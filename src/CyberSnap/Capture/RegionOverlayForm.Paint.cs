@@ -599,29 +599,48 @@ public sealed partial class RegionOverlayForm
             };
             SizeF textSize = g.MeasureString(label, font, new SizeF(10000f, face.Height), sf);
 
-            // Done's standalone check reads smaller than the Cancel X for the same box, so it
-            // reserves a slightly wider slot in the group to land optically balanced.
-            float iconVisualW = iconOnRight ? iconSize * 1.15f : (useFluent ? iconSize : iconSize * 0.84f);
-            float groupW = iconVisualW + gap + textSize.Width;
-            float startX = face.X + (face.Width - groupW) / 2f;
+            float vNudge;
+            float textX;
+            if (iconOnRight)
+            {
+                // Done: the larger check rides at the pill's right edge; the label is centred
+                // within the remaining space so the pair reads balanced with the Cancel X.
+                var fam0 = font.FontFamily;
+                float em0 = fam0.GetEmHeight(font.Style);
+                float ascent0 = fam0.GetCellAscent(font.Style);
+                float descent0 = fam0.GetCellDescent(font.Style);
+                float capHeight0 = em0 * 0.72f; // Segoe UI cap height ≈ 0.72 em
+                float emPx0 = font.SizeInPoints * g.DpiY / 72f;
+                vNudge = ((ascent0 - capHeight0 - descent0) / em0) * emPx0 / 2f;
 
-            var fam = font.FontFamily;
-            float em = fam.GetEmHeight(font.Style);
-            float ascent = fam.GetCellAscent(font.Style);
-            float descent = fam.GetCellDescent(font.Style);
-            float capHeight = em * 0.72f; // Segoe UI cap height ≈ 0.72 em
-            float emPx = font.SizeInPoints * g.DpiY / 72f;
-            float vNudge = ((ascent - capHeight - descent) / em) * emPx / 2f;
+                float rightPad = face.Height * 0.22f;
+                bx = face.Right - rightPad - iconSize;
+                by = face.Y + (face.Height - iconSize) / 2f;
+                textX = face.X + (bx - gap - face.X - textSize.Width) / 2f;
+            }
+            else
+            {
+                float iconVisualW = useFluent ? iconSize : iconSize * 0.84f;
+                float groupW = iconVisualW + gap + textSize.Width;
+                float startX = face.X + (face.Width - groupW) / 2f;
 
-            // Icon sits after the text for Done (right); before the text otherwise.
-            bx = iconOnRight ? startX + textSize.Width + gap : startX;
-            by = face.Y + (face.Height - iconSize) / 2f;
+                var fam = font.FontFamily;
+                float em = fam.GetEmHeight(font.Style);
+                float ascent = fam.GetCellAscent(font.Style);
+                float descent = fam.GetCellDescent(font.Style);
+                float capHeight = em * 0.72f; // Segoe UI cap height ≈ 0.72 em
+                float emPx = font.SizeInPoints * g.DpiY / 72f;
+                vNudge = ((ascent - capHeight - descent) / em) * emPx / 2f;
+
+                bx = startX;
+                by = face.Y + (face.Height - iconSize) / 2f;
+                textX = startX + iconVisualW + gap;
+            }
 
             Color baseTextColor = (accentColor.ToArgb() == UiChrome.SurfaceDanger.ToArgb())
                 ? UiChrome.SurfaceDanger
                 : UiChrome.SurfaceTextPrimary;
 
-            float textX = iconOnRight ? startX : startX + iconVisualW + gap;
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseTextColor)))
             {
                 var textRect = new RectangleF(textX, face.Y - vNudge, textSize.Width + 1f, face.Height);

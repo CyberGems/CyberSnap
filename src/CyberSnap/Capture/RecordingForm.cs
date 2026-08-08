@@ -260,13 +260,13 @@ public sealed partial class RecordingForm : Form
         var cancelLabel = isMp4
             ? (isSpanish ? "Cancelar captura MP4" : "Cancel MP4 capture")
             : (isSpanish ? "Cancelar captura GIF" : "Cancel GIF capture");
-        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
+        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
         cancelItem.Click += (_, _) => CancelFromEscape();
         menu.Items.Add(cancelItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var closeLabel = isSpanish ? "Cerrar menú y continuar" : "Close menu and continue";
+        var closeLabel = isSpanish ? "Continuar editando" : "Continue editing";
         var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "close", iconSize: 24);
         closeItem.Click += (_, _) => menu.Close();
         menu.Items.Add(closeItem);
