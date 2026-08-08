@@ -1324,6 +1324,7 @@ public sealed partial class RegionOverlayForm
         }
         var settings = Services.SettingsService.LoadStatic();
         _confirmPillShowLabels = settings?.ConfirmPillShowLabels ?? false;
+        _confirmDoneShowLabel = settings?.ConfirmDoneShowLabel ?? true;
         RebuildConfirmChromeKinds();
         RecomputeConfirmButtonWidth();
         _hasSelection = false;
@@ -1376,6 +1377,20 @@ public sealed partial class RegionOverlayForm
     {
         if (_confirmPillShowLabels == show) return;
         _confirmPillShowLabels = show;
+        _confirmChromeLayoutDirty = true;
+        if (_isConfirmingSelection)
+        {
+            RecomputeConfirmButtonWidth();
+            LayoutConfirmChromeRects();
+            Invalidate();
+        }
+    }
+
+    /// <summary>Applies Settings → Done pill label without re-entering confirm mode.</summary>
+    public void SetConfirmDoneShowLabel(bool show)
+    {
+        if (_confirmDoneShowLabel == show) return;
+        _confirmDoneShowLabel = show;
         _confirmChromeLayoutDirty = true;
         if (_isConfirmingSelection)
         {
@@ -2075,6 +2090,9 @@ public sealed partial class RegionOverlayForm
             return true;
         if (kind == ConfirmChromeKind.TogglePreview)
             return false;
+        // Done has its own label toggle, independent of the mode-pill labels setting.
+        if (kind == ConfirmChromeKind.Done)
+            return !_confirmDoneShowLabel;
         return !_confirmPillShowLabels;
     }
 
@@ -2527,6 +2545,16 @@ public sealed partial class RegionOverlayForm
         Invalidate();
     }
 
+    private void ToggleConfirmDoneLabel()
+    {
+        _confirmDoneShowLabel = !_confirmDoneShowLabel;
+        ConfirmDoneShowLabelChanged?.Invoke(_confirmDoneShowLabel);
+        _confirmChromeLayoutDirty = true;
+        RecomputeConfirmButtonWidth();
+        LayoutConfirmChromeRects();
+        Invalidate();
+    }
+
     private void ResetConfirmPress()
     {
         _confirmPressTimer.Stop();
@@ -2680,6 +2708,7 @@ public sealed partial class RegionOverlayForm
         if (!_confirmChromeLayoutDirty
             && _confirmChromeLaidOutForRect == _confirmRect
             && _confirmChromeLaidOutWithLabels == _confirmPillShowLabels
+            && _confirmChromeLaidOutWithDoneLabel == _confirmDoneShowLabel
             && Math.Abs(_confirmChromeLaidOutExpandAmt - _confirmModesExpandAmt) < 0.0005f
             && _confirmChromeRects.Length == _confirmChromeKinds.Length)
             return;
@@ -2687,6 +2716,7 @@ public sealed partial class RegionOverlayForm
         _confirmChromeLayoutDirty = false;
         _confirmChromeLaidOutForRect = _confirmRect;
         _confirmChromeLaidOutWithLabels = _confirmPillShowLabels;
+        _confirmChromeLaidOutWithDoneLabel = _confirmDoneShowLabel;
         _confirmChromeLaidOutExpandAmt = _confirmModesExpandAmt;
 
         int bh = UiChrome.ScaleInt(ConfirmButtonHeight);

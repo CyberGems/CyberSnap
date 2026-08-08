@@ -54,6 +54,9 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Raised when the user toggles icon+label mode on the confirm bar.</summary>
     public event Action<bool>? ConfirmPillShowLabelsChanged;
 
+    /// <summary>Raised when the user toggles the Done pill's text label on the confirm bar.</summary>
+    public event Action<bool>? ConfirmDoneShowLabelChanged;
+
     /// <summary>Action chosen when the user commits via a destination pill (or Enter / double-click primary).</summary>
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public ConfirmCommitAction PendingCommitAction { get; private set; } = ConfirmCommitAction.Default;
@@ -98,9 +101,11 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Rounded dock panel behind the confirm pills so they stay readable on any wallpaper.</summary>
     private Rectangle _confirmChromeWrapperRect = Rectangle.Empty;
     private bool _confirmPillShowLabels;
+    private bool _confirmDoneShowLabel = true;
     private bool _confirmChromeLayoutDirty = true;
     private Rectangle _confirmChromeLaidOutForRect = Rectangle.Empty;
     private bool _confirmChromeLaidOutWithLabels;
+    private bool _confirmChromeLaidOutWithDoneLabel;
     private float _confirmChromeLaidOutExpandAmt = -1f;
     /// <summary>Alternate modes (OCR…QR) are shown; Image stays as the always-visible trigger.</summary>
     private bool _confirmModesExpanded;
@@ -2437,14 +2442,7 @@ public sealed partial class RegionOverlayForm : Form
             catch { }
         };
 
-        var labelsItem = WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Show labels on buttons"),
-            iconId: _confirmPillShowLabels ? "check" : null,
-            iconSize: 24);
-        labelsItem.Click += (_, _) => ToggleConfirmPillShowLabels();
-        menu.Items.Add(labelsItem);
-
-        menu.Items.Add(new ToolStripSeparator());
+        // Pill-label toggles live on the confirm-frame gear (options) menu, not here.
 
         var retryItem = WindowsMenuRenderer.Item(
             LocalizationService.Translate("Retry selection"),
@@ -2630,20 +2628,25 @@ public sealed partial class RegionOverlayForm : Form
         menu.Items.Add(duplicateItem);
         menu.Items.Add(deleteItem);
 
-        menu.Items.Add(new ToolStripSeparator());
-
-        var captureFsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-        var captureItem = WindowsMenuRenderer.Item(captureFsLabel, iconId: "captureRect", iconSize: 24);
-        captureItem.Click += (s, e) =>
+        // Confirm mode keeps the object menu scoped to the object itself: the frame is
+        // locked, so capture-wide actions (full-screen, retry, cancel) stay out of it.
+        if (!_isConfirmingSelection)
         {
-            RegionSelected?.Invoke(_virtualBounds);
-        };
-        menu.Items.Add(captureItem);
+            menu.Items.Add(new ToolStripSeparator());
 
-        var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "signOut", iconSize: 24);
-        cancelCapItem.Click += (s, e) => Cancel();
-        menu.Items.Add(cancelCapItem);
+            var captureFsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
+            var captureItem = WindowsMenuRenderer.Item(captureFsLabel, iconId: "captureRect", iconSize: 24);
+            captureItem.Click += (s, e) =>
+            {
+                RegionSelected?.Invoke(_virtualBounds);
+            };
+            menu.Items.Add(captureItem);
+
+            var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
+            var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "signOut", iconSize: 24);
+            cancelCapItem.Click += (s, e) => Cancel();
+            menu.Items.Add(cancelCapItem);
+        }
 
         menu.Items.Add(new ToolStripSeparator());
 
