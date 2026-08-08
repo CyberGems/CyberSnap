@@ -2120,14 +2120,21 @@ public sealed partial class RegionOverlayForm
             font,
             new Size(int.MaxValue, iconOnlySize),
             TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
-        // Done draws a larger check to the right of the label (see DrawConfirmActionPill);
-        // widen its reserved icon slot so the glyph isn't crowded or clipped.
-        int iconPart = kind == ConfirmChromeKind.Done
-            ? Math.Max(UiChrome.ScaleInt(18), (int)(iconOnlySize * 0.62f))
-            : Math.Max(UiChrome.ScaleInt(16), (int)(iconOnlySize * 0.52f));
-        int gap = UiChrome.ScaleInt(6);
-        int padX = UiChrome.ScaleInt(12);
-        return Math.Max(iconOnlySize + UiChrome.ScaleInt(28), padX + iconPart + gap + textSize.Width + padX);
+        // Done lays out label + right check with its own centered padding (see
+        // DrawConfirmActionPill); reserve the same horizontal budget so nothing overlaps.
+        if (kind == ConfirmChromeKind.Done)
+        {
+            int h = iconOnlySize;
+            int padX = (int)Math.Round(h * DoneLabelPadXFrac);
+            int iconW = (int)Math.Round(h * DoneLabelIconFrac);
+            int gap = (int)Math.Round(h * DoneLabelGapFrac);
+            return Math.Max(iconOnlySize + UiChrome.ScaleInt(28), padX + textSize.Width + gap + iconW + padX);
+        }
+
+        int iconPart = Math.Max(UiChrome.ScaleInt(16), (int)(iconOnlySize * 0.52f));
+        int gapStd = UiChrome.ScaleInt(6);
+        int padXStd = UiChrome.ScaleInt(12);
+        return Math.Max(iconOnlySize + UiChrome.ScaleInt(28), padXStd + iconPart + gapStd + textSize.Width + padXStd);
     }
 
     private string ConfirmChromeDrawLabel(ConfirmChromeKind kind)

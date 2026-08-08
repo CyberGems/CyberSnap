@@ -211,14 +211,14 @@ public sealed partial class ScrollingCaptureForm : Form
             "es", StringComparison.OrdinalIgnoreCase);
 
         var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
-        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
         cancelItem.Click += (_, _) => Cancel();
         menu.Items.Add(cancelItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
         var closeLabel = isSpanish ? "Continuar editando" : "Continue editing";
-        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "close", iconSize: 24);
+        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "undo", iconSize: 24);
         closeItem.Click += (_, _) => menu.Close();
         menu.Items.Add(closeItem);
 
