@@ -435,9 +435,8 @@ public sealed partial class RegionOverlayForm
     private void OpenConfirmOptionsMenu(Point clickLocation)
     {
         HideToolbarTooltip();
-        bool recentlyClosedMenu = (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250;
-        if (recentlyClosedMenu && _lastContextMenuBtnIndex == -1)
-            return;
+        // Note: unlike the capture-bar activator, the gear pill intentionally has no
+        // "recently-closed" guard — the click should always (re)open the options menu.
 
         Point anchor = clickLocation;
         if (!_confirmOptionsPillRect.IsEmpty)

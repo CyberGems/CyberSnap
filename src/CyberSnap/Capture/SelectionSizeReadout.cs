@@ -290,7 +290,7 @@ internal static class SelectionSizeReadout
         using (var path = WindowsDockRenderer.RoundedRect(rect, radius))
         {
             int bgA = hovered || active ? 240 : 225;
-            using var bg = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20));
+            using var bg = new SolidBrush(Color.FromArgb(bgA, UiChrome.SurfaceTier1));
             g.FillPath(bg, path);
             using var border = new Pen(
                 Color.FromArgb(hovered || active ? 220 : 150, accent),
@@ -453,20 +453,22 @@ internal static class SelectionSizeReadout
         using (var path = WindowsDockRenderer.RoundedRect(rect, radius))
         {
             int bgA = hovered ? 240 : 225;
-            using var bg = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20));
+            using var bg = new SolidBrush(Color.FromArgb(bgA, UiChrome.SurfaceTier1));
             g.FillPath(bg, path);
             using var border = new Pen(Color.FromArgb(hovered ? 220 : 150, accent), hovered ? 1.4f : 1f);
             g.DrawPath(border, path);
         }
 
-        // 2×3 grip dots (reorder / drag affordance).
+        // 2×3 grip dots (reorder / drag affordance) — neutral gray like the neighboring gear,
+        // not the accent, so it doesn't read as a brand-colored control.
+        var gripGray = UiChrome.SurfaceTextSecondary;
         float cx = rect.X + rect.Width / 2f;
         float cy = rect.Y + rect.Height / 2f;
         float stepX = UiChrome.ScaleFloat(4.2f);
         float stepY = UiChrome.ScaleFloat(4.2f);
         float r = UiChrome.ScaleFloat(1.35f);
         int a = hovered ? 240 : 190;
-        using var dot = new SolidBrush(Color.FromArgb(a, accent));
+        using var dot = new SolidBrush(Color.FromArgb(a, gripGray));
         for (int row = -1; row <= 1; row++)
         {
             for (int col = -1; col <= 0; col++)
@@ -783,7 +785,7 @@ internal static class SelectionSizeReadout
         using (var path = WindowsDockRenderer.RoundedRect(rect, Radius))
         {
             int bgA = emphasize ? 240 : 225;
-            using var bg = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20));
+            using var bg = new SolidBrush(Color.FromArgb(bgA, UiChrome.SurfaceTier1));
             g.FillPath(bg, path);
             using var border = new Pen(Color.FromArgb(emphasize ? 220 : 150, accent), emphasize ? 1.4f : 1f);
             g.DrawPath(border, path);
@@ -833,8 +835,11 @@ internal static class SelectionSizeReadout
         }
         else
         {
-            float y0 = box.Top + 2.5f;
-            float y1 = box.Bottom - 2.5f;
+            // Vertical arrow (pill height) — shorten slightly top/bottom so it doesn't look
+            // taller than the neighboring horizontal arrow.
+            float yShrink = box.Height * 0.10f;
+            float y0 = box.Top + 2.5f + yShrink;
+            float y1 = box.Bottom - 2.5f - yShrink;
             g.DrawLine(pen, cxf, y0, cxf, y1);
             g.DrawLine(pen, cxf, y0, cxf - head, y0 + head);
             g.DrawLine(pen, cxf, y0, cxf + head, y0 + head);
