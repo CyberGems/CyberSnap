@@ -608,6 +608,7 @@ public partial class App
                 };
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
                 overlay.SetConfirmPillShowLabels(_settingsService.Settings.ConfirmPillShowLabels);
+                overlay.SetConfirmDoneShowLabel(_settingsService.Settings.ConfirmDoneShowLabel);
                 overlay.EnabledToolsChanged += enabledTools =>
                 {
                     // Merge with latest cached settings to avoid overwriting changes
@@ -646,6 +647,14 @@ public partial class App
                             _settingsWindow.SyncConfirmPillShowLabels(showLabels);
                     }
                     catch { }
+                };
+                overlay.ConfirmDoneShowLabelChanged += showLabel =>
+                {
+                    var latest = Services.SettingsService.LoadStatic();
+                    if (latest != null)
+                        _settingsService!.Settings = latest;
+                    _settingsService!.Settings.ConfirmDoneShowLabel = showLabel;
+                    _settingsService.Save();
                 };
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);
                 overlay.SetToolColor(System.Drawing.Color.FromArgb(_settingsService.Settings.ToolColorArgb));

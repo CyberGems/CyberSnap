@@ -2056,6 +2056,8 @@
   "Image": "Image",
   "Scroll": "Scroll",
   "Show labels on buttons": "Show labels on buttons",
+  "Show mode labels": "Show mode labels",
+  "Show Done button label": "Show Done button label",
   "Show preview after capture": "Show preview after capture",
   "Toggle capture preview on confirm": "Toggle capture preview on confirm",
   "Capture as Image": "Capture as Image",

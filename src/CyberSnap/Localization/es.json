@@ -2201,6 +2201,8 @@
   "Image": "Imagen",
   "Scroll": "Desplazamiento",
   "Show labels on buttons": "Mostrar etiquetas en los botones",
+  "Show mode labels": "Mostrar etiquetas de modo",
+  "Show Done button label": "Mostrar etiqueta del botón Listo",
   "Show preview after capture": "Mostrar vista previa después de capturar",
   "Toggle capture preview on confirm": "Activar vista previa de captura al confirmar",
   "Capture as Image": "Capturar como imagen",

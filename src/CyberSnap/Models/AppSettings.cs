@@ -193,9 +193,16 @@ public sealed class AppSettings
 
     /// <summary>
     /// When true, confirm-mode destination pills show a short text label beside the icon.
-    /// Cancel / Retry stay icon-only. Toggleable from Settings → Notifications and the confirm bar context menu.
+    /// Cancel / Retry stay icon-only. Toggleable from the confirm-frame gear (options) menu.
     /// </summary>
     public bool ConfirmPillShowLabels { get; set; }
+
+    /// <summary>
+    /// When true, the confirm-mode Done pill shows its short text label beside the icon.
+    /// Independent of <see cref="ConfirmPillShowLabels"/>; toggleable from the confirm-frame
+    /// gear (options) menu. Defaults to ON so the primary action stays self-describing.
+    /// </summary>
+    public bool ConfirmDoneShowLabel { get; set; } = true;
 
     /// <summary>
     /// When true, show the preview window after capture instead of executing automatic destinations directly.

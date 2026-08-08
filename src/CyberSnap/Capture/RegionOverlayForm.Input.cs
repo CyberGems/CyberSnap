@@ -46,6 +46,24 @@ public sealed partial class RegionOverlayForm
 
             if (_isConfirmingSelection)
             {
+                // Prefer an annotation under the cursor: RMB on a shape must offer the
+                // shape menu (duplicate / delete), not the confirm chrome one.
+                int annHit = HitTestAnnotation(e.Location);
+                if (annHit >= 0)
+                {
+                    if (!_multiSelectedIndices.Contains(annHit))
+                    {
+                        _selectedAnnotationIndex = annHit;
+                        _multiSelectedIndices.Clear();
+                        // Force immediate repaint so the selection frame is visible
+                        // before the context menu appears.
+                        Invalidate();
+                        Update();
+                    }
+                    ShowAnnotationContextMenu(e.Location);
+                    return;
+                }
+
                 // Prefer the pill under the cursor so "Hide X" matches annotation-bar RMB.
                 ConfirmChromeKind? focused = null;
                 int pillHit = HitTestConfirmButton(e.Location);

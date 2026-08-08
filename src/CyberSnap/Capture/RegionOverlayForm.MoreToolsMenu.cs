@@ -293,6 +293,25 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(showAnnotItem);
         }
 
+        // Confirm-mode label toggles live here (the confirm-frame gear), keeping the
+        // confirm context menu (and annotation context menus) free of chrome options.
+        if (ShowAnnotationChrome)
+        {
+            var modeLabelsItem = WindowsMenuRenderer.Item(
+                LocalizationService.Translate("Show mode labels"),
+                iconId: _confirmPillShowLabels ? "check" : null,
+                iconSize: 24);
+            modeLabelsItem.Click += (_, _) => ToggleConfirmPillShowLabels();
+            menu.Items.Add(modeLabelsItem);
+
+            var doneLabelItem = WindowsMenuRenderer.Item(
+                LocalizationService.Translate("Show Done button label"),
+                iconId: _confirmDoneShowLabel ? "check" : null,
+                iconSize: 24);
+            doneLabelItem.Click += (_, _) => ToggleConfirmDoneLabel();
+            menu.Items.Add(doneLabelItem);
+        }
+
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu.
         // single window that spans every monitor, so on a multi-monitor setup with mixed DPI the
         // WinForms ToolStripDropDown places a second-level submenu on the wrong monitor and swallows
