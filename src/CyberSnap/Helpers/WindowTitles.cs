@@ -11,6 +11,7 @@ public static class WindowTitles
     public const string Ocr = "Text extraction (OCR) ᐧ CyberSnap";
     public const string Settings = "Configuration ᐧ CyberSnap";
     public const string About = "About ᐧ CyberSnap";
+    public const string Achievements = "Achievements ᐧ CyberSnap";
     public const string Preview = "Capture Preview ᐧ CyberSnap";
 
     public static string Taskbar(string key, string? languageCode = null) =>

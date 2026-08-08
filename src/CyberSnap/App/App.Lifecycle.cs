@@ -29,6 +29,12 @@ public partial class App
             return;
         }
 
+        if (navigateTo is "achievements" or "logros")
+        {
+            ShowAchievements();
+            return;
+        }
+
         if (_settingsWindow is { IsVisible: true })
         {
             _settingsWindow.Activate();
@@ -177,6 +183,98 @@ public partial class App
         win.Focus();
     }
 
+    public void ShowAchievements()
+    {
+        if (_achievementsWindow is { IsVisible: true })
+        {
+            _achievementsWindow.Activate();
+            _achievementsWindow.Topmost = true;
+            _achievementsWindow.Topmost = false;
+            _achievementsWindow.Focus();
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _achievementsWindowOpening, 1, 0) != 0)
+            return;
+
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                if (_achievementsWindow is { IsVisible: true })
+                {
+                    _achievementsWindow.Activate();
+                    return;
+                }
+
+                ShowAchievementsWindow();
+            }
+            catch (Exception ex)
+            {
+                _achievementsWindow = null;
+                ShowAchievementsOpenFailed(ex);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _achievementsWindowOpening, 0);
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    public void RefreshAchievementsWindowIfOpen()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshAchievementsWindowIfOpen);
+            return;
+        }
+
+        if (_achievementsWindow is { IsVisible: true })
+            _achievementsWindow.RefreshFromSettings();
+    }
+
+    private void ShowAchievementsWindow()
+    {
+        var historyService = EnsureHistoryService();
+        var win = new AchievementsWindow(_settingsService!, historyService);
+
+        var activeEditor = UI.Editor.EditorForm.ActiveInstance;
+        if (activeEditor != null)
+        {
+            var helper = new System.Windows.Interop.WindowInteropHelper(win)
+            {
+                Owner = activeEditor.Handle
+            };
+        }
+
+        win.Closed += (_, _) =>
+        {
+            _achievementsWindow = null;
+            Dispatcher.BeginInvoke(() => ScheduleIdleMemoryTrim(), DispatcherPriority.Background);
+        };
+        _achievementsWindow = win;
+        win.Show();
+        win.Activate();
+        win.Topmost = true;
+        win.Topmost = false;
+        win.Focus();
+    }
+
+    private static void ShowAchievementsOpenFailed(Exception ex)
+    {
+        AppDiagnostics.LogError("lifecycle.show-achievements", ex);
+        try
+        {
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Error"),
+                $"{LocalizationService.Translate("CyberSnap was unable to open Achievements")}\n{ex.Message}");
+        }
+        catch (Exception toastEx)
+        {
+            AppDiagnostics.LogError("lifecycle.show-achievements.toast", toastEx);
+        }
+    }
+
     private static void ShowAboutOpenFailed(Exception ex)
     {
         AppDiagnostics.LogError("lifecycle.show-about", ex);
@@ -242,6 +340,7 @@ public partial class App
             _trayIcon?.RefreshLocalization();
             _widgetWindow?.RefreshLocalization();
             _aboutWindow?.RefreshLocalization();
+            _achievementsWindow?.RefreshLocalization();
             UI.Editor.EditorForm.ActiveInstance?.RefreshLocalization();
         };
         win.HotkeyChanged += hotkeyHandler;

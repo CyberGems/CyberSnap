@@ -1828,12 +1828,18 @@ public sealed partial class EditorForm
         var scrollbarsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Always show scrollbars"), iconId: null);
         scrollbarsItem.ToolTipText = LocalizationService.Translate("Keep the scroll position indicators visible at all times.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
+        var achievementsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Achievements"), iconId: "trophy");
         var aboutItem = WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap"), iconId: "info");
         var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "signOut");
         settingsItem.Click += (_, _) =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.ShowSettings("editor");
+        };
+        achievementsItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.ShowAchievements();
         };
         aboutItem.Click += (_, _) =>
         {
@@ -1984,6 +1990,7 @@ public sealed partial class EditorForm
         menu.Items.Add(deleteItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
+        menu.Items.Add(achievementsItem);
         menu.Items.Add(aboutItem);
         menu.Items.Add(exitItem);
 

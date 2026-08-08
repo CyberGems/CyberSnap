@@ -17,12 +17,12 @@ using FontFamily = System.Windows.Media.FontFamily;
 
 namespace CyberSnap.UI;
 
-// Milestone rail: a neon progress track shown under the "Celebrations" row in the Notifications
+// Milestone rail: a neon progress track shown in the Achievements window
 // tab. It always shows progress over the capture-count milestones (lit nodes for reached ones, a
 // CyberPaste-style grabber at the current position); when a milestone has been reached but not yet
 // seen here, the rail comes alive once with the same flowing sweep + breathing glow as a
 // celebration toast (see ApplyCelebrationVisual in ToastWindow.xaml.cs), then settles back to calm.
-public partial class SettingsWindow
+public partial class AchievementsWindow
 {
     // Neon palette shared with the celebration toast sweep.
     private static MediaColor RailCyan => Theme.IsGray

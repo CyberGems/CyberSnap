@@ -15,11 +15,11 @@ using HAlign = System.Windows.HorizontalAlignment;
 
 namespace CyberSnap.UI;
 
-// Achievements tab: a gamified surface with the animated milestone rail (hero), Duolingo-style
+// Achievements window: a gamified surface with the animated milestone rail (hero), Duolingo-style
 // statistics cards, and a medal grid grouped by category. The rail itself lives in
-// SettingsWindow.Celebrations.cs and is hosted here via MilestoneRailHost; this file builds the
+// AchievementsWindow.MilestoneRail.cs and is hosted here via MilestoneRailHost; this file builds the
 // statistics and medal sections that surround it.
-public partial class SettingsWindow
+public partial class AchievementsWindow
 {
     private static readonly string GlyphCamera = ((char)0xE722).ToString(); // Camera (present in both Fluent + MDL2)
     private static readonly string GlyphStar = ((char)0xE735).ToString();   // FavoriteStarFill
@@ -37,17 +37,32 @@ public partial class SettingsWindow
 
     private static readonly Brush FallbackTextBrush = Theme.IsDark ? Brushes.White : Brushes.Black;
 
-    // (Re)builds the statistics cards and medal grid from the live settings. Called when the
-    // Achievements tab is selected and after the Celebrations toggle changes.
+    // (Re)builds the statistics cards and medal grid from the live settings.
     private void RefreshAchievements()
     {
-        if (AchievementsStatsHost is null || AchievementsMedalsHost is null || _settingsService is null)
+        if (_settingsService is null)
             return;
+
+        // Prefer the live logical tree over generated fields — if Connect() left a field
+        // null (or pointing at a detached instance), FindLogicalNode still reaches the hosts.
+        var statsHost = LogicalTreeHelper.FindLogicalNode(this, "AchievementsStatsHost") as Grid
+                        ?? AchievementsStatsHost;
+        var medalsHost = LogicalTreeHelper.FindLogicalNode(this, "AchievementsMedalsHost") as StackPanel
+                         ?? AchievementsMedalsHost;
+
+        if (statsHost is null || medalsHost is null)
+        {
+            AppDiagnostics.LogWarning(
+                "achievements.refresh",
+                $"Host missing (stats={(statsHost is null)}, medals={(medalsHost is null)}, " +
+                $"fieldStats={(AchievementsStatsHost is null)}, fieldMedals={(AchievementsMedalsHost is null)}).");
+            return;
+        }
 
         var s = _settingsService.Settings;
         BootstrapCaptureCountsFromGallery(s);
-        BuildStatsCards(s);
-        BuildMedalGrid(s);
+        BuildStatsCards(statsHost, s);
+        BuildMedalGrid(medalsHost, s);
     }
 
     // Seeds per-type counters from the gallery on the very first load for existing users.
@@ -88,15 +103,24 @@ public partial class SettingsWindow
     }
 
     // Grid of summary stat cards + per-type breakdown.
-    private void BuildStatsCards(AppSettings s)
+    private void BuildStatsCards(Grid host, AppSettings s)
     {
-        var host = AchievementsStatsHost!;
         host.Children.Clear();
         host.ColumnDefinitions.Clear();
         host.RowDefinitions.Clear();
 
-        host.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        host.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // MinWidth guards against the classic WPF Star+infinite-measure collapse (0-width columns)
+        // when the host is measured inside a StackPanel before the ScrollViewer has a real width.
+        host.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(1, GridUnitType.Star),
+            MinWidth = 140
+        });
+        host.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(1, GridUnitType.Star),
+            MinWidth = 140
+        });
 
         int count = s.CelebrationCaptureCount;
         int reached = CelebrationMilestones.Values.Count(v => count >= v);
@@ -132,7 +156,7 @@ public partial class SettingsWindow
             FontWeight = FontWeights.SemiBold,
             Opacity = 0.55,
             FontFamily = new FontFamily("Segoe UI Variable Text"),
-            Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
             Margin = new Thickness(5, 14, 5, 4),
         };
         Grid.SetColumn(sepLabel, 0);
@@ -246,9 +270,8 @@ public partial class SettingsWindow
     }
 
     // Medal grid: one section per category, each with a WrapPanel of medal tiles.
-    private void BuildMedalGrid(AppSettings s)
+    private void BuildMedalGrid(StackPanel host, AppSettings s)
     {
-        var host = AchievementsMedalsHost!;
         host.Children.Clear();
 
         var achievements = AchievementCatalog.Build(s, LocalizationService.Translate);
