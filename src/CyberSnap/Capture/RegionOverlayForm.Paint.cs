@@ -574,6 +574,9 @@ public sealed partial class RegionOverlayForm
 
         // ── Label + icon laid out as a single centered group ──
         bool useFluent = !string.IsNullOrEmpty(fluentIconId);
+        // Done places its check to the RIGHT of the label and noticeably larger, so the
+        // primary action glyph balances the Cancel X next to it (icon-then-label reads small).
+        bool iconOnRight = kind == ConfirmChromeKind.Done && !string.IsNullOrEmpty(label);
         float iconSize;
         float bx, by;
         if (string.IsNullOrEmpty(label))
@@ -584,8 +587,8 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            iconSize = face.Height * 0.58f;
-            float gap = face.Height * 0.22f;
+            iconSize = face.Height * (iconOnRight ? 0.92f : 0.58f);
+            float gap = face.Height * (iconOnRight ? 0.26f : 0.22f);
 
             using var sf = new StringFormat(StringFormat.GenericTypographic)
             {
@@ -596,7 +599,9 @@ public sealed partial class RegionOverlayForm
             };
             SizeF textSize = g.MeasureString(label, font, new SizeF(10000f, face.Height), sf);
 
-            float iconVisualW = useFluent ? iconSize : iconSize * 0.84f;
+            // Done's standalone check reads smaller than the Cancel X for the same box, so it
+            // reserves a slightly wider slot in the group to land optically balanced.
+            float iconVisualW = iconOnRight ? iconSize * 1.15f : (useFluent ? iconSize : iconSize * 0.84f);
             float groupW = iconVisualW + gap + textSize.Width;
             float startX = face.X + (face.Width - groupW) / 2f;
 
@@ -608,16 +613,18 @@ public sealed partial class RegionOverlayForm
             float emPx = font.SizeInPoints * g.DpiY / 72f;
             float vNudge = ((ascent - capHeight - descent) / em) * emPx / 2f;
 
-            bx = startX;
+            // Icon sits after the text for Done (right); before the text otherwise.
+            bx = iconOnRight ? startX + textSize.Width + gap : startX;
             by = face.Y + (face.Height - iconSize) / 2f;
 
             Color baseTextColor = (accentColor.ToArgb() == UiChrome.SurfaceDanger.ToArgb())
                 ? UiChrome.SurfaceDanger
                 : UiChrome.SurfaceTextPrimary;
 
+            float textX = iconOnRight ? startX : startX + iconVisualW + gap;
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseTextColor)))
             {
-                var textRect = new RectangleF(startX + iconVisualW + gap, face.Y - vNudge, textSize.Width + 1f, face.Height);
+                var textRect = new RectangleF(textX, face.Y - vNudge, textSize.Width + 1f, face.Height);
                 g.DrawString(label, font, textBrush, textRect, sf);
             }
         }

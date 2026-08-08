@@ -382,7 +382,8 @@ public sealed partial class RegionOverlayForm
             anchor.Height);
 
         // Confirm dock is horizontal under the frame — keep tips above the pills.
-        _toolbarToolTip.ShowNear(this, text, anchorScreen, ToolTipPlacement.Above);
+        // singleLine: title + hotkey hint stay on one row (Preview toggle, Done, etc.).
+        _toolbarToolTip.ShowNear(this, text, anchorScreen, ToolTipPlacement.Above, singleLine: true);
         _tooltipVisible = true;
         _tooltipShowTime = DateTime.UtcNow;
     }

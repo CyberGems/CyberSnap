@@ -22,6 +22,7 @@ public sealed class WindowsToolTip : Form
     private const int AnchorGap = 8;
     private readonly Font _font = UiChrome.ChromeFont(8.5f);
     private string _text = "";
+    private bool _singleLine;
 
     public WindowsToolTip()
     {
@@ -94,7 +95,7 @@ public sealed class WindowsToolTip : Form
     public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, bool above)
         => ShowNear(owner, text, anchorScreenBounds, above ? ToolTipPlacement.Above : ToolTipPlacement.Below);
 
-    public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, ToolTipPlacement placement)
+    public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, ToolTipPlacement placement, bool singleLine = false)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -104,15 +105,19 @@ public sealed class WindowsToolTip : Form
 
         CyberSnap.UI.Theme.Refresh();
         _text = text;
+        _singleLine = singleLine;
         BackColor = UiChrome.SurfaceTooltip;
         ForeColor = UiChrome.SurfaceTextPrimary;
 
-        var preferred = TextRenderer.MeasureText(
-            text,
-            _font,
-            new Size(MaxWidth - PadX * 2, 0),
-            TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-        int width = Math.Min(MaxWidth, Math.Max(1, preferred.Width + PadX * 2));
+        // Single-line tooltips measure without word-wrap so the title + hint stay on one row.
+        var measureSize = singleLine ? new Size(int.MaxValue, 0) : new Size(MaxWidth - PadX * 2, 0);
+        var measureFlags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
+        if (!singleLine)
+            measureFlags |= TextFormatFlags.WordBreak;
+        var preferred = TextRenderer.MeasureText(text, _font, measureSize, measureFlags);
+        int width = singleLine
+            ? Math.Max(1, preferred.Width + PadX * 2)
+            : Math.Min(MaxWidth, Math.Max(1, preferred.Width + PadX * 2));
         int height = Math.Max(1, preferred.Height + PadY * 2);
 
         int x;
@@ -188,13 +193,18 @@ public sealed class WindowsToolTip : Form
         }
 
         var textRect = new Rectangle(PadX, PadY, Width - PadX * 2, Height - PadY * 2);
+        var drawFlags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
+        if (_singleLine)
+            drawFlags |= TextFormatFlags.SingleLine;
+        else
+            drawFlags |= TextFormatFlags.WordBreak;
         TextRenderer.DrawText(
             g,
             _text,
             _font,
             textRect,
             UiChrome.SurfaceTextPrimary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            drawFlags);
     }
 
     protected override void Dispose(bool disposing)
