@@ -57,7 +57,7 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Raised when the user toggles the Done pill's text label on the confirm bar.</summary>
     public event Action<bool>? ConfirmDoneShowLabelChanged;
 
-    /// <summary>Action chosen when the user commits via a destination pill (or Enter / double-click primary).</summary>
+    /// <summary>Action chosen when the user commits via a destination pill (or Enter on the primary pill).</summary>
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public ConfirmCommitAction PendingCommitAction { get; private set; } = ConfirmCommitAction.Default;
 
