@@ -2049,7 +2049,8 @@ public sealed partial class RegionOverlayForm
         ConfirmChromeKind.ModeOcr => "OCR",
         ConfirmChromeKind.ModeVideo => "Video",
         ConfirmChromeKind.ModeGif => "GIF",
-        ConfirmChromeKind.ModeScroll => LocalizationService.Translate("Scroll"),
+        // Pill label stays "Scroll" even in Spanish ("Desplazamiento" stretches the dock).
+        ConfirmChromeKind.ModeScroll => "Scroll",
         ConfirmChromeKind.ModeQr => "QR",
         _ => ""
     };
@@ -2119,7 +2120,11 @@ public sealed partial class RegionOverlayForm
             font,
             new Size(int.MaxValue, iconOnlySize),
             TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
-        int iconPart = Math.Max(UiChrome.ScaleInt(16), (int)(iconOnlySize * 0.52f));
+        // Done draws a larger check to the right of the label (see DrawConfirmActionPill);
+        // widen its reserved icon slot so the glyph isn't crowded or clipped.
+        int iconPart = kind == ConfirmChromeKind.Done
+            ? Math.Max(UiChrome.ScaleInt(18), (int)(iconOnlySize * 0.62f))
+            : Math.Max(UiChrome.ScaleInt(16), (int)(iconOnlySize * 0.52f));
         int gap = UiChrome.ScaleInt(6);
         int padX = UiChrome.ScaleInt(12);
         return Math.Max(iconOnlySize + UiChrome.ScaleInt(28), padX + iconPart + gap + textSize.Width + padX);

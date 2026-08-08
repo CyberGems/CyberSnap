@@ -2617,7 +2617,7 @@ public sealed partial class RegionOverlayForm : Form
         var deleteLabel = multi
             ? (isSpanish ? "Eliminar selección" : "Delete selection")
             : (isSpanish ? "Eliminar" : "Delete");
-        var deleteItem = WindowsMenuRenderer.Item(deleteLabel, iconId: "trash", danger: true, iconSize: 24);
+        var deleteItem = WindowsMenuRenderer.Item(deleteLabel, iconId: "trash", danger: true, dangerIconOnly: true, iconSize: 24);
         deleteItem.Click += (s, e) => {
             if (_multiSelectedIndices.Count > 1)
                 DeleteMultiSelectedAnnotations();

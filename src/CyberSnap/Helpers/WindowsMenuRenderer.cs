@@ -93,17 +93,21 @@ public static class WindowsMenuRenderer
         bool active = false,
         bool danger = false,
         Color? customColor = null,
-        int iconSize = 20)
+        int iconSize = 20,
+        bool dangerIconOnly = false)
     {
         text = CyberSnap.Services.LocalizationService.Translate(text);
 
-        var color = customColor ?? (danger
-            ? Color.FromArgb(239, 68, 68)
+        var dangerColor = Color.FromArgb(239, 68, 68);
+        // dangerIconOnly: paint the glyph red for scanning but keep the text in the
+        // normal foreground (requested for the annotation Delete menu item).
+        var color = customColor ?? (danger && !dangerIconOnly
+            ? dangerColor
             : ToDrawingColor(CyberSnap.UI.Theme.TextPrimary));
         var textPrimary = ToDrawingColor(CyberSnap.UI.Theme.TextPrimary);
         var textSecondary = ToDrawingColor(CyberSnap.UI.Theme.TextSecondary);
         var imageColor = customColor ?? (danger
-            ? color
+            ? dangerColor
             : active
                 ? Color.FromArgb(255, textPrimary.R, textPrimary.G, textPrimary.B)
                 : Color.FromArgb(215, textSecondary.R, textSecondary.G, textSecondary.B));
