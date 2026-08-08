@@ -34,6 +34,22 @@ public partial class SettingsWindow
         }
     }
 
+    private void OpenDataFolderBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Open the folder that stores settings, achievements, and cache.
+            // Uses AppStoragePaths so dev and installed builds resolve to the same Roaming path.
+            Directory.CreateDirectory(AppStoragePaths.GalleryDataDirectory); // also ensures root exists
+            System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(AppStoragePaths.SettingsPath)!);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.open-data-folder", ex);
+            SetSettingsImportExportStatus("Could not open the data folder.");
+        }
+    }
+
     private void ImportSettingsButton_Click(object sender, RoutedEventArgs e)
     {
         AppSettings? previous = null;
@@ -635,10 +651,9 @@ public partial class SettingsWindow
             value => _settingsService.Settings.CelebrationsEnabled = value,
             value => CelebrationsCheck.IsChecked = value);
 
-        // Reflect the new on/off state in the milestone rail (dims when off, lights up when on).
-        RefreshMilestoneRail(reveal: true);
-        // Refresh the Achievements tab too, so stats/medals are current if the user visits it next.
-        RefreshAchievements();
+        // Keep the Achievements window in sync if it is already open.
+        if (Application.Current is App app)
+            app.RefreshAchievementsWindowIfOpen();
     }
 
     /// <summary>
