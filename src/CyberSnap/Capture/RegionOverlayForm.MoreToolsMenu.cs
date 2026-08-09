@@ -267,30 +267,34 @@ public sealed partial class RegionOverlayForm
                 if (captureToolsCount <= 1)
                 {
                     hideItem.Enabled = false;
-                    hideItem.ToolTipText = isSpanish ? "Debe haber al menos una herramienta de captura activa." : "Keep at least one capture tool enabled.";
+                    hideItem.ToolTipText = isSpanish ? "Debe haber al menos un botón de captura activo." : "Keep at least one capture button enabled.";
                 }
             }
             menu.Items.Add(hideItem);
             menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Bulk show/hide annotation tools
-        if (_isConfirmingSelection || buttonIndex == -1 || tool == null)
+        // Bulk show/hide annotation tools — confirm-frame gear only (the annotation dock);
+        // the capture bar has no annotation tools to bulk-toggle at this stage of the flow.
+        if (_isConfirmingSelection)
         {
-            var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
-            bool toolsVisible = annotationToolsCount > 0;
-            var showAnnotItem = WindowsMenuRenderer.Item(
-                LocalizationService.Translate("Show annotation tools"),
-                iconId: toolsVisible ? "check" : null,
-                iconSize: 24);
-            showAnnotItem.Click += (s, e) => {
-                if (toolsVisible)
-                    HideAllAnnotationTools();
-                else
-                    ShowAllAnnotationTools();
-                _toolbarContextMenu?.Close();
-            };
-            menu.Items.Add(showAnnotItem);
+            if (ShowAnnotationChrome)
+            {
+                var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+                bool toolsVisible = annotationToolsCount > 0;
+                var showAnnotItem = WindowsMenuRenderer.Item(
+                    LocalizationService.Translate("Show annotation tools"),
+                    iconId: toolsVisible ? "check" : null,
+                    iconSize: 24);
+                showAnnotItem.Click += (s, e) => {
+                    if (toolsVisible)
+                        HideAllAnnotationTools();
+                    else
+                        ShowAllAnnotationTools();
+                    _toolbarContextMenu?.Close();
+                };
+                menu.Items.Add(showAnnotItem);
+            }
         }
 
         // Confirm-mode label toggles live here (the confirm-frame gear), keeping the
@@ -327,10 +331,14 @@ public sealed partial class RegionOverlayForm
 
         if (hiddenTools.Count > 0)
         {
-            // Restore all hidden tools
-            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
+            // Capture bar speaks in "buttons"; the confirm-dock (annotation chrome) keeps
+            // "tools" for the annotation set. Same items, just localized to the bar.
+            bool captionAsButtons = !_isConfirmingSelection;
+            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count, captionAsButtons);
 
-            var headerText = isSpanish ? "Herramientas ocultas:" : "Hidden tools:";
+            var headerText = captionAsButtons
+                ? (isSpanish ? "Botones ocultos:" : "Hidden buttons:")
+                : (isSpanish ? "Herramientas ocultas:" : "Hidden tools:");
             var header = WindowsMenuRenderer.Item(headerText, iconId: null, iconSize: 24);
             header.Enabled = false;
             menu.Items.Add(header);
@@ -505,9 +513,12 @@ public sealed partial class RegionOverlayForm
         RefreshToolbar();
     }
 
-    private void AddRestoreHiddenToolsItem(ContextMenuStrip menu, bool isSpanish, int hiddenCount)
+    private void AddRestoreHiddenToolsItem(ContextMenuStrip menu, bool isSpanish, int hiddenCount, bool captionAsButtons = false)
     {
-        var restoreText = isSpanish ? "Restaurar herramientas ocultas" : "Restore hidden tools";
+        // On the capture bar the hidden entries are buttons; on the confirm dock they're tools.
+        var restoreText = captionAsButtons
+            ? (isSpanish ? "Restaurar botones ocultos" : "Restore hidden buttons")
+            : (isSpanish ? "Restaurar herramientas ocultas" : "Restore hidden tools");
         var restoreItem = WindowsMenuRenderer.Item(restoreText, iconId: "add", iconSize: 24);
         restoreItem.Enabled = hiddenCount > 0;
         restoreItem.Click += (s, e) => {

@@ -185,8 +185,18 @@ public sealed partial class RegionOverlayForm
                     buttonSpacing,
                     0)
                 : GetToolbarPrimarySpan(_mainBarTools.Length + 1, 1, buttonSize, buttonSpacing, 0);
+            // Capture bar: brand text only makes a comeback once the user hides buttons (the bar
+            // shrinks and the extra room reads as intentional). Until then — or in vertical dock —
+            // it's logo-only. The confirm/annotation dock keeps its previous rule.
+            bool anyHiddenCaptureTools = false;
+            if (!IsVerticalDock)
+            {
+                var s = Services.SettingsService.LoadStatic();
+                var enabled = s?.EnabledTools ?? ToolDef.DefaultEnabledIds();
+                anyHiddenCaptureTools = ToolDef.AllTools.Any(t => t.Group == 0 && !enabled.Contains(t.Id));
+            }
             bool canShowText = ShowAnnotationChrome
-                || _mainBarTools.Length >= 6;
+                || (!IsVerticalDock && _mainBarTools.Length >= 1 && anyHiddenCaptureTools);
 
             // Prefer the first laid-out tool (capture bar or annotation-only confirm dock).
             // Empty capture slots in confirm mode must not be used — they sit at (0,0) and
