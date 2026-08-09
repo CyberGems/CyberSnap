@@ -696,7 +696,12 @@ public partial class App
 
                 overlay.RegionSelected += sel =>
                 {
-                    if (overlay.ActiveMode == CaptureMode.Rectangle)
+                    // Persist for any confirmed region-based capture, not just plain Rectangle:
+                    // with permanent confirm the active tool may have been switched to an
+                    // annotation (Arrow/Rect/…) before committing, so the old mode filter was
+                    // skipping valid region selections and leaving a stale larger rect.
+                    if (overlay.ActiveMode is CaptureMode.Rectangle or CaptureMode.Center
+                        || Models.ToolDef.IsAnnotationTool(overlay.ActiveMode))
                         LastCaptureArea.PersistFromOverlaySelection(_settingsService!.Settings, _settingsService, sel, captureBounds);
 
                     var commitAction = overlay.PendingCommitAction;
