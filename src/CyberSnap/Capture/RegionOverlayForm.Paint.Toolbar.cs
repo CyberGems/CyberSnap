@@ -830,7 +830,7 @@ public sealed partial class RegionOverlayForm
         int buttonSize = UiChrome.ScaledToolbarButtonSize;
         int containerPadding = UiChrome.ScaleInt(4);
         int containerSize = buttonSize + containerPadding * 2;
-        int gap = UiChrome.ScaledToolbarInnerPadding;
+        int gap = UiChrome.ScaleInt(AltCapturePopupGapPx); // snug — almost flush with the host button
         var dock = ActiveDockSide;
 
         int baseX = primaryBtn.X + (primaryBtn.Width - containerSize) / 2;
@@ -864,7 +864,17 @@ public sealed partial class RegionOverlayForm
                 y = primaryBtn.Bottom + gap + step;
 
             var toolId = altIds[i];
-            var iconId = toolId switch { "crop" => "rect", "rect" => "captureRect", var id => id };
+ // Resolve to a real Fluent icon id; non-ToolDef actions (repeat/fullscreen/active window)
+            // must map to their glyph ids or DrawIcon renders nothing.
+            var iconId = toolId switch
+            {
+                "crop" => "rect",
+                "rect" => "captureRect",
+                "_repeatLastArea" => "captureBack",
+                "_fullscreen" => "fullscreen",
+                "_activeWindow" => "activeWindow",
+                var id => id,
+            };
             _altPopupSlots.Add((new Rectangle(x, y, containerSize, containerSize), toolId, iconId));
         }
 
@@ -884,7 +894,16 @@ public sealed partial class RegionOverlayForm
         {
             var settings = Services.SettingsService.LoadStatic();
             var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
+
+            // Capture-mode flyout (the screenshot asked: all capture modes live on the Area
+            // button; only its siblings Area ↔ From Center stay merged-and-default-aware).
+            // Order: other area mode first (Centro), then the rest of capture modes.
             alts.Add(defaultMode == CaptureMode.Center ? "rect" : "center");
+            alts.Add("scroll");      // already on the bar; moving into the Area flyout per request
+            alts.Add("fullscreen");
+            alts.Add("activeWindow");
+            alts.Add("_repeatLastArea");
+
             return alts;
         }
 

@@ -19,7 +19,8 @@ public static class ToolIcons
         ["_scrollCapture"] = "scrollCapture",
         ["scroll"] = "scrollCapture",
         ["rect"] = "captureRect",
-        ["_repeatLastArea"] = "captureRect",
+        // Repeat last area uses its own "return-to-area" bracket glyph, not the area-select crop.
+        ["_repeatLastArea"] = "captureBack",
         ["_record"] = "record",
 
         // Editor toolbar tools (Settings → Hotkeys → Annotations Editor)
