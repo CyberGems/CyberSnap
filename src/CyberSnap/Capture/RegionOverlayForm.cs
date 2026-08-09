@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
@@ -137,6 +138,8 @@ public sealed partial class RegionOverlayForm : Form
     /// from hover over the trigger. Long enough that crossing the trigger by accident (e.g.
     /// while dragging a shape over a nearby edge) doesn't pop the strip under the cursor.</summary>
     private const int ExpandHoverDelayMs = 220;
+    /// <summary>How snug the alt-capture flyout sits to its owning button (scaled px).</summary>
+    private const int AltCapturePopupGapPx = 2;
     /// <summary>Confirm gear (⚙) is hover-priority: open fast on hover; keep it snappy.</summary>
     private const int ConfirmGearHoverDelayMs = 55;
     /// <summary>Last drawing tool shown in the sticky trigger slot (never select/eraser).</summary>
@@ -594,6 +597,8 @@ public sealed partial class RegionOverlayForm : Form
     public event Action<Rectangle>? ScrollRegionSelected;
     public event Action? SelectionCancelled;
     public event Action<Models.RecordingFormat>? RecordingRequested;
+    /// <summary>Raised when the user picks "Repeat last area" from the Area capture flyout.</summary>
+    public event Action? RepeatLastAreaRequested;
 
     /// <summary>Active capture tool mode on the overlay (may differ from the launch mode).</summary>
     public CaptureMode ActiveMode => _mode;
@@ -919,7 +924,15 @@ public sealed partial class RegionOverlayForm : Form
         {
             int logoSize = UiChrome.ScaleInt(10);
             int textWidth = UiChrome.ScaleInt(60);
-            bool canShowText = _mainBarTools.Length >= 6;
+            // Brand text only shows after the user hides capture buttons; logo-only until then.
+            // Reserving its width anyway leaves a wide empty strip beside the logo. This branch
+            // is the horizontal dock (vertical is handled above), but keep the same guard as the
+            // paint pass (capture bar with ≥1 tool) so layout and paint never disagree on the
+            // reserved width — a mismatch shifts the whole bar.
+            var s = Services.SettingsService.LoadStatic();
+            var enabled = s?.EnabledTools ?? ToolDef.DefaultEnabledIds();
+            bool anyHiddenCaptureTools = ToolDef.AllTools.Any(t => t.Group == 0 && !enabled.Contains(t.Id));
+            bool canShowText = !ShowAnnotationChrome && _mainBarTools.Length >= 1 && anyHiddenCaptureTools;
             brandWidth = canShowText
                 ? logoSize + textWidth + UiChrome.ScaleInt(24)
                 : logoSize + UiChrome.ScaleInt(16);
@@ -2042,6 +2055,14 @@ public sealed partial class RegionOverlayForm : Form
 
     private void SelectAltPopupTool(string toolId)
     {
+        // Special actions that aren't toolbar ToolDef entries (still valid alt-flyout picks).
+        if (string.Equals(toolId, "_repeatLastArea", StringComparison.OrdinalIgnoreCase))
+        {
+            CloseAltToolPopup();
+            RepeatLastCapture();
+            return;
+        }
+
         var targetTool = ToolDef.AllTools.FirstOrDefault(t =>
             string.Equals(t.Id, toolId, StringComparison.OrdinalIgnoreCase));
         if (targetTool is null)
@@ -2072,6 +2093,24 @@ public sealed partial class RegionOverlayForm : Form
         if (!_altCaptureButtonRect.IsEmpty && _altCaptureButtonRect.Contains(location))
             return true;
         return GetAltPopupSlotAt(location) >= 0;
+    }
+
+    /// <summary>
+    /// "Repeat last area" doesn't select a tool — it asks the app to re-run the last saved
+    /// area immediately. Close the overlay (without counting as a cancel) and let App do
+    /// the capture + result handling via <see cref="RepeatLastAreaRequested"/>.
+    /// </summary>
+    private void RepeatLastCapture()
+    {
+        try
+        {
+            RepeatLastAreaRequested?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            Services.AppDiagnostics.LogError("overlay.repeat-last-area", ex);
+        }
+        Close();
     }
 
     /// <summary>

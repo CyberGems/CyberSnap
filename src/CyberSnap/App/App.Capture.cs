@@ -759,6 +759,13 @@ public partial class App
                     HandleOcrResult(cropped);
                 };
 
+                overlay.RepeatLastAreaRequested += () =>
+                {
+                    // Overlay already closed itself; end its message loop, then capture on the UI thread.
+                    System.Windows.Forms.Application.ExitThread();
+                    Dispatcher.BeginInvoke(CaptureRepeatLastAreaNow);
+                };
+
                 overlay.ScrollRegionSelected += sel =>
                 {
                     overlay.Hide();

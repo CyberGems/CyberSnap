@@ -72,6 +72,19 @@ public sealed partial class RegionOverlayForm
                 _tooltipVisible = true;
                 _tooltipShowTime = DateTime.UtcNow;
             }
+            else if (BuildAltActionTooltip(altToolId, settings) is { } altLabel)
+            {
+                // Non-ToolDef capture actions (fullscreen / active window / repeat last area).
+                var slot = _altPopupSlots[_hoveredAltSlotIndex].Container;
+                var altAnchorScreen = new Rectangle(
+                    _virtualBounds.X + slot.X,
+                    _virtualBounds.Y + slot.Y,
+                    slot.Width,
+                    slot.Height);
+                _toolbarToolTip.ShowNear(this, altLabel, altAnchorScreen, placement);
+                _tooltipVisible = true;
+                _tooltipShowTime = DateTime.UtcNow;
+            }
             return;
         }
 
@@ -275,6 +288,29 @@ public sealed partial class RegionOverlayForm
             text += "\n" + LocalizationService.Translate("Right-click to hide");
 
         return text;
+    }
+
+    /// <summary>
+    /// Tooltip for Area-flyout actions that aren't <see cref="ToolDef"/> rows
+    /// (fullscreen, active window, repeat last area). Returns null when unknown.
+    /// All labels are translated via <see cref="LocalizationService"/>.
+    /// </summary>
+    private static string? BuildAltActionTooltip(string toolId, AppSettings? settings)
+    {
+        string labelKey;
+        switch (toolId)
+        {
+            case "_fullscreen": labelKey = "Fullscreen capture"; break;
+            case "_activeWindow": labelKey = "Active window"; break;
+            case "_repeatLastArea": labelKey = "Repeat last area"; break;
+            default: return null; // not a known non-ToolDef action
+        }
+
+        var title = LocalizationService.Translate(labelKey);
+        var hotkey = settings?.GetToolHotkey(toolId) ?? (0u, 0u);
+        if (hotkey.key != 0)
+            title += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
+        return title;
     }
 
     /// <summary>One-line “how to use” hint for tooltips (reuses capture-banner phrasing).</summary>
