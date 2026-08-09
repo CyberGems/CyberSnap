@@ -759,11 +759,26 @@ public partial class App
                     HandleOcrResult(cropped);
                 };
 
-                overlay.RepeatLastAreaRequested += () =>
+                overlay.ImmediateCaptureRequested += actionId =>
                 {
-                    // Overlay already closed itself; end its message loop, then capture on the UI thread.
+                    // Overlay already closed itself; end its message loop, then run the action on
+                    // the UI thread. These capture modes are self-contained (no region select).
                     System.Windows.Forms.Application.ExitThread();
-                    Dispatcher.BeginInvoke(CaptureRepeatLastAreaNow);
+                    Dispatcher.BeginInvoke(() =>
+                    {
+                        switch (actionId)
+                        {
+                            case "_fullscreen":
+                                CaptureFullscreenNow();
+                                break;
+                            case "_activeWindow":
+                                CaptureActiveWindowNow();
+                                break;
+                            case "_repeatLastArea":
+                                CaptureRepeatLastAreaNow();
+                                break;
+                        }
+                    });
                 };
 
                 overlay.ScrollRegionSelected += sel =>

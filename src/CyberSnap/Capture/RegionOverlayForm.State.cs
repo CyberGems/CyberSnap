@@ -81,12 +81,7 @@ public sealed partial class RegionOverlayForm
             _visibleTools = ToolDef.AllTools.Where(t => enabledIds.Contains(t.Id)).ToArray();
         }
 
-        _mainBarTools = _visibleTools.Where(t =>
-            !flyoutIds.Contains(t.Id) &&
-            // Scroll Capture moved into the Area button's hold-to-switch flyout, so it no
-            // longer takes a dedicated slot on the capture bar. Still available via the "⋮"
-            // menu and its hotkey.
-            !string.Equals(t.Id, "scroll", StringComparison.OrdinalIgnoreCase)).ToArray();
+        _mainBarTools = _visibleTools.Where(t => !flyoutIds.Contains(t.Id)).ToArray();
         _flyoutTools = _visibleTools.Where(t => flyoutIds.Contains(t.Id)).ToArray();
         RefreshToolbar();
     }
