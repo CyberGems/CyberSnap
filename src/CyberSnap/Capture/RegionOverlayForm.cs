@@ -138,7 +138,7 @@ public sealed partial class RegionOverlayForm : Form
     /// while dragging a shape over a nearby edge) doesn't pop the strip under the cursor.</summary>
     private const int ExpandHoverDelayMs = 220;
     /// <summary>Confirm gear (⚙) is hover-priority: open fast on hover; keep it snappy.</summary>
-    private const int ConfirmGearHoverDelayMs = 90;
+    private const int ConfirmGearHoverDelayMs = 55;
     /// <summary>Last drawing tool shown in the sticky trigger slot (never select/eraser).</summary>
     private string? _annotationDrawingToolId;
     /// <summary>Growing clip window for retractable tools above the sticky cluster.</summary>
