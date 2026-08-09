@@ -232,6 +232,9 @@ public sealed partial class RegionOverlayForm : Form
     private string[] _toolbarToolIds = Array.Empty<string>();
     private CaptureMode?[] _toolbarModes = Array.Empty<CaptureMode?>();
     private string? _activeToolId;
+    /// <summary>True while the horizontal dock actually draws the "CyberSnap" wordmark next to the
+    /// logo; drives the branding click target so it never covers the first capture button.</summary>
+    private bool _brandTextVisible;
     private int _hoveredButton = -1;
     private int _tooltipButton = -1;
     private WindowsToolTip? _toolbarToolTip;
@@ -938,9 +941,9 @@ public sealed partial class RegionOverlayForm : Form
             bool canShowText = !ShowAnnotationChrome && _mainBarTools.Length >= 1 && anyHiddenCaptureTools;
             brandWidth = canShowText
                 ? logoSize + textWidth + UiChrome.ScaleInt(24)
-                // Collapsed (logo-only): leave real breathing room so the glyph doesn't sit
-                // flush against the first capture button.
-                : logoSize + UiChrome.ScaleInt(26);
+                // Collapsed (logo-only): modest strip — the glyph is anchored to the grip on its
+                // left, so only the gap to the first capture button needs the breathing room.
+                : logoSize + UiChrome.ScaleInt(20);
             w = tier1PrimarySpan + brandWidth + gripSize + gripToContentGap;
             h = pad * 2 + buttonSize;
         }

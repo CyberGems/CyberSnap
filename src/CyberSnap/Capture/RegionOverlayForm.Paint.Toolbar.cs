@@ -157,16 +157,17 @@ public sealed partial class RegionOverlayForm
                 ly = _brandRect.Y + (_brandRect.Height - logoSz) / 2f;
             }
             _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
-            
+            _brandTextVisible = false; // vertical dock is icon-only
+
             if (_brandBitmap != null)
             {
                 using (var ia = new ImageAttributes())
                 {
                     ia.SetColorMatrix(cm);
-                    g.DrawImage(_brandBitmap, 
-                        new Rectangle((int)lx, (int)ly, logoSz, logoSz), 
-                        0, 0, _brandBitmap.Width, _brandBitmap.Height, 
-                        GraphicsUnit.Pixel, 
+                    g.DrawImage(_brandBitmap,
+                        new Rectangle((int)lx, (int)ly, logoSz, logoSz),
+                        0, 0, _brandBitmap.Width, _brandBitmap.Height,
+                        GraphicsUnit.Pixel,
                         ia);
                 }
             }
@@ -212,6 +213,7 @@ public sealed partial class RegionOverlayForm
             float tempTextW = firstToolX - tempTextX - UiChrome.ScaleInt(6);
             
             bool drawText = canShowText && (tempTextW >= UiChrome.ScaleInt(60));
+            _brandTextVisible = drawText;
 
             float lx;
             float ly;
@@ -225,13 +227,11 @@ public sealed partial class RegionOverlayForm
             else
             {
                 logoSz = UiChrome.ScaleInt(14); // Enlarged and centered when text is hidden
-                // Keep the logo snug in the brand strip, just left of the first tool.
+                // Anchor the logo to the left of its strip (just right of the grip), not centred
+                // over the whole reserved width — centring pulls it away from the grip and makes
+                // it read floating/misaligned. Keep a small pad so it doesn't touch the grip.
                 float brandPad = UiChrome.ScaleFloat(6f);
-                lx = _brandRect.X + Math.Max(brandPad, (availableBrandWidth - logoSz) / 2f);
-                // Never let the logo drift more than a few px away from the first tool.
-                float maxLx = firstToolX - logoSz - brandPad;
-                if (maxLx >= _brandRect.X + brandPad)
-                    lx = Math.Min(lx, maxLx);
+                lx = _brandRect.X + brandPad;
                 ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
             }
             
@@ -897,11 +897,13 @@ public sealed partial class RegionOverlayForm
 
             // Capture-mode flyout (the screenshot asked: all capture modes live on the Area
             // button; only its siblings Area ↔ From Center stay merged-and-default-aware).
-            // Order: other area mode first (Centro), then the rest of capture modes.
+            // Order: other area mode first (Centro), then the rest of capture modes. Use the
+            // underscore-prefixed ids for the self-contained actions so the immediate-capture
+            // dispatch + tooltip lookup (which key off "_fullscreen"/"_activeWindow") match.
             alts.Add(defaultMode == CaptureMode.Center ? "rect" : "center");
             alts.Add("scroll");      // already on the bar; moving into the Area flyout per request
-            alts.Add("fullscreen");
-            alts.Add("activeWindow");
+            alts.Add("_fullscreen");
+            alts.Add("_activeWindow");
             alts.Add("_repeatLastArea");
 
             return alts;

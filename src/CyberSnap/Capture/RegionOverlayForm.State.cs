@@ -275,12 +275,18 @@ public sealed partial class RegionOverlayForm
             return !_brandRect.IsEmpty && _brandRect.Contains(location);
         }
 
-        // Horizontal: logo icon + "CyberSnap" text label (~68px wide) + 3px margin.
-        int brandWidth = Helpers.UiChrome.ScaleInt(68);
+        // Horizontal: logo icon + "CyberSnap" text label when it is actually drawn.
+        // The strip must never extend past the logo's own footprint in collapsed (logo-only)
+        // mode — a hardcoded 68px bled over the first capture button and hijacked its
+        // click/hold into the quick-start guide. Fall back to the real brand strip bounds.
+        int textWidth = _brandTextVisible ? Helpers.UiChrome.ScaleInt(68) : 0;
+        int contentWidth = Math.Max(0, _logoRect.Width) + textWidth;
+        if (contentWidth <= 0 && !_brandRect.IsEmpty)
+            contentWidth = _brandRect.Width;
         var contentRect = new Rectangle(
             _logoRect.X - 3,
             _logoRect.Y - 3,
-            brandWidth,
+            contentWidth,
             _logoRect.Height + 6);
 
         return contentRect.Contains(location);
