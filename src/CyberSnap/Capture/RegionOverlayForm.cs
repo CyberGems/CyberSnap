@@ -597,8 +597,11 @@ public sealed partial class RegionOverlayForm : Form
     public event Action<Rectangle>? ScrollRegionSelected;
     public event Action? SelectionCancelled;
     public event Action<Models.RecordingFormat>? RecordingRequested;
-    /// <summary>Raised when the user picks "Repeat last area" from the Area capture flyout.</summary>
-    public event Action? RepeatLastAreaRequested;
+    /// <summary>
+    /// Raised when the user picks a self-contained capture action from the Area flyout that runs
+    /// right away without a region selection ("_fullscreen" / "_activeWindow" / "_repeatLastArea").
+    /// </summary>
+    public event Action<string>? ImmediateCaptureRequested;
 
     /// <summary>Active capture tool mode on the overlay (may differ from the launch mode).</summary>
     public CaptureMode ActiveMode => _mode;
@@ -935,7 +938,9 @@ public sealed partial class RegionOverlayForm : Form
             bool canShowText = !ShowAnnotationChrome && _mainBarTools.Length >= 1 && anyHiddenCaptureTools;
             brandWidth = canShowText
                 ? logoSize + textWidth + UiChrome.ScaleInt(24)
-                : logoSize + UiChrome.ScaleInt(16);
+                // Collapsed (logo-only): leave real breathing room so the glyph doesn't sit
+                // flush against the first capture button.
+                : logoSize + UiChrome.ScaleInt(26);
             w = tier1PrimarySpan + brandWidth + gripSize + gripToContentGap;
             h = pad * 2 + buttonSize;
         }
@@ -1886,7 +1891,12 @@ public sealed partial class RegionOverlayForm : Form
     private void BuildToolbarToolSplit(Rectangle screenBounds, int buttonSize, int buttonSpacing, int pad)
     {
         var flyoutIds = ToolDef.FlyoutToolIds();
-        var mainBarTools = _visibleTools.Where(t => !flyoutIds.Contains(t.Id)).ToList();
+        // The build-time single source of truth for the capture bar. Scroll Capture was moved
+        // into the Area button's hold-to-switch flyout, so exclude it here — otherwise it gets
+        // re-added as the button right after the merged Area/tool and stealing hover/selection.
+        var mainBarTools = _visibleTools.Where(t =>
+            !flyoutIds.Contains(t.Id) &&
+            !string.Equals(t.Id, "scroll", StringComparison.OrdinalIgnoreCase)).ToList();
         var flyoutTools = _visibleTools.Where(t => flyoutIds.Contains(t.Id)).ToList();
 
         var rectTool = mainBarTools.FirstOrDefault(t => t.Id == "rect");
@@ -2055,11 +2065,14 @@ public sealed partial class RegionOverlayForm : Form
 
     private void SelectAltPopupTool(string toolId)
     {
-        // Special actions that aren't toolbar ToolDef entries (still valid alt-flyout picks).
-        if (string.Equals(toolId, "_repeatLastArea", StringComparison.OrdinalIgnoreCase))
+        // Self-contained capture actions that run right away (no region selection): they'd
+        // resolve to no ToolDef and silently do nothing, so route them to the app instead.
+        if (IsImmediateCaptureAction(toolId))
         {
             CloseAltToolPopup();
-            RepeatLastCapture();
+            Close();
+            try { ImmediateCaptureRequested?.Invoke(toolId); }
+            catch (Exception ex) { Services.AppDiagnostics.LogError("overlay.immediate-capture", ex); }
             return;
         }
 
@@ -2086,6 +2099,10 @@ public sealed partial class RegionOverlayForm : Form
         CloseAltToolPopup();
     }
 
+    /// <summary>Flyout ids that trigger an immediate full capture instead of selecting a tool.</summary>
+    private static bool IsImmediateCaptureAction(string toolId) =>
+        toolId is "_fullscreen" or "_activeWindow" or "_repeatLastArea";
+
     private bool IsPointInAltToolPopup(Point location)
     {
         if (!_altCapturePopupOpen)
@@ -2093,24 +2110,6 @@ public sealed partial class RegionOverlayForm : Form
         if (!_altCaptureButtonRect.IsEmpty && _altCaptureButtonRect.Contains(location))
             return true;
         return GetAltPopupSlotAt(location) >= 0;
-    }
-
-    /// <summary>
-    /// "Repeat last area" doesn't select a tool — it asks the app to re-run the last saved
-    /// area immediately. Close the overlay (without counting as a cancel) and let App do
-    /// the capture + result handling via <see cref="RepeatLastAreaRequested"/>.
-    /// </summary>
-    private void RepeatLastCapture()
-    {
-        try
-        {
-            RepeatLastAreaRequested?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            Services.AppDiagnostics.LogError("overlay.repeat-last-area", ex);
-        }
-        Close();
     }
 
     /// <summary>
