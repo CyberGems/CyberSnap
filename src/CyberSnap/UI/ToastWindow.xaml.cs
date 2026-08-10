@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -50,6 +51,7 @@ public partial class ToastWindow : Window
     private double _activeDurationSeconds = 2.5;
     private string? _savedFilePath;
     private Bitmap? _previewBitmap;
+    private IReadOnlyList<ToastStatusLine>? _statusLines;
     private bool _isDragging;
     private System.Windows.Point _mouseDownPos;
     private System.Windows.Media.Brush? _dragBorderBrush;
@@ -334,9 +336,23 @@ public partial class ToastWindow : Window
         TitleText.TextAlignment = TextAlignment.Center;
         BodyText.TextAlignment = TextAlignment.Center;
 
+        // Status-lines mode: one row per completed action (✓/✗). Replaces the dotted Body
+        // string so each step reads on its own line with an optional right-side detail.
+        _statusLines = spec.StatusLines;
+        PopulateStatusLines(_statusLines);
+        bool hasStatusRows = _statusLines is { Count: > 0 };
+        if (hasStatusRows)
+        {
+            // Toast is wider/taller for the vertical list; body is replaced by the rows.
+            Root.MaxWidth = 420;
+            Root.MinWidth = 260;
+            BodyText.Visibility = Visibility.Collapsed;
+        }
 
         TitleText.Visibility = string.IsNullOrWhiteSpace(spec.Title) ? Visibility.Collapsed : Visibility.Visible;
-        BodyText.Visibility = string.IsNullOrWhiteSpace(spec.Body) ? Visibility.Collapsed : Visibility.Visible;
+        BodyText.Visibility = hasStatusRows || string.IsNullOrWhiteSpace(spec.Body)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         TextContentPanel.Visibility = (TitleText.Visibility == Visibility.Collapsed && BodyText.Visibility == Visibility.Collapsed)
             ? Visibility.Collapsed
             : Visibility.Visible;
@@ -431,6 +447,138 @@ public partial class ToastWindow : Window
 
         HookOverlayButtons();
         RefreshOverlayButtonLayout();
+    }
+
+    // ── Status-lines rows (enriched after-capture toast) ─────────────────────────────
+    private void PopulateStatusLines(IReadOnlyList<ToastStatusLine>? lines)
+    {
+        StatusLinesPanel.Children.Clear();
+        if (lines is null || lines.Count == 0)
+        {
+            StatusLinesPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        StatusLinesPanel.Visibility = Visibility.Visible;
+        foreach (var line in lines)
+            StatusLinesPanel.Children.Add(BuildStatusLineRow(line));
+    }
+
+    private FrameworkElement BuildStatusLineRow(ToastStatusLine line)
+    {
+        var iconColor = line.IsError
+            ? System.Drawing.Color.FromArgb(255, 239, 83, 80)   // soft red
+            : line.IconId == "check"
+                ? System.Drawing.Color.FromArgb(255, 34, 197, 94)  // success green
+                : System.Drawing.Color.FromArgb(220, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+
+        var icon = new System.Windows.Controls.Image
+        {
+            Width = 16,
+            Height = 16,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+            Source = FluentIcons.RenderWpf(line.IconId, iconColor, 16)
+        };
+        RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
+
+        var label = new TextBlock
+        {
+            Text = line.Label,
+            FontSize = 11.5,
+            FontWeight = FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = line.IsError
+                ? new SolidColorBrush(Color.FromRgb(239, 83, 80))
+                : Theme.Brush(Theme.TextPrimary),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        AutomationProperties.SetName(label, line.Label + (string.IsNullOrEmpty(line.Detail) ? "" : $" {line.Detail}"));
+
+        var detailText = string.IsNullOrWhiteSpace(line.Detail) ? null : new TextBlock
+        {
+            Text = line.Detail,
+            FontSize = 10.5,
+            Opacity = 0.72,
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = Theme.Brush(Theme.TextSecondary),
+            Margin = new Thickness(8, 0, 0, 0)
+        };
+
+        var grid = new Grid { Margin = new Thickness(0, 1, 0, 1) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        if (!string.IsNullOrEmpty(line.CopyableText))
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        Grid.SetColumn(icon, 0);
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(icon);
+        grid.Children.Add(label);
+
+        if (detailText != null)
+        {
+            Grid.SetColumn(detailText, 2);
+            grid.Children.Add(detailText);
+        }
+
+        if (!string.IsNullOrEmpty(line.CopyableText))
+        {
+            var copyBtn = BuildInlineCopyButton(line.CopyableText, line.CopyableTooltip);
+            Grid.SetColumn(copyBtn, 3);
+            grid.Children.Add(copyBtn);
+        }
+
+        return grid;
+    }
+
+    private FrameworkElement BuildInlineCopyButton(string textToCopy, string? tooltip)
+    {
+        var icon = new System.Windows.Controls.Image { Width = 14, Height = 14, Stretch = Stretch.Uniform };
+        RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
+        icon.Source = FluentIcons.RenderWpf("copy", IconWhite, 20);
+
+        var btn = new Border
+        {
+            Width = 22,
+            Height = 22,
+            CornerRadius = new CornerRadius(6),
+            Background = System.Windows.Media.Brushes.Transparent,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            ToolTip = tooltip,
+            Child = icon,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(6, 0, 0, 0)
+        };
+        AutomationProperties.SetName(btn, tooltip ?? LocalizationService.Translate("Copy"));
+
+        btn.MouseEnter += (_, _) =>
+        {
+            btn.Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+        };
+        btn.MouseLeave += (_, _) =>
+        {
+            btn.Background = System.Windows.Media.Brushes.Transparent;
+        };
+        btn.MouseLeftButtonDown += async (_, _) =>
+        {
+            if (InteractiveActionsBlocked) return;
+            try
+            {
+                ClipboardService.CopyTextToClipboard(textToCopy);
+                icon.Source = FluentIcons.RenderWpf("check", System.Drawing.Color.FromArgb(255, 34, 197, 94), 20);
+                await Task.Delay(1200);
+                if (IsLoaded)
+                    icon.Source = FluentIcons.RenderWpf("copy", IconWhite, 20);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("toast.copy-path", ex.Message, ex);
+            }
+        };
+
+        return btn;
     }
 
     private void ConfigureImagePreview(ToastSpec spec)

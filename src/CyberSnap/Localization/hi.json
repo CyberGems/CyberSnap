@@ -174,7 +174,8 @@
   "Translating...": "à¤…à¤¨à¥à¤µà¤¾à¤¦ à¤¹à¥‹ à¤°à¤¹à¤¾ à¤¹à¥ˆ...",
   "Copy result": "à¤ªà¤°à¤¿à¤£à¤¾à¤® à¤•à¥‰à¤ªà¥€ à¤•à¤°à¥‡à¤‚",
   "Copy text": "à¤ªà¤¾à¤  à¤•à¥‰à¤ªà¥€ à¤•à¤°à¥‡à¤‚",
-  "Local model": "à¤¸à¥à¤¥à¤¾à¤¨à¥€à¤¯ à¤®à¥‰à¤¡à¤²",  "Google Translate": "à¤—à¥‚à¤—à¤² à¤…à¤¨à¥à¤µà¤¾à¤¦",
+  "Local model": "à¤¸à¥à¤¥à¤¾à¤¨à¥€à¤¯ à¤®à¥‰à¤¡à¤²",
+  "Google Translate": "à¤—à¥‚à¤—à¤² à¤…à¤¨à¥à¤µà¤¾à¤¦",
   "Warming local model...": "à¤µà¤¾à¤°à¥à¤®à¤¿à¤‚à¤— à¤¸à¥à¤¥à¤¾à¤¨à¥€à¤¯ à¤®à¥‰à¤¡à¤²...",
   "Starting translation...": "à¤…à¤¨à¥à¤µà¤¾à¤¦ à¤ªà¥à¤°à¤¾à¤°à¤‚à¤­ à¤¹à¥‹ à¤°à¤¹à¤¾ à¤¹à¥ˆ...",
   "Detecting language...": "à¤­à¤¾à¤·à¤¾ à¤•à¤¾ à¤ªà¤¤à¤¾ à¤²à¤—à¤¾à¤¯à¤¾ à¤œà¤¾ à¤°à¤¹à¤¾ à¤¹à¥ˆ...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "पथ कॉपी करें",
+  "Capture not saved": "कैप्चर सहेजा नहीं गया",
+  "Not run": "नहीं चला"
 }

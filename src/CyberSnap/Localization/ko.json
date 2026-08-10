@@ -174,7 +174,8 @@
   "Translating...": "ë²ˆì—­ ì¤‘...",
   "Copy result": "ê²°ê³¼ ë³µì‚¬",
   "Copy text": "í…ìŠ¤íŠ¸ ë³µì‚¬",
-  "Local model": "ì§€ì—­ëª¨ë¸",  "Google Translate": "êµ¬ê¸€ ë²ˆì—­",
+  "Local model": "ì§€ì—­ëª¨ë¸",
+  "Google Translate": "êµ¬ê¸€ ë²ˆì—­",
   "Warming local model...": "ì˜¨ë‚œí™” ì§€ì—­ ëª¨ë¸â€¦",
   "Starting translation...": "ë²ˆì—­ ì‹œìž‘ ì¤‘...",
   "Detecting language...": "ì–¸ì–´ ê°ì§€ ì¤‘...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "경로 복사",
+  "Capture not saved": "캡처가 저장되지 않았습니다",
+  "Not run": "실행되지 않음"
 }

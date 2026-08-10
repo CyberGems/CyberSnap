@@ -174,7 +174,8 @@
   "Translating...": "Käännetään...",
   "Copy result": "Kopioi tulos",
   "Copy text": "Kopioi teksti",
-  "Local model": "Paikallinen malli",  "Google Translate": "Google-kääntäjä",
+  "Local model": "Paikallinen malli",
+  "Google Translate": "Google-kääntäjä",
   "Warming local model...": "Lämpenevä paikallinen malli...",
   "Starting translation...": "Aloitetaan käännöstä...",
   "Detecting language...": "Havaitaan kieltä...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Kopioi polku",
+  "Capture not saved": "Kaappausta ei tallennettu",
+  "Not run": "Ei suoritettu"
 }

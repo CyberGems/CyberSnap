@@ -146,6 +146,11 @@ namespace CyberSnap.UI
             Close();
         }
 
+        /// <summary>True when the caller already wrote this capture to the clipboard
+        /// (eager copy fired before the preview opened). Lets the owner skip a
+        /// duplicate copy when the preview commits.</summary>
+        public bool ClipboardAlreadyCopied { get; }
+
         public bool IsAutoCloseEnabled =>
             _settingsService.Settings.CapturePreviewTimeoutSeconds > 0;
 
@@ -164,11 +169,13 @@ namespace CyberSnap.UI
             Bitmap bitmap,
             SettingsService settingsService,
             System.Drawing.Point? targetMonitorPoint = null,
-            string? savedFilePath = null)
+            string? savedFilePath = null,
+            bool clipboardAlreadyCopied = false)
         {
             _capturedBitmap = bitmap;
             _settingsService = settingsService;
             _savedFilePath = string.IsNullOrWhiteSpace(savedFilePath) ? null : savedFilePath;
+            ClipboardAlreadyCopied = clipboardAlreadyCopied;
             // Own the capture-monitor anchor immediately. The static hint is easy to consume
             // (toast / GetCurrentWorkArea) before our deferred center runs — that sent the
             // dialog to the primary monitor when capturing on a secondary.
@@ -250,6 +257,24 @@ namespace CyberSnap.UI
             SoundService.PlayPreviewSound();
         }
 
+        // Suffix "(<shortcut>)" appended to a translated tooltip body so hotkeys are
+        // discoverable on hover without taking up label space.
+        private static string WithHotkeyHint(string text, string shortcut)
+            => string.IsNullOrWhiteSpace(text) ? $"({shortcut})" : $"{text} ({shortcut})";
+
+        /// <summary>
+        /// Anchor a control's ToolTip above the control itself instead of WPF's default
+        /// cursor-relative placement (which lands under the pointer, can overflow the
+        /// window on long texts, and feels random on stacked activity buttons).
+        /// PlacementTarget = the element, so the tip anchors to the control, not the mouse.
+        /// </summary>
+        private static void ApplyTooltipPlacement(FrameworkElement element)
+        {
+            ToolTipService.SetPlacement(element, System.Windows.Controls.Primitives.PlacementMode.Top);
+            ToolTipService.SetPlacementTarget(element, element);
+            ToolTipService.SetVerticalOffset(element, -6);
+        }
+
         private void ApplyLocalizedLabels()
         {
             var lang = _settingsService.Settings.InterfaceLanguage;
@@ -285,13 +310,25 @@ namespace CyberSnap.UI
             CopyBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Copy to clipboard"), "Ctrl+C");
             EditBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in the annotation editor"), "Ctrl+E");
 
+            // Tooltip placement: anchor each tip above its control. UpdateContinueOrExitButton
+            // rewrites CancelBtn.ToolTip on state changes — SetPlacement survives that because
+            // it's an attached property on the button, not tied to the tooltip content.
+            ApplyTooltipPlacement(OptionalActionsHeaderLabel);
+            ApplyTooltipPlacement(EditAfterCaptureSettingsBtn);
+            ApplyTooltipPlacement(SaveBtn);
+            ApplyTooltipPlacement(CopyBtn);
+            ApplyTooltipPlacement(EditBtn);
+            ApplyTooltipPlacement(PrintBtn);
+            ApplyTooltipPlacement(MoreBtn);
+            ApplyTooltipPlacement(DeleteBtn);
+            ApplyTooltipPlacement(CancelBtn);
+            ApplyTooltipPlacement(ZoomOutBtn);
+            ApplyTooltipPlacement(ZoomInBtn);
+            ApplyTooltipPlacement(ZoomFitBtn);
+            ApplyTooltipPlacement(ZoomLevelText);
+
             UpdateContinueOrExitButton();
         }
-
-        // Suffix "(<shortcut>)" appended to a translated tooltip body so hotkeys are
-        // discoverable on hover without taking up label space.
-        private static string WithHotkeyHint(string text, string shortcut)
-            => string.IsNullOrWhiteSpace(text) ? $"({shortcut})" : $"{text} ({shortcut})";
 
         private void CapturePreviewDialog_ContentRendered(object? sender, EventArgs e)
         {
@@ -1441,6 +1478,14 @@ namespace CyberSnap.UI
                 DoneTooltip = doneTooltip,
                 FinalTiming = finalTiming
             };
+
+            // Anchor the pill's ToolTip above the chip (not under the cursor). Placement is
+            // attached to the two tooltip hosts (border + status icon) so the rewritten text
+            // in ApplyPillVisualState keeps the anchored placement.
+            ApplyTooltipPlacement(border);
+            ToolTipService.SetPlacement(statusIcon, System.Windows.Controls.Primitives.PlacementMode.Top);
+            ToolTipService.SetPlacementTarget(statusIcon, border);
+            ToolTipService.SetVerticalOffset(statusIcon, -6);
 
             // Always start pending (blue); Done-timing chips animate to green afterward.
             ApplyPillVisualState(chip, PillVisualState.Pending);

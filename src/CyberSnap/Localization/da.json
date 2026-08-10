@@ -174,7 +174,8 @@
   "Translating...": "Oversætter...",
   "Copy result": "Kopiér resultatet",
   "Copy text": "Kopier tekst",
-  "Local model": "Lokal model",  "Google Translate": "Google Oversæt",
+  "Local model": "Lokal model",
+  "Google Translate": "Google Oversæt",
   "Warming local model...": "Varmer lokal model...",
   "Starting translation...": "Starter oversættelse...",
   "Detecting language...": "Registrerer sprog...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Kopiér sti",
+  "Capture not saved": "Optagelse ikke gemt",
+  "Not run": "Ikke kørt"
 }

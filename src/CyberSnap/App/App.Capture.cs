@@ -743,15 +743,16 @@ public partial class App
                             var settings = _settingsService!.Settings;
                             if (settings.ShowCapturePreview)
                             {
+                                bool copiedEarly = false;
                                 if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
                                 {
-                                    TryCopyCaptureOutputToClipboard(cropped, null);
+                                    copiedEarly = TryCopyCaptureOutputToClipboard(cropped, null);
                                 }
 
                                 // Save is immediate when the path is known (same timing as auto-copy).
                                 string? earlySavePath = TrySaveCaptureFileEarly(cropped, settings);
 
-                                var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint, earlySavePath);
+                                var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint, earlySavePath, copiedEarly);
                                 // Show() (non-modal) instead of ShowDialog(): modal loops disable every
                                 // other top-level HWND in this thread via EnableWindow(false), which
                                 // locked the floating widget and made Windows beep on click. With a single
@@ -761,7 +762,7 @@ public partial class App
                                 {
                                     if (result == true)
                                     {
-                                        HandleCaptureResult(cropped, dialog.SelectedAction, earlySavePath);
+                                        HandleCaptureResult(cropped, dialog.SelectedAction, earlySavePath, dialog.ClipboardAlreadyCopied);
                                     }
                                     else
                                     {

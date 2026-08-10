@@ -174,7 +174,8 @@
   "Translating...": "Ã–versÃ¤tter...",
   "Copy result": "Kopiera resultatet",
   "Copy text": "Kopiera text",
-  "Local model": "Lokal modell",  "Google Translate": "Google Ã–versÃ¤tt",
+  "Local model": "Lokal modell",
+  "Google Translate": "Google Ã–versÃ¤tt",
   "Warming local model...": "Värmande lokal modell...",
   "Starting translation...": "Startar översättning...",
   "Detecting language...": "Upptäcker språk...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Kopiera sökväg",
+  "Capture not saved": "Skärmdump ej sparad",
+  "Not run": "Ej körd"
 }

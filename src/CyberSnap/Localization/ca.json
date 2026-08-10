@@ -174,7 +174,8 @@
   "Translating...": "S'està traduint...",
   "Copy result": "Copia el resultat",
   "Copy text": "Copia el text",
-  "Local model": "Model local",  "Google Translate": "Traductor de Google",
+  "Local model": "Model local",
+  "Google Translate": "Traductor de Google",
   "Warming local model...": "Escalfament del model local...",
   "Starting translation...": "S'està iniciant la traducció...",
   "Detecting language...": "S'està detectant el llenguatge...",
@@ -312,7 +313,7 @@
   "Screen Recorder (GIF)": "Screen Recorder (GIF)",
   "Active drawing and text color": "Active drawing and text color",
   "Shape stroke width": "Shape stroke width",
-  "Unsaved changes": "Unsaved changes",
+  "Unsaved changes": "Canvis sense desar",
   "Check for Updates": "Check for Updates",
   "Download": "Download",
   "Later": "Later",
@@ -353,6 +354,7 @@
   "Image imported": "Imatge importada",
   "New canvas created": "Nou llenç creat",
   "New canvas": "Nou llenç",
-  "Unsaved changes": "Canvis sense desar",
-  "Saved": "Desat"
+  "Copy path": "Copia el camí",
+  "Capture not saved": "Captura no desada",
+  "Not run": "No executat"
 }

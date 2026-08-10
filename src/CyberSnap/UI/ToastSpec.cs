@@ -1,9 +1,26 @@
 using Bitmap = System.Drawing.Bitmap;
 using Color = System.Windows.Media.Color;
+using System.Collections.Generic;
 using System.Windows.Media;
 using System.Windows;
 
 namespace CyberSnap.UI;
+
+/// <summary>One outcome row in an enriched after-capture toast ("✓ Image saved — C:\…\shot.png").</summary>
+internal sealed record ToastStatusLine
+{
+    /// <summary>Fluent icon id: "check", "dismiss", "info", "share", "folder", …</summary>
+    public required string IconId { get; init; }
+    public required string Label { get; init; }
+    /// <summary>Optional right-side detail (shortened path, URL, size…).</summary>
+    public string? Detail { get; init; }
+    /// <summary>When true, the row is rendered in the error accent (red).</summary>
+    public bool IsError { get; init; }
+    /// <summary>When set, the row hosts an inline "Copy this text" button.</summary>
+    public string? CopyableText { get; init; }
+    /// <summary>Tooltip for the inline copy button (already localized).</summary>
+    public string? CopyableTooltip { get; init; }
+}
 
 internal sealed record ToastSpec
 {
@@ -51,6 +68,11 @@ internal sealed record ToastSpec
     // override it (e.g. "trophy") so they don't show a capture icon unrelated to the unlock.
     public string? CelebrationBodyIconId { get; init; }
     public bool IsWelcomeToast { get; init; }
+
+    /// <summary>When set, replaces <see cref="Body"/> with a vertical list of action-status
+    /// rows (icon + label + optional detail + optional inline "Copy this text" button).
+    /// Used by the enriched after-capture toast.</summary>
+    public IReadOnlyList<ToastStatusLine>? StatusLines { get; init; }
 
     public static ToastSpec Standard(string title, string body = "", string? filePath = null) => new()
     {

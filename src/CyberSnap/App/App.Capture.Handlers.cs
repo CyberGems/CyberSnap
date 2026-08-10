@@ -16,7 +16,8 @@ public partial class App
     private void HandleCaptureResult(
         Bitmap result,
         RegionOverlayForm.ConfirmCommitAction commitAction = RegionOverlayForm.ConfirmCommitAction.Default,
-        string? alreadySavedPath = null)
+        string? alreadySavedPath = null,
+        bool clipboardAlreadyCopied = false)
     {
         var settings = _settingsService!.Settings;
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
@@ -83,11 +84,26 @@ public partial class App
                 Dispatcher.BeginInvoke(() =>
                 {
                     var action = NormalizeAfterCaptureAction(settings.AfterCapture);
-                    bool wantCopy = commitAction == RegionOverlayForm.ConfirmCommitAction.Copy
-                        || Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image);
-                    bool copied = false;
-                    if (wantCopy)
+                    // Skip the duplicate write when the preview already did the eager copy
+                    // for this same capture (auto-copy ON + preview shown). Otherwise the
+                    // clipboard gets stamped twice — visible in Win+V as a duplicated entry.
+                    bool explicitCopy = commitAction == RegionOverlayForm.ConfirmCommitAction.Copy;
+                    bool shouldTryCopy = explicitCopy
+                        || (!clipboardAlreadyCopied
+                            && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image));
+                    bool copied;
+                    if (shouldTryCopy)
                         copied = TryCopyCaptureOutputToClipboard(persisted.Output, persisted.FilePath);
+                    else if (clipboardAlreadyCopied)
+                        // Eager copy already ran for this capture — report it as done so the
+                        // notification toast shows "Copied to clipboard" instead of stale
+                        // "Clipboard copy failed".
+                        copied = true;
+                    else
+                        copied = false;
+                    // For the toast: clipboard was effectively done or attempted. This is what
+                    // decides whether the "Copied to clipboard" row shows.
+                    bool copyWanted = shouldTryCopy || clipboardAlreadyCopied;
                     ResetCapturing();
 
                     CelebrateCaptureIfEarned(settings);
@@ -130,8 +146,8 @@ public partial class App
                                 ShowDynamicAfterCaptureToast(
                                     saved: savedToDisk,
                                     copied: copied,
-                                    copyWanted: wantCopy,
-                                    shared: false,
+                                    copyWanted: copyWanted,
+                                    share: default,
                                     openedEditor: false,
                                     openedViewer: true,
                                     filePath: persisted.FilePath);
@@ -146,8 +162,8 @@ public partial class App
                             ShowDynamicAfterCaptureToast(
                                 saved: savedToDisk,
                                 copied: copied,
-                                copyWanted: wantCopy,
-                                shared: false,
+                                copyWanted: copyWanted,
+                                share: default,
                                 openedEditor: true,
                                 openedViewer: false,
                                 filePath: persisted.FilePath);
@@ -204,7 +220,7 @@ public partial class App
                                 showCompactToast,
                                 savedToDisk,
                                 copied,
-                                wantCopy,
+                                copyWanted,
                                 openedViewer);
                         }
                         else
@@ -215,8 +231,8 @@ public partial class App
                                 ShowDynamicAfterCaptureToast(
                                     saved: savedToDisk,
                                     copied: copied,
-                                    copyWanted: wantCopy,
-                                    shared: false,
+                                    copyWanted: copyWanted,
+                                    share: default,
                                     openedEditor: false,
                                     openedViewer: openedViewer,
                                     filePath: persisted.FilePath);
@@ -251,11 +267,11 @@ public partial class App
         bool copyWanted,
         bool openedViewer)
     {
-        bool shared = false;
+        ShareAttempt shareAttempt = default;
         try
         {
-            // When a compact summary toast will list "Shared", skip PresentResult's own toast.
-            shared = await TryShareCaptureAsync(bitmap, filePath, presentResultToast: !showCompactToast)
+            // When the enriched summary toast will list "Shared", skip PresentResult's own toast.
+            shareAttempt = await TryShareCaptureAsync(bitmap, filePath, presentResultToast: !showCompactToast)
                 .ConfigureAwait(true);
         }
         finally
@@ -269,7 +285,7 @@ public partial class App
                 saved: saved,
                 copied: copied,
                 copyWanted: copyWanted,
-                shared: shared,
+                share: shareAttempt,
                 openedEditor: false,
                 openedViewer: openedViewer,
                 filePath: filePath);
@@ -278,7 +294,10 @@ public partial class App
         ScheduleIdleMemoryTrim();
     }
 
-    private async Task<bool> TryShareCaptureAsync(Bitmap bitmap, string? filePath, bool presentResultToast)
+    /// <summary>Short summary of a share attempt, for the enriched after-capture toast.</summary>
+    private readonly record struct ShareAttempt(bool Success, string? Url, string? ErrorMessage);
+
+    private async Task<ShareAttempt> TryShareCaptureAsync(Bitmap bitmap, string? filePath, bool presentResultToast)
     {
         try
         {
@@ -294,12 +313,15 @@ public partial class App
             catch { }
 
             if (!UI.Share.ImageShareFlow.ConfirmThirdPartyUploadIfNeeded(owner, ownerHandle, provider, settings))
-                return false;
+                return default;
 
             var result = await UI.Share.ImageShareFlow.ShareBitmapAsync(bitmap).ConfigureAwait(true);
             if (presentResultToast)
                 UI.Share.ImageShareFlow.PresentResult(result, settings);
-            return result.Success;
+            return new ShareAttempt(
+                result.Success,
+                result.PublicUrl ?? result.ClipboardText,
+                result.Success ? null : result.ErrorMessage);
         }
         catch (Exception ex)
         {
@@ -308,57 +330,156 @@ public partial class App
                 LocalizationService.Translate("Upload failed"),
                 LocalizationService.Translate("CyberSnap could not share the capture. Check your network or upload configuration in Settings."),
                 filePath);
-            return false;
+            return default;
         }
     }
 
+    /// <summary>Truncate a long path to a compact "drive:\…\<folder>\<file>" form for the toast.</summary>
+    private static string ShortenPath(string path, int maxLen = 42)
+    {
+        if (string.IsNullOrEmpty(path) || path.Length <= maxLen)
+            return path;
+
+        string file = System.IO.Path.GetFileName(path);
+        string root = System.IO.Path.GetPathRoot(path) ?? "";        // e.g. "C:\"
+        string dir  = System.IO.Path.GetDirectoryName(path) ?? "";
+        string? parentName = null;
+        if (!string.IsNullOrEmpty(dir))
+            parentName = System.IO.Path.GetFileName(dir.TrimEnd(
+                System.IO.Path.DirectorySeparatorChar,
+                System.IO.Path.AltDirectorySeparatorChar));
+
+        string candidate = parentName is { Length: > 0 }
+            ? $"{root}…\\{parentName}\\{file}"
+            : $"{root}…\\{file}";
+
+        if (candidate.Length > maxLen)
+            candidate = $"{root}…\\{file}";
+        if (candidate.Length > maxLen)
+            return path; // hopeless — hand back the original (TextTrimming will ellipsize if needed)
+
+        return candidate;
+    }
+
     /// <summary>
-    /// Compact status toast listing automatic steps completed when Notification is on
-    /// (including after Preview closes). Body follows after-capture pill flow order and
-    /// DoneLabelKey wording. Preview / Notification are omitted (preview already ran;
-    /// this toast is the notification).
+    /// Enriched status toast listing automatic steps completed when Notification is on
+    /// (including after Preview closes). One row per SELECTED action. A row is ✓ when
+    /// the action completed, ✗ when it was attempted but failed, and ⚠ (info) when the
+    /// action is configured but didn't run this time (e.g. share-on-demand disabled).
+    /// Preview row is omitted (preview already ran); the toast itself is the Notification.
     /// </summary>
     private void ShowDynamicAfterCaptureToast(
         bool saved,
         bool copied,
         bool copyWanted,
-        bool shared,
+        ShareAttempt share,
         bool openedEditor,
         bool openedViewer,
         string? filePath)
     {
         var state = Helpers.AfterCaptureOutcomeModel.FromSettings(_settingsService!.Settings);
-        var parts = new List<(int Order, string Text)>();
+        var rows = new List<(int Order, UI.ToastStatusLine Line)>();
 
-        void TryAdd(Helpers.AfterCapturePillKind pill, bool completed, string? textOverride = null)
+        void TryAdd(Helpers.AfterCapturePillKind pill, UI.ToastStatusLine line)
         {
-            if (!completed)
-                return;
-
-            parts.Add((
-                Helpers.AfterCaptureOutcomeModel.FlowDisplayOrder(pill),
-                textOverride
-                    ?? LocalizationService.Translate(Helpers.AfterCaptureOutcomeModel.DoneLabelKey(pill))));
+            rows.Add((Helpers.AfterCaptureOutcomeModel.FlowDisplayOrder(pill), line));
         }
 
-        // Save only when the Save pill is configured (a file may also exist as a share side-effect).
-        TryAdd(Helpers.AfterCapturePillKind.Save, saved && state.Save);
-        // Clipboard / Editor / Viewer / Share: list what this capture actually completed
-        // (configured pills or confirm-mode one-shots).
-        TryAdd(
-            Helpers.AfterCapturePillKind.Clipboard,
-            copyWanted,
-            copied ? null : LocalizationService.Translate("Clipboard copy failed"));
-        TryAdd(Helpers.AfterCapturePillKind.Share, shared);
-        TryAdd(Helpers.AfterCapturePillKind.Editor, openedEditor);
-        TryAdd(Helpers.AfterCapturePillKind.SystemViewer, openedViewer);
+        // ── Save ──────────────────────────────────────────────────────────────────────
+        // Show the row when the Save action is configured; icon reflects outcome.
+        if (state.Save)
+        {
+            bool saveOk = saved && !string.IsNullOrEmpty(filePath);
+            TryAdd(Helpers.AfterCapturePillKind.Save, new UI.ToastStatusLine
+            {
+                IconId = saveOk ? "check" : "warning",
+                Label = saveOk
+                    ? LocalizationService.Translate("Image saved")
+                    : LocalizationService.Translate("Capture not saved"),
+                Detail = saveOk ? ShortenPath(filePath!) : null,
+                IsError = !saveOk,
+                CopyableText = saveOk ? filePath : null,
+                CopyableTooltip = saveOk ? LocalizationService.Translate("Copy path") : null
+            });
+        }
 
-        parts.Sort((a, b) => a.Order.CompareTo(b.Order));
+        // ── Clipboard ─────────────────────────────────────────────────────────────────
+        // Configured via auto-copy pill, OR user pressed the preview "Copy" button (one-shot).
+        bool autoCopyConfigured = Helpers.AutoCopyPreferences.ShouldCopy(
+            _settingsService!.Settings, Helpers.AutoCopyKind.Image);
+        bool clipboardConfigured = autoCopyConfigured || copyWanted;
+        if (clipboardConfigured)
+        {
+            TryAdd(Helpers.AfterCapturePillKind.Clipboard, new UI.ToastStatusLine
+            {
+                IconId = copied ? "check" : "warning",
+                Label = copied
+                    ? LocalizationService.Translate("Copied to clipboard")
+                    : LocalizationService.Translate("Clipboard copy failed"),
+                IsError = !copied
+            });
+        }
+
+        // ── Share ─────────────────────────────────────────────────────────────────────
+        // Configured auto-share → row always appears; ✓ = success, ⚠ = didn't run, ✗ = failed.
+        if (state.Share)
+        {
+            UI.ToastStatusLine shareLine;
+            if (share.Success)
+                shareLine = new UI.ToastStatusLine
+                {
+                    IconId = "check",
+                    Label = LocalizationService.Translate("Shared"),
+                    Detail = share.Url
+                };
+            else if (!string.IsNullOrEmpty(share.ErrorMessage))
+                shareLine = new UI.ToastStatusLine
+                {
+                    IconId = "warning",
+                    Label = LocalizationService.Translate("Shared"),
+                    Detail = share.ErrorMessage,
+                    IsError = true
+                };
+            else
+                shareLine = new UI.ToastStatusLine
+                {
+                    IconId = "info",
+                    Label = LocalizationService.Translate("Shared"),
+                    Detail = LocalizationService.Translate("Not run")
+                };
+            TryAdd(Helpers.AfterCapturePillKind.Share, shareLine);
+        }
+
+        // ── Editor ────────────────────────────────────────────────────────────────────
+        // Destination radio: Editor / Notification (we're inside the toast, so the user
+        // picked Editor). Show the row only when Editor is the configured destination.
+        if (state.Destination == Helpers.AfterCaptureDestination.Editor)
+        {
+            TryAdd(Helpers.AfterCapturePillKind.Editor, new UI.ToastStatusLine
+            {
+                IconId = openedEditor ? "check" : "info",
+                Label = LocalizationService.Translate("Opened in editor"),
+                Detail = openedEditor ? null : LocalizationService.Translate("Not run")
+            });
+        }
+
+        // ── System Viewer ─────────────────────────────────────────────────────────────
+        if (state.SystemViewer)
+        {
+            TryAdd(Helpers.AfterCapturePillKind.SystemViewer, new UI.ToastStatusLine
+            {
+                IconId = openedViewer ? "check" : "info",
+                Label = LocalizationService.Translate("Opened in system viewer"),
+                Detail = openedViewer ? null : LocalizationService.Translate("Not run")
+            });
+        }
+
+        rows.Sort((a, b) => a.Order.CompareTo(b.Order));
 
         ToastWindow.Show(new ToastSpec
         {
             Title = LocalizationService.Translate("Capture processed"),
-            Body = parts.Count > 0 ? string.Join(" · ", parts.Select(p => p.Text)) : "",
+            StatusLines = rows.Select(r => r.Line).ToList(),
             FilePath = filePath,
             PlayCaptureSound = true,
             IsSystemMessage = false

@@ -174,7 +174,8 @@
   "Translating...": "Ã‡eviri...",
   "Copy result": "Sonucu kopyala",
   "Copy text": "Metni kopyala",
-  "Local model": "Yerel model",  "Google Translate": "Google Ã‡eviri",
+  "Local model": "Yerel model",
+  "Google Translate": "Google Ã‡eviri",
   "Warming local model...": "Yerli model ısınıyor...",
   "Starting translation...": "Ã‡eviri baÅŸlatÄ±lÄ±yor...",
   "Detecting language...": "Dil algılanıyor...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Yolu kopyala",
+  "Capture not saved": "Yakalama kaydedilmedi",
+  "Not run": "Çalıştırılmadı"
 }

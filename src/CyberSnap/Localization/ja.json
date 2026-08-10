@@ -174,7 +174,8 @@
   "Translating...": "翻訳中...",
   "Copy result": "ã‚³ãƒ”ãƒ¼çµæžœ",
   "Copy text": "ãƒ†ã‚­ã‚¹ãƒˆã‚’ã‚³ãƒ”ãƒ¼ã™ã‚‹",
-  "Local model": "ãƒ­ãƒ¼ã‚«ãƒ«ãƒ¢ãƒ‡ãƒ«",  "Google Translate": "Google翻訳",
+  "Local model": "ãƒ­ãƒ¼ã‚«ãƒ«ãƒ¢ãƒ‡ãƒ«",
+  "Google Translate": "Google翻訳",
   "Warming local model...": "ãƒ­ãƒ¼ã‚«ãƒ« ãƒ¢ãƒ‡ãƒ«ã‚’æ¸©ã‚ã¦ã„ã¾ã™...",
   "Starting translation...": "ç¿»è¨³ã‚’é–‹å§‹ã—ã¦ã„ã¾ã™...",
   "Detecting language...": "è¨€èªžã‚’æ¤œå‡ºä¸­...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "パスをコピー",
+  "Capture not saved": "キャプチャが保存されませんでした",
+  "Not run": "実行されませんでした"
 }

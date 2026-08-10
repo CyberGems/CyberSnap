@@ -57,6 +57,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <Grid x:Name="ImageArea" Grid.Row="0" Visibility="Collapsed" MaxHeight="176" HorizontalAlignment="Stretch">
@@ -83,7 +84,7 @@
                     </Border>
                 </Grid>
 
-                <StackPanel x:Name="ActionsHost" Grid.Row="2" Visibility="Collapsed">
+                <StackPanel x:Name="ActionsHost" Grid.Row="3" Visibility="Collapsed">
                     <Border x:Name="PreviewActionsDivider" Height="1" Margin="10,0,10,6" Opacity="1"/>
                     <Grid x:Name="ActionsPanel" Margin="10,0,10,10">
                     <Grid.RowDefinitions>
@@ -235,6 +236,11 @@
 
                 </Grid>
 
+                <!-- Enriched after-capture status rows (one per completed action),
+                     populated in code-behind from ToastSpec.StatusLines. -->
+                <StackPanel x:Name="StatusLinesPanel" Grid.Row="2"
+                            Margin="14,0,14,11" Visibility="Collapsed"/>
+
                 <!-- Top-right close button (always visible) -->
                 <Border x:Name="TextCloseBtn" Width="24" Height="24" CornerRadius="7"
                         Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
@@ -244,7 +250,7 @@
                         Cursor="Hand"
                         Focusable="True"
                         KeyDown="CloseBtn_KeyDown"
-                        Grid.RowSpan="3"
+                        Grid.RowSpan="4"
                         HorizontalAlignment="Right" VerticalAlignment="Top"
                         Margin="0,7,7,0"
                         Panel.ZIndex="10">

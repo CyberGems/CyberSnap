@@ -174,7 +174,8 @@
   "Translating...": "à¸à¸³à¸¥à¸±à¸‡à¹à¸›à¸¥...",
   "Copy result": "à¸„à¸±à¸”à¸¥à¸­à¸à¸œà¸¥à¸¥à¸±à¸žà¸˜à¹Œ",
   "Copy text": "à¸„à¸±à¸”à¸¥à¸­à¸à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡",
-  "Local model": "à¹‚à¸¡à¹€à¸”à¸¥à¸—à¹‰à¸­à¸‡à¸–à¸´à¹ˆà¸™",  "Google Translate": "Google à¹à¸›à¸¥à¸ à¸²à¸©à¸²",
+  "Local model": "à¹‚à¸¡à¹€à¸”à¸¥à¸—à¹‰à¸­à¸‡à¸–à¸´à¹ˆà¸™",
+  "Google Translate": "Google à¹à¸›à¸¥à¸ à¸²à¸©à¸²",
   "Warming local model...": "à¸­à¸¸à¹ˆà¸™à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¹‚à¸¡à¹€à¸”à¸¥à¸—à¹‰à¸­à¸‡à¸–à¸´à¹ˆà¸™...",
   "Starting translation...": "à¸à¸³à¸¥à¸±à¸‡à¹€à¸£à¸´à¹ˆà¸¡à¸à¸²à¸£à¹à¸›à¸¥...",
   "Detecting language...": "à¸à¸³à¸¥à¸±à¸‡à¸•à¸£à¸§à¸ˆà¸«à¸²à¸ à¸²à¸©à¸²...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "คัดลอกเส้นทาง",
+  "Capture not saved": "ไม่ได้บันทึกการจับภาพ",
+  "Not run": "ไม่ได้รัน"
 }

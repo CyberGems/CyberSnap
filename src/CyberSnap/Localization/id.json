@@ -174,7 +174,8 @@
   "Translating...": "Menerjemahkan...",
   "Copy result": "Salin hasilnya",
   "Copy text": "Salin teks",
-  "Local model": "Model lokal",  "Google Translate": "Google Terjemahan",
+  "Local model": "Model lokal",
+  "Google Translate": "Google Terjemahan",
   "Warming local model...": "Menghangatkan model lokal...",
   "Starting translation...": "Memulai terjemahan...",
   "Detecting language...": "Mendeteksi bahasa...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Salin jalur",
+  "Capture not saved": "Tangkapan tidak disimpan",
+  "Not run": "Tidak dijalankan"
 }

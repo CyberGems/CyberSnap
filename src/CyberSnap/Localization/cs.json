@@ -174,7 +174,8 @@
   "Translating...": "PÅ™eklad...",
   "Copy result": "Zkopírujte výsledek",
   "Copy text": "Zkopírujte text",
-  "Local model": "Místní model",  "Google Translate": "PÅ™ekladaÄ Google",
+  "Local model": "Místní model",
+  "Google Translate": "PÅ™ekladaÄ Google",
   "Warming local model...": "Oteplovací lokální model...",
   "Starting translation...": "SpouÅ¡tÄ›nÃ­ pÅ™ekladu...",
   "Detecting language...": "Detekce jazyka...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Kopírovat cestu",
+  "Capture not saved": "Snímek nebyl uložen",
+  "Not run": "Nebylo spuštěno"
 }
