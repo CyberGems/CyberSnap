@@ -196,6 +196,8 @@
   "Discard the current crop and select again": "Descarta el recorte actual y vuelve a seleccionar",
   "Cancel capture completely": "Cancelar captura completa",
   "Close the capture tool and discard everything": "Cierra la captura y descarta todo",
+  "Capture already in progress": "Ya hay una captura en curso",
+  "Close the open preview (Done or Esc) before starting another capture.": "Cierra la vista previa abierta (Listo o Esc) antes de iniciar otra captura.",
   "double-click": "doble clic",
   "\"{0}\" hidden · Restore from ▼": "\"{0}\" oculto · Restaurar desde ▼",
   "Drag to select the capture area": "Arrastra para seleccionar el área de captura",

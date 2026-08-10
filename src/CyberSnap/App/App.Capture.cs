@@ -575,6 +575,11 @@ public partial class App
         var thread = new Thread(() =>
         {
             Bitmap? screenshot = null;
+            // Set when RegionSelected delegates to the Preview dialog. The Preview then owns
+            // the capture session (and calls ResetCapturing when it closes), so the overlay's
+            // FormClosed handler skips its default ResetCapturing to avoid prematurely
+            // re-arming the hotkey while the Preview is still open.
+            bool outcomeDelegatedToPreview = false;
             try
             {
                 Theme.Refresh();
@@ -713,40 +718,74 @@ public partial class App
                     UI.PopupWindowHelper.SetMonitorHintPoint(monitorPoint);
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
+
+                    // Decide delegate ownership of the capture session BEFORE closing the
+                    // overlay: FormClosed fires synchronously inside Close(). When the Preview
+                    // is going to open, we keep _isCapturing=1 until it closes; otherwise
+                    // the default FormClosed-reset path applies.
+                    var latestSettings = Services.SettingsService.LoadStatic();
+                    bool willShowPreview = latestSettings?.ShowCapturePreview
+                        ?? _settingsService!.Settings.ShowCapturePreview;
+                    if (willShowPreview)
+                        outcomeDelegatedToPreview = true;
+
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
 
                     Dispatcher.BeginInvoke(() =>
                     {
-                        var latest = Services.SettingsService.LoadStatic();
-                        if (latest != null)
-                            _settingsService!.Settings = latest;
-
-                        var settings = _settingsService!.Settings;
-                        if (settings.ShowCapturePreview)
+                        try
                         {
-                            if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
-                            {
-                                TryCopyCaptureOutputToClipboard(cropped, null);
-                            }
+                            var latest = Services.SettingsService.LoadStatic();
+                            if (latest != null)
+                                _settingsService!.Settings = latest;
 
-                            // Save is immediate when the path is known (same timing as auto-copy).
-                            string? earlySavePath = TrySaveCaptureFileEarly(cropped, settings);
-
-                            var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint, earlySavePath);
-                            if (dialog.ShowDialog() == true)
+                            var settings = _settingsService!.Settings;
+                            if (settings.ShowCapturePreview)
                             {
-                                HandleCaptureResult(cropped, dialog.SelectedAction, earlySavePath);
+                                if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
+                                {
+                                    TryCopyCaptureOutputToClipboard(cropped, null);
+                                }
+
+                                // Save is immediate when the path is known (same timing as auto-copy).
+                                string? earlySavePath = TrySaveCaptureFileEarly(cropped, settings);
+
+                                var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint, earlySavePath);
+                                // Show() (non-modal) instead of ShowDialog(): modal loops disable every
+                                // other top-level HWND in this thread via EnableWindow(false), which
+                                // locked the floating widget and made Windows beep on click. With a single
+                                // active preview managed via App.ShowCapturePreviewDialog + CommittedResult,
+                                // the widget stays responsive and a follow-up capture replaces this dialog.
+                                ShowCapturePreviewDialog(dialog, result =>
+                                {
+                                    if (result == true)
+                                    {
+                                        HandleCaptureResult(cropped, dialog.SelectedAction, earlySavePath);
+                                    }
+                                    else
+                                    {
+                                        // false = user cancelled (Esc / X / Delete).
+                                        // null = replaced by a newer capture (its own preview owns
+                                        //   the reset now; do NOT ResetCapturing twice).
+                                        cropped.Dispose();
+                                        if (result == false)
+                                            ResetCapturing();
+                                    }
+                                });
                             }
                             else
                             {
-                                cropped.Dispose();
-                                ResetCapturing();
+                                HandleCaptureResult(cropped, commitAction);
                             }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            HandleCaptureResult(cropped, commitAction);
+                            // Defensive: never leave _isCapturing stuck at 1 (widget/tray would
+                            // stay hidden forever). Log and reset so the next hotkey works.
+                            AppDiagnostics.LogError("capture.preview-dispatch", ex);
+                            try { cropped.Dispose(); } catch { }
+                            ResetCapturing();
                         }
                     });
                 };
@@ -889,6 +928,12 @@ public partial class App
                             _settingsService.Save();
                         });
                     }
+
+                    // The Preview now owns the session and will call ResetCapturing itself
+                    // once the user commits or cancels. Skipping here keeps _isCapturing=1
+                    // so the hotkey guard blocks parallel captures while Preview is open.
+                    if (outcomeDelegatedToPreview)
+                        return;
 
                     Dispatcher.BeginInvoke(ResetCapturing);
                 };

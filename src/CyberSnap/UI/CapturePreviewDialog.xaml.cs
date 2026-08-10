@@ -109,6 +109,43 @@ namespace CyberSnap.UI
 
         public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; private set; } = RegionOverlayForm.ConfirmCommitAction.Default;
 
+        /// <summary>
+        /// Result of the preview session, replacing the WPF DialogResult (this window is
+        /// shown non-modally via Show() so other app windows — the floating widget — stay
+        /// responsive). Read after <see cref="System.Windows.Window.Closed"/> fires; at
+        /// that point this property is final.
+        /// true = commit pending outcomes; false = discard; null = disposed by replacement
+        /// (the user pressed the capture hotkey again while this preview was open).
+        /// </summary>
+        public bool? CommittedResult { get; private set; }
+
+        /// <summary>Set by <see cref="CloseFromReplace"/> so the Closing ??= fallback keeps
+        /// CommittedResult null (replacement) instead of converting it to a user cancel.</summary>
+        private bool _replaced;
+
+        /// <summary>
+        /// Closes this preview because a newer capture is replacing it. No fade-out, no
+        /// commit — just a clean close so the new preview can take over the active slot.
+        /// </summary>
+        public void CloseFromReplace()
+        {
+            if (_isClosing)
+                return;
+            _isClosing = true;
+            _replaced = true;
+            CommittedResult = null;
+            Close();
+        }
+
+        private void CommitAndClose(bool result)
+        {
+            if (_isClosing)
+                return;
+            _isClosing = true;
+            CommittedResult = result;
+            Close();
+        }
+
         public bool IsAutoCloseEnabled =>
             _settingsService.Settings.CapturePreviewTimeoutSeconds > 0;
 
@@ -149,6 +186,14 @@ namespace CyberSnap.UI
             ContentRendered += CapturePreviewDialog_ContentRendered;
             Activated += CapturePreviewDialog_Activated;
             SettingsService.SettingsChanged += SettingsService_SettingsChanged;
+            Closing += (_, _) =>
+            {
+                // Any close path that did not go through CommitAndClose (Alt+F4, system X,
+                // taskbar close) counts as discard — never run deferred outcomes. A replace-
+                // close keeps CommittedResult null so App doesn't run a redundant reset.
+                if (!_replaced)
+                    CommittedResult ??= false;
+            };
             Closed += (_, _) =>
             {
                 SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
@@ -742,7 +787,6 @@ namespace CyberSnap.UI
         private void PerformAutoClose()
         {
             // Same outcome as Continue / Done, but fade out first (manual close stays instant).
-            // Do not set DialogResult until the fade completes — WPF closes ShowDialog on set.
             if (_isClosing)
                 return;
             _isClosing = true;
@@ -760,13 +804,15 @@ namespace CyberSnap.UI
                 fadeOut.Completed += (_, _) =>
                 {
                     BeginAnimation(OpacityProperty, null);
-                    DialogResult = commit;
+                    CommittedResult = commit;
+                    Close();
                 };
                 BeginAnimation(OpacityProperty, fadeOut);
             }
             catch
             {
-                DialogResult = commit;
+                CommittedResult = commit;
+                Close();
             }
         }
 
@@ -802,8 +848,7 @@ namespace CyberSnap.UI
         {
             if (_isClosing)
                 return;
-            _isClosing = true;
-            DialogResult = ResolvePrimaryButtonCommit();
+            CommitAndClose(ResolvePrimaryButtonCommit());
         }
 
         private void EditAfterCaptureSettingsBtn_Click(object sender, RoutedEventArgs e)
@@ -1926,10 +1971,7 @@ namespace CyberSnap.UI
 
         private void TitleBar_CloseRequested(object sender, EventArgs e)
         {
-            if (_isClosing)
-                return;
-            _isClosing = true;
-            DialogResult = false;
+            CommitAndClose(false);
         }
 
         private void TitleBar_PinRequested(object sender, EventArgs e) => TogglePinned();
@@ -1958,45 +2000,40 @@ namespace CyberSnap.UI
         {
             if (_isClosing)
                 return;
-            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
-            DialogResult = true;
+            CommitAndClose(true);
         }
 
         private void CopyBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isClosing)
                 return;
-            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Copy;
-            DialogResult = true;
+            CommitAndClose(true);
         }
 
         private void EditBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isClosing)
                 return;
-            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Edit;
-            DialogResult = true;
+            CommitAndClose(true);
         }
 
         private void ShareBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isClosing)
                 return;
-            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Share;
-            DialogResult = true;
+            CommitAndClose(true);
         }
 
         private void GalleryBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isClosing)
                 return;
-            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.History;
-            DialogResult = true;
+            CommitAndClose(true);
         }
 
         private void PrintBtn_Click(object sender, RoutedEventArgs e)
@@ -2080,8 +2117,7 @@ namespace CyberSnap.UI
             ToastWindow.Show(LocalizationService.Translate("Capture deleted"));
             // Discard: close without committing so deferred outcomes (save/share/viewer)
             // don't run against the file we just removed.
-            _isClosing = true;
-            DialogResult = false;
+            CommitAndClose(false);
         }
 
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
@@ -2095,8 +2131,7 @@ namespace CyberSnap.UI
             {
                 if (_isClosing)
                     return;
-                _isClosing = true;
-                DialogResult = false;
+                CommitAndClose(false);
                 e.Handled = true;
                 return;
             }
