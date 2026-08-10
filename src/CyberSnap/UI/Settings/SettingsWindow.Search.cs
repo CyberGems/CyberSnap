@@ -713,6 +713,20 @@ public partial class SettingsWindow
         }
     }
 
+    /// <summary>Open the Notifications (Toasts) tab. Used by the toast gear button
+    /// to jump straight to the notification settings.</summary>
+    public void NavigateToNotificationsSettings()
+    {
+        try
+        {
+            SelectSettingsTab("notifications");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.notifications-navigate", $"Navigation failed: {ex.Message}");
+        }
+    }
+
     private void SelectSettingsTab(string pageKey)
     {
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
