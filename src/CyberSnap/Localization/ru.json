@@ -174,7 +174,8 @@
   "Translating...": "ÐŸÐµÑ€ÐµÐ²Ð¾Ð´...",
   "Copy result": "ÐšÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ñ€ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚",
   "Copy text": "ÐšÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ñ‚ÐµÐºÑÑ‚",
-  "Local model": "Ð›Ð¾ÐºÐ°Ð»ÑŒÐ½Ð°Ñ Ð¼Ð¾Ð´ÐµÐ»ÑŒ",  "Google Translate": "Ð“ÑƒÐ³Ð» Ð¿ÐµÑ€ÐµÐ²Ð¾Ð´Ñ‡Ð¸Ðº",
+  "Local model": "Ð›Ð¾ÐºÐ°Ð»ÑŒÐ½Ð°Ñ Ð¼Ð¾Ð´ÐµÐ»ÑŒ",
+  "Google Translate": "Ð“ÑƒÐ³Ð» Ð¿ÐµÑ€ÐµÐ²Ð¾Ð´Ñ‡Ð¸Ðº",
   "Warming local model...": "Ð¡Ð¾Ð³Ñ€ÐµÐ²Ð°ÑŽÑ‰Ð°Ñ Ð¼ÐµÑÑ‚Ð½Ð°Ñ Ð¼Ð¾Ð´ÐµÐ»ÑŒ...",
   "Starting translation...": "ÐÐ°Ñ‡Ð¸Ð½Ð°ÑŽ Ð¿ÐµÑ€ÐµÐ²Ð¾Ð´...",
   "Detecting language...": "ÐžÐ±Ð½Ð°Ñ€ÑƒÐ¶ÐµÐ½Ð¸Ðµ ÑÐ·Ñ‹ÐºÐ°...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Копировать путь",
+  "Capture not saved": "Снимок не сохранён",
+  "Not run": "Не выполнено"
 }

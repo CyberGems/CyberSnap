@@ -139,6 +139,19 @@ public partial class CyberSnapTitleBar : UserControl
         MinimizeBtn.ToolTip = Services.LocalizationService.Translate("Minimize");
         MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
         CloseBtn.ToolTip = ResolveCloseToolTip(this);
+        ApplyTooltipPlacement(MinimizeBtn);
+        ApplyTooltipPlacement(MaximizeBtn);
+        ApplyTooltipPlacement(CloseBtn);
+    }
+
+    /// <summary>Anchor a title-bar button tooltip above the button instead of WPF's default
+    /// cursor-relative placement (tips drifted under the pointer and could spill off-window
+    /// on long texts).</summary>
+    private static void ApplyTooltipPlacement(FrameworkElement element)
+    {
+        System.Windows.Controls.ToolTipService.SetPlacement(element, System.Windows.Controls.Primitives.PlacementMode.Top);
+        System.Windows.Controls.ToolTipService.SetPlacementTarget(element, element);
+        System.Windows.Controls.ToolTipService.SetVerticalOffset(element, -6);
     }
 
     private static void OnIsPinActiveChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -184,6 +197,7 @@ public partial class CyberSnapTitleBar : UserControl
             : System.Drawing.Color.FromArgb(190, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
         PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", pinColor, 18, active: true);
         PinBtn.ToolTip = LocalizationService.Translate(IsPinActive ? "Unpin" : "Pin");
+        ApplyTooltipPlacement(PinBtn);
     }
 
     private void InitializeActionBtn(System.Drawing.Color titleIcon)

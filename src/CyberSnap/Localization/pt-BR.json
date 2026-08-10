@@ -174,7 +174,8 @@
   "Translating...": "Traduzindo...",
   "Copy result": "Copiar resultado",
   "Copy text": "Copiar texto",
-  "Local model": "Modelo local",  "Google Translate": "Google Tradutor",
+  "Local model": "Modelo local",
+  "Google Translate": "Google Tradutor",
   "Warming local model...": "Aquecendo modelo local...",
   "Starting translation...": "Iniciando a tradução...",
   "Detecting language...": "Detectando idioma...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Copiar caminho",
+  "Capture not saved": "Captura não salva",
+  "Not run": "Não executado"
 }

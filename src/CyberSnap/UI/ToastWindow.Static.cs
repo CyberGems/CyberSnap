@@ -80,12 +80,13 @@ public partial class ToastWindow
         if (spec.IsSystemMessage && !_systemNotificationsEnabled)
             return;
 
-        // Guard: skip completely empty toasts (no text, no image, no color)
+        // Guard: skip completely empty toasts (no text, no image, no color, no status rows)
         if (string.IsNullOrWhiteSpace(spec.Title)
             && string.IsNullOrWhiteSpace(spec.Body)
             && spec.PreviewBitmap is null
             && spec.InlinePreviewBitmap is null
-            && !spec.SwatchColor.HasValue)
+            && !spec.SwatchColor.HasValue
+            && spec.StatusLines is not { Count: > 0 })
             return;
 
         if (!spec.SuppressSound)

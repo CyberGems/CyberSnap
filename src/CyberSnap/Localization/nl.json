@@ -174,7 +174,8 @@
   "Translating...": "Vertalen...",
   "Copy result": "Kopieer resultaat",
   "Copy text": "Kopieer tekst",
-  "Local model": "Lokaal model",  "Google Translate": "Google Vertalen",
+  "Local model": "Lokaal model",
+  "Google Translate": "Google Vertalen",
   "Warming local model...": "Opwarmend lokaal model...",
   "Starting translation...": "Vertalen starten...",
   "Detecting language...": "Taal detecteren...",
@@ -342,5 +343,8 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Copy path": "Pad kopiëren",
+  "Capture not saved": "Opname niet opgeslagen",
+  "Not run": "Niet uitgevoerd"
 }
