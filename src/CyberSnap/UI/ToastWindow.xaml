@@ -219,7 +219,7 @@
                         <Image x:Name="InlinePreviewImage" Stretch="Uniform" Margin="4"
                                RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,56,0">
                         <TextBlock x:Name="TitleText" FontSize="12.75" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"
                                    TextAlignment="Center"
@@ -240,6 +240,24 @@
                      populated in code-behind from ToastSpec.StatusLines. -->
                 <StackPanel x:Name="StatusLinesPanel" Grid.Row="2"
                             Margin="14,0,14,11" Visibility="Collapsed"/>
+
+                <!-- Top-right settings button (always visible, opens app settings) -->
+                <Border x:Name="TextSettingsBtn" Width="24" Height="24" CornerRadius="7"
+                        Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                        ToolTip="Notification settings"
+                        AutomationProperties.Name="Notification settings"
+                        AutomationProperties.HelpText="Open notification settings."
+                        Cursor="Hand"
+                        Focusable="True"
+                        KeyDown="SettingsBtn_KeyDown"
+                        Grid.RowSpan="4"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="0,7,35,0"
+                        Panel.ZIndex="10">
+                    <Image x:Name="TextSettingsIcon" Width="11" Height="11" Stretch="Uniform" Opacity="0.65"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
 
                 <!-- Top-right close button (always visible) -->
                 <Border x:Name="TextCloseBtn" Width="24" Height="24" CornerRadius="7"

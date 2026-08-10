@@ -681,6 +681,7 @@ public partial class ToastWindow : Window
         ApplyToastOverlayButtonVisual(HistoryBtn, HistoryIcon, "history", active: false);
         ApplyToastOverlayButtonVisual(EditBtn, EditIcon, "draw", active: false);
         ApplyTextCloseVisual(active: false);
+        ApplyTextSettingsVisual(active: false);
 
         HookOverlayHover(CloseBtn, CloseIcon, "close");
         HookOverlayHover(PinBtn, PinIcon, "pin");
@@ -692,6 +693,20 @@ public partial class ToastWindow : Window
         HookOverlayHover(EditBtn, EditIcon, "draw");
         TextCloseBtn.MouseEnter += (_, _) => ApplyTextCloseVisual(active: true);
         TextCloseBtn.MouseLeave += (_, _) => ApplyTextCloseVisual(active: false);
+        TextSettingsBtn.MouseEnter += (_, _) => ApplyTextSettingsVisual(active: true);
+        TextSettingsBtn.MouseLeave += (_, _) => ApplyTextSettingsVisual(active: false);
+    }
+
+    private void ApplyTextSettingsVisual(bool active)
+    {
+        var iconColor = Theme.IsDark
+            ? System.Drawing.Color.FromArgb(active ? 255 : 200, 255, 255, 255)
+            : System.Drawing.Color.FromArgb(active ? 255 : 180, 24, 24, 24);
+        TextSettingsIcon.Source = FluentIcons.RenderWpf("gear", iconColor, 14);
+        TextSettingsIcon.Opacity = active ? 1.0 : 0.78;
+        TextSettingsBtn.Background = active
+            ? Theme.Brush(Theme.IsDark ? Color.FromArgb(48, 255, 255, 255) : Color.FromArgb(38, 0, 0, 0))
+            : System.Windows.Media.Brushes.Transparent;
     }
 
     private void ApplyTextCloseVisual(bool active)
@@ -771,9 +786,12 @@ public partial class ToastWindow : Window
         HistoryBtn.MouseLeftButtonDown -= HistoryBtn_MouseLeftButtonDown;
         EditBtn.MouseLeftButtonDown -= EditBtn_MouseLeftButtonDown;
         TextCloseBtn.MouseLeftButtonDown -= CloseBtn_MouseLeftButtonDown;
+        TextSettingsBtn.MouseLeftButtonDown -= SettingsBtn_MouseLeftButtonDown;
 
         // Text-only toasts (no preview bitmap) always get an X — independent of ShowOverlayButtons.
         TextCloseBtn.MouseLeftButtonDown += CloseBtn_MouseLeftButtonDown;
+        // Same for the settings gear: always available regardless of ShowOverlayButtons.
+        TextSettingsBtn.MouseLeftButtonDown += SettingsBtn_MouseLeftButtonDown;
 
         if (_previewBitmap is null || !_spec.ShowOverlayButtons)
             return;
@@ -813,6 +831,8 @@ public partial class ToastWindow : Window
         // Close button is always visible for all toast types.
         SetToastElementAccessibility(TextCloseBtn, LocalizationService.Translate("Close notification"), LocalizationService.Translate("Close this notification."));
         TextCloseBtn.Visibility = Visibility.Visible;
+        SetToastElementAccessibility(TextSettingsBtn, LocalizationService.Translate("Notification settings"), LocalizationService.Translate("Open notification settings."));
+        TextSettingsBtn.Visibility = Visibility.Visible;
         ApplyTextCloseVisual(active: false);
     }
 
@@ -970,6 +990,43 @@ public partial class ToastWindow : Window
             return;
 
         e.Handled = true;
+        CloseToast();
+    }
+
+    private void SettingsBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        e.Handled = true;
+        try
+        {
+            ((App)Application.Current).ShowSettings("notifications");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("toast.open-settings", ex.Message, ex);
+        }
+        CloseToast();
+    }
+
+    private void SettingsBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
+            return;
+
+        e.Handled = true;
+        try
+        {
+            ((App)Application.Current).ShowSettings("notifications");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("toast.open-settings", ex.Message, ex);
+        }
         CloseToast();
     }
 
@@ -2116,7 +2173,8 @@ public partial class ToastWindow : Window
         IsChildOf(source, DeleteBtn) ||
         IsChildOf(source, HistoryBtn) ||
         IsChildOf(source, EditBtn) ||
-        IsChildOf(source, TextCloseBtn);
+        IsChildOf(source, TextCloseBtn) ||
+        IsChildOf(source, TextSettingsBtn);
 
     private string? GetDragFilePath()
     {
