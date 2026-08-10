@@ -75,7 +75,8 @@ public partial class App
         if (TrySwitchActiveOverlay(_settingsService!.Settings.DefaultCaptureMode))
             return;
 
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        // Replace any stale Preview window — the user clearly wants a fresh capture.
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchOverlay(_settingsService!.Settings.DefaultCaptureMode);
     }
@@ -85,7 +86,7 @@ public partial class App
         if (TrySwitchActiveOverlay(mode))
             return;
 
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchOverlay(mode);
     }
@@ -95,7 +96,7 @@ public partial class App
         if (TrySwitchActiveOverlay(CaptureMode.Ocr))
             return;
 
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchOverlay(CaptureMode.Ocr);
     }
@@ -105,7 +106,7 @@ public partial class App
         if (TrySwitchActiveOverlay(CaptureMode.ColorPicker))
             return;
 
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchOverlay(CaptureMode.ColorPicker);
     }
@@ -118,14 +119,14 @@ public partial class App
             return;
         }
 
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchGifRecording(RecordingFormat.GIF);
     }
 
     private void OnScrollCaptureHotkeyPressed()
     {
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchScrollingCapture();
     }
@@ -133,21 +134,21 @@ public partial class App
 
     private void OnFullscreenHotkeyPressed()
     {
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchWithDelay(CaptureFullscreenNow);
     }
 
     private void OnActiveWindowHotkeyPressed()
     {
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchWithDelay(CaptureActiveWindowNow);
     }
 
     private void OnRepeatLastAreaHotkeyPressed()
     {
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
 
         if (!LastCaptureArea.TryGetScreenRect(_settingsService!.Settings, out _))
@@ -325,7 +326,7 @@ public partial class App
             return;
         }
 
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchGifRecording();
     }

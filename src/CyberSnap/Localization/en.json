@@ -158,6 +158,8 @@
   "Discard the current crop and select again": "Discard the current crop and select again",
   "Cancel capture completely": "Cancel capture completely",
   "Close the capture tool and discard everything": "Close the capture tool and discard everything",
+  "Capture already in progress": "Capture already in progress",
+  "Close the open preview (Done or Esc) before starting another capture.": "Close the open preview (Done or Esc) before starting another capture.",
   "double-click": "double-click",
   "\"{0}\" hidden · Restore from ▼": "\"{0}\" hidden · Restore from ▼",
   "Drag to select the capture area": "Drag to select the capture area",

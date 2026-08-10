@@ -1391,6 +1391,15 @@ public partial class CaptureWidgetWindow : Window
 
     private void TriggerAppCapture(Models.CaptureMode mode, RecordingFormat? recordingFormat = null)
     {
+        // While a capture Preview is open, refuse the new capture and tell the user why.
+        // (Hotkeys reach App.OnHotkeyPressed first and the guard there replaces the preview;
+        //  widget clicks land here and must not silently disappear into the guard.)
+        if (((App)System.Windows.Application.Current).ActivePreviewDialog != null)
+        {
+            NotifyPreviewBlocksCapture();
+            return;
+        }
+
         // Hide so the widget is not included in the capture, then launch after a brief delay.
         HideAndLaunch(app =>
         {
@@ -1431,7 +1440,61 @@ public partial class CaptureWidgetWindow : Window
     /// Launches a standalone tool (Color Picker, OCR, Ruler, Scan) that runs as its own form
     /// and bypasses the capture overlay entirely.
     /// </summary>
-    private void TriggerStandaloneTool(Action<App> launch) => HideAndLaunch(launch);
+    private void TriggerStandaloneTool(Action<App> launch)
+    {
+        // Same "preview is open" guard as TriggerAppCapture.
+        if (((App)System.Windows.Application.Current).ActivePreviewDialog != null)
+        {
+            NotifyPreviewBlocksCapture();
+            return;
+        }
+        HideAndLaunch(launch);
+    }
+
+    /// <summary>
+    /// Visual "you can't capture right now" feedback: a small horizontal shake of the
+    /// panel plus a localized toast explaining that an open Preview window must be closed
+    /// first. The toast runs every time (not just once) because the Preview can linger
+    /// behind other windows and the user may not realize it's still open.
+    /// </summary>
+    private void NotifyPreviewBlocksCapture()
+    {
+        PlayShakeAnimation();
+        ShowPreviewBlockingTip();
+    }
+
+    private void ShowPreviewBlockingTip()
+    {
+        ToastWindow.Show(
+            Services.LocalizationService.Translate("Capture already in progress"),
+            Services.LocalizationService.Translate("Close the open preview (Done or Esc) before starting another capture."));
+    }
+
+    /// <summary>
+    /// Cheap horizontal shake driven by an easing double-animation on the existing
+    /// SlideTransform, so the feedback works whether the widget is collapsed (peek) or
+    /// expanded (full panel). Two peaks left/right, then settle to zero.
+    /// </summary>
+    private void PlayShakeAnimation()
+    {
+        if (UI.Motion.Disabled)
+            return;
+
+        SlideTransform.BeginAnimation(TranslateTransform.XProperty, null);
+
+        var frames = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames
+        {
+            Duration = new Duration(TimeSpan.FromMilliseconds(320))
+        };
+        frames.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        frames.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(-5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(40))));
+        frames.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(120))));
+        frames.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(-4, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(200))));
+        frames.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(3, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(270))));
+        frames.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(320))));
+
+        SlideTransform.BeginAnimation(TranslateTransform.XProperty, frames);
+    }
 
     /// <summary>
     /// Hides the widget, waits for the hide to settle, launches the action, then re-shows
