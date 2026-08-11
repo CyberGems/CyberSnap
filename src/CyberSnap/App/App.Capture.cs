@@ -152,6 +152,8 @@ public partial class App
                 if (fmt == RecordingFormat.GIF)
                 {
                     // Form only invokes this when the live Send-to-Trimmer toggle is on.
+                    // Note: the "Show notification" pill fires from the main completion path
+                    // below, so this early callback does not need a fallback toast on failure.
                     onGifEncodedForTrimmer = path =>
                     {
                         try
@@ -164,11 +166,7 @@ public partial class App
                                     firstFrame: null,
                                     isGif: true,
                                     ephemeral: !persistRecording,
-                                    onFailure: () =>
-                                    {
-                                        if (wantRecordingNotification)
-                                            ShowRecordingToast(path, copiedToClipboard: null, isGif: true, ephemeral: !persistRecording);
-                                    });
+                                    onFailure: () => { });
                             });
                         }
                         catch (Exception ex)
@@ -243,31 +241,26 @@ public partial class App
                                         firstFrame,
                                         isGif: false,
                                         ephemeral: !persistRecording,
-                                        onFailure: () =>
-                                        {
-                                            if (wantRecordingNotification)
-                                                ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
-                                        });
+                                        onFailure: () => { });
                                     firstFrame = null;
                                 }
                                 catch (Exception ex)
                                 {
                                     AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
                                     firstFrame?.Dispose();
-                                    if (wantRecordingNotification)
-                                        ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
                                 }
                             }
-                        }
-                        else if (wantRecordingNotification)
-                        {
-                            firstFrame?.Dispose();
-                            ShowRecordingToast(path, copiedToClipboard, isGif, ephemeral: !persistRecording);
                         }
                         else
                         {
                             firstFrame?.Dispose();
                         }
+
+                        // Pill semantics: "Show notification" is orthogonal to the trimmer.
+                        // When ON, the completion toast is always shown (in addition to —
+                        // or instead of — the trimmer window).
+                        if (wantRecordingNotification)
+                            ShowRecordingToast(path, copiedToClipboard, isGif, ephemeral: !persistRecording);
 
                         ScheduleIdleMemoryTrim();
                     });

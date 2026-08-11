@@ -37,6 +37,9 @@ public partial class RecordingOutcomeEditor : UserControl
             if (e.NewSize.Width > 0 && Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5)
                 Rebuild();
         };
+        // Cap the WrapPanel's effective width to the ActiveTray's actual width minus its
+        // Padding (8+8), so the panel wraps exactly at the tray edge instead of spilling.
+        ActiveTray.SizeChanged += (_, _) => Rebuild();
     }
 
     public RecordingOutcomeKind Kind
@@ -129,6 +132,16 @@ public partial class RecordingOutcomeEditor : UserControl
             var dock = new DockPanel { LastChildFill = true };
             dock.Children.Add(source);
             dock.Children.Add(steps);
+
+            // Hard-cap the wrap width so the pills never overflow the tray. Without this the
+            // WrapPanel occasionally measures with infinite width during the first pass of
+            // the parent layout, keeping everything on a single row that overflows the Card.
+            double sourceWidth = FlowSourceIconSize + 4 + 2 + 6; // icon + border margin + breathing
+            double trayPadding = ActiveTray.Padding.Left + ActiveTray.Padding.Right;
+            double available = ActiveTray.ActualWidth - trayPadding - sourceWidth;
+            if (available > 0)
+                steps.MaxWidth = available;
+
             ActivePanel.Children.Add(dock);
         }
 
