@@ -348,7 +348,8 @@ public partial class App
         ToastWindow.Show(ToastSpec.Standard(title, body, path) with
         {
             PlayCaptureSound = true,
-            DeleteFileOnDismiss = ephemeral
+            DeleteFileOnDismiss = ephemeral,
+            InlineIconId = isGif ? "recordGif" : "record"
         });
     }
 

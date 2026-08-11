@@ -3292,12 +3292,12 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Services:LocalizationService.SourceText="System alerts" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Services:LocalizationService.SourceText="Show brief status alerts such as &quot;CyberSnap is ready&quot;, &quot;Video recorded&quot; or &quot;Encoding, please wait...&quot;. Previews and error alerts are not affected." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Show brief status alerts such as &quot;CyberSnap is ready&quot;, &quot;Video recorded&quot; or &quot;Encoding, please wait...&quot;. Error alerts are not affected." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="SystemNotificationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           Width="150" HorizontalAlignment="Left"
                                           AutomationProperties.Name="System alerts"
-                                          Services:LocalizationService.SourceToolTip="Show brief status alerts such as &quot;CyberSnap is ready&quot;, &quot;Video recorded&quot; or &quot;Encoding, please wait...&quot;. Previews and error alerts are not affected."
+                                          Services:LocalizationService.SourceToolTip="Show brief status alerts such as &quot;CyberSnap is ready&quot;, &quot;Video recorded&quot; or &quot;Encoding, please wait...&quot;. Error alerts are not affected."
                                           Checked="SystemNotificationsCheck_Changed" Unchecked="SystemNotificationsCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>

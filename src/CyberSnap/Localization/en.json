@@ -1064,7 +1064,7 @@
   "Clear All Guides": "Clear All Guides",
   "System messages": "System alerts",
   "System alerts": "System alerts",
-  "Show brief status alerts such as \"CyberSnap is ready\", \"Video recorded\" or \"Encoding, please wait...\". Previews and error alerts are not affected.": "Show brief status alerts such as \"CyberSnap is ready\", \"Video recorded\" or \"Encoding, please wait...\". Previews and error alerts are not affected.",
+  "Show brief status alerts such as \"CyberSnap is ready\", \"Video recorded\" or \"Encoding, please wait...\". Error alerts are not affected.": "Show brief status alerts such as \"CyberSnap is ready\", \"Video recorded\" or \"Encoding, please wait...\". Error alerts are not affected.",
   "Bottom Left": "Bottom Left",
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",

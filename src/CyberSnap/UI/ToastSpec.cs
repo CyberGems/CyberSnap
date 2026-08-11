@@ -29,6 +29,13 @@ internal sealed record ToastSpec
     public Color? SwatchColor { get; init; }
     public Bitmap? PreviewBitmap { get; init; }
     public Bitmap? InlinePreviewBitmap { get; init; }
+    /// <summary>
+    /// Optional Fluent icon id rendered inside <see cref="InlinePreviewHost"/> when neither
+    /// <see cref="IsWelcomeToast"/> nor <see cref="InlinePreviewBitmap"/> are set.
+    /// Used to give brief status toasts (e.g. "Video recorded" / "GIF recorded") a clear
+    /// left-side glyph that balances the layout against the top-right action buttons.
+    /// </summary>
+    public string? InlineIconId { get; init; }
     public string? FilePath { get; init; }
     public string? ClickActionUrl { get; init; }
     public string? ClickActionLabel { get; init; }
