@@ -80,6 +80,7 @@ public sealed partial class RecordingForm : Form
     private System.Windows.Forms.Timer? _tickTimer;
     private readonly string _savePath;
     private RecordingControlBar? _controlBar;
+    private RecordingControlBarWindow? _controlBarWpf;
 
     // Screen-relative selection (stays valid after phase change)
     private Rectangle _recordRegion; // in form coords, persisted
@@ -329,6 +330,7 @@ public sealed partial class RecordingForm : Form
                 _isHandleDragging = true;
                 _handleDragOrigin = e.Location;
                 _handleDragStartRect = _recordRegion;
+                _controlBarWpf?.SetDragInProgress(true);
                 return;
             }
             if (_recordRegion.Contains(e.Location))
@@ -337,6 +339,7 @@ public sealed partial class RecordingForm : Form
                 _isHandleDragging = true;
                 _handleDragOrigin = e.Location;
                 _handleDragStartRect = _recordRegion;
+                _controlBarWpf?.SetDragInProgress(true);
                 return;
             }
         }
@@ -431,6 +434,7 @@ public sealed partial class RecordingForm : Form
             _isHandleDragging = false;
             _handleDragIdx = -1;
             RebuildRecordingSurface();
+            _controlBarWpf?.SetDragInProgress(false);
             Invalidate();
             return;
         }
@@ -889,14 +893,20 @@ public sealed partial class RecordingForm : Form
 
     private void UpdateControlBarPosition()
     {
-        if (_controlBar is null || _controlBar.IsDisposed)
-            return;
-
         var screenRegion = new Rectangle(
             _recordRegion.X + _virtualBounds.X,
             _recordRegion.Y + _virtualBounds.Y,
             _recordRegion.Width,
             _recordRegion.Height);
+
+        if (_controlBarWpf is not null)
+        {
+            _controlBarWpf.Reposition(screenRegion);
+            return;
+        }
+
+        if (_controlBar is null || _controlBar.IsDisposed)
+            return;
         _controlBar.Reposition(screenRegion);
         // Bring the control bar back to front — resizing the overlay can steal TopMost z-order.
         User32.SetWindowPos(_controlBar.Handle, User32.HWND_TOPMOST,
@@ -905,6 +915,11 @@ public sealed partial class RecordingForm : Form
 
     private void CloseControlBar()
     {
+        if (_controlBarWpf is not null)
+        {
+            try { _controlBarWpf.CloseSafely(); } catch { /* ignore */ }
+            _controlBarWpf = null;
+        }
         try { _controlBar?.Close(); } catch { /* ignore */ }
         try { _controlBar?.Dispose(); } catch { /* ignore */ }
         _controlBar = null;

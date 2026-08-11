@@ -515,6 +515,8 @@
   "Recording active": "Recording",
   "Recording paused": "Paused",
   "Start recording button": "Start",
+  "Pause": "Pause",
+  "Resume": "Resume",
   "Stop recording button": "Stop",
   "Recording ready hint": "{0} · {1} FPS",
   "Recording start tooltip": "Start recording  (Enter)",
