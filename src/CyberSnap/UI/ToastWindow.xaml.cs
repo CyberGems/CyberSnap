@@ -383,6 +383,21 @@ public partial class ToastWindow : Window
             ConfigureInlinePreviewLayout(spec.InlinePreviewBitmap);
             InlinePreviewImage.Source = ToBitmapSource(spec.InlinePreviewBitmap);
         }
+        else if (!string.IsNullOrEmpty(spec.InlineIconId))
+        {
+            // Brief status toasts (video/GIF recorded, saved, etc.) get a left-side glyph so the
+            // layout doesn't feel lopsided against the top-right action buttons. Rendered in the
+            // theme's accent color to match the captureRect motif used by the welcome toast.
+            InlinePreviewHost.Visibility = Visibility.Visible;
+            InlinePreviewHost.Width = 44;
+            InlinePreviewHost.Height = 44;
+            InlinePreviewImage.Margin = new System.Windows.Thickness(10);
+            var accent = Theme.Accent;
+            InlinePreviewImage.Source = FluentIcons.RenderWpf(
+                spec.InlineIconId,
+                System.Drawing.Color.FromArgb(accent.A, accent.R, accent.G, accent.B),
+                24);
+        }
         else
         {
             InlinePreviewHost.Visibility = Visibility.Collapsed;
@@ -2017,7 +2032,41 @@ public partial class ToastWindow : Window
 
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
         menu.PlacementTarget = this; // ensure menu closes when clicking outside
-        menu.Closed += (_, _) => menu.Items.Clear(); // prevent leak
+
+        // Pause the auto-dismiss timer + progress bar while the menu is open, so the toast
+        // doesn't fade away under the user's feet while they browse the options. We don't
+        // touch _isPinned here — if the toast was already pinned we don't need to do anything,
+        // and after the menu closes the toast should resume in the same state it was.
+        double remainingOnOpen = double.NaN;
+        bool pausedByMenu = false;
+        if (!_isPinned && !_isDismissing && !_isFading)
+        {
+            // Capture the current progress-bar scale to compute remaining seconds.
+            double currentProgress = CaptureProgressScale();
+            remainingOnOpen = GetToastAutoDismissRemainingSeconds(currentProgress, _activeDurationSeconds);
+            _timer.Stop();
+            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            pausedByMenu = true;
+        }
+
+        menu.Closed += (_, _) =>
+        {
+            menu.Items.Clear(); // prevent leak
+            if (!pausedByMenu || _isDismissing || _isFading)
+                return;
+
+            // Restart the visible countdown from the captured remaining seconds.
+            ProgressBar.Visibility = Visibility.Visible;
+            ProgressScale.ScaleX = Math.Clamp(remainingOnOpen / _activeDurationSeconds, 0, 1);
+            if (!_isHovered)
+            {
+                ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                    new DoubleAnimation { To = 0, Duration = Motion.Sec(remainingOnOpen), FillBehavior = FillBehavior.HoldEnd });
+                _timer.Interval = TimeSpan.FromSeconds(remainingOnOpen);
+                _timer.Start();
+            }
+            // If _isHovered, the existing hover-resume path will handle the timer.
+        };
         menu.IsOpen = true;
     }
 

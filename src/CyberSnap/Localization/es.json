@@ -1363,7 +1363,7 @@
   "Clear All Guides": "Borrar todas las guías",
   "System messages": "Avisos de sistema",
   "System alerts": "Avisos de sistema",
-  "Show brief status alerts such as \"CyberSnap is ready\", \"Video recorded\" or \"Encoding, please wait...\". Previews and error alerts are not affected.": "Mostrar avisos de estado breves como \"CyberSnap está listo\", \"Vídeo grabado\" o \"Codificando, por favor espera...\". Las vistas previas y las alertas de error no se ven afectadas.",
+  "Show brief status alerts such as \"CyberSnap is ready\", \"Video recorded\" or \"Encoding, please wait...\". Error alerts are not affected.": "Mostrar avisos de estado breves como \"CyberSnap está listo\", \"Vídeo grabado\" o \"Codificando, por favor espera...\". Las alertas de error no se ven afectadas.",
   "Bottom Left": "Abajo a la izquierda",
   "Bottom Right": "Abajo a la derecha",
   "Annotations Editor": "Editor de anotaciones",
