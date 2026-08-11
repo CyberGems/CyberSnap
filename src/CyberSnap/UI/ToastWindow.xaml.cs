@@ -27,6 +27,7 @@ public partial class ToastWindow : Window
     private TranslateTransform? _celebrationSweep;
     private bool _isDismissing;
     private bool _isHovered;
+    private bool _contextMenuOpen;
     private bool _isFading;
     private bool _isSavingPreview;
     private bool _isDeletingSavedFile;
@@ -167,6 +168,11 @@ public partial class ToastWindow : Window
                 _timer.Stop();
                 return;
             }
+            // While a context menu spawned by this toast is open, the cursor leaving our window
+            // does NOT mean the user is done — they're browsing the menu. Keep everything paused;
+            // the menu.Closed handler will restart the countdown.
+            if (_contextMenuOpen)
+                return;
             if (_resumeDismissOnMouseLeave)
             {
                 _resumeDismissOnMouseLeave = false;
@@ -2033,39 +2039,49 @@ public partial class ToastWindow : Window
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
         menu.PlacementTarget = this; // ensure menu closes when clicking outside
 
-        // Pause the auto-dismiss timer + progress bar while the menu is open, so the toast
-        // doesn't fade away under the user's feet while they browse the options. We don't
-        // touch _isPinned here — if the toast was already pinned we don't need to do anything,
-        // and after the menu closes the toast should resume in the same state it was.
+        // Pause the auto-dismiss both while the context menu is open AND when the cursor
+        // wanders out of the toast into the menu — the user is still interacting with
+        // this toast, so its countdown shouldn't move. When the menu closes we restart
+        // the visible countdown from where the cursor is right now.
         double remainingOnOpen = double.NaN;
         bool pausedByMenu = false;
         if (!_isPinned && !_isDismissing && !_isFading)
         {
-            // Capture the current progress-bar scale to compute remaining seconds.
-            double currentProgress = CaptureProgressScale();
-            remainingOnOpen = GetToastAutoDismissRemainingSeconds(currentProgress, _activeDurationSeconds);
+            // Capture progress *before* stopping the timer/animation. During hover the bar
+            // is being refilled to 1.0 so CaptureProgressScale would lie: force the timer's
+            // remaining time from the countdown instead.
+            remainingOnOpen = _timer.IsEnabled
+                ? Math.Max(0.1, CaptureProgressScale() * _activeDurationSeconds)
+                : _activeDurationSeconds;
             _timer.Stop();
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            _contextMenuOpen = true;
             pausedByMenu = true;
         }
 
         menu.Closed += (_, _) =>
         {
             menu.Items.Clear(); // prevent leak
+            _contextMenuOpen = false;
             if (!pausedByMenu || _isDismissing || _isFading)
                 return;
 
-            // Restart the visible countdown from the captured remaining seconds.
+            // If the cursor is still over the toast, hover logic keeps things paused
+            // (timer already stopped, ProgressBar will refill via MouseLeave when the
+            // user finally moves out). Otherwise restart the visible countdown.
+            if (IsMouseOver)
+            {
+                _isHovered = true;
+                BeginProgressRefillForHover();
+                return;
+            }
+
             ProgressBar.Visibility = Visibility.Visible;
             ProgressScale.ScaleX = Math.Clamp(remainingOnOpen / _activeDurationSeconds, 0, 1);
-            if (!_isHovered)
-            {
-                ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation { To = 0, Duration = Motion.Sec(remainingOnOpen), FillBehavior = FillBehavior.HoldEnd });
-                _timer.Interval = TimeSpan.FromSeconds(remainingOnOpen);
-                _timer.Start();
-            }
-            // If _isHovered, the existing hover-resume path will handle the timer.
+            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation { To = 0, Duration = Motion.Sec(remainingOnOpen), FillBehavior = FillBehavior.HoldEnd });
+            _timer.Interval = TimeSpan.FromSeconds(remainingOnOpen);
+            _timer.Start();
         };
         menu.IsOpen = true;
     }
