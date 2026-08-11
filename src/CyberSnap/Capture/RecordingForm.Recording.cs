@@ -15,12 +15,6 @@ public sealed partial class RecordingForm
     private const string VideoPreviewSeekOffset = "0.40";
     private IDisposable? _desktopAudioSoundSuppression;
 
-    /// <summary>
-    /// Feature flag: use the WPF RecordingControlBarWindow instead of the GDI+ RecordingControlBar.
-    /// Keep both alive for one release for easy rollback.
-    /// </summary>
-    private static readonly bool UseWpfControlBar = true;
-
     // â”€â”€â”€ Recording lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
@@ -46,7 +40,6 @@ public sealed partial class RecordingForm
             }
         }
 
-        _controlBar?.SetPaused(_isPaused);
         _controlBarWpf?.SetPaused(_isPaused);
     }
 
@@ -57,7 +50,6 @@ public sealed partial class RecordingForm
         if (Interlocked.Exchange(ref _recordingStopRequested, 1) != 0) return;
         _state = State.Encoding;
         _tickTimer?.Stop();
-        _controlBar?.TransitionToEncoding();
         _controlBarWpf?.TransitionToEncoding();
 
         var gifRec = _recorder; _recorder = null;
@@ -195,79 +187,39 @@ public sealed partial class RecordingForm
             _recordRegion.Width,
             _recordRegion.Height);
 
-        if (UseWpfControlBar)
+        // Own the bar by this overlay so it stays above it while dragging.
+        _controlBarWpf = RecordingControlBarWindow.Create(screenRegion, _format, _fps, _openTrimmerAfterCapture, this);
+        _controlBarWpf.FpsChanged += fps =>
         {
-            // Own the bar by this overlay so it stays above it while dragging.
-            _controlBarWpf = RecordingControlBarWindow.Create(screenRegion, _format, _fps, _openTrimmerAfterCapture, this);
-            _controlBarWpf.FpsChanged += fps =>
-            {
-                _fps = fps;
-                PersistRecordingFps(_format, fps);
-            };
-            _controlBarWpf.SendToTrimmerChanged += enabled =>
-            {
-                _openTrimmerAfterCapture = enabled;
-                PersistSendToTrimmer(_format, enabled);
-            };
-            _controlBarWpf.StartClicked += () =>
-            {
-                if (_state == State.PreRecording)
-                    StartActualRecording();
-            };
-            _controlBarWpf.StopClicked += () =>
-            {
-                if (_state == State.Recording)
-                    StopRecording();
-            };
-            _controlBarWpf.PauseClicked += () =>
-            {
-                if (_state == State.Recording)
-                    TogglePause();
-            };
-            _controlBarWpf.CancelClicked += () =>
-            {
-                if (_state is State.PreRecording or State.Recording)
-                    DiscardRecording();
-            };
-            _controlBarWpf.ShowSafely();
-        }
-        else
+            _fps = fps;
+            PersistRecordingFps(_format, fps);
+        };
+        _controlBarWpf.SendToTrimmerChanged += enabled =>
         {
-            _controlBar = new RecordingControlBar(screenRegion, _format, _fps, _openTrimmerAfterCapture);
-            _controlBar.FpsChanged += fps =>
-            {
-                _fps = fps;
-                PersistRecordingFps(_format, fps);
-            };
-            _controlBar.SendToTrimmerChanged += enabled =>
-            {
-                _openTrimmerAfterCapture = enabled;
-                PersistSendToTrimmer(_format, enabled);
-            };
-            _controlBar.StartClicked += () =>
-            {
-                if (_state == State.PreRecording)
-                    StartActualRecording();
-            };
-            _controlBar.StopClicked += () =>
-            {
-                if (_state == State.Recording)
-                    StopRecording();
-            };
-            _controlBar.PauseClicked += () =>
-            {
-                if (_state == State.Recording)
-                    TogglePause();
-            };
-            _controlBar.CancelClicked += () =>
-            {
-                if (_state is State.PreRecording or State.Recording)
-                    DiscardRecording();
-            };
-            _controlBar.Show();
-            User32.SetWindowPos(_controlBar.Handle, User32.HWND_TOPMOST,
-                0, 0, 0, 0, User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_SHOWWINDOW);
-        }
+            _openTrimmerAfterCapture = enabled;
+            PersistSendToTrimmer(_format, enabled);
+        };
+        _controlBarWpf.StartClicked += () =>
+        {
+            if (_state == State.PreRecording)
+                StartActualRecording();
+        };
+        _controlBarWpf.StopClicked += () =>
+        {
+            if (_state == State.Recording)
+                StopRecording();
+        };
+        _controlBarWpf.PauseClicked += () =>
+        {
+            if (_state == State.Recording)
+                TogglePause();
+        };
+        _controlBarWpf.CancelClicked += () =>
+        {
+            if (_state is State.PreRecording or State.Recording)
+                DiscardRecording();
+        };
+        _controlBarWpf.ShowSafely();
     }
 
     private void StartActualRecording()
@@ -281,14 +233,11 @@ public sealed partial class RecordingForm
         // Prefer FPS selected on the floating bar (if present).
         if (_controlBarWpf is not null)
             _fps = _controlBarWpf.Fps;
-        else if (_controlBar is not null)
-            _fps = _controlBar.Fps;
 
         _screenshot?.Dispose();
         _screenshot = null;
 
         TransitionToRecordingSurface();
-        _controlBar?.TransitionToRecording();
         _controlBarWpf?.TransitionToRecording();
         UpdateControlBarPosition();
 
@@ -341,7 +290,6 @@ public sealed partial class RecordingForm
             var rawElapsed = _recorder?.Elapsed ?? _videoRecorder?.Elapsed ?? TimeSpan.Zero;
             var pausedNow = _isPaused && _pauseStartTime.HasValue ? DateTime.UtcNow - _pauseStartTime.Value : TimeSpan.Zero;
             var elapsed = rawElapsed - _totalPausedDuration - pausedNow;
-            _controlBar?.SetElapsed(elapsed);
             _controlBarWpf?.SetElapsed(elapsed);
         };
         _tickTimer.Start();

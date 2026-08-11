@@ -79,7 +79,6 @@ public sealed partial class RecordingForm : Form
     private CaptureEscapeKeyHook? _escapeHook;
     private System.Windows.Forms.Timer? _tickTimer;
     private readonly string _savePath;
-    private RecordingControlBar? _controlBar;
     private RecordingControlBarWindow? _controlBarWpf;
 
     // Screen-relative selection (stays valid after phase change)
@@ -893,24 +892,15 @@ public sealed partial class RecordingForm : Form
 
     private void UpdateControlBarPosition()
     {
+        if (_controlBarWpf is null)
+            return;
+
         var screenRegion = new Rectangle(
             _recordRegion.X + _virtualBounds.X,
             _recordRegion.Y + _virtualBounds.Y,
             _recordRegion.Width,
             _recordRegion.Height);
-
-        if (_controlBarWpf is not null)
-        {
-            _controlBarWpf.Reposition(screenRegion);
-            return;
-        }
-
-        if (_controlBar is null || _controlBar.IsDisposed)
-            return;
-        _controlBar.Reposition(screenRegion);
-        // Bring the control bar back to front — resizing the overlay can steal TopMost z-order.
-        User32.SetWindowPos(_controlBar.Handle, User32.HWND_TOPMOST,
-            0, 0, 0, 0, User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_SHOWWINDOW);
+        _controlBarWpf.Reposition(screenRegion);
     }
 
     private void CloseControlBar()
@@ -920,9 +910,6 @@ public sealed partial class RecordingForm : Form
             try { _controlBarWpf.CloseSafely(); } catch { /* ignore */ }
             _controlBarWpf = null;
         }
-        try { _controlBar?.Close(); } catch { /* ignore */ }
-        try { _controlBar?.Dispose(); } catch { /* ignore */ }
-        _controlBar = null;
     }
 
     private void BuildHollowRegion()
