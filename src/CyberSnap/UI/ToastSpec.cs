@@ -27,7 +27,6 @@ internal sealed record ToastSpec
     public string Title { get; init; } = "";
     public string Body { get; init; } = "";
     public Color? SwatchColor { get; init; }
-    public Bitmap? PreviewBitmap { get; init; }
     public Bitmap? InlinePreviewBitmap { get; init; }
     /// <summary>
     /// Optional Fluent icon id rendered inside <see cref="InlinePreviewHost"/> when neither
@@ -60,11 +59,6 @@ internal sealed record ToastSpec
     /// are visible but do not run real actions.
     /// </summary>
     public bool DisableInteractiveActions { get; init; }
-    public Stretch PreviewStretch { get; init; } = Stretch.Uniform;
-    public Thickness PreviewMargin { get; init; }
-    public double? PreviewMaxHeight { get; init; }
-    public int? MaxWidthOverride { get; init; }
-    public int? MinWidthOverride { get; init; }
     public double? DurationSeconds { get; init; }
     // When true, the toast plays a celebratory flourish (animated sweep timeline).
     // Only honored for non-error toasts.

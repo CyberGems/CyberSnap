@@ -27,6 +27,16 @@ public partial class RecordingOutcomeEditor : UserControl
     {
         InitializeComponent();
         Loaded += (_, _) => Rebuild();
+        // Rebuild the active pills whenever the available width actually changes. WrapPanel
+        // inside a DockPanel last-child-fill sometimes measures with infinite width during
+        // the first pass (especially when hosted inside a Card Border with its own padding),
+        // so pills can be laid out past the visible edge. Re-running Rebuild forces a
+        // re-measure once the real width is known.
+        SizeChanged += (_, e) =>
+        {
+            if (e.NewSize.Width > 0 && Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5)
+                Rebuild();
+        };
     }
 
     public RecordingOutcomeKind Kind

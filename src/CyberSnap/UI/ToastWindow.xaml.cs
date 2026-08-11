@@ -87,43 +87,6 @@ public partial class ToastWindow : Window
     private static Color DefaultDarkToastStroke()
         => Theme.ToastBorder;
 
-    internal static (int Width, int Height, bool Framed) ComputeImageOnlyPreviewLayout(int sourceWidth, int sourceHeight)
-    {
-        int safeWidth = Math.Max(1, sourceWidth);
-        int safeHeight = Math.Max(1, sourceHeight);
-        double aspect = safeWidth / (double)safeHeight;
-        bool framed = Math.Min(safeWidth, safeHeight) < 72 || aspect > 2.5 || aspect < 0.85;
-
-        if (framed)
-        {
-            if (aspect < 0.85)
-                return (188, 220, true);
-
-            const int frameWidth = 280;
-            const int maxFrameHeight = 176;
-            const int minFrameHeight = 44;
-            int frameHeight = (int)Math.Round(Math.Clamp(frameWidth / aspect, minFrameHeight, maxFrameHeight));
-            return (frameWidth, frameHeight, true);
-        }
-
-        const int targetHeight = 188;
-        double width = targetHeight * aspect;
-        double height = targetHeight;
-
-        if (width > 332)
-        {
-            width = 332;
-            height = width / aspect;
-        }
-        else if (width < 188)
-        {
-            width = 188;
-            height = Math.Min(targetHeight, width / aspect);
-        }
-
-        return ((int)Math.Round(width), (int)Math.Round(height), false);
-    }
-
     private ToastWindow(ToastSpec spec)
     {
         _spec = spec;
@@ -135,7 +98,9 @@ public partial class ToastWindow : Window
         LoadOverlayIcons();
         UiScale.ApplyToWindow(this, OuterShell, scaleWindowBounds: false);
 
-        double baseDuration = spec.PreviewBitmap is not null ? _durationSeconds : _systemDurationSeconds;
+        // Rich toasts (capture / recording / share) use _durationSeconds; brief text-only
+        // system alerts use the longer _systemDurationSeconds so the user has time to read.
+        double baseDuration = spec.IsSystemMessage ? _systemDurationSeconds : _durationSeconds;
         _activeDurationSeconds = spec.DurationSeconds ?? baseDuration;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_activeDurationSeconds) };
         _timer.Tick += (_, _) =>
@@ -230,7 +195,6 @@ public partial class ToastWindow : Window
             ProgressGlow.BlurRadius = 0;
             ProgressGlow.Opacity = 0;
 
-            ImageFrame.BorderBrush = Theme.Brush(Theme.BorderSubtle);
             InlinePreviewHost.Background = Theme.Brush(Theme.BgSecondary);
             InlinePreviewHost.BorderBrush = Theme.Brush(Theme.BorderSubtle);
             PreviewActionsDivider.Background = Theme.Brush(Theme.Separator);
@@ -259,9 +223,6 @@ public partial class ToastWindow : Window
             ProgressGlow.BlurRadius = 8;
             ProgressGlow.Opacity = 0.8;
 
-            ImageFrame.BorderBrush = Theme.Brush(Theme.IsDark
-                ? Color.FromArgb(28, 255, 255, 255)
-                : Color.FromArgb(18, 0, 0, 0));
             InlinePreviewHost.Background = Theme.Brush(Theme.IsDark
                 ? Color.FromArgb(22, 255, 255, 255)
                 : Color.FromArgb(12, 0, 0, 0));
@@ -272,8 +233,8 @@ public partial class ToastWindow : Window
                 ? Color.FromArgb(36, 255, 255, 255)
                 : Color.FromArgb(28, 0, 0, 0));
         }
-        ImageFrame.BorderThickness = new Thickness(1);
     }
+
 
     internal bool TryUpdateInPlace(ToastSpec spec)
     {
@@ -294,7 +255,9 @@ public partial class ToastWindow : Window
         UpdateRootClip();
         ApplyPlacement(animateEntry: true, subtleEntry: false);
 
-        double baseDuration = spec.PreviewBitmap is not null ? _durationSeconds : _systemDurationSeconds;
+        // Rich toasts (capture / recording / share) use _durationSeconds; brief text-only
+        // system alerts use the longer _systemDurationSeconds so the user has time to read.
+        double baseDuration = spec.IsSystemMessage ? _systemDurationSeconds : _durationSeconds;
         _activeDurationSeconds = spec.DurationSeconds ?? baseDuration;
 
         _isHovered = IsMouseOver;
@@ -410,23 +373,10 @@ public partial class ToastWindow : Window
             InlinePreviewImage.Source = null;
         }
 
-        if (spec.PreviewBitmap is not null)
-        {
-            _previewBitmap = spec.PreviewBitmap;
-            ImageArea.Visibility = Visibility.Visible;
-            ConfigureImagePreview(spec);
-            UpdateVideoPlayBadge(spec.FilePath);
-        }
-        else
-        {
-            ImageArea.Visibility = Visibility.Collapsed;
-            PreviewImage.Source = null;
-            if (VideoPlayBadge is not null)
-                VideoPlayBadge.Visibility = Visibility.Collapsed;
-            CloseBtn.Visibility = Visibility.Collapsed;
-            PinBtn.Visibility = Visibility.Collapsed;
-            SaveBtn.Visibility = Visibility.Collapsed;
-        }
+        // The "large preview" toast (ImageArea + PreviewImage + VideoPlayBadge + Close/Pin/Save
+        // overlay buttons) was retired — capture previews now live in the Preview window and
+        // recording previews in the Trimmer. There are no production callers that assign
+        // ToastSpec.PreviewBitmap anymore.
 
         if (spec.TransparentShell)
         {
@@ -600,68 +550,6 @@ public partial class ToastWindow : Window
         };
 
         return btn;
-    }
-
-    private void ConfigureImagePreview(ToastSpec spec)
-    {
-        var preview = spec.PreviewBitmap!;
-        bool imageOnly = TitleText.Visibility == Visibility.Collapsed &&
-                         BodyText.Visibility == Visibility.Collapsed &&
-                         TextContentPanel.Visibility == Visibility.Collapsed;
-        bool fallbackFramed = false;
-
-        double aspect = preview.Height <= 0 ? 1d : preview.Width / (double)preview.Height;
-
-        int toastW;
-        int toastH;
-        var previewStretch = spec.PreviewStretch;
-        if (imageOnly)
-        {
-            var imageOnlyLayout = ComputeImageOnlyPreviewLayout(preview.Width, preview.Height);
-            fallbackFramed = imageOnlyLayout.Framed;
-            toastW = imageOnlyLayout.Width;
-            toastH = imageOnlyLayout.Height;
-
-            Root.MinWidth = toastW;
-            Root.MaxWidth = toastW;
-            ImageArea.Width = toastW;
-            ImageArea.Height = toastH;
-            ImageArea.MaxHeight = toastH;
-            System.Windows.Controls.Grid.SetRowSpan(ImageArea, 1);
-            Root.Background = Theme.Brush(Theme.ToastBg);
-            ImageFrame.Background = Theme.Brush(Theme.ToastBg);
-            double topR = IsDefaultDarkTheme() ? InnerCornerRadius : RootCornerRadius;
-            ImageFrame.CornerRadius = new CornerRadius(topR, topR, 0, 0);
-            ImageFrame.BorderThickness = new Thickness(0);
-        }
-        else
-        {
-            toastW = spec.MaxWidthOverride ?? (int)Math.Clamp(180 * aspect, 200, 340);
-            toastH = spec.PreviewMaxHeight is double maxH
-                ? (int)maxH
-                : (int)Math.Clamp(toastW / Math.Max(0.35, aspect), 80, 200);
-            Root.MaxWidth = toastW;
-            Root.MinWidth = spec.MinWidthOverride ?? Math.Min(200, toastW);
-            ImageArea.Width = double.NaN;
-            ImageArea.Height = double.NaN;
-            ImageArea.MaxHeight = toastH;
-            System.Windows.Controls.Grid.SetRowSpan(ImageArea, 1);
-            Root.Background = Theme.Brush(Theme.ToastBg);
-            ImageFrame.Background = Theme.Brush(Theme.ToastBg);
-            double topR = IsDefaultDarkTheme() ? InnerCornerRadius : RootCornerRadius;
-            ImageFrame.CornerRadius = new CornerRadius(topR, topR, 0, 0);
-            ImageFrame.BorderThickness = new Thickness(1);
-        }
-
-        PreviewImage.Stretch = previewStretch;
-        PreviewImage.Margin = imageOnly
-            ? (fallbackFramed ? new Thickness(0) : new Thickness(-1))
-            : spec.PreviewMargin;
-        PreviewImage.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-        PreviewImage.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
-        PreviewImage.Source = ToBitmapSource(preview);
-
-        RefreshOverlayButtonLayout();
     }
 
     private void ConfigureInlinePreviewLayout(Bitmap preview)
@@ -914,8 +802,7 @@ public partial class ToastWindow : Window
         ActionsPanel.RowDefinitions[1].Height = maxRow >= 2 ? new GridLength(rowHeight) : new GridLength(0);
         ActionsPanel.Height = maxRow * rowHeight;
 
-        bool showDivider = maxRow > 0 &&
-                           (ImageArea.Visibility == Visibility.Visible || TextContentPanel.Visibility == Visibility.Visible);
+        bool showDivider = maxRow > 0 && TextContentPanel.Visibility == Visibility.Visible;
         PreviewActionsDivider.Visibility = showDivider ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -934,14 +821,6 @@ public partial class ToastWindow : Window
 
         if (spec.InlinePreviewBitmap is not null)
             SetToastElementAccessibility(InlinePreviewHost, "Inline toast preview", "Preview image shown inside this notification.");
-
-        if (spec.PreviewBitmap is not null)
-        {
-            // Tooltip/help for the image surface is owned by RefreshInteractiveTooltip so the
-            // configured body-click action and file name stay in one place (no competing tips).
-            var previewHelp = BuildPreviewBodyTooltip(spec) ?? "Notification preview image";
-            SetToastElementAccessibility(PreviewImage, "Notification preview image", previewHelp);
-        }
     }
 
     private void RefreshOverlayButtonAccessibility(System.Windows.Controls.Border button, Helpers.ToastButtonKind kind)
@@ -1522,55 +1401,22 @@ public partial class ToastWindow : Window
         // action and file name never fight each other depending on where the cursor sits.
         var tip = BuildPreviewBodyTooltip(spec);
         ToolTip = tip;
-        if (ImageArea.Visibility == Visibility.Visible)
-            PreviewImage.ToolTip = tip;
     }
 
     /// <summary>
     /// Body-click action line, optionally with the capture file name on a second line.
     /// Used for both the window tooltip and the preview image (which fills most of the toast).
     /// </summary>
+    /// <summary>
+    /// Tooltip for click-to-action on the toast body. Only the explicit ClickActionLabel is
+    /// honored — the legacy "click a large preview" flow that read ToastPreviewClickAction
+    /// was retired together with ToastSpec.PreviewBitmap (no production callers).
+    /// </summary>
     private static string? BuildPreviewBodyTooltip(ToastSpec spec)
     {
         if (!string.IsNullOrWhiteSpace(spec.ClickActionLabel))
             return LocalizationService.Translate(spec.ClickActionLabel);
-
-        // Non-preview toasts (system messages, etc.) leave tooltip empty unless a custom label was set.
-        if (spec.PreviewBitmap is null)
-            return null;
-
-        ToastPreviewClickAction action;
-        try
-        {
-            action = SettingsService.LoadStatic()?.ToastPreviewClickAction
-                ?? ToastPreviewClickAction.OpenInEditor;
-        }
-        catch
-        {
-            action = ToastPreviewClickAction.OpenInEditor;
-        }
-
-        bool isPdf = !string.IsNullOrWhiteSpace(spec.FilePath) && spec.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
-        string tipKey = isPdf
-            ? "Click to open in default viewer"
-            : action switch
-            {
-                ToastPreviewClickAction.OpenInDefaultViewer => "Click to open in default viewer",
-                ToastPreviewClickAction.CopyToClipboard => "Click to copy",
-                ToastPreviewClickAction.Save => "Click to save",
-                ToastPreviewClickAction.OpenInGallery => "Click to open in Gallery",
-                ToastPreviewClickAction.Close => "Click to close",
-                _ => "Click to open in editor"
-            };
-        string actionLine = LocalizationService.Translate(tipKey);
-
-        if (string.IsNullOrWhiteSpace(spec.FilePath))
-            return actionLine;
-
-        string fileName = Path.GetFileName(spec.FilePath);
-        return string.IsNullOrWhiteSpace(fileName)
-            ? actionLine
-            : $"{actionLine}\n{fileName}";
+        return null;
     }
 
     private void DeleteBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1985,20 +1831,6 @@ public partial class ToastWindow : Window
         => path is not null &&
            (path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
             path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase));
-
-    /// <summary>
-    /// Centered neutral play badge on video/GIF capture previews (same language as the designer mock).
-    /// </summary>
-    private void UpdateVideoPlayBadge(string? filePath)
-    {
-        if (VideoPlayBadge is null)
-            return;
-
-        bool show = IsVideoOrGifPath(filePath);
-        VideoPlayBadge.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        if (show)
-            VideoPlayBadge.Background = Theme.Brush(Color.FromArgb(180, 0, 0, 0));
-    }
 
     private void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
@@ -2622,7 +2454,6 @@ public partial class ToastWindow : Window
         if (_current == this) _current = null;
         RunOnClosedCleanup("toast.closed.dispose-preview", () => _previewBitmap?.Dispose());
         _previewBitmap = null;
-        RunOnClosedCleanup("toast.closed.clear-preview-source", () => PreviewImage.Source = null);
         RunOnClosedCleanup("toast.closed.clear-inline-source", () => InlinePreviewImage.Source = null);
         if (_deleteFileOnDismiss)
         {
@@ -2854,13 +2685,6 @@ public partial class ToastWindow : Window
         ProgressBar.RenderTransformOrigin = centered
             ? new System.Windows.Point(0.5, 0.5)
             : new System.Windows.Point(0, 0.5);
-
-        // When the bar sits on top, square the image's upper corners so the rounded
-        // notch doesn't peek out beneath the timeline. Inner radius matches EdgeRing inset.
-        double imageR = IsDefaultDarkTheme() ? InnerCornerRadius : RootCornerRadius;
-        ImageFrame.CornerRadius = topEdge
-            ? new CornerRadius(0)
-            : new CornerRadius(imageR, imageR, 0, 0);
     }
 
     [DllImport("user32.dll")]
