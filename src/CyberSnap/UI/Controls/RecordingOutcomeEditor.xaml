@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:Services="clr-namespace:CyberSnap.Services"
-             x:Name="Root">
+             x:Name="Root"
+             HorizontalAlignment="Stretch">
     <StackPanel>
         <TextBlock x:Name="ActiveLabel"
                    Text="Active"
@@ -17,8 +18,9 @@
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="8,8"
-                MinHeight="44">
-            <Grid x:Name="ActivePanel"/>
+                MinHeight="44"
+                ClipToBounds="True">
+            <Grid x:Name="ActivePanel" ClipToBounds="True"/>
         </Border>
 
         <TextBlock x:Name="AvailableLabel"
@@ -34,7 +36,8 @@
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="8,8"
-                MinHeight="44">
+                MinHeight="44"
+                ClipToBounds="True">
             <WrapPanel x:Name="AvailablePanel" Orientation="Horizontal"/>
         </Border>
     </StackPanel>

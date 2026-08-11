@@ -83,8 +83,8 @@ public partial class ToastWindow
         // Guard: skip completely empty toasts (no text, no image, no color, no status rows)
         if (string.IsNullOrWhiteSpace(spec.Title)
             && string.IsNullOrWhiteSpace(spec.Body)
-            && spec.PreviewBitmap is null
             && spec.InlinePreviewBitmap is null
+            && string.IsNullOrEmpty(spec.InlineIconId)
             && !spec.SwatchColor.HasValue
             && spec.StatusLines is not { Count: > 0 })
             return;
