@@ -147,8 +147,8 @@ public static class RecordingOutcomeModel
         {
             RecordingOutcomePillKind.Save => "Write the recording to the configured save folder.",
             RecordingOutcomePillKind.Notification => kind == RecordingOutcomeKind.Video
-                ? "Show a status toast when an MP4 recording finishes (or if the trimmer fails to open)."
-                : "Show a status toast when a GIF recording finishes (or if the trimmer fails to open).",
+                ? "Show a toast when an MP4 recording finishes (in addition to the trimmer if enabled)."
+                : "Show a toast when a GIF recording finishes (in addition to the trimmer if enabled).",
             RecordingOutcomePillKind.Clipboard => kind == RecordingOutcomeKind.Video
                 ? "Copy the finished MP4 to the clipboard."
                 : "Copy the finished GIF to the clipboard.",

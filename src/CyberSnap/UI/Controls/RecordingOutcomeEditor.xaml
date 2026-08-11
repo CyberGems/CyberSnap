@@ -13,7 +13,8 @@
                    Margin="0,0,0,6"
                    Services:LocalizationService.SourceText="Active outcome"
                    Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-        <Border Background="{DynamicResource ThemeInputBackgroundBrush}"
+        <Border x:Name="ActiveTray"
+                Background="{DynamicResource ThemeInputBackgroundBrush}"
                 BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
