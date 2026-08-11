@@ -1363,7 +1363,11 @@ public partial class CaptureWidgetWindow : Window
     {
         if (_suppressCaptureCursorToggle) return;
 
-        _settings.SetCaptureCursorForAll(CaptureCursorToggle.IsChecked == true);
+        // The widget's cursor toggle is screenshot-only: video and GIF have their
+        // own per-format toggles in Settings (and now also inline on the recording
+        // bar). VideoShowCursor and GifShowCursor are intentionally NOT touched
+        // here so the user can keep the three states independent.
+        _settings.ShowCursor = CaptureCursorToggle.IsChecked == true;
         _settingsService.Save();
         _settingsService.FlushPendingWrites();
         ((App)System.Windows.Application.Current).SyncSettingsShowCursorCheck();

@@ -535,17 +535,10 @@ public sealed class AppSettings
     public bool HasSeenQuickStartGuide { get; set; }
     /// <summary>Last Group-1 (annotation) tool id used during capture confirm, restored next time.</summary>
     public string? LastAnnotationToolId { get; set; }
+
+    /// <summary>Include the mouse pointer in still-image captures (screenshots).
+    /// Video / GIF recordings have their own per-format flags below.</summary>
     public bool ShowCursor { get; set; }
-    /// <summary>
-    /// Master capture-cursor switch: still images, MP4, and GIF together
-    /// (widget + Capture tab). Video/GIF tabs can still diverge afterward.
-    /// </summary>
-    public void SetCaptureCursorForAll(bool enabled)
-    {
-        ShowCursor = enabled;
-        VideoShowCursor = enabled;
-        GifShowCursor = enabled;
-    }
     public bool ShowCaptureMagnifier { get; set; } = true;
     public bool ShowSelectionSize { get; set; } = true;
     public bool OverlayCaptureAllMonitors { get; set; } = true;
