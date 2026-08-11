@@ -256,6 +256,12 @@ public partial class App
                             firstFrame?.Dispose();
                         }
 
+                        // Dismiss the pinned "Encoding, please wait..." toast NOW — before the
+                        // completion toast appears. Otherwise (MP4 path) the trimmer's 500ms
+                        // deferred ShowTrimmer would arrive later and ForceDismissCurrent would
+                        // incorrectly close the "Video recorded" toast the user just saw.
+                        ToastWindow.ForceDismissCurrent();
+
                         // Pill semantics: "Show notification" is orthogonal to the trimmer.
                         // When ON, the completion toast is always shown (in addition to —
                         // or instead of — the trimmer window).
@@ -987,7 +993,6 @@ public partial class App
         {
             try
             {
-                ToastWindow.ForceDismissCurrent();
                 var trimmer = new VideoTrimmerWindow(path, _settingsService!, firstFrame);
                 if (ephemeral)
                 {

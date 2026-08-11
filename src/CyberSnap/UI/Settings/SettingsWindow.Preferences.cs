@@ -286,13 +286,12 @@ public partial class SettingsWindow
             "Show cursor",
             previous,
             selected,
-            value => _settingsService.Settings.SetCaptureCursorForAll(value),
+            value => _settingsService.Settings.ShowCursor = value,
             value =>
             {
                 ShowCursorCheck.IsChecked = value;
                 if (WidgetCaptureCursorCheck != null)
                     WidgetCaptureCursorCheck.IsChecked = value;
-                SyncRecordingShowCursorChecks(value);
             },
             () => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
     }
@@ -1221,13 +1220,12 @@ public partial class SettingsWindow
             "Capture cursor",
             previous,
             selected,
-            value => _settingsService.Settings.SetCaptureCursorForAll(value),
+            value => _settingsService.Settings.ShowCursor = value,
             value =>
             {
                 WidgetCaptureCursorCheck.IsChecked = value;
                 if (ShowCursorCheck != null)
                     ShowCursorCheck.IsChecked = value;
-                SyncRecordingShowCursorChecks(value);
             },
             value => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
     }
@@ -1255,22 +1253,6 @@ public partial class SettingsWindow
         {
             _suppressGeneralPreferenceChange = false;
             _suppressCaptureSavePreferenceChange = false;
-            _suppressRecordingPreferenceChange = false;
-        }
-    }
-
-    private void SyncRecordingShowCursorChecks(bool enabled)
-    {
-        _suppressRecordingPreferenceChange = true;
-        try
-        {
-            if (VideoShowCursorCheck != null)
-                VideoShowCursorCheck.IsChecked = enabled;
-            if (GifShowCursorCheck != null)
-                GifShowCursorCheck.IsChecked = enabled;
-        }
-        finally
-        {
             _suppressRecordingPreferenceChange = false;
         }
     }
