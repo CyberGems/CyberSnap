@@ -384,11 +384,13 @@ public sealed partial class RegionOverlayForm
         var kind = DisplayConfirmChromeKind(slotKind);
         bool isPrimary = _hoveredConfirmButton == IndexOfPrimaryConfirmAction();
         string hotkey = ConfirmChromeHotkeyHint(kind);
-        // The retained modes trigger swaps identity with the destination of the tool that locked
-        // the region (e.g. collapsed OCR trigger, or the in-strip Image pill while OCR confirming).
-        // When collapsed the trigger IS the image-mode toggle, so it keeps no capture hotkey.
-        bool triggerIsToggle = slotKind == ConfirmChromeKind.ModeImage && !ConfirmTriggerActsAsDestination;
-        if (triggerIsToggle || (slotKind == ConfirmChromeKind.ModeImage && _confirmModesExpanded))
+        // The retained modes trigger swaps identity with the tool that locked the region. When it
+        // displays a swappable destination (e.g. OCR trigger, or in-strip Image while OCR
+        // confirming) it dispatches that destination, so it keeps the destination's tooltip +
+        // hotkey. Only the plain-Image trigger acts solely as the strip toggle.
+        bool triggerIsToggleOnly = slotKind == ConfirmChromeKind.ModeImage
+            && SelectedConfirmModeKind() == ConfirmChromeKind.ModeImage;
+        if (triggerIsToggleOnly)
             hotkey = "";
 
         // Hint beside the primary pill: Done shows Enter; hover pills show their own hotkey.
@@ -396,7 +398,7 @@ public sealed partial class RegionOverlayForm
             ? "  (Enter)"
             : (string.IsNullOrEmpty(hotkey) ? "" : "  (" + hotkey + ")");
 
-        string title = triggerIsToggle
+        string title = triggerIsToggleOnly
             ? LocalizationService.Translate("Image capture mode")
             : ConfirmChromeTitle(kind);
 
