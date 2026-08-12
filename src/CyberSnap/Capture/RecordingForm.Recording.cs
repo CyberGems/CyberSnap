@@ -224,6 +224,14 @@ public sealed partial class RecordingForm
 
     private void StartActualRecording()
     {
+        // Never start a recorder with an empty region; fall back to area selection.
+        if (_recordRegion.Width <= 0 || _recordRegion.Height <= 0)
+        {
+            _state = State.Selecting;
+            Invalidate();
+            return;
+        }
+
         _state = State.Recording;
         _recordingStopRequested = 0;
         _totalPausedDuration = TimeSpan.Zero;

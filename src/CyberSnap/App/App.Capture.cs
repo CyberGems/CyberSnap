@@ -887,11 +887,15 @@ public partial class App
 
                 overlay.RecordingRequested += fmt =>
                 {
+                    // ConfirmRect is Rectangle.Empty when recording is requested from the
+                    // toolbar before any area has been confirmed; treat it as "no selection"
+                    // so RecordingForm starts in area-selection mode instead of PreRecording.
                     var rect = overlay.ConfirmRect;
                     overlay.Hide();
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
-                    Dispatcher.BeginInvoke(() => LaunchGifRecording(fmt, rect));
+                    Dispatcher.BeginInvoke(() =>
+                        LaunchGifRecording(fmt, rect.IsEmpty ? (System.Drawing.Rectangle?)null : rect));
                 };
 
                 overlay.ColorPicked += hex =>
