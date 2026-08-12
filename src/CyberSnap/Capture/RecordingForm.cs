@@ -121,7 +121,9 @@ public sealed partial class RecordingForm : Form
         _showMagnifier = showMagnifier;
         _openTrimmerAfterCapture = openVideoTrimmerAfterCapture;
         _onGifEncodedForTrimmer = onGifEncodedForTrimmer;
-        if (initialSelection.HasValue)
+        // An empty rectangle counts as "no selection": stay in State.Selecting
+        // so the user draws the area before the control bar is shown.
+        if (initialSelection.HasValue && !initialSelection.Value.IsEmpty)
         {
             _selection = initialSelection.Value;
             _state = State.PreRecording;
