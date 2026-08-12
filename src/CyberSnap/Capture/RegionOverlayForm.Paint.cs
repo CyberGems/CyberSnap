@@ -562,7 +562,7 @@ public sealed partial class RegionOverlayForm
 
         // Background:
         // Idle: transparent. Hovered or selected: flat low-opacity accent fill.
-        bool isSelectedMode = (kind == ConfirmChromeKind.ModeImage);
+        bool isSelectedMode = kind == SelectedConfirmModeKind();
         if (hover || isSelectedMode)
         {
             using (var path = WindowsDockRenderer.RoundedRect(face, hoverCorner))

@@ -1369,7 +1369,9 @@ public sealed partial class RegionOverlayForm
         EnsureToolbarReady();
 
         // If nothing was restored, land on Arrow so the sticky trigger is a drawing tool.
-        EnsureDefaultAnnotationTool();
+        // Text-extraction confirm (OCR) shows no annotation surface at all.
+        if (ShowAnnotationChrome)
+            EnsureDefaultAnnotationTool();
 
         // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
@@ -2003,6 +2005,17 @@ public sealed partial class RegionOverlayForm
             : "Extract text from the selection");
 
     private static bool IsConfirmChromeDisabled(ConfirmChromeKind kind) => false;
+
+    /// <summary>Destination pill highlighted as "selected" for the tool that locked the region.</summary>
+    private ConfirmChromeKind SelectedConfirmModeKind() => _modeBeforeConfirm switch
+    {
+        CaptureMode.Ocr => ConfirmChromeKind.ModeOcr,
+        CaptureMode.Record => ConfirmChromeKind.ModeVideo,
+        CaptureMode.RecordGif => ConfirmChromeKind.ModeGif,
+        CaptureMode.Scan => ConfirmChromeKind.ModeQr,
+        CaptureMode.ScrollCapture => ConfirmChromeKind.ModeScroll,
+        _ => ConfirmChromeKind.ModeImage, // Rectangle/Center and any image-producing tool
+    };
 
     private int IndexOfPrimaryConfirmAction()
     {
