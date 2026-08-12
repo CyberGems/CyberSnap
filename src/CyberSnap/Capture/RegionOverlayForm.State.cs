@@ -2025,7 +2025,8 @@ public sealed partial class RegionOverlayForm
     /// slot with the destination of the tool that locked the region. When the user confirms via OCR,
     /// for example, the always-visible trigger renders as OCR and the OCR slot (in the expanded
     /// strip) renders as Image — so no destination appears twice and the trigger reflects the real
-    /// source tool. Identity-swap only; layout anchoring and hit-testing keep using the slot kinds.
+    /// source tool. Follows the SLOT regardless of expanded/collapsed state; only click behavior
+    /// changes between the two. Layout anchoring and hit-testing keep using the slot kinds.
     /// </summary>
     private ConfirmChromeKind DisplayConfirmChromeKind(ConfirmChromeKind slotKind)
     {
@@ -2035,9 +2036,9 @@ public sealed partial class RegionOverlayForm
         return slotKind;
     }
 
-    // When collapsed, the retained trigger is the only visible modes pill and doubles as the
-    // destination for the tool that locked the region — clicking it dispatches that destination
-    // directly. When expanded, the trigger just toggles the strip back to collapsed.
+    // When collapsed and a non-image tool locked the region, the retained trigger IS that tool's
+    // destination — clicking it dispatches directly. When expanded (or plain Image), the trigger
+    // toggles the strip. Only affects click dispatch; visual identity is slot-driven above.
     private bool ConfirmTriggerActsAsDestination => !_confirmModesExpanded
         && SelectedConfirmModeKind() != ConfirmChromeKind.ModeImage;
 
@@ -2480,9 +2481,49 @@ public sealed partial class RegionOverlayForm
             case ConfirmChromeKind.ModeGif:
             case ConfirmChromeKind.ModeScroll:
             case ConfirmChromeKind.ModeQr:
-                RunConfirmDestination(_confirmChromeKinds[button]);
+                // A swappable destination pill re-mode the confirm when the user picks a different
+                // outcome than the source tool (e.g. OCR-locked region + Image pill → image mode).
+                // Picking the same destination as the source still captures immediately.
+                var dest = DisplayConfirmChromeKind(_confirmChromeKinds[button]);
+                if (dest != SelectedConfirmModeKind())
+                    SwitchConfirmDestination(dest);
+                else
+                    RunConfirmDestination(dest);
                 break;
         }
+    }
+
+    /// <summary>Switches the confirmed region to a different capture outcome without leaving the
+    /// confirm dock. The whole pill set re-derives from the new source mode.</summary>
+    private void SwitchConfirmDestination(ConfirmChromeKind newDestination)
+    {
+        // OCR is the only destination that hides the annotation chrome; everything else keeps it.
+        bool wasOcr = _modeBeforeConfirm == CaptureMode.Ocr;
+        _modeBeforeConfirm = newDestination switch
+        {
+            ConfirmChromeKind.ModeOcr => CaptureMode.Ocr,
+            _ => CaptureMode.Rectangle,
+        };
+        bool isOcr = newDestination == ConfirmChromeKind.ModeOcr;
+
+        _confirmModesExpanded = false;
+        ResetConfirmModesExpanded(collapsed: true);
+        _confirmChromeLayoutDirty = true;
+
+        CalcToolbar();
+        LayoutConfirmChromeRects();
+
+        // Annotation chrome only re-presents when entering an annotatable mode from OCR, and the
+        // user hadn't hidden it. Entering OCR (hide) is handled by EnsureToolbarReady's early-out.
+        if (!isOcr && wasOcr && ShowAnnotationChrome)
+        {
+            PresentAnnotationToolbarNow();
+            EnsureToolbarReady();
+            EnsureDefaultAnnotationTool();
+        }
+
+        Invalidate();
+        try { Update(); } catch { }
     }
 
     /// <summary>Dispatches a swappable destination pill to its capture action.</summary>

@@ -318,9 +318,9 @@ public sealed partial class RegionOverlayForm
 
                         bool isPrimaryDest = !disabled && i == primaryIdx;
                         // The retained modes trigger swaps identity with the destination of the
-                        // tool that locked the region (e.g. OCR trigger + Image-in-strip), so the
-                        // collapsed dock shows the real source tool. Slot kind still drives the
-                        // selection highlight inside DrawConfirmActionPill.
+                        // tool that locked the region (OCR confirm → OCR trigger + Image in strip).
+                        // Icon/label/accent AND the selection highlight all follow the DISPLAYED
+                        // identity, so the pill that LOOKS like the source tool reads as selected.
                         var effectiveKind = DisplayConfirmChromeKind(kind);
                         Color activeColor = ConfirmChromeAccent(effectiveKind, isPrimary: false);
                         Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
@@ -337,7 +337,7 @@ public sealed partial class RegionOverlayForm
                         string label = ConfirmChromeDrawLabel(effectiveKind);
 
                         DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
-                            hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest, kind: kind);
+                            hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest, kind: effectiveKind);
                     }
 
                     Color sep = UiChrome.IsDark
