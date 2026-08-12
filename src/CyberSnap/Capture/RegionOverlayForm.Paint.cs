@@ -565,17 +565,11 @@ public sealed partial class RegionOverlayForm
         // Face sinks downward onto its fixed base while pressed.
         var face = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
 
-        // Background:
-        // Idle: transparent. Hovered or selected: flat low-opacity accent fill.
+        // Background — reuse the exact same state visual as the capture/annotation toolbar:
+        // hover gets a subtle flat fill; selected gets a stronger accent fill + inset accent ring.
+        // Idle paints nothing.
         bool isSelectedMode = kind == SelectedConfirmModeKind();
-        if (hover || isSelectedMode)
-        {
-            using (var path = WindowsDockRenderer.RoundedRect(face, hoverCorner))
-            using (var brush = new SolidBrush(Color.FromArgb(isSelectedMode ? (UiChrome.IsDark ? 36 : 28) : (UiChrome.IsDark ? 26 : 20), accentColor)))
-                g.FillPath(brush, path);
-        }
-
-        // No outline in idle to keep it flat like annotation tools.
+        WindowsDockRenderer.PaintButton(g, face, active: isSelectedMode, hovered: hover, radius: hoverCorner, accent: accentColor);
 
         // ── Label + icon laid out as a single centered group ──
         bool useFluent = !string.IsNullOrEmpty(fluentIconId);
@@ -660,10 +654,14 @@ public sealed partial class RegionOverlayForm
 
         float baseAlphaFactor = 0.25f + 0.75f * opacity;
         Color iconColor = Color.FromArgb((int)(255 * baseAlphaFactor), baseIconColor);
+        // Selected: full-opacity so the accent tint isn't washed out by the shared baseAlpha.
+        Color pillIconColor = isSelectedMode ? accentColor : iconColor;
 
         if (useFluent)
         {
-            FluentIcons.DrawIcon(g, fluentIconId!, new RectangleF(bx, by, iconSize, iconSize), iconColor, iconInset: 0f);
+            // Selected mode swaps the outline glyph for its filled variant and tints it with the
+            // accent color — the same active cue the capture/annotation toolbar applies.
+            FluentIcons.DrawIcon(g, fluentIconId!, new RectangleF(bx, by, iconSize, iconSize), pillIconColor, iconInset: 0f, active: isSelectedMode);
             return;
         }
 

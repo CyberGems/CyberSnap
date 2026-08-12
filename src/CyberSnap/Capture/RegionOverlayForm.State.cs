@@ -2042,9 +2042,9 @@ public sealed partial class RegionOverlayForm
     private bool ConfirmTriggerActsAsDestination => !_confirmModesExpanded
         && SelectedConfirmModeKind() != ConfirmChromeKind.ModeImage;
 
-    /// <summary>Measurement kind for a confirm pill; identical to its painted display kind.</summary>
-    private ConfirmChromeKind LayoutConfirmChromeKind(ConfirmChromeKind kind)
-        => DisplayConfirmChromeKind(kind);
+    // Layout/measurement always uses the SLOT kind (ModeImage), never the swapped display identity.
+    // Otherwise the collapsed trigger width would vary with the source tool ("OCR" vs "Image"),
+    // shifting the whole dock sideways when alternating modes.
 
     private int IndexOfPrimaryConfirmAction()
     {
@@ -2481,11 +2481,15 @@ public sealed partial class RegionOverlayForm
             case ConfirmChromeKind.ModeGif:
             case ConfirmChromeKind.ModeScroll:
             case ConfirmChromeKind.ModeQr:
-                // A swappable destination pill re-mode the confirm when the user picks a different
-                // outcome than the source tool (e.g. OCR-locked region + Image pill → image mode).
-                // Picking the same destination as the source still captures immediately.
+                // Only OCR <-> Image is a two-way mode SWAP (edit/annotate vs extract text).
+                // Video/GIF/Scroll/QR are one-shot destinations: they capture immediately, as
+                // before the swap feature. Picking the same destination as the source also captures.
                 var dest = DisplayConfirmChromeKind(_confirmChromeKinds[button]);
-                if (dest != SelectedConfirmModeKind())
+                var src = SelectedConfirmModeKind();
+                bool isSwapPair =
+                    (src == ConfirmChromeKind.ModeOcr && dest == ConfirmChromeKind.ModeImage)
+                    || (src == ConfirmChromeKind.ModeImage && dest == ConfirmChromeKind.ModeOcr);
+                if (isSwapPair)
                     SwitchConfirmDestination(dest);
                 else
                     RunConfirmDestination(dest);
@@ -2853,7 +2857,7 @@ public sealed partial class RegionOverlayForm
         int[] widths = new int[_confirmChromeKinds.Length];
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
-            fullWidths[i] = MeasureConfirmChromeButtonWidth(LayoutConfirmChromeKind(_confirmChromeKinds[i]), bh);
+            fullWidths[i] = MeasureConfirmChromeButtonWidth(_confirmChromeKinds[i], bh);
             widths[i] = IsRetractableConfirmMode(_confirmChromeKinds[i])
                 ? (int)Math.Round(fullWidths[i] * expandAmt)
                 : fullWidths[i];
