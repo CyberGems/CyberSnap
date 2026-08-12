@@ -65,8 +65,9 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>
     /// Annotation flyout + stroke/color chrome only while the region is locked.
     /// Pre-selection dock stays capture-only (no annotation bar, no color/width).
+    /// Text-extraction confirm (OCR) has no use for drawing tools, so it skips them too.
     /// </summary>
-    private bool ShowAnnotationChrome => _isConfirmingSelection;
+    private bool ShowAnnotationChrome => _isConfirmingSelection && _modeBeforeConfirm != CaptureMode.Ocr;
 
     private bool _isConfirmingSelection;
     private Rectangle _confirmRect;
