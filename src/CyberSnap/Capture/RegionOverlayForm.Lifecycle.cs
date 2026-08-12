@@ -85,6 +85,15 @@ public sealed partial class RegionOverlayForm
         if (_confirmDocksHiddenForFrameManip)
             return;
 
+        // Confirming without annotation chrome (e.g. OCR text-extraction) never shows a toolbar:
+        // the only chrome is the confirm dock. Keep any leftover toolbar hidden.
+        if (_isConfirmingSelection && !ShowAnnotationChrome)
+        {
+            if (_toolbarForm != null && _toolbarForm.Visible)
+                _toolbarForm.Hide();
+            return;
+        }
+
         if (ShowAnnotationChrome)
         {
             var settings = Services.SettingsService.LoadStatic();

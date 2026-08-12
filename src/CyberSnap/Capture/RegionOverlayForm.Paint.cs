@@ -317,7 +317,12 @@ public sealed partial class RegionOverlayForm
                         }
 
                         bool isPrimaryDest = !disabled && i == primaryIdx;
-                        Color activeColor = ConfirmChromeAccent(kind, isPrimary: false);
+                        // The retained modes trigger swaps identity with the destination of the
+                        // tool that locked the region (e.g. OCR trigger + Image-in-strip), so the
+                        // collapsed dock shows the real source tool. Slot kind still drives the
+                        // selection highlight inside DrawConfirmActionPill.
+                        var effectiveKind = DisplayConfirmChromeKind(kind);
+                        Color activeColor = ConfirmChromeAccent(effectiveKind, isPrimary: false);
                         Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
                         Color deactTint = InterpolateColor(deactColor, activeColor, 0.25f);
                         Color color = InterpolateColor(deactTint, activeColor, factor);
@@ -328,8 +333,8 @@ public sealed partial class RegionOverlayForm
                             ConfirmChromeKind.Cancel => 3, // use signOut fluent icon
                             _ => 3 // fluent icon path
                         };
-                        string? fluentIcon = kind == ConfirmChromeKind.Retry ? null : ConfirmChromeFluentIcon(kind);
-                        string label = ConfirmChromeDrawLabel(kind);
+                        string? fluentIcon = kind == ConfirmChromeKind.Retry ? null : ConfirmChromeFluentIcon(effectiveKind);
+                        string label = ConfirmChromeDrawLabel(effectiveKind);
 
                         DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
                             hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest, kind: kind);
