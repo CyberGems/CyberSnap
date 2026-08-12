@@ -1365,13 +1365,16 @@ public sealed partial class RegionOverlayForm
         LayoutConfirmChromeRects();
         RefreshConfirmSizeReadoutRect();
         MarkToolbarRenderDirty();
-        PresentAnnotationToolbarNow();
-        EnsureToolbarReady();
-
-        // If nothing was restored, land on Arrow so the sticky trigger is a drawing tool.
-        // Text-extraction confirm (OCR) shows no annotation surface at all.
+        // Only present the toolbar where annotation chrome applies. For text-extraction
+        // confirm (OCR) there is no drawing surface, and re-presenting would resurface the
+        // capture dock (CalcToolbar falls back to capture tools when ShowAnnotationChrome is false).
         if (ShowAnnotationChrome)
+        {
+            PresentAnnotationToolbarNow();
+            EnsureToolbarReady();
+            // If nothing was restored, land on Arrow so the sticky trigger is a drawing tool.
             EnsureDefaultAnnotationTool();
+        }
 
         // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
@@ -2017,6 +2020,31 @@ public sealed partial class RegionOverlayForm
         _ => ConfirmChromeKind.ModeImage, // Rectangle/Center and any image-producing tool
     };
 
+    /// <summary>
+    /// Visual identity of a confirm pill, swapping the retained (non-retractable) ModeImage trigger
+    /// slot with the destination of the tool that locked the region. When the user confirms via OCR,
+    /// for example, the always-visible trigger renders as OCR and the OCR slot (in the expanded
+    /// strip) renders as Image — so no destination appears twice and the trigger reflects the real
+    /// source tool. Identity-swap only; layout anchoring and hit-testing keep using the slot kinds.
+    /// </summary>
+    private ConfirmChromeKind DisplayConfirmChromeKind(ConfirmChromeKind slotKind)
+    {
+        var sel = SelectedConfirmModeKind();
+        if (slotKind == ConfirmChromeKind.ModeImage) return sel;
+        if (slotKind == sel) return ConfirmChromeKind.ModeImage;
+        return slotKind;
+    }
+
+    // When collapsed, the retained trigger is the only visible modes pill and doubles as the
+    // destination for the tool that locked the region — clicking it dispatches that destination
+    // directly. When expanded, the trigger just toggles the strip back to collapsed.
+    private bool ConfirmTriggerActsAsDestination => !_confirmModesExpanded
+        && SelectedConfirmModeKind() != ConfirmChromeKind.ModeImage;
+
+    /// <summary>Measurement kind for a confirm pill; identical to its painted display kind.</summary>
+    private ConfirmChromeKind LayoutConfirmChromeKind(ConfirmChromeKind kind)
+        => DisplayConfirmChromeKind(kind);
+
     private int IndexOfPrimaryConfirmAction()
     {
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
@@ -2430,8 +2458,15 @@ public sealed partial class RegionOverlayForm
                 CommitConfirmedSelection(ConfirmCommitAction.Default);
                 break;
             case ConfirmChromeKind.ModeImage:
-                // Image is the modes trigger: open when collapsed, close when expanded.
-                // Capture stays on Done / Enter / hotkey I — not on this pill.
+                // The trigger pill's identity is swapped with the destination of the tool that
+                // locked the region. Collapsed: dispatches that destination directly (OCR extracts,
+                // Video records, ...). Expanded: collapses the modes strip again. Plain Image still
+                // toggles only.
+                if (ConfirmTriggerActsAsDestination)
+                {
+                    RunConfirmDestination(SelectedConfirmModeKind());
+                    break;
+                }
                 if (!_confirmModesExpanded)
                     ExpandConfirmModes();
                 else
@@ -2440,6 +2475,21 @@ public sealed partial class RegionOverlayForm
             case ConfirmChromeKind.TogglePreview:
                 ToggleConfirmPreview();
                 break;
+            case ConfirmChromeKind.ModeOcr:
+            case ConfirmChromeKind.ModeVideo:
+            case ConfirmChromeKind.ModeGif:
+            case ConfirmChromeKind.ModeScroll:
+            case ConfirmChromeKind.ModeQr:
+                RunConfirmDestination(_confirmChromeKinds[button]);
+                break;
+        }
+    }
+
+    /// <summary>Dispatches a swappable destination pill to its capture action.</summary>
+    private void RunConfirmDestination(ConfirmChromeKind kind)
+    {
+        switch (kind)
+        {
             case ConfirmChromeKind.ModeOcr:
                 OcrRegionSelected?.Invoke(_confirmRect);
                 break;
@@ -2762,7 +2812,7 @@ public sealed partial class RegionOverlayForm
         int[] widths = new int[_confirmChromeKinds.Length];
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
-            fullWidths[i] = MeasureConfirmChromeButtonWidth(_confirmChromeKinds[i], bh);
+            fullWidths[i] = MeasureConfirmChromeButtonWidth(LayoutConfirmChromeKind(_confirmChromeKinds[i]), bh);
             widths[i] = IsRetractableConfirmMode(_confirmChromeKinds[i])
                 ? (int)Math.Round(fullWidths[i] * expandAmt)
                 : fullWidths[i];
