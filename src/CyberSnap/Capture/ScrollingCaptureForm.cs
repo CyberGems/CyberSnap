@@ -80,7 +80,7 @@ public sealed partial class ScrollingCaptureForm : Form
     private readonly bool _showMagnifier;
     private readonly CaptureMagnifierHelper? _magHelper;
     private LiveSelectionAdornerForm? _selectionAdorner;
-    private StandaloneToolBanner? _hintBanner;
+    private BannerLayeredForm? _hintBanner;
 
     // Cached GDI objects for selection overlay
     private readonly Font _readoutFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
@@ -152,17 +152,16 @@ public sealed partial class ScrollingCaptureForm : Form
             var scrollLabel = LocalizationService.Translate("Scrolling capture") + ": ";
             var scrollAction = LocalizationService.Translate("Drag to select scrolling area")
                 + " · " + LocalizationService.Translate("Right-click or Esc to cancel");
-            _hintBanner = new StandaloneToolBanner(
+            _hintBanner = new BannerLayeredForm(
                 new BannerSegment[]
                 {
                     new(scrollLabel, StandaloneToolBanner.LabelColor),
                     new(scrollAction, null), // theme accent
                 },
                 Screen.FromPoint(Cursor.Position).WorkingArea,
-                Bounds,
-                onInvalidate: () => Invalidate(),
                 persistent: true,
                 iconId: "scrollCapture");
+            _hintBanner.ShowFor(this);
         }
         else
         {
@@ -310,7 +309,7 @@ public sealed partial class ScrollingCaptureForm : Form
         if (_state == State.Selecting)
         {
             if (!_isDragging)
-                _hintBanner?.DismissIfHovered(e.Location);
+                _hintBanner?.DismissIfHovered(PointToScreen(e.Location));
 
             if (_isDragging)
             {
@@ -993,7 +992,7 @@ public sealed partial class ScrollingCaptureForm : Form
         }
 
         // Keep painting while fading out (Dismiss keeps the instance; opacity gates visibility).
-        _hintBanner?.Render(g);
+        // The hint is rendered by its independent layered window; the host only paints capture chrome.
     }
 
     private void DismissHintBanner()

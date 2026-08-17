@@ -135,6 +135,7 @@ public sealed partial class RegionOverlayForm
         if (_isConfirmingSelection)
         {
             _prevCursorPos = _lastCursorPos;
+            _lastRawCursorPos = e.Location;
             _lastCursorPos = ClampAnnotationEndPoint(e.Location);
 
             // Never keep the capture magnifier alive over confirm chrome or while resizing/moving.
@@ -959,7 +960,9 @@ public sealed partial class RegionOverlayForm
             // While annotating inside a confirmed selection, the live cursor position is clamped
             // to the selection rect so the preview and the eventual committed shape stay inside
             // the frame — matches what the user sees at the edge and avoids crossing into the
-            // dock/toolbar zone near the bottom/right borders.
+            // dock/toolbar zone near the bottom/right borders. The RAW cursor (fed to the chip's
+            // visibility gate) stays unclamped so the chip can hide when truly outside.
+            _lastRawCursorPos = e.Location;
             _lastCursorPos = ClampAnnotationEndPoint(e.Location);
         }
 
@@ -1610,6 +1613,7 @@ public sealed partial class RegionOverlayForm
             ClearCrosshairGuides();
             _prevCursorPos = _lastCursorPos;
             _lastCursorPos = Point.Empty;
+            _lastRawCursorPos = Point.Empty;
             _lastAutoDetectRect = Rectangle.Empty;
             _autoDetectRect = Rectangle.Empty;
             _autoDetectActive = false;

@@ -75,7 +75,7 @@ public sealed partial class RecordingForm : Form
     private LiveSelectionAdornerForm? _selectionAdorner;
     private Rectangle _autoDetectRect;
     private bool _autoDetectActive;
-    private StandaloneToolBanner? _banner;
+    private BannerLayeredForm? _banner;
     private CaptureEscapeKeyHook? _escapeHook;
     private System.Windows.Forms.Timer? _tickTimer;
     private readonly string _savePath;
@@ -164,11 +164,9 @@ public sealed partial class RecordingForm : Form
             new(action, null), // null = theme accent
         };
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
-        _banner = new StandaloneToolBanner(
+        _banner = new BannerLayeredForm(
             bannerSegments,
             bannerWorkingArea,
-            Bounds,
-            onInvalidate: () => Invalidate(),
             iconId: iconId);
     }
 
@@ -193,6 +191,7 @@ public sealed partial class RecordingForm : Form
         Focus();
         _escapeHook = CaptureEscapeKeyHook.Install(this, CancelFromEscape);
         _selectionAdorner?.Show(this);
+        _banner?.ShowFor(this);
 
         bool isDetectEnabled = false;
         try
@@ -359,7 +358,7 @@ public sealed partial class RecordingForm : Form
         {
             // Hover clears the hint so it does not block the capture surface.
             if (!_isDragging)
-                _banner?.DismissIfHovered(e.Location);
+                _banner?.DismissIfHovered(PointToScreen(e.Location));
 
             if (_isDragging)
             {
@@ -474,9 +473,13 @@ public sealed partial class RecordingForm : Form
         var g = e.Graphics;
 
         if (_state == State.Selecting)
+        {
             PaintSelectionPhase(g);
+        }
         else
+        {
             PaintRecordingPhase(g);
+        }
     }
 
     private void PaintSelectionPhase(Graphics g)
@@ -522,7 +525,7 @@ public sealed partial class RecordingForm : Form
         }
 
         // Always paint last so a short dismiss-fade can finish even mid-drag.
-        _banner?.Render(g);
+        // The hint is rendered by its independent layered window; keep the host paint surface focused on capture chrome.
     }
 
     private void UpdateLiveSelectionAdorner()
@@ -979,6 +982,8 @@ public sealed partial class RecordingForm : Form
             _recorder?.Dispose();
             _videoRecorder?.Dispose();
             _magHelper?.Dispose();
+            _banner?.Dispose();
+            _banner = null;
             _selectionAdorner?.Dispose();
             _selectionAdorner = null;
             _screenshot?.Dispose();

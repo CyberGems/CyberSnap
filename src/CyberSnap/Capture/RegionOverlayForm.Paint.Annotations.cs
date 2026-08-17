@@ -231,11 +231,17 @@ public sealed partial class RegionOverlayForm
             r = U(r, InflateForRepaint(Rectangle.Round(GetActiveTextRect()), 16));
         if (_selectPreviewAnnotation is not null)
             r = U(r, GetAnnotationBounds(_selectPreviewAnnotation));
-        if (ShouldPaintCursorToolChip(_lastCursorPos))
+        if (ShouldPaintCursorToolChip(_chipGateCursor))
             r = U(r, GetCursorChipRect(_lastCursorPos));
 
         return r.Width > 0 && r.Height > 0 ? InflateForRepaint(r, 8) : Rectangle.Empty;
     }
+
+    // Cursor used only to DECIDE chip visibility: raw so "outside region" can hide the chip,
+    // never the clamped _lastCursorPos that would pin it to the border.
+    private Point _chipGateCursor => _isConfirmingSelection && _lastRawCursorPos != Point.Empty
+        ? _lastRawCursorPos
+        : _lastCursorPos;
 
     private Point GetLiveAnnotationCursorPoint()
         => _lastCursorPos != Point.Empty
