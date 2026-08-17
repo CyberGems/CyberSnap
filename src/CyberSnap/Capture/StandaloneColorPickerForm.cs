@@ -18,8 +18,7 @@ namespace CyberSnap.Capture;
 public sealed class StandaloneColorPickerForm : Form
 {
     private readonly Bitmap _screenshot;
-    private readonly Rectangle _bannerWorkingArea;
-    private readonly StandaloneToolBanner _banner;
+    private readonly BannerLayeredForm _banner;
     private PickerMagnifierForm? _magnifierForm;
     private Color _pickedColor = Color.Black;
 
@@ -62,8 +61,6 @@ public sealed class StandaloneColorPickerForm : Form
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
 
-        _bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
-
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
         _screenshot = bmp;
@@ -92,26 +89,24 @@ public sealed class StandaloneColorPickerForm : Form
         var pickerLabel = LocalizationService.Translate("Color picker") + ": ";
         var pickerAction = LocalizationService.Translate("Click to pick color & copy HEX")
             + " · " + LocalizationService.Translate("Right-click or Esc to close");
-        _banner = new StandaloneToolBanner(
+        _banner = new BannerLayeredForm(
             new BannerSegment[]
             {
                 new(pickerLabel, StandaloneToolBanner.LabelColor),
                 new(pickerAction, null), // theme accent
             },
-            _bannerWorkingArea,
-            Bounds,
-            onInvalidate: () => Invalidate(),
+            Screen.FromPoint(Cursor.Position).WorkingArea,
             iconId: "picker");
 
         // Initial magnifier at cursor position
         UpdateMagnifierAtCursor();
     }
 
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
+        protected override void Dispose(bool disposing)
         {
-            _banner.Dispose();
+            if (disposing)
+            {
+                _banner.Dispose();
             CloseMagnifier();
             _screenshot?.Dispose();
             _magBitmap?.Dispose();
@@ -121,9 +116,10 @@ public sealed class StandaloneColorPickerForm : Form
 
     // ── Lifecycle ──
 
-    protected override void OnShown(EventArgs e)
+        protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        _banner.ShowFor(this);
         Activate();
         Focus();
     }
@@ -146,7 +142,7 @@ public sealed class StandaloneColorPickerForm : Form
     {
         _cursorPos = e.Location;
 
-        _banner.DismissIfHovered(_cursorPos);
+        _banner.DismissIfHovered(PointToScreen(e.Location));
 
         UpdateMagnifierAtCursor();
         base.OnMouseMove(e);
@@ -226,9 +222,6 @@ public sealed class StandaloneColorPickerForm : Form
 
         // Draw screenshot as background
         g.DrawImage(_screenshot, ClientRectangle);
-
-        // Draw banner
-        _banner.Render(g);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

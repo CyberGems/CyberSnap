@@ -16,7 +16,6 @@ namespace CyberSnap.Capture;
 public sealed class StandaloneRulerForm : Form
 {
     private readonly Bitmap _screenshot;
-    private readonly Rectangle _bannerWorkingArea;
     private Point _rulerStart;
     private bool _isDragging;
     private Point _cursorPos;
@@ -33,7 +32,7 @@ public sealed class StandaloneRulerForm : Form
     private Point _editOffset; // cursor offset from _lastFrom during move
 
     // ── Banner (reusable animated instruction overlay) ──
-    private readonly StandaloneToolBanner _banner;
+    private readonly BannerLayeredForm _banner;
 
     // ── Close button on the measurement chip ──
     private readonly ToolTip _chipTooltip;
@@ -66,7 +65,7 @@ public sealed class StandaloneRulerForm : Form
         KeyPreview = true;
 
         // Capture which screen the cursor is on now (STA thread, right after menu click)
-        _bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
 
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
@@ -81,15 +80,13 @@ public sealed class StandaloneRulerForm : Form
         var rulerAction = LocalizationService.Translate("Click & drag to measure")
             + " · " + LocalizationService.Translate("Right-click or Esc to close")
             + " · " + LocalizationService.Translate("Hold Shift to constrain");
-        _banner = new StandaloneToolBanner(
+        _banner = new BannerLayeredForm(
             new BannerSegment[]
             {
                 new(rulerLabel, StandaloneToolBanner.LabelColor),
                 new(rulerAction, null), // theme accent
             },
-            _bannerWorkingArea,
-            Bounds,
-            onInvalidate: () => Invalidate(),
+            bannerWorkingArea,
             iconId: "ruler");
 
         // ── Chip close-button tooltip ──
@@ -178,7 +175,13 @@ public sealed class StandaloneRulerForm : Form
         base.Dispose(disposing);
     }
 
-    // ── Banner animation (delegated to StandaloneToolBanner) ──
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _banner.ShowFor(this);
+    }
+
+    // ── Banner animation (delegated to BannerLayeredForm) ──
     // The banner timer is self-contained; mouse-move calls DismissIfHovered so the
     // hint clears when it would otherwise block the tool surface.
 
@@ -289,7 +292,7 @@ public sealed class StandaloneRulerForm : Form
 
         // Revive only when idle — never while measuring/editing so the pill stays out of the way.
         if (!_isDragging && _editState == EditState.None)
-            _banner.DismissIfHovered(_cursorPos);
+            _banner.DismissIfHovered(PointToScreen(e.Location));
 
         if (_isDragging)
         {
@@ -420,9 +423,6 @@ public sealed class StandaloneRulerForm : Form
         {
             RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark, showCloseButton: true, dpiScale: _dpiScale);
         }
-
-        // Draw banner (handled by reusable StandaloneToolBanner)
-        _banner.Render(g);
     }
 
     // ── Helpers ──

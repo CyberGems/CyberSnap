@@ -16,8 +16,7 @@ namespace CyberSnap.Capture;
 public sealed class StandaloneOcrForm : Form
 {
     private readonly Bitmap _screenshot;
-    private readonly Rectangle _bannerWorkingArea;
-    private readonly StandaloneToolBanner _banner;
+    private readonly BannerLayeredForm _banner;
     private Point _cursorPos;
     private Point _dragStart;
     private bool _isDragging;
@@ -49,8 +48,6 @@ public sealed class StandaloneOcrForm : Form
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
         KeyPreview = true;
 
-        _bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
-
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
         _screenshot = bmp;
@@ -76,15 +73,13 @@ public sealed class StandaloneOcrForm : Form
         var ocrLabel = LocalizationService.Translate("OCR") + ": ";
         var ocrAction = LocalizationService.Translate("Click & drag to select text region")
             + " · " + LocalizationService.Translate("Right-click or Esc to close");
-        _banner = new StandaloneToolBanner(
+        _banner = new BannerLayeredForm(
             new BannerSegment[]
             {
                 new(ocrLabel, StandaloneToolBanner.LabelColor),
                 new(ocrAction, null), // theme accent
             },
-            _bannerWorkingArea,
-            Bounds,
-            onInvalidate: () => Invalidate(),
+            Screen.FromPoint(Cursor.Position).WorkingArea,
             iconId: "ocr");
 
         // ── Context menu (shown on right-click) ──
@@ -130,6 +125,12 @@ public sealed class StandaloneOcrForm : Form
             _screenshot?.Dispose();
         }
         base.Dispose(disposing);
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _banner.ShowFor(this);
     }
 
     // ── Keyboard ──
@@ -181,7 +182,7 @@ public sealed class StandaloneOcrForm : Form
 
         // Don't revive while dragging — the banner was dismissed on mouse-down on purpose.
         if (!_isDragging)
-            _banner.DismissIfHovered(_cursorPos);
+            _banner.DismissIfHovered(PointToScreen(e.Location));
 
         if (_isDragging)
         {
@@ -369,9 +370,6 @@ public sealed class StandaloneOcrForm : Form
         {
             DrawProcessingIndicator(g, _selectionRect);
         }
-
-        // Draw banner
-        _banner.Render(g);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

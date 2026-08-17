@@ -165,21 +165,7 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <summary>Match segment layout to <see cref="Render"/> (sum of typographic segment widths).</summary>
     private SizeF MeasureContent(Graphics g, Font font)
     {
-        var sf = StringFormat.GenericTypographic;
-        if (_segments is { Count: > 0 })
-        {
-            float w = 0f;
-            float h = 0f;
-            foreach (var seg in _segments)
-            {
-                var s = g.MeasureString(seg.Text, font, PointF.Empty, sf);
-                w += s.Width;
-                h = Math.Max(h, s.Height);
-            }
-            return new SizeF(w, Math.Max(h, 1f));
-        }
-
-        return g.MeasureString(_text, font, PointF.Empty, sf);
+        return BannerRenderer.MeasureContent(g, _text, _segments, font);
     }
 
     private void ApplyBannerRect(SizeF size)
@@ -246,81 +232,14 @@ public sealed class StandaloneToolBanner : IDisposable
         var state = g.Save();
         try
         {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            using var font = UiChrome.ChromeFont(16f, FontStyle.Regular);
-            var size = MeasureContent(g, font);
-            ApplyBannerRect(size);
-
-            const int paddingH = 28;
-            const int paddingV = 17;
-            float iconSize = size.Height * 0.92f;
-            float iconBlock = _iconId != null ? iconSize + IconGap : 0f;
-            float width = _bannerRect.Width;
-            float height = _bannerRect.Height;
-            float x = _bannerRect.X;
-            float y = _bannerRect.Y;
-
-            // Light uses a slightly translucent card so the dimmed capture still shows through;
-            // dark/gray stay near-opaque so cyan/silver type stays readable on the screenshot.
-            int alphaBg = Math.Min((int)((Theme.IsDark ? 255 : 235) * _opacity), 255);
-            int alphaBorder = (int)((Theme.IsDark ? 140 : 110) * _opacity);
-            int alphaGlow = (int)((Theme.IsDark ? 40 : 24) * _opacity);
-            int alphaText = (int)(255 * _opacity);
-
-            var accent = AccentColor;
-            var bg = BackgroundColor;
-            var label = LabelColor;
-            var iconColor = _iconColorOverride ?? label;
-
-            using var path = RoundedRect(_bannerRect, 10);
-            using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, bg));
-            using var glowPen = new Pen(Color.FromArgb(alphaGlow, accent), 3f);
-            using var borderPen = new Pen(Color.FromArgb(alphaBorder, accent), 1.5f);
-
-            g.FillPath(bgBrush, path);
-            g.DrawPath(glowPen, path);
-            g.DrawPath(borderPen, path);
-
-            // Leading vector icon — the exact same Streamline/Fluent SVG the capture toolbar
-            // draws, rendered at inset 0 to fill its slot. Fades with the banner via alphaText.
-            if (_iconId != null)
-            {
-                float iconX = x + paddingH;
-                float iconY = y + (height - iconSize) / 2f;
-                FluentIcons.DrawIcon(g, _iconId,
-                    new RectangleF(iconX, iconY, iconSize, iconSize),
-                    Color.FromArgb(alphaText, iconColor), 0f);
-            }
-
-            using var sf = new StringFormat
-            {
-                Alignment = StringAlignment.Near,
-                LineAlignment = StringAlignment.Center
-            };
-
-            if (_segments != null)
-            {
-                // Draw each segment with its own color, laid out left-to-right.
-                var typo = StringFormat.GenericTypographic;
-                float cursorX = x + paddingH + iconBlock;
-                float textTop = y + paddingV;
-                foreach (var seg in _segments)
-                {
-                    // null → accent; pure white (legacy call sites) → theme label color
-                    var segColor = ResolveSegmentColor(seg.Color, accent, label);
-                    using var segBrush = new SolidBrush(Color.FromArgb(alphaText, segColor));
-                    g.DrawString(seg.Text, font, segBrush, cursorX, textTop, typo);
-                    cursorX += g.MeasureString(seg.Text, font, PointF.Empty, typo).Width;
-                }
-            }
-            else
-            {
-                var textRect = new RectangleF(x + paddingH + iconBlock, y + paddingV, size.Width, size.Height);
-                using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accent));
-                sf.Alignment = StringAlignment.Center;
-                g.DrawString(_text, font, textBrush, textRect, sf);
-            }
+            BannerRenderer.Render(
+                g,
+                _bannerRect,
+                _text,
+                _segments,
+                _iconId,
+                _iconColorOverride,
+                _opacity);
         }
         finally
         {

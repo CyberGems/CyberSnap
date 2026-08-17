@@ -16,8 +16,7 @@ namespace CyberSnap.Capture;
 public sealed class StandaloneScanForm : Form
 {
     private readonly Bitmap _screenshot;
-    private readonly Rectangle _bannerWorkingArea;
-    private readonly StandaloneToolBanner _banner;
+    private readonly BannerLayeredForm _banner;
     private Point _cursorPos;
     private Point _dragStart;
     private bool _isDragging;
@@ -42,8 +41,6 @@ public sealed class StandaloneScanForm : Form
         StartPosition = FormStartPosition.Manual;
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
-
-        _bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
 
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
@@ -70,15 +67,13 @@ public sealed class StandaloneScanForm : Form
         var scanLabel = LocalizationService.Translate("QR & Barcodes") + ": ";
         var scanAction = LocalizationService.Translate("Click & drag to scan QR or barcodes")
             + " · " + LocalizationService.Translate("Right-click or Esc to close");
-        _banner = new StandaloneToolBanner(
+        _banner = new BannerLayeredForm(
             new BannerSegment[]
             {
                 new(scanLabel, StandaloneToolBanner.LabelColor),
                 new(scanAction, null), // theme accent
             },
-            _bannerWorkingArea,
-            Bounds,
-            onInvalidate: () => Invalidate(),
+            Screen.FromPoint(Cursor.Position).WorkingArea,
             iconId: "scan");
     }
 
@@ -92,6 +87,12 @@ public sealed class StandaloneScanForm : Form
             _screenshot?.Dispose();
         }
         base.Dispose(disposing);
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _banner.ShowFor(this);
     }
 
     // ── Keyboard ──
@@ -143,7 +144,7 @@ public sealed class StandaloneScanForm : Form
 
         // Don't revive while dragging — the banner was dismissed on mouse-down on purpose.
         if (!_isDragging)
-            _banner.DismissIfHovered(_cursorPos);
+            _banner.DismissIfHovered(PointToScreen(e.Location));
 
         if (_isDragging)
         {
@@ -296,9 +297,6 @@ public sealed class StandaloneScanForm : Form
         {
             SelectionFrameRenderer.DrawAutoDetectRectangle(g, _autoDetectRect);
         }
-
-        // Draw banner
-        _banner.Render(g);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

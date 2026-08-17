@@ -1206,7 +1206,10 @@ public sealed partial class RegionOverlayForm
 
     private void RenderCursorToolPreview(Graphics g)
     {
-        if (!ShouldPaintCursorToolChip(_lastCursorPos)) return;
+        // Gate on the RAW cursor (helper below): _lastCursorPos is clamped into _confirmRect, so it
+        // always reads "inside" the region and would pin the chip to the border when the pointer is
+        // outside. The chip must hide the moment the real cursor leaves the drawable area.
+        if (!ShouldPaintCursorToolChip(_chipGateCursor)) return;
 
         bool hasStroke = ToolChipHasStroke(_mode);
         var color = _toolColor;
