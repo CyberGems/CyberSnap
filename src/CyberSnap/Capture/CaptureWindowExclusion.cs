@@ -6,7 +6,7 @@ namespace CyberSnap.Capture;
 internal static class CaptureWindowExclusion
 {
     private readonly record struct HiddenWindow(IntPtr Handle, bool WasTopmost);
-    private sealed record RegisteredWindow(IntPtr Handle, Func<Rectangle>? BoundsProvider);
+    private sealed record RegisteredWindow(IntPtr Handle, Func<Rectangle>? BoundsProvider, bool HasDisplayAffinity);
 
     private static readonly object Sync = new();
     private static readonly List<RegisteredWindow> RegisteredWindows = new();
@@ -24,16 +24,17 @@ internal static class CaptureWindowExclusion
         if (handle == IntPtr.Zero)
             return;
 
+        bool hasAffinity = false;
         try
         {
-            User32.SetWindowDisplayAffinity(handle, User32.WDA_EXCLUDEFROMCAPTURE);
+            hasAffinity = User32.SetWindowDisplayAffinity(handle, User32.WDA_EXCLUDEFROMCAPTURE);
         }
         catch
         {
             // Best-effort only. Older Windows builds or unusual window styles can reject this.
         }
 
-        Register(handle);
+        Register(handle, hasAffinity);
     }
 
     public static void SetLogicalBounds(IntPtr handle, Func<Rectangle>? boundsProvider)
@@ -45,7 +46,8 @@ internal static class CaptureWindowExclusion
         {
             PruneDeadHandles();
             int index = RegisteredWindows.FindIndex(window => window.Handle == handle);
-            var registered = new RegisteredWindow(handle, boundsProvider);
+            bool hasAffinity = index >= 0 && RegisteredWindows[index].HasDisplayAffinity;
+            var registered = new RegisteredWindow(handle, boundsProvider, hasAffinity);
             if (index >= 0)
                 RegisteredWindows[index] = registered;
             else
@@ -90,13 +92,20 @@ internal static class CaptureWindowExclusion
         }
     }
 
-    public static void Register(IntPtr handle)
+    public static void Register(IntPtr handle, bool hasDisplayAffinity = false)
     {
         lock (Sync)
         {
             PruneDeadHandles();
-            if (!RegisteredWindows.Any(window => window.Handle == handle))
-                RegisteredWindows.Add(new RegisteredWindow(handle, null));
+            int index = RegisteredWindows.FindIndex(window => window.Handle == handle);
+            if (index < 0)
+            {
+                RegisteredWindows.Add(new RegisteredWindow(handle, null, hasDisplayAffinity));
+            }
+            else if (hasDisplayAffinity && !RegisteredWindows[index].HasDisplayAffinity)
+            {
+                RegisteredWindows[index] = RegisteredWindows[index] with { HasDisplayAffinity = true };
+            }
         }
     }
 
@@ -129,6 +138,11 @@ internal static class CaptureWindowExclusion
 
     private static bool ShouldHide(RegisteredWindow window, Rectangle captureRegion)
     {
+        // When WDA_EXCLUDEFROMCAPTURE is successfully applied, DWM and DXGI automatically
+        // exclude this window from screen captures without requiring SW_HIDE or DWM sleeps.
+        if (window.HasDisplayAffinity)
+            return false;
+
         var handle = window.Handle;
         if (handle == IntPtr.Zero || !User32.IsWindow(handle) || !User32.IsWindowVisible(handle))
             return false;

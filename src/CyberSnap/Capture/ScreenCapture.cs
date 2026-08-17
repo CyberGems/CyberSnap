@@ -185,7 +185,7 @@ public static class ScreenCapture
         return fullScreenshot.Clone(cropRect, fullScreenshot.PixelFormat);
     }
 
-    private static bool IsLikelyInvalidCapture(Bitmap bitmap)
+    private static unsafe bool IsLikelyInvalidCapture(Bitmap bitmap)
     {
         if (bitmap.Width <= 0 || bitmap.Height <= 0)
             return true;
@@ -195,17 +195,16 @@ public static class ScreenCapture
 
         var rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
         var data = bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-        int rowLength = bitmap.Width * 4;
-        var row = ArrayPool<byte>.Shared.Rent(rowLength);
         try
         {
+            byte* scan0 = (byte*)data.Scan0;
             int stride = data.Stride;
             int samples = 0;
             int darkSamples = 0;
 
             for (int y = 0; y < bitmap.Height; y += stepY)
             {
-                Marshal.Copy(IntPtr.Add(data.Scan0, y * stride), row, 0, rowLength);
+                byte* row = scan0 + (y * stride);
                 for (int x = 0; x < bitmap.Width; x += stepX)
                 {
                     int i = x * 4;
@@ -220,7 +219,6 @@ public static class ScreenCapture
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(row);
             bitmap.UnlockBits(data);
         }
     }

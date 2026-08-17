@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using CyberSnap.Native;
@@ -33,9 +33,6 @@ internal static class DxgiScreenCapture
             lock (deviceBundle.CaptureSyncRoot)
             {
                 var result = new Bitmap(region.Width, region.Height, PixelFormat.Format32bppArgb);
-
-                using var graphics = Graphics.FromImage(result);
-                graphics.Clear(Color.Transparent);
 
                 var outputs = deviceBundle.GetOutputs();
                 if (!IsRegionFullyCoveredByOutputs(region, outputs.Select(output => ToRectangle(output.Description.DesktopCoordinates))))
