@@ -96,9 +96,7 @@ public sealed partial class RegionOverlayForm
 
         if (ShowAnnotationChrome)
         {
-            var settings = Services.SettingsService.LoadStatic();
-            var currentlyEnabled = settings?.EnabledTools ?? ToolDef.DefaultEnabledIds();
-            bool hasAnnotations = currentlyEnabled.Any(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+            bool hasAnnotations = _visibleTools.Any(t => t.Group == 1);
             if (!hasAnnotations)
             {
                 if (_toolbarForm != null && _toolbarForm.Visible)

@@ -583,9 +583,7 @@ public partial class App
             try
             {
                 Theme.Refresh();
-                var latestSettings = Services.SettingsService.LoadStatic();
-                if (latestSettings != null)
-                    _settingsService!.Settings = latestSettings;
+                var s = _settingsService!.Settings;
 
                 bool showCursor = _settingsService!.Settings.ShowCursor;
                 var (bmp, bounds) = _settingsService.Settings.OverlayCaptureAllMonitors
