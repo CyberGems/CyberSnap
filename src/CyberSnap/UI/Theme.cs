@@ -138,11 +138,29 @@ public static class Theme
     };
 
     private static Models.AppThemeMode _forcedMode = Models.AppThemeMode.System;
+    private static int _cachedDarkMode = -1; // -1 = uninitialized, 0 = light, 1 = dark
+
+    static Theme()
+    {
+        try
+        {
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged += (_, e) =>
+            {
+                if (e.Category is Microsoft.Win32.UserPreferenceCategory.General or Microsoft.Win32.UserPreferenceCategory.Color)
+                {
+                    Volatile.Write(ref _cachedDarkMode, -1);
+                    Refresh();
+                }
+            };
+        }
+        catch { }
+    }
 
     /// <summary>Set the app-wide theme mode and refresh IsDark.</summary>
     public static void SetMode(Models.AppThemeMode mode)
     {
         _forcedMode = mode;
+        Volatile.Write(ref _cachedDarkMode, -1);
         Refresh();
     }
 
@@ -160,14 +178,23 @@ public static class Theme
 
     private static bool DetectDarkMode()
     {
+        int cached = Volatile.Read(ref _cachedDarkMode);
+        if (cached != -1) return cached == 1;
+
         try
         {
             using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
             var val = key?.GetValue("AppsUseLightTheme");
-            return val is int i && i == 0;
+            bool isDark = val is int i && i == 0;
+            Volatile.Write(ref _cachedDarkMode, isDark ? 1 : 0);
+            return isDark;
         }
-        catch { return true; }
+        catch
+        {
+            Volatile.Write(ref _cachedDarkMode, 1);
+            return true;
+        }
     }
 
     private static Color C(byte r, byte g, byte b) => Color.FromRgb(r, g, b);
