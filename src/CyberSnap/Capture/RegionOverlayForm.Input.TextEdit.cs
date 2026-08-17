@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Windows.Forms;
@@ -95,6 +95,14 @@ public sealed partial class RegionOverlayForm
         }
     }
 
+    private bool _textStyleLoaded;
+    private void EnsureTextStyleLoaded()
+    {
+        if (_textStyleLoaded) return;
+        _textStyleLoaded = true;
+        LoadTextStyleFromSettings();
+    }
+
     private void LoadTextStyleFromSettings()
     {
         try
@@ -123,6 +131,7 @@ public sealed partial class RegionOverlayForm
     private RectangleF GetActiveTextRect()
     {
         if (!_isTyping) return RectangleF.Empty;
+        EnsureTextStyleLoaded();
         if (_activeTextLayoutDirty)
         {
             _activeTextRectCache = MeasureTextRect(

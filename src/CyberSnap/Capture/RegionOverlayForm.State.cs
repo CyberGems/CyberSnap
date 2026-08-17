@@ -549,7 +549,12 @@ public sealed partial class RegionOverlayForm
         {
             if (_windowDetectionMode != WindowDetectionMode.Off && IsSelectionCaptureMode())
             {
-                WindowDetector.SnapshotWindows(_virtualBounds);
+                _ = Task.Run(() =>
+                {
+                    try { WindowDetector.SnapshotWindows(_virtualBounds); }
+                    catch { }
+                });
+
                 SeedAutoDetectUnderCursor();
             }
         }
@@ -2956,13 +2961,20 @@ public sealed partial class RegionOverlayForm
                 minX = Math.Max(minX, _toolbarRect.Right + clear);
         }
 
-        // Prefer the pill strip under the capture frame width (L-shape), not past the
-        // frame edge that hosts the annotation column.
-        if (ShowAnnotationChrome && r.Width > 0)
+        // Prefer the pill strip under the capture frame width (L-shape), not past the frame edge
+        // that hosts the annotation column. This edge clamp is GEOMETRIC (about the frame, not the
+        // annotation bar), so it must apply even when the annotation chrome is hidden (OCR) — else
+        // the dock floats ~anchorW/2 right of the frame and jumps left when the bar appears.
+        // Derive the side from frame/monitor geometry since _annotationFrameDockSide is stale when
+        // the annotation toolbar never ran (OCR flow).
+        if (r.Width > 0)
         {
-            if (_annotationFrameDockSide == CaptureDockSide.Right)
+            bool effectiveRight = ShowAnnotationChrome
+                ? _annotationFrameDockSide == CaptureDockSide.Right
+                : r.Right + collapsedClusterW <= maxX; // annotation chrome would sit right if it fits
+            if (effectiveRight)
                 maxX = Math.Min(maxX, r.Right);
-            else if (_annotationFrameDockSide == CaptureDockSide.Left)
+            else
                 minX = Math.Max(minX, r.Left - collapsedClusterW - Math.Max(UiChrome.ScaleInt(20), r.Width / 3));
         }
 

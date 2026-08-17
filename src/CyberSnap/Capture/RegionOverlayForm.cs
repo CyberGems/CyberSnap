@@ -306,6 +306,9 @@ public sealed partial class RegionOverlayForm : Form
     private Point _confirmDragStartOffset;
     private Point _confirmCustomOffset;
     private Point _lastCursorPos;
+    // Raw (unclamped) cursor. _lastCursorPos is clamped into the confirm region, so it can't be
+    // used to decide whether the pointer is actually inside the drawable area — this one is.
+    private Point _lastRawCursorPos;
     private Point _prevCursorPos; // crosshair ghosting fix
     private Rectangle _lastSelectionRect;
     private Rectangle _lastAutoDetectRect;
@@ -615,7 +618,6 @@ public sealed partial class RegionOverlayForm : Form
         WindowDetectionMode windowDetectionMode = WindowDetectionMode.WindowOnly,
         CenterSelectionAspectRatio centerSelectionAspectRatio = CenterSelectionAspectRatio.Free)
     {
-        CyberSnap.UI.Theme.Refresh();
         _screenshot = screenshot;
         _virtualBounds = virtualBounds;
         _windowDetectionMode = windowDetectionMode;
@@ -625,7 +627,6 @@ public sealed partial class RegionOverlayForm : Form
         _mode = initialMode;
         _activeToolId = ToolDef.AllTools.FirstOrDefault(t => t.Mode == _mode)?.Id;
         _showTime = DateTime.UtcNow;
-        LoadTextStyleFromSettings();
 
         // Magnifier bitmap for color picker
         _magBitmap = new Bitmap(PW, PH, PixelFormat.Format32bppArgb);

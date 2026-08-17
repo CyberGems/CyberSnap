@@ -781,6 +781,7 @@ public sealed partial class RegionOverlayForm
                 Invalidate();
                 break;
             case CaptureMode.Text:
+                EnsureTextStyleLoaded();
                 HideToolbarForCaptureTool();
                 // New text instance (not a re-edit)
                 if (_isTyping)
