@@ -108,49 +108,80 @@ public sealed partial class AnnotationCanvas
 
         _checkerboardBrush.ResetTransform();
         _checkerboardBrush.ScaleTransform((float)_zoom, (float)_zoom);
-        _checkerboardBrush.TranslateTransform(x / (float)_zoom, y / (float)_zoom);
+        _checkerboardBrush.TranslateTransform(_pan.X / (float)_zoom, _pan.Y / (float)_zoom);
         g.FillRectangle(_checkerboardBrush, x, y, width, height);
     }
 
-    /// <summary>Draws the base bitmap at the current zoom/pan, using the pre-scaled cache.</summary>
+    /// <summary>Draws the base bitmap at the current zoom/pan, using the pre-scaled cache and visible-viewport clipping.</summary>
     private void DrawBaseImage(Graphics g)
     {
         int scaledW = Math.Max(1, (int)Math.Round(_baseBitmap.Width * _zoom));
         int scaledH = Math.Max(1, (int)Math.Round(_baseBitmap.Height * _zoom));
 
-        PaintCheckerboardBackground(g, _pan.X, _pan.Y, scaledW, scaledH);
+        int clientW = ClientSize.Width;
+        int clientH = ClientSize.Height;
+        if (clientW <= 0 || clientH <= 0) return;
 
-        // Zoomed in (>= 1): NearestNeighbor straight from the source is already cheap —
-        // GDI+ clips rasterization to the visible region, so cost scales with on-screen
-        // pixels, not the (potentially huge) destination size. Caching here would mean
-        // allocating a larger-than-screen bitmap (e.g. 28000×16000 at 8×), so we don't.
-        // This also preserves the crisp pixel-peeping look of the original code.
+        // Clip destination rectangle strictly to the client viewport to avoid huge off-screen coordinate calculations
+        var destRect = Rectangle.Intersect(
+            new Rectangle(0, 0, clientW, clientH),
+            new Rectangle((int)_pan.X, (int)_pan.Y, scaledW, scaledH));
+
+        if (destRect.Width <= 0 || destRect.Height <= 0)
+            return;
+
+        // Draw checkerboard background ONLY for the visible destination area
+        PaintCheckerboardBackground(g, destRect.X, destRect.Y, destRect.Width, destRect.Height);
+
+        // Compute visible source rectangle in base bitmap coordinates
+        float srcX = (destRect.X - _pan.X) / (float)_zoom;
+        float srcY = (destRect.Y - _pan.Y) / (float)_zoom;
+        float srcW = destRect.Width / (float)_zoom;
+        float srcH = destRect.Height / (float)_zoom;
+
+        srcX = Math.Clamp(srcX, 0f, _baseBitmap.Width);
+        srcY = Math.Clamp(srcY, 0f, _baseBitmap.Height);
+        srcW = Math.Min(srcW, _baseBitmap.Width - srcX);
+        srcH = Math.Min(srcH, _baseBitmap.Height - srcY);
+
+        if (srcW <= 0 || srcH <= 0)
+            return;
+
+        // 1. Zoomed in (>= 1.0): nearest-neighbor visible-rect sampling (instant, 0 lag regardless of zoom level)
         if (_zoom >= 1.0)
         {
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            g.DrawImage(_baseBitmap, _pan.X, _pan.Y, scaledW, scaledH);
+            g.PixelOffsetMode = PixelOffsetMode.Half;
+            g.DrawImage(_baseBitmap, destRect, srcX, srcY, srcW, srcH, GraphicsUnit.Pixel);
             return;
         }
 
-        // Zoomed out (< 1): the expensive bicubic-downscale case.
-        // During an active zoom gesture, draw with fast bilinear filtering directly from the base bitmap;
-        // the settle timer then rebuilds the crisp high-quality bicubic cache once zooming stops.
+        // 2. Zoomed out (< 1.0) during active zoom gesture: fast bilinear visible-rect sampling
         if (_zoomInteracting)
         {
             g.InterpolationMode = InterpolationMode.Bilinear;
             g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.DrawImage(_baseBitmap, _pan.X, _pan.Y, scaledW, scaledH);
+            g.DrawImage(_baseBitmap, destRect, srcX, srcY, srcW, srcH, GraphicsUnit.Pixel);
             return;
         }
 
+        // 3. Settled zoomed-out view (< 1.0): high-quality pre-scaled cache blitted 1:1
         EnsureScaledCache(scaledW, scaledH);
+        if (_scaledCache is not null)
+        {
+            int cacheX = Math.Clamp(destRect.X - (int)_pan.X, 0, _scaledCache.Width);
+            int cacheY = Math.Clamp(destRect.Y - (int)_pan.Y, 0, _scaledCache.Height);
+            int cacheW = Math.Min(destRect.Width, _scaledCache.Width - cacheX);
+            int cacheH = Math.Min(destRect.Height, _scaledCache.Height - cacheY);
 
-        // Blit the cache 1:1 (dest size == cache size) — NearestNeighbor here is a copy,
-        // not a resample, so there's no quality loss versus the cached HQ render.
-        g.InterpolationMode = InterpolationMode.NearestNeighbor;
-        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-        g.DrawImage(_scaledCache!, _pan.X, _pan.Y, scaledW, scaledH);
+            if (cacheW > 0 && cacheH > 0)
+            {
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+                g.DrawImage(_scaledCache, new Rectangle(destRect.X, destRect.Y, cacheW, cacheH),
+                    cacheX, cacheY, cacheW, cacheH, GraphicsUnit.Pixel);
+            }
+        }
     }
 
     /// <summary>Rebuilds _scaledCache when the requested on-screen size changes.</summary>
