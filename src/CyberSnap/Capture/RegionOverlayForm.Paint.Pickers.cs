@@ -84,22 +84,33 @@ public sealed partial class RegionOverlayForm
                 g.FillPath(_pickerSearchBg!, searchPath);
                 g.DrawPath(_pickerFocusBorder!, searchPath);
             }
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             var searchFont = GetPickerSearchFont();
             string placeholder = Services.LocalizationService.Translate("Search...");
             string searchDisplay = _emojiSearch.Length > 0 ? _emojiSearch : placeholder;
-            Color searchColor = _emojiSearch.Length > 0 ? UiChrome.SurfaceTextPrimary : UiChrome.SurfaceTextMuted;
-            var textRect = new Rectangle(searchRect.X + 10, searchRect.Y, searchRect.Width - 20, searchRect.Height);
-            TextRenderer.DrawText(g, searchDisplay, searchFont, textRect, searchColor,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
-
-            // Text cursor
-            if (_emojiSearch.Length > 0)
+            var searchBrush = SketchRenderer.GetToolColorBrush(_emojiSearch.Length > 0
+                ? UiChrome.SurfaceTextPrimary
+                : UiChrome.SurfaceTextMuted);
+            using (var sf = new StringFormat
             {
-                var measured = TextRenderer.MeasureText(g, _emojiSearch, searchFont, Size.Empty, TextFormatFlags.NoPadding);
-                float cursorX = textRect.X + measured.Width + 1;
-                int cursorPad = 5;
-                g.DrawLine(_pickerCursorPen!, cursorX, searchRect.Y + cursorPad, cursorX, searchRect.Bottom - cursorPad);
+                Alignment = StringAlignment.Near,
+                LineAlignment = StringAlignment.Center,
+                FormatFlags = StringFormatFlags.NoWrap
+            })
+            {
+                var textRect = new RectangleF(searchRect.X + 10, searchRect.Y, searchRect.Width - 20, searchRect.Height);
+                g.DrawString(searchDisplay, searchFont, searchBrush, textRect, sf);
+
+                // Text cursor
+                if (_emojiSearch.Length > 0)
+                {
+                    var measured = g.MeasureString(_emojiSearch, searchFont);
+                    float cursorX = textRect.X + measured.Width - 2;
+                    int cursorPad = 5;
+                    g.DrawLine(_pickerCursorPen!, cursorX, searchRect.Y + cursorPad, cursorX, searchRect.Bottom - cursorPad);
+                }
             }
+            g.TextRenderingHint = TextRenderingHint.SystemDefault;
 
             // Emoji grid
             int gridY = py + pad + searchBarH + pad;
