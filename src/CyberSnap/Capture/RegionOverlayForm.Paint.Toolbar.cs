@@ -314,7 +314,7 @@ public sealed partial class RegionOverlayForm
                     pen.EndCap = LineCap.Round;
                     g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
                 }
-                PaintCaptureHoldHint(g, btn, lineColor, buttonIndex: i);
+                PaintCaptureHoldHint(g, btn, UiChrome.SurfaceTextPrimary, buttonIndex: i);
                 continue;
             }
 
@@ -349,7 +349,7 @@ public sealed partial class RegionOverlayForm
                 int glossAlpha = colorAlpha > 200 ? 100 : 70;
                 using (var hlBrush = new SolidBrush(Color.FromArgb(glossAlpha, 255, 255, 255)))
                     g.FillEllipse(hlBrush, hlX, hlY, hlW, hlH);
-                PaintCaptureHoldHint(g, btn, baseColor, buttonIndex: i);
+                PaintCaptureHoldHint(g, btn, UiChrome.SurfaceTextPrimary, buttonIndex: i);
                 continue;
             }
 
