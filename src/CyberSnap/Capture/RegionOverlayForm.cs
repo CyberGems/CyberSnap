@@ -2334,16 +2334,15 @@ public sealed partial class RegionOverlayForm : Form
 
         if (_colorPickerOpen)
         {
-            bool inColorPopup = _colorPickerRect.Contains(cursorOverlayPos);
-            bool onOpenColorBtn = _hoveredButton == ColorButtonIndex;
+            var colorBtn = _toolbarButtons.Length > ColorButtonIndex ? _toolbarButtons[ColorButtonIndex] : Rectangle.Empty;
+            var colorPopup = !_colorPickerRect.IsEmpty ? _colorPickerRect : GetColorPickerBounds();
+            var colorArea = Rectangle.Union(colorBtn, colorPopup);
+            colorArea.Inflate(UiChrome.ScaleInt(12), UiChrome.ScaleInt(12));
+
+            bool inColorArea = colorArea.Contains(cursorOverlayPos);
             bool onOtherMerged = onMerged && _hoveredButton != ColorButtonIndex;
 
-            if (onOtherMerged)
-            {
-                _colorPickerOpen = false;
-                changed = true;
-            }
-            else if (!inColorPopup && !onOpenColorBtn)
+            if (onOtherMerged || !inColorArea)
             {
                 _colorPickerOpen = false;
                 changed = true;
@@ -2352,16 +2351,15 @@ public sealed partial class RegionOverlayForm : Form
 
         if (_strokePickerOpen)
         {
-            bool inStrokePopup = _strokePickerRect.Contains(cursorOverlayPos);
-            bool onOpenStrokeBtn = _hoveredButton == StrokeWidthButtonIndex;
+            var strokeBtn = _toolbarButtons.Length > StrokeWidthButtonIndex ? _toolbarButtons[StrokeWidthButtonIndex] : Rectangle.Empty;
+            var strokePopup = !_strokePickerRect.IsEmpty ? _strokePickerRect : GetStrokePickerBounds();
+            var strokeArea = Rectangle.Union(strokeBtn, strokePopup);
+            strokeArea.Inflate(UiChrome.ScaleInt(12), UiChrome.ScaleInt(12));
+
+            bool inStrokeArea = strokeArea.Contains(cursorOverlayPos);
             bool onOtherMerged = onMerged && _hoveredButton != StrokeWidthButtonIndex;
 
-            if (onOtherMerged)
-            {
-                _strokePickerOpen = false;
-                changed = true;
-            }
-            else if (!inStrokePopup && !onOpenStrokeBtn)
+            if (onOtherMerged || !inStrokeArea)
             {
                 _strokePickerOpen = false;
                 changed = true;
@@ -2376,12 +2374,14 @@ public sealed partial class RegionOverlayForm : Form
         {
             if (isColorButton)
             {
+                _colorPickerRect = GetColorPickerBounds();
                 _colorPickerOpen = true;
                 HideToolbarTooltip();
                 changed = true;
             }
             else if (isStrokeButton)
             {
+                _strokePickerRect = GetStrokePickerBounds();
                 _strokePickerOpen = true;
                 HideToolbarTooltip();
                 changed = true;
