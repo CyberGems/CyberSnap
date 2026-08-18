@@ -15,23 +15,32 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     private ToolTipPlacement GetToolbarToolTipPlacement(int buttonIndex = -1)
     {
-        bool isFlyoutButton = buttonIndex == ColorButtonIndex
-            || buttonIndex == StrokeWidthButtonIndex
-            || buttonIndex == _mergedCaptureButtonIndex
-            || buttonIndex == _mergedRecordButtonIndex
-            || _colorPickerOpen
-            || _strokePickerOpen
-            || _altCapturePopupOpen;
+        if (buttonIndex == ColorButtonIndex)
+        {
+            var popup = !_colorPickerRect.IsEmpty ? _colorPickerRect : GetColorPickerBounds();
+            var btn = _toolbarButtons.Length > ColorButtonIndex ? _toolbarButtons[ColorButtonIndex] : _toolbarRect;
+            return popup.X < btn.X ? ToolTipPlacement.Right : ToolTipPlacement.Left;
+        }
+
+        if (buttonIndex == StrokeWidthButtonIndex)
+        {
+            var popup = !_strokePickerRect.IsEmpty ? _strokePickerRect : GetStrokePickerBounds();
+            var btn = _toolbarButtons.Length > StrokeWidthButtonIndex ? _toolbarButtons[StrokeWidthButtonIndex] : _toolbarRect;
+            return popup.X < btn.X ? ToolTipPlacement.Right : ToolTipPlacement.Left;
+        }
+
+        if (buttonIndex == _mergedCaptureButtonIndex || buttonIndex == _mergedRecordButtonIndex)
+        {
+            var btn = buttonIndex >= 0 && buttonIndex < _toolbarButtons.Length ? _toolbarButtons[buttonIndex] : _toolbarRect;
+            if (_altCapturePopupOpen && !_altCaptureButtonRect.IsEmpty)
+            {
+                return _altCaptureButtonRect.X < btn.X ? ToolTipPlacement.Right : ToolTipPlacement.Left;
+            }
+            return IsRightDock ? ToolTipPlacement.Right : ToolTipPlacement.Left;
+        }
 
         if (ShowAnnotationChrome)
         {
-            if (isFlyoutButton)
-            {
-                // Opposite to the flyout (flyout opens inward toward selection, tooltip opens outward)
-                return _annotationFrameDockSide == CaptureDockSide.Right
-                    ? ToolTipPlacement.Right
-                    : ToolTipPlacement.Left;
-            }
             return _annotationFrameDockSide == CaptureDockSide.Right
                 ? ToolTipPlacement.Left
                 : ToolTipPlacement.Right;
@@ -39,10 +48,6 @@ public sealed partial class RegionOverlayForm
 
         if (IsVerticalDock)
         {
-            if (isFlyoutButton)
-            {
-                return IsRightDock ? ToolTipPlacement.Right : ToolTipPlacement.Left;
-            }
             return IsRightDock ? ToolTipPlacement.Left : ToolTipPlacement.Right;
         }
 
