@@ -1396,7 +1396,7 @@ public partial class CaptureWidgetWindow : Window
         ((App)System.Windows.Application.Current).SyncSettingsAutoCopyChecks();
     }
 
-    private void WidgetBranding_Click(object sender, MouseButtonEventArgs e)
+    private void WidgetBranding_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
         CollapseWidget();

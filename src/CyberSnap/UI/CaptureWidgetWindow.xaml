@@ -135,15 +135,68 @@
                         </Border>
                     </Border>
 
-                <Grid x:Name="ControlsGrid" Margin="12">
+                <Grid x:Name="ControlsGrid" Margin="12,10,12,12">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + Config -->
                         <RowDefinition Height="Auto"/> <!-- Capture Button -->
                         <RowDefinition Height="Auto"/> <!-- Quick Actions -->
-                        <RowDefinition Height="Auto"/> <!-- Settings Row -->
+                        <RowDefinition Height="Auto"/> <!-- Settings / Toggles -->
                     </Grid.RowDefinitions>
 
+                    <!-- Top Title Bar -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="WidgetBrandingBtn"
+                                Grid.Column="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                Cursor="Hand"
+                                FocusVisualStyle="{x:Null}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Left"
+                                ToolTip="Open About CyberSnap"
+                                Services:LocalizationService.SourceToolTip="Open About CyberSnap"
+                                Click="WidgetBranding_Click"
+                                MouseEnter="WidgetBranding_MouseEnter"
+                                MouseLeave="WidgetBranding_MouseLeave">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="Transparent">
+                                        <ContentPresenter/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="WidgetLogoImage"
+                                       Width="11" Height="11"
+                                       Margin="0,0,4,0"
+                                       VerticalAlignment="Center"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       SnapsToDevicePixels="True"
+                                       UseLayoutRounding="True"/>
+                                <TextBlock x:Name="WidgetBrandText"
+                                           Text="CyberSnap widget"
+                                           FontSize="9.5"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource WidgetTextMuted}"
+                                           Opacity="0.65"
+                                           VerticalAlignment="Center"
+                                           FontFamily="Segoe UI Variable Display"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Configuration"
+                                AutomationProperties.Name="Configuration">
+                            <Image x:Name="SettingsIcon" Width="16" Height="16"/>
+                        </Button>
+                    </Grid>
+
                     <!-- Big Circular Capture Button -->
-                    <Grid Grid.Row="0" Margin="0,0,0,12" HorizontalAlignment="Center">
+                    <Grid Grid.Row="1" Margin="0,0,0,12" HorizontalAlignment="Center">
                         <Button x:Name="CaptureButton" Click="CaptureButton_Click" Cursor="Hand" Width="54" Height="54" FocusVisualStyle="{x:Null}"
                                 ToolTip="Quick screenshot (Area Capture)"
                                 AutomationProperties.Name="Quick screenshot"
@@ -173,11 +226,11 @@
                                                         <!-- A: subtle pop -->
                                                         <DoubleAnimation Storyboard.TargetName="CenterScale" Storyboard.TargetProperty="ScaleX"
                                                                          To="1.25" Duration="0:0:0.12">
-                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
                                                         <DoubleAnimation Storyboard.TargetName="CenterScale" Storyboard.TargetProperty="ScaleY"
                                                                          To="1.25" Duration="0:0:0.12">
-                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
                                                         <!-- B: center glow intensifies -->
                                                         <DoubleAnimation Storyboard.TargetName="CenterGlow" Storyboard.TargetProperty="BlurRadius"
@@ -218,7 +271,7 @@
                     </Grid>
 
                     <!-- Quick Action Shortcuts (Larger icons 22x22) -->
-                    <StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,0,10">
+                    <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,0,10">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
                             <Button Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click" ToolTip="Scrolling capture"
                                     AutomationProperties.Name="Scrolling capture">
@@ -254,9 +307,8 @@
                     </StackPanel>
 
                     <!-- Settings / Toggle Row -->
-                    <Grid Grid.Row="2" Margin="0,4,0,0">
+                    <Grid Grid.Row="3" Margin="0,2,0,0">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
@@ -279,7 +331,7 @@
                                           AutomationProperties.HelpText="Copy captures, OCR text, and recordings to the clipboard when they finish."/>
                         </Grid>
 
-                        <Grid Grid.Row="1" Margin="0,0,0,6"
+                        <Grid Grid.Row="1" Margin="0,0,0,2"
                               ToolTip="Include the mouse pointer in still captures"
                               Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures">
                             <Grid.ColumnDefinitions>
@@ -297,48 +349,6 @@
                                           Services:LocalizationService.SourceToolTip="Include the mouse pointer in image captures, video, and GIF"
                                           AutomationProperties.Name="Capture cursor"
                                           AutomationProperties.HelpText="Include the mouse pointer in image captures, video, and GIF"/>
-                        </Grid>
-
-                        <Grid Grid.Row="2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border x:Name="WidgetBrandingBtn"
-                                    Grid.Column="0"
-                                    Background="Transparent"
-                                    CornerRadius="4"
-                                    Cursor="Hand"
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Left"
-                                    ToolTip="Open About CyberSnap"
-                                    Services:LocalizationService.SourceToolTip="Open About CyberSnap"
-                                    MouseLeftButtonUp="WidgetBranding_Click"
-                                    MouseEnter="WidgetBranding_MouseEnter"
-                                    MouseLeave="WidgetBranding_MouseLeave">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image x:Name="WidgetLogoImage"
-                                           Width="11" Height="11"
-                                           Margin="0,0,4,0"
-                                           VerticalAlignment="Center"
-                                           Stretch="Uniform"
-                                           RenderOptions.BitmapScalingMode="HighQuality"
-                                           SnapsToDevicePixels="True"
-                                           UseLayoutRounding="True"/>
-                                    <TextBlock x:Name="WidgetBrandText"
-                                               Text="CyberSnap widget"
-                                               FontSize="9.5"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource WidgetTextMuted}"
-                                               Opacity="0.65"
-                                               VerticalAlignment="Center"
-                                               FontFamily="Segoe UI Variable Display"/>
-                                </StackPanel>
-                            </Border>
-                            <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Configuration"
-                                    AutomationProperties.Name="Configuration">
-                                <Image x:Name="SettingsIcon" Width="16" Height="16"/>
-                            </Button>
                         </Grid>
                     </Grid>
                 </Grid>
