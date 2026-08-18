@@ -120,24 +120,31 @@ public sealed partial class RegionOverlayForm
 
         if (IsVerticalDock)
         {
-            float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
-            float ly = _toolbarRect.Y + pad + UiChrome.ScaleInt(6);
-            if (!_brandRect.IsEmpty)
-            {
-                logoSz = Math.Min(logoSz + UiChrome.ScaleInt(2), Math.Max(8, _brandRect.Height - UiChrome.ScaleInt(4)));
-                lx = _brandRect.X + (_brandRect.Width - logoSz) / 2f;
-                ly = _brandRect.Y + (_brandRect.Height - logoSz) / 2f;
-            }
+            float topAnchor = !_annotationGripRect.IsEmpty ? _annotationGripRect.Bottom : (!_captureGripRect.IsEmpty ? _captureGripRect.Bottom : _toolbarRect.Y + pad);
+            int firstToolY = _toolbarButtons.Length > 0 && _toolbarButtons[0].Height > 0 ? _toolbarButtons[0].Y : (int)topAnchor + logoSz;
+            float bottomAnchor = firstToolY > topAnchor ? firstToolY : topAnchor + logoSz;
+
+            float ly = topAnchor + (bottomAnchor - topAnchor - logoSz) / 2f;
+            float lx = _toolbarRect.X + (_toolbarRect.Width - logoSz) / 2f;
+
+            _brandRect = new Rectangle(_toolbarRect.X + pad, (int)topAnchor, buttonSize, (int)(bottomAnchor - topAnchor));
             _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
 
             FluentIcons.DrawIcon(g, "question", new RectangleF(lx, ly, logoSz, logoSz), brandIconColor, 0f);
         }
         else
         {
-            float brandPad = UiChrome.ScaleFloat(6f);
-            float lx = _brandRect.X + brandPad;
+            int firstToolX = GetFirstVisibleToolbarButtonX();
+            if (firstToolX < 0)
+                firstToolX = _brandRect.Right;
+
+            float leftAnchor = !_captureGripRect.IsEmpty ? _captureGripRect.Right : _brandRect.X;
+            float rightAnchor = firstToolX > leftAnchor ? firstToolX : leftAnchor + logoSz;
+
+            float lx = leftAnchor + (rightAnchor - leftAnchor - logoSz) / 2f;
             float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
 
+            _brandRect = new Rectangle((int)leftAnchor, _toolbarRect.Y + pad, (int)(rightAnchor - leftAnchor), buttonSize);
             _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
 
             FluentIcons.DrawIcon(g, "question", new RectangleF(lx, ly, logoSz, logoSz), brandIconColor, 0f);
