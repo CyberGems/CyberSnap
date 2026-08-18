@@ -257,52 +257,32 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Tight click region around the logo icon (+ wordmark on horizontal docks) that opens
-    /// the Quick Start Guide.
+    /// Click region for the question mark icon that opens the Quick Start Guide.
     /// </summary>
     private bool IsPointInBrandClickArea(Point location)
     {
-        if (_logoRect.IsEmpty)
+        if (_logoRect.IsEmpty && _brandRect.IsEmpty)
             return false;
 
-        // Vertical docks are icon-only — hit the logo (and compact brand strip if present).
-        if (IsVerticalDock)
+        if (!_brandRect.IsEmpty && _brandRect.Contains(location))
+            return true;
+
+        if (!_logoRect.IsEmpty)
         {
             var hit = _logoRect;
-            hit.Inflate(3, 3);
-            if (hit.Contains(location))
-                return true;
-            return !_brandRect.IsEmpty && _brandRect.Contains(location);
+            hit.Inflate(Helpers.UiChrome.ScaleInt(6), Helpers.UiChrome.ScaleInt(6));
+            return hit.Contains(location);
         }
 
-        // Horizontal: logo icon + "CyberSnap" text label when it is actually drawn.
-        // The strip must never extend past the logo's own footprint in collapsed (logo-only)
-        // mode — a hardcoded 68px bled over the first capture button and hijacked its
-        // click/hold into the quick-start guide. Fall back to the real brand strip bounds.
-        int textWidth = _brandTextVisible ? Helpers.UiChrome.ScaleInt(68) : 0;
-        int contentWidth = Math.Max(0, _logoRect.Width) + textWidth;
-        if (contentWidth <= 0 && !_brandRect.IsEmpty)
-            contentWidth = _brandRect.Width;
-        var contentRect = new Rectangle(
-            _logoRect.X - 3,
-            _logoRect.Y - 3,
-            contentWidth,
-            _logoRect.Height + 6);
-
-        return contentRect.Contains(location);
+        return false;
     }
 
     /// <summary>
-    /// Area of the toolbar reserved for dragging: the grip OR the empty space
-    /// around the branding strip (excluding the clickable brand logo/text itself).
-    /// Gaps between tool buttons are NOT drag handles.
+    /// Area of the toolbar reserved for dragging: the dedicated grip handle.
     /// </summary>
     private bool IsPointInToolbarDragArea(Point location)
     {
         if (ShowAnnotationChrome ? HitTestAnnotationDockGrip(location) : HitTestCaptureDockGrip(location))
-            return true;
-
-        if (!_brandRect.IsEmpty && _brandRect.Contains(location) && !IsPointInBrandClickArea(location))
             return true;
 
         return false;
