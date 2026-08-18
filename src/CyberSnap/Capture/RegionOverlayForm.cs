@@ -2402,14 +2402,12 @@ public sealed partial class RegionOverlayForm : Form
             {
                 _colorPickerRect = GetColorPickerBounds();
                 _colorPickerOpen = true;
-                HideToolbarTooltip();
                 changed = true;
             }
             else if (isStrokeButton)
             {
                 _strokePickerRect = GetStrokePickerBounds();
                 _strokePickerOpen = true;
-                HideToolbarTooltip();
                 changed = true;
             }
             else if (isMergedTool)
@@ -2418,7 +2416,6 @@ public sealed partial class RegionOverlayForm : Form
                 _altCapturePopupOpen = true;
                 EnsureAltPopupSlotsLaidOut();
                 PositionToolbarForm();
-                HideToolbarTooltip();
                 changed = true;
             }
         }

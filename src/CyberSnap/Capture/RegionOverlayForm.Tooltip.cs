@@ -13,10 +13,25 @@ public sealed partial class RegionOverlayForm
     /// Vertical annotation/capture columns: tip beside the button so it never covers neighbors.
     /// Horizontal docks keep above/below.
     /// </summary>
-    private ToolTipPlacement GetToolbarToolTipPlacement()
+    private ToolTipPlacement GetToolbarToolTipPlacement(int buttonIndex = -1)
     {
+        bool isFlyoutButton = buttonIndex == ColorButtonIndex
+            || buttonIndex == StrokeWidthButtonIndex
+            || buttonIndex == _mergedCaptureButtonIndex
+            || buttonIndex == _mergedRecordButtonIndex
+            || _colorPickerOpen
+            || _strokePickerOpen
+            || _altCapturePopupOpen;
+
         if (ShowAnnotationChrome)
         {
+            if (isFlyoutButton)
+            {
+                // Opposite to the flyout (flyout opens inward toward selection, tooltip opens outward)
+                return _annotationFrameDockSide == CaptureDockSide.Right
+                    ? ToolTipPlacement.Right
+                    : ToolTipPlacement.Left;
+            }
             return _annotationFrameDockSide == CaptureDockSide.Right
                 ? ToolTipPlacement.Left
                 : ToolTipPlacement.Right;
@@ -24,6 +39,10 @@ public sealed partial class RegionOverlayForm
 
         if (IsVerticalDock)
         {
+            if (isFlyoutButton)
+            {
+                return IsRightDock ? ToolTipPlacement.Right : ToolTipPlacement.Left;
+            }
             return IsRightDock ? ToolTipPlacement.Left : ToolTipPlacement.Right;
         }
 
@@ -44,7 +63,7 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        var placement = GetToolbarToolTipPlacement();
+        var placement = GetToolbarToolTipPlacement(_hoveredButton);
 
         if (_hoveredAltSlotIndex >= 0 && _altCapturePopupOpen && _hoveredAltSlotIndex < _altPopupSlots.Count)
         {
@@ -155,12 +174,6 @@ public sealed partial class RegionOverlayForm
         }
 
         if (!IsToolbarInteractive() || _hoveredButton < 0 || _hoveredButton >= _toolbarLabels.Length)
-        {
-            HideToolbarTooltip();
-            return;
-        }
-
-        if (_colorPickerOpen && _hoveredButton == ColorButtonIndex)
         {
             HideToolbarTooltip();
             return;
