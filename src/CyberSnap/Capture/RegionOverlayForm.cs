@@ -58,9 +58,14 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Raised when the user toggles the Done pill's text label on the confirm bar.</summary>
     public event Action<bool>? ConfirmDoneShowLabelChanged;
 
+    /// <summary>Raised when the user toggles remembering the last used annotation tool.</summary>
+    public event Action<bool>? RememberAnnotationToolChanged;
+
     /// <summary>Action chosen when the user commits via a destination pill (or Enter on the primary pill).</summary>
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public ConfirmCommitAction PendingCommitAction { get; private set; } = ConfirmCommitAction.Default;
+
+
 
     /// <summary>
     /// Annotation flyout + stroke/color chrome only while the region is locked.
@@ -104,6 +109,9 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _confirmChromeWrapperRect = Rectangle.Empty;
     private bool _confirmPillShowLabels;
     private bool _confirmDoneShowLabel = true;
+    private bool _rememberAnnotationTool = true;
+
+    public void SetRememberAnnotationTool(bool remember) => _rememberAnnotationTool = remember;
 
     // Done pill label+check layout — single source of truth shared by the width measurer
     // (State) and the layer (Paint), so the pair stays visually centered at any DPI.

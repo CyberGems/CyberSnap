@@ -301,6 +301,13 @@ public sealed partial class RegionOverlayForm
         // confirm context menu (and annotation context menus) free of chrome options.
         if (ShowAnnotationChrome)
         {
+            var rememberAnnotItem = WindowsMenuRenderer.Item(
+                LocalizationService.Translate("Remember annotation tool"),
+                iconId: _rememberAnnotationTool ? "check" : null,
+                iconSize: 24);
+            rememberAnnotItem.Click += (_, _) => ToggleRememberAnnotationTool();
+            menu.Items.Add(rememberAnnotItem);
+
             var modeLabelsItem = WindowsMenuRenderer.Item(
                 LocalizationService.Translate("Show mode labels"),
                 iconId: _confirmPillShowLabels ? "check" : null,
