@@ -415,6 +415,9 @@ public sealed partial class RegionOverlayForm
 
     internal void RefreshToolbar()
     {
+        if (IsDisposed || Disposing)
+            return;
+
         // Confirm mode now shows the annotation chrome on the same dock (stroke/color + flyout).
         // Keep the toolbar visible and rebuild layout for the current phase.
         var oldUiBounds = _lastOverlayUiBounds;

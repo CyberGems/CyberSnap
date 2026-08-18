@@ -78,7 +78,7 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            _visibleTools = ToolDef.AllTools.Where(t => enabledIds.Contains(t.Id)).ToArray();
+            _visibleTools = ToolDef.AllTools.Where(t => enabledIds.Contains(t.Id) || IsPinnedAnnotationUtility(t.Id)).ToArray();
         }
 
         _mainBarTools = _visibleTools.Where(t => !flyoutIds.Contains(t.Id)).ToArray();
@@ -721,7 +721,7 @@ public sealed partial class RegionOverlayForm
         ClearRedoEditHistory();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
-        if (ShowAnnotationChrome)
+        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
         {
             MarkToolbarRenderDirty();
             RefreshToolbar();
@@ -743,7 +743,7 @@ public sealed partial class RegionOverlayForm
             command.Dispose();
         _editUndoStack.Clear();
         _editRedoStack.Clear();
-        if (ShowAnnotationChrome)
+        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
         {
             MarkToolbarRenderDirty();
             RefreshToolbar();
@@ -1134,7 +1134,7 @@ public sealed partial class RegionOverlayForm
         ResetSelectedAnnotationState();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
-        if (ShowAnnotationChrome)
+        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
         {
             MarkToolbarRenderDirty();
             RefreshToolbar();
@@ -1155,7 +1155,7 @@ public sealed partial class RegionOverlayForm
         ResetSelectedAnnotationState();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
-        if (ShowAnnotationChrome)
+        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
         {
             MarkToolbarRenderDirty();
             RefreshToolbar();
@@ -1463,8 +1463,9 @@ public sealed partial class RegionOverlayForm
         if (preferred?.Mode is not null)
         {
             // Don't steal focus from select/eraser — only seed the sticky drawing trigger.
-            if (string.IsNullOrEmpty(_activeToolId) || IsPinnedAnnotationUtility(_activeToolId!)
-                || !_flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase)))
+            if (string.IsNullOrEmpty(_activeToolId)
+                || (!_flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase))
+                    && !IsPinnedAnnotationUtility(_activeToolId!)))
             {
                 SetTool(preferred, showHelpBanner: false);
             }
@@ -2691,6 +2692,13 @@ public sealed partial class RegionOverlayForm
     {
         _rememberAnnotationTool = !_rememberAnnotationTool;
         RememberAnnotationToolChanged?.Invoke(_rememberAnnotationTool);
+        var app = (App)System.Windows.Application.Current;
+        if (app?.SettingsService != null)
+        {
+            app.SettingsService.Settings.RememberAnnotationTool = _rememberAnnotationTool;
+            app.SettingsService.Save();
+            app.SettingsService.FlushPendingWrites();
+        }
         _toolbarContextMenu?.Close();
     }
 
