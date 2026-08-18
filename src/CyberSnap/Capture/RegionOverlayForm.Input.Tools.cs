@@ -418,6 +418,7 @@ public sealed partial class RegionOverlayForm
                     }
                     if (!Cursor.Equals(confirmTarget))
                         Cursor = confirmTarget;
+                    ClearCursorToolChip();
                     return;
                 }
                 else if (sizePillHover && !IsDraggingAnyAnnotation())
@@ -425,6 +426,7 @@ public sealed partial class RegionOverlayForm
                     confirmTarget = CursorFactory.GrabCursor;
                     if (!Cursor.Equals(confirmTarget))
                         Cursor = confirmTarget;
+                    ClearCursorToolChip();
                     return;
                 }
                 else if (gripHover)
@@ -440,6 +442,7 @@ public sealed partial class RegionOverlayForm
                     confirmTarget = HasConfirmAnnotations() ? Cursors.Default : CursorFactory.PrecisionCursor;
                     if (!Cursor.Equals(confirmTarget))
                         Cursor = confirmTarget;
+                    ClearCursorToolChip();
                     return;
                 }
                 else if (!HasConfirmAnnotations() && insideFrame
@@ -448,6 +451,7 @@ public sealed partial class RegionOverlayForm
                     // Clean canvas + Pick/non-annotation tool: whole interior is a drag target.
                     confirmTarget = CursorFactory.GrabCursor;
                     if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
+                    ClearCursorToolChip();
                     return;
                 }
                 else if (ToolDef.IsAnnotationTool(_mode))
@@ -491,6 +495,7 @@ public sealed partial class RegionOverlayForm
                         _hoverButtonStartTime = DateTime.UtcNow;
                     }
 
+                    ClearCursorToolChip();
                     return;
                 }
                 else if (ToolDef.IsAnnotationTool(_mode))
@@ -516,6 +521,7 @@ public sealed partial class RegionOverlayForm
                         _hoverButtonStartTime = DateTime.UtcNow;
                     }
 
+                    ClearCursorToolChip();
                     return;
                 }
 
@@ -532,6 +538,7 @@ public sealed partial class RegionOverlayForm
                         _hoverButtonStartTime = DateTime.UtcNow;
                     }
 
+                    ClearCursorToolChip();
                     return;
                 }
             }
@@ -1210,6 +1217,20 @@ public sealed partial class RegionOverlayForm
 
         if (toolbarDirty)
             RefreshToolbar();
+    }
+
+    private void ClearCursorToolChip()
+    {
+        if (ToolShowsCursorChip(_mode))
+        {
+            var oldChip = GetCursorChipRect(_prevCursorPos != Point.Empty ? _prevCursorPos : _lastCursorPos);
+            if (!oldChip.IsEmpty)
+            {
+                InvalidateLivePreview(oldChip, Rectangle.Empty, 8);
+            }
+        }
+        _prevCursorPos = Point.Empty;
+        ClearCrosshairGuides();
     }
 
     private void InvalidateLiveTransform(Rectangle oldBounds, Rectangle newBounds)
