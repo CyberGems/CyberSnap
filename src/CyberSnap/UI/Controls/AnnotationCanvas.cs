@@ -64,8 +64,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private bool _welcomeDragOver;       // file drag currently over the editor while welcome is shown
     private RectangleF _welcomeCardRect;
     private RectangleF _welcomeIconRect;
-    private readonly RectangleF[] _welcomeChipRects = new RectangleF[3];
-    private int _welcomeHoverChip = -1;  // -1 none, 0 Open, 1 Paste, 2 Capture
+    private readonly RectangleF[] _welcomeChipRects = new RectangleF[4];
+    private int _welcomeHoverChip = -1;  // -1 none, 0 New, 1 Open, 2 Paste, 3 Capture
     private bool _welcomeHoverCard;
     private bool _welcomeHoverIcon;
     private int _welcomePressedChip = -1;
@@ -313,6 +313,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             if (IsWelcomeVisible) Invalidate();
         }
     }
+
+    /// <summary>Welcome chip: create a new custom canvas dialog.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Action? WelcomeNewCanvasRequested { get; set; }
 
     /// <summary>Welcome chip: open a file/project dialog.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -605,9 +609,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
         switch (chip)
         {
-            case 0: WelcomeOpenRequested?.Invoke(); break;
-            case 1: WelcomePasteRequested?.Invoke(); break;
-            case 2: WelcomeCaptureRequested?.Invoke(); break;
+            case 0: WelcomeNewCanvasRequested?.Invoke(); break;
+            case 1: WelcomeOpenRequested?.Invoke(); break;
+            case 2: WelcomePasteRequested?.Invoke(); break;
+            case 3: WelcomeCaptureRequested?.Invoke(); break;
         }
         return true;
     }
@@ -624,12 +629,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     private static bool IsWelcomeChipEnabled(int chip)
     {
-        if (chip == 1)
+        if (chip == 2)
         {
             try { return Clipboard.ContainsImage(); }
             catch { return false; }
         }
-        return chip is 0 or 2;
+        return chip is 0 or 1 or 3;
     }
     private CanvasTool _activeTool = CanvasTool.Move;
     private int _lastClickTick;
