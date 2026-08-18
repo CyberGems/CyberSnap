@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace CyberSnap.Native;
 
@@ -9,6 +9,9 @@ internal static partial class Gdi32
 
     [LibraryImport("gdi32.dll")]
     public static partial IntPtr CreateCompatibleBitmap(IntPtr hdc, int nWidth, int nHeight);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial IntPtr CreateBitmap(int nWidth, int nHeight, uint nPlanes, uint nBitCount, IntPtr lpBits);
 
     [LibraryImport("gdi32.dll")]
     public static partial IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
