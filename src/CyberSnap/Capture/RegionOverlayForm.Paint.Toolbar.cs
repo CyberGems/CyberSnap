@@ -118,37 +118,12 @@ public sealed partial class RegionOverlayForm
         var oldHint = g.TextRenderingHint;
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        if (IsVerticalDock)
-        {
-            float topAnchor = !_annotationGripRect.IsEmpty ? _annotationGripRect.Bottom : (!_captureGripRect.IsEmpty ? _captureGripRect.Bottom : _toolbarRect.Y + pad);
-            int firstToolY = _toolbarButtons.Length > 0 && _toolbarButtons[0].Height > 0 ? _toolbarButtons[0].Y : (int)topAnchor + logoSz;
-            float bottomAnchor = firstToolY > topAnchor ? firstToolY : topAnchor + logoSz;
+        float lx = _brandRect.X + (_brandRect.Width - logoSz) / 2f;
+        float ly = _brandRect.Y + (_brandRect.Height - logoSz) / 2f;
 
-            float ly = topAnchor + (bottomAnchor - topAnchor - logoSz) / 2f;
-            float lx = _toolbarRect.X + (_toolbarRect.Width - logoSz) / 2f;
+        _logoRect = new Rectangle((int)Math.Round(lx), (int)Math.Round(ly), logoSz, logoSz);
 
-            _brandRect = new Rectangle(_toolbarRect.X + pad, (int)topAnchor, buttonSize, (int)(bottomAnchor - topAnchor));
-            _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
-
-            FluentIcons.DrawIcon(g, "question", new RectangleF(lx, ly, logoSz, logoSz), brandIconColor, 0f);
-        }
-        else
-        {
-            int firstToolX = GetFirstVisibleToolbarButtonX();
-            if (firstToolX < 0)
-                firstToolX = _brandRect.Right;
-
-            float leftAnchor = !_captureGripRect.IsEmpty ? _captureGripRect.Right : _brandRect.X;
-            float rightAnchor = firstToolX > leftAnchor ? firstToolX : leftAnchor + logoSz;
-
-            float lx = leftAnchor + (rightAnchor - leftAnchor - logoSz) / 2f;
-            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
-
-            _brandRect = new Rectangle((int)leftAnchor, _toolbarRect.Y + pad, (int)(rightAnchor - leftAnchor), buttonSize);
-            _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
-
-            FluentIcons.DrawIcon(g, "question", new RectangleF(lx, ly, logoSz, logoSz), brandIconColor, 0f);
-        }
+        FluentIcons.DrawIcon(g, "question", new RectangleF(lx, ly, logoSz, logoSz), brandIconColor, 0f);
 
         g.TextRenderingHint = oldHint;
 
