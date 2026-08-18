@@ -292,7 +292,7 @@ public sealed partial class RegionOverlayForm
             }
             if (btn < _mainBarTools.Length)
             {
-                if (btn == _mergedCaptureButtonIndex)
+                if (btn == _mergedCaptureButtonIndex || btn == _mergedRecordButtonIndex)
                 {
                     BeginMergedButtonHold(btn);
                 }

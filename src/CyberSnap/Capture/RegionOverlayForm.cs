@@ -247,6 +247,7 @@ public sealed partial class RegionOverlayForm : Form
     private DateTime _mouseDownStartTime = DateTime.MinValue;
     private bool _isMouseDownOnCaptureBtn = false;
     private int _mergedCaptureButtonIndex = -1;
+    private int _mergedRecordButtonIndex = -1;
     /// <summary>Toolbar button currently held for an alt-tool popup (capture or annotation merge).</summary>
     private int _mergedHoldButtonIndex = -1;
     /// <summary>Primary tool id → enabled sibling ids not shown on the bar (annotation merges only).</summary>
@@ -1880,11 +1881,12 @@ public sealed partial class RegionOverlayForm : Form
     {
         var flyoutIds = ToolDef.FlyoutToolIds();
         // The build-time single source of truth for the capture bar. Scroll Capture was moved
-        // into the Area button's hold-to-switch flyout, so exclude it here — otherwise it gets
-        // re-added as the button right after the merged Area/tool and stealing hover/selection.
+        // into the Area button's hold-to-switch flyout, and GIF recorder was moved into the
+        // Video Recorder button's hold-to-switch flyout, so exclude them here.
         var mainBarTools = _visibleTools.Where(t =>
             !flyoutIds.Contains(t.Id) &&
-            !string.Equals(t.Id, "scroll", StringComparison.OrdinalIgnoreCase)).ToList();
+            !string.Equals(t.Id, "scroll", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(t.Id, "recordGif", StringComparison.OrdinalIgnoreCase)).ToList();
         var flyoutTools = _visibleTools.Where(t => flyoutIds.Contains(t.Id)).ToList();
 
         var rectTool = mainBarTools.FirstOrDefault(t => t.Id == "rect");
@@ -1911,12 +1913,16 @@ public sealed partial class RegionOverlayForm : Form
         _mainBarTools = mainBarTools.ToArray();
         _flyoutTools = flyoutTools.ToArray();
 
+        _mergedRecordButtonIndex = -1;
         for (int i = 0; i < _mainBarTools.Length; i++)
         {
             if (_mainBarTools[i].Id == "rect" || _mainBarTools[i].Id == "center")
             {
                 _mergedCaptureButtonIndex = i;
-                break;
+            }
+            else if (_mainBarTools[i].Id == "record" || _mainBarTools[i].Id == "recordGif")
+            {
+                _mergedRecordButtonIndex = i;
             }
         }
     }
@@ -2024,7 +2030,9 @@ public sealed partial class RegionOverlayForm : Form
         _annotationMergeAltsByButton.ContainsKey(buttonIndex);
 
     private bool IsMergedHoldButton(int buttonIndex) =>
-        buttonIndex == _mergedCaptureButtonIndex || IsAnnotationMergeButton(buttonIndex);
+        buttonIndex == _mergedCaptureButtonIndex
+        || buttonIndex == _mergedRecordButtonIndex
+        || IsAnnotationMergeButton(buttonIndex);
 
     private void BeginMergedButtonHold(int buttonIndex)
     {
@@ -2119,7 +2127,8 @@ public sealed partial class RegionOverlayForm : Form
         // Click outside the alt slots (and not on the primary held button) dismisses the popup.
         int btnUnder = GetToolbarButtonAt(location);
         if (btnUnder == _mergedHoldButtonIndex
-            || (btnUnder == _mergedCaptureButtonIndex && _mergedCaptureButtonIndex >= 0))
+            || (btnUnder == _mergedCaptureButtonIndex && _mergedCaptureButtonIndex >= 0)
+            || (btnUnder == _mergedRecordButtonIndex && _mergedRecordButtonIndex >= 0))
         {
             return false; // let primary button handlers run (re-hold / short press)
         }

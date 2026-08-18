@@ -1316,7 +1316,7 @@ public sealed partial class RegionOverlayForm
             if (holdTime < 300)
             {
                 // Short press activates the primary tool shown on the merged slot.
-                if (heldBtn == _mergedCaptureButtonIndex
+                if ((heldBtn == _mergedCaptureButtonIndex || heldBtn == _mergedRecordButtonIndex)
                     && heldBtn >= 0 && heldBtn < _mainBarTools.Length)
                 {
                     var tool = _mainBarTools[heldBtn];
