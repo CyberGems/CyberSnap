@@ -336,7 +336,11 @@ public sealed partial class RegionOverlayForm
 
         if (IsVerticalDock)
         {
-            x = IsRightDock ? anchor.X - width - gap : anchor.Right + gap;
+            bool isRight = ShowAnnotationChrome
+                ? _annotationFrameDockSide == CaptureDockSide.Right
+                : IsRightDock;
+
+            x = isRight ? anchor.X - width - gap : anchor.Right + gap;
             y = anchor.Y + (anchor.Height / 2) - (height / 2);
             var margin = Helpers.UiChrome.ScaleInt(8);
             y = Math.Clamp(y, clampBounds.Top + margin, Math.Max(clampBounds.Top + margin, clampBounds.Bottom - height - margin));
