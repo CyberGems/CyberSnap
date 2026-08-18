@@ -1172,10 +1172,10 @@ public sealed partial class RegionOverlayForm
             int gridY = _emojiPickerRect.Y + pad + searchBarH + pad;
             int relX = e.Location.X - _emojiPickerRect.X - pad;
             int relY = e.Location.Y - gridY;
-            int col = relX / (emojiSize + pad);
-            int row = relY / (emojiSize + pad);
+            int col = relX / emojiSize;
+            int row = relY / emojiSize;
             int idx = (_emojiScrollOffset + row) * cols + col;
-            int newHover = (col >= 0 && col < cols && relY >= 0 && idx < filtered.Length) ? idx : -1;
+            int newHover = (col >= 0 && col < cols && row >= 0 && row < EmojiPickerVisibleRows && idx < filtered.Length) ? idx : -1;
             if (newHover != _emojiHovered) { _emojiHovered = newHover; toolbarDirty = true; }
         }
 

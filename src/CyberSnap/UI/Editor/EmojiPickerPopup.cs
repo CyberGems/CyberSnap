@@ -57,6 +57,7 @@ internal sealed class EmojiPickerPopup : Form
             ForeColor = EditorColors.TextPrimary,
             Font = UiChrome.ChromeFont(10f, FontStyle.Regular),
             Height = 28,
+            PlaceholderText = LocalizationService.Translate("Search..."),
         };
         _search.TextChanged += (_, _) => _grid.SetFilter(_search.Text);
         _search.KeyDown += (sender, e) =>
