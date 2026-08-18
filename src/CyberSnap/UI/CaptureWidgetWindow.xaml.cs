@@ -202,6 +202,9 @@ public partial class CaptureWidgetWindow : Window
         Resources["WidgetGlowOpacity"] = Theme.IsDark ? 0.6 : 0.35;
     }
 
+    private ImageSource? _widgetLogoColor;
+    private ImageSource? _widgetLogoMuted;
+
     private void LoadIcons()
     {
         Theme.Refresh();
@@ -225,6 +228,13 @@ public partial class CaptureWidgetWindow : Window
         GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
         RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, 22); // Ruler tool icon
         SettingsIcon.Source = Helpers.FluentIcons.RenderWpf("gear", normalIconColor, 16);
+
+        _widgetLogoColor = ThemedLogo.Square(12);
+        _widgetLogoMuted = ThemedLogo.SquareGrayscale(12);
+        WidgetLogoImage.Source = _widgetLogoMuted;
+        WidgetLogoImage.Opacity = 0.7;
+        WidgetBrandText.Opacity = 0.65;
+        WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetTextMuted");
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -1384,6 +1394,33 @@ public partial class CaptureWidgetWindow : Window
         _settingsService.FlushPendingWrites();
         SettingsService.PublishAutoCopyState(_settings);
         ((App)System.Windows.Application.Current).SyncSettingsAutoCopyChecks();
+    }
+
+    private void WidgetBranding_Click(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        CollapseWidget();
+        ((App)System.Windows.Application.Current).ShowAbout();
+    }
+
+    private void WidgetBranding_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_widgetLogoColor != null)
+            WidgetLogoImage.Source = _widgetLogoColor;
+        WidgetLogoImage.Opacity = 1.0;
+
+        WidgetBrandText.Opacity = 1.0;
+        WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetText");
+    }
+
+    private void WidgetBranding_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_widgetLogoMuted != null)
+            WidgetLogoImage.Source = _widgetLogoMuted;
+        WidgetLogoImage.Opacity = 0.7;
+
+        WidgetBrandText.Opacity = 0.65;
+        WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetTextMuted");
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e)

@@ -304,14 +304,37 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <Image Width="10" Height="10" Margin="0,0,4,0" VerticalAlignment="Center"
-                                       Source="pack://application:,,,/Assets/CyberSnap_square.png"/>
-                                <TextBlock Text="CyberSnap widget" FontSize="9.5" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource WidgetTextMuted}" Opacity="0.65"
+                            <Border x:Name="WidgetBrandingBtn"
+                                    Grid.Column="0"
+                                    Background="Transparent"
+                                    CornerRadius="4"
+                                    Cursor="Hand"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Left"
+                                    ToolTip="Open About CyberSnap"
+                                    Services:LocalizationService.SourceToolTip="Open About CyberSnap"
+                                    MouseLeftButtonUp="WidgetBranding_Click"
+                                    MouseEnter="WidgetBranding_MouseEnter"
+                                    MouseLeave="WidgetBranding_MouseLeave">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Image x:Name="WidgetLogoImage"
+                                           Width="11" Height="11"
+                                           Margin="0,0,4,0"
                                            VerticalAlignment="Center"
-                                           FontFamily="Segoe UI Variable Display"/>
-                            </StackPanel>
+                                           Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           SnapsToDevicePixels="True"
+                                           UseLayoutRounding="True"/>
+                                    <TextBlock x:Name="WidgetBrandText"
+                                               Text="CyberSnap widget"
+                                               FontSize="9.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource WidgetTextMuted}"
+                                               Opacity="0.65"
+                                               VerticalAlignment="Center"
+                                               FontFamily="Segoe UI Variable Display"/>
+                                </StackPanel>
+                            </Border>
                             <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Configuration"
                                     AutomationProperties.Name="Configuration">
                                 <Image x:Name="SettingsIcon" Width="16" Height="16"/>

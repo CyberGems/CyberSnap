@@ -340,15 +340,21 @@ public partial class ToastWindow : Window
         if (spec.IsWelcomeToast)
         {
             InlinePreviewHost.Visibility = Visibility.Visible;
-            InlinePreviewHost.Width = 44;
-            InlinePreviewHost.Height = 44;
-            InlinePreviewImage.Margin = new System.Windows.Thickness(4);
-            InlinePreviewImage.Source = ThemedLogo.Square(36);
+            InlinePreviewHost.Width = 40;
+            InlinePreviewHost.Height = 40;
+            InlinePreviewHost.Background = System.Windows.Media.Brushes.Transparent;
+            InlinePreviewHost.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            InlinePreviewHost.BorderThickness = new Thickness(0);
+            InlinePreviewImage.Margin = new System.Windows.Thickness(0);
+            InlinePreviewImage.Source = ThemedLogo.Square(40);
         }
         else if (spec.InlinePreviewBitmap is not null)
         {
             _previewBitmap = spec.InlinePreviewBitmap;
             InlinePreviewHost.Visibility = Visibility.Visible;
+            InlinePreviewHost.Background = Theme.Brush(Color.FromArgb(0x12, 0xFF, 0xFF, 0xFF));
+            InlinePreviewHost.BorderBrush = Theme.Brush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF));
+            InlinePreviewHost.BorderThickness = new Thickness(1);
             ConfigureInlinePreviewLayout(spec.InlinePreviewBitmap);
             InlinePreviewImage.Source = ToBitmapSource(spec.InlinePreviewBitmap);
         }
@@ -358,6 +364,9 @@ public partial class ToastWindow : Window
             // layout doesn't feel lopsided against the top-right action buttons. Rendered in the
             // theme's accent color to match the captureRect motif used by the welcome toast.
             InlinePreviewHost.Visibility = Visibility.Visible;
+            InlinePreviewHost.Background = Theme.Brush(Color.FromArgb(0x12, 0xFF, 0xFF, 0xFF));
+            InlinePreviewHost.BorderBrush = Theme.Brush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF));
+            InlinePreviewHost.BorderThickness = new Thickness(1);
             InlinePreviewHost.Width = 44;
             InlinePreviewHost.Height = 44;
             InlinePreviewImage.Margin = new System.Windows.Thickness(10);
