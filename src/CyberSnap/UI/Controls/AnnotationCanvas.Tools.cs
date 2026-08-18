@@ -795,11 +795,8 @@ public sealed partial class AnnotationCanvas
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
-        base.OnMouseMove(e);
-
-        // Track the pointer so the floating tool chip can follow it. Repaint on plain
-        // hover (the draw/shape tools otherwise only update the cursor here) so the chip
-        // keeps up; redundant Invalidate calls within one message coalesce into one paint.
+        // Track the pointer so the floating tool chip can follow it.
+        Point oldCursorClient = _cursorClient;
         _cursorClient = e.Location;
         _cursorOnCanvas = true;
 
@@ -813,7 +810,17 @@ public sealed partial class AnnotationCanvas
 
         if (!_isDragging && !_isPanning && !_cropDragging && !_resizeDragging && _preSpaceTool == null
             && ToolShowsCursorChip(_activeTool))
-            Invalidate();
+        {
+            var oldChip = GetCursorChipRect(oldCursorClient);
+            var newChip = GetCursorChipRect(_cursorClient);
+            if (!oldChip.IsEmpty || !newChip.IsEmpty)
+            {
+                var dirty = !oldChip.IsEmpty && !newChip.IsEmpty ? Rectangle.Union(oldChip, newChip) : (!oldChip.IsEmpty ? oldChip : newChip);
+                dirty.Intersect(ClientRectangle);
+                if (dirty.Width > 0 && dirty.Height > 0)
+                    Invalidate(dirty);
+            }
+        }
 
         if (_resizeDragging)
         {
@@ -1199,20 +1206,112 @@ public sealed partial class AnnotationCanvas
             case CanvasTool.CurvedArrow:
                 if (_currentStroke is not null && (img != _currentStroke[^1]))
                 {
+                    var prevPt = _currentStroke[^1];
                     _currentStroke.Add(img);
-                    Invalidate();
+                    var dirtySegment = RectFromPoints(prevPt, img, (int)Math.Ceiling(StrokeWidth * 2));
+                    InvalidateLivePreview(dirtySegment, dirtySegment, 16);
                 }
                 break;
             case CanvasTool.Arrow:
             case CanvasTool.Line:
+            {
+                var oldEnd = GetDragLineEnd(_dragLastImg);
+                var newEnd = GetDragLineEnd(img);
+                var oldBounds = RectFromPoints(_dragStartImg, oldEnd);
+                var newBounds = RectFromPoints(_dragStartImg, newEnd);
+                _dragLastImg = img;
+                InvalidateLivePreview(oldBounds, newBounds, 32);
+                break;
+            }
             case CanvasTool.Rect:
             case CanvasTool.Circle:
+            {
+                var oldBounds = GetDragShapeRect(_dragLastImg);
+                var newBounds = GetDragShapeRect(img);
+                _dragLastImg = img;
+                InvalidateLivePreview(oldBounds, newBounds, 24);
+                break;
+            }
             case CanvasTool.Highlight:
             case CanvasTool.Blur:
+            {
+                var oldBounds = NormRect(_dragStartImg, _dragLastImg);
+                var newBounds = NormRect(_dragStartImg, img);
                 _dragLastImg = img;
-                Invalidate();
+                InvalidateLivePreview(oldBounds, newBounds, 18);
                 break;
+            }
         }
+    }
+
+    private void InvalidateLivePreview(Rectangle oldImgBounds, Rectangle newImgBounds, int extraPad = 24)
+    {
+        float sw = GetScaledStrokeWidth(StrokeWidth);
+        int pad = (int)Math.Ceiling(sw + extraPad);
+
+        RectangleF oldScreen = ImageToScreenRect(Rectangle.Inflate(oldImgBounds, pad, pad));
+        RectangleF newScreen = ImageToScreenRect(Rectangle.Inflate(newImgBounds, pad, pad));
+
+        Rectangle dirty;
+        if (!oldImgBounds.IsEmpty && !newImgBounds.IsEmpty)
+            dirty = Rectangle.Round(RectangleF.Union(oldScreen, newScreen));
+        else if (!oldImgBounds.IsEmpty)
+            dirty = Rectangle.Round(oldScreen);
+        else if (!newImgBounds.IsEmpty)
+            dirty = Rectangle.Round(newScreen);
+        else
+            dirty = ClientRectangle;
+
+        dirty.Inflate(6, 6);
+        dirty.Intersect(ClientRectangle);
+        if (dirty.Width > 0 && dirty.Height > 0)
+        {
+            Invalidate(dirty);
+            Update();
+        }
+        else
+        {
+            Invalidate();
+        }
+    }
+
+    private Rectangle GetCursorChipRect(Point clientPos)
+    {
+        if (clientPos.IsEmpty || !ToolShowsCursorChip(_activeTool))
+            return Rectangle.Empty;
+
+        bool hasStroke = ToolChipHasStroke(_activeTool);
+        string label = hasStroke ? string.Format(LocalizationService.Translate("Thickness {0}"), (int)Math.Round(StrokeWidth)) : string.Empty;
+
+        const int glyphSize = 22;
+        using var font = UiChrome.ChromeFont(8.5f, FontStyle.Regular);
+        using var tempBmp = new Bitmap(1, 1);
+        using var g = Graphics.FromImage(tempBmp);
+        SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;
+
+        const int padX = 7, padY = 5, gap = 6;
+        float contentH = Math.Max(glyphSize, textSize.Height);
+        int chipW = padX + glyphSize
+            + (label.Length > 0 ? gap + (int)Math.Ceiling(textSize.Width) : 0) + padX;
+        int chipH = padY + (int)Math.Ceiling(contentH) + padY;
+
+        const int off = 18;
+        int x = clientPos.X + off;
+        int y = clientPos.Y + off;
+        if (x + chipW > ClientSize.Width) x = clientPos.X - off - chipW;
+        if (y + chipH > ClientSize.Height) y = clientPos.Y - off - chipH;
+        x = Math.Max(0, x);
+        y = Math.Max(0, y);
+        return Rectangle.Inflate(new Rectangle(x, y, chipW, chipH), 6, 6);
+    }
+
+    private static Rectangle RectFromPoints(Point a, Point b, int pad = 0)
+    {
+        int x = Math.Min(a.X, b.X) - pad;
+        int y = Math.Min(a.Y, b.Y) - pad;
+        int w = Math.Abs(a.X - b.X) + pad * 2;
+        int h = Math.Abs(a.Y - b.Y) + pad * 2;
+        return new Rectangle(x, y, w, h);
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
