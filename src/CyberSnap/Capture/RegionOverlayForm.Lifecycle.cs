@@ -459,6 +459,7 @@ public sealed partial class RegionOverlayForm
     {
         HideToolbarTooltip();
         _colorPickerOpen = false;
+        _strokePickerOpen = false;
         _fontPickerOpen = false;
         _emojiPickerOpen = false;
         HideFontSearchBox();

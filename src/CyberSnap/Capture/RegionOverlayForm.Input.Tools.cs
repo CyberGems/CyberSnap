@@ -844,6 +844,14 @@ public sealed partial class RegionOverlayForm
         }
         else if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
             target = IsPointInColorPickerSwatch(e.Location) ? Cursors.Hand : Cursors.Default;
+        else if (_strokePickerOpen && _strokePickerRect.Contains(e.Location))
+        {
+            int oldHover = _hoveredStrokePickerIndex;
+            _hoveredStrokePickerIndex = GetStrokePickerItemAt(e.Location);
+            target = _hoveredStrokePickerIndex >= 0 ? Cursors.Hand : Cursors.Default;
+            if (_hoveredStrokePickerIndex != oldHover)
+                Invalidate(InflateForRepaint(_strokePickerRect, 4));
+        }
         else if (_altCapturePopupOpen && (_altCaptureButtonRect.Contains(e.Location) || _hoveredAltSlotIndex >= 0))
             target = _hoveredAltSlotIndex >= 0 ? Cursors.Hand : Cursors.Default;
 

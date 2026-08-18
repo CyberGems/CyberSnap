@@ -427,6 +427,11 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _colorPickerRect;
     private PickerMagnifierForm? _captureMagnifierForm;
 
+    // Stroke width picker popup state
+    private bool _strokePickerOpen;
+    private Rectangle _strokePickerRect;
+    private int _hoveredStrokePickerIndex = -1;
+
     private static RegionOverlayForm? _currentOverlay;
 
     // Select tool state
@@ -2032,6 +2037,8 @@ public sealed partial class RegionOverlayForm : Form
     private bool IsMergedHoldButton(int buttonIndex) =>
         buttonIndex == _mergedCaptureButtonIndex
         || buttonIndex == _mergedRecordButtonIndex
+        || buttonIndex == ColorButtonIndex
+        || buttonIndex == StrokeWidthButtonIndex
         || IsAnnotationMergeButton(buttonIndex);
 
     private void BeginMergedButtonHold(int buttonIndex)
@@ -2297,23 +2304,24 @@ public sealed partial class RegionOverlayForm : Form
         // popup and opens the one under the pointer after the same hover delay. Sliding off
         // the merged cluster entirely closes whatever was open so the affordance doesn't
         // linger while the user is busy elsewhere on the canvas.
+        bool isColorButton = _hoveredButton == ColorButtonIndex;
+        bool isStrokeButton = _hoveredButton == StrokeWidthButtonIndex;
+        bool isMergedTool = IsMergedHoldButton(_hoveredButton) && !isColorButton && !isStrokeButton;
+
         bool onMerged = !_isMouseDownOnCaptureBtn
             && _hoveredButton >= 0
-            && IsMergedHoldButton(_hoveredButton);
+            && (isMergedTool || isColorButton || isStrokeButton);
+
+        var cursorOverlayPos = PointToClient(Cursor.Position);
 
         if (_altCapturePopupOpen)
         {
-            // Pointer left the open button's cluster → close unless it's still hovering an
-            // alt-slot (the revealed popup itself); closing while hovered over an alt slot
-            // would kill the picker the user is browsing.
             bool inPopup = _hoveredAltCaptureBtn || _hoveredAltSlotIndex >= 0;
             bool onOpenSource = _mergedHoldButtonIndex >= 0 && _hoveredButton == _mergedHoldButtonIndex;
             bool onOtherMerged = onMerged && _hoveredButton != _mergedHoldButtonIndex;
 
             if (onOtherMerged)
             {
-                // Switch source: close the current popup; the fresh-hover branch below will
-                // open the new owner's alternates once the delay elapses on the new pill.
                 CloseAltToolPopup(invalidate: false);
                 changed = true;
             }
@@ -2324,18 +2332,69 @@ public sealed partial class RegionOverlayForm : Form
             }
         }
 
-        if (!_altCapturePopupOpen
+        if (_colorPickerOpen)
+        {
+            bool inColorPopup = _colorPickerRect.Contains(cursorOverlayPos);
+            bool onOpenColorBtn = _hoveredButton == ColorButtonIndex;
+            bool onOtherMerged = onMerged && _hoveredButton != ColorButtonIndex;
+
+            if (onOtherMerged)
+            {
+                _colorPickerOpen = false;
+                changed = true;
+            }
+            else if (!inColorPopup && !onOpenColorBtn)
+            {
+                _colorPickerOpen = false;
+                changed = true;
+            }
+        }
+
+        if (_strokePickerOpen)
+        {
+            bool inStrokePopup = _strokePickerRect.Contains(cursorOverlayPos);
+            bool onOpenStrokeBtn = _hoveredButton == StrokeWidthButtonIndex;
+            bool onOtherMerged = onMerged && _hoveredButton != StrokeWidthButtonIndex;
+
+            if (onOtherMerged)
+            {
+                _strokePickerOpen = false;
+                changed = true;
+            }
+            else if (!inStrokePopup && !onOpenStrokeBtn)
+            {
+                _strokePickerOpen = false;
+                changed = true;
+            }
+        }
+
+        if (!_altCapturePopupOpen && !_colorPickerOpen && !_strokePickerOpen
             && !_isMouseDownOnCaptureBtn
             && onMerged
             && _hoverButtonStartTime != DateTime.MinValue
             && (DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= ExpandHoverDelayMs)
         {
-            _mergedHoldButtonIndex = _hoveredButton;
-            _altCapturePopupOpen = true;
-            EnsureAltPopupSlotsLaidOut();
-            PositionToolbarForm();
-            HideToolbarTooltip();
-            changed = true;
+            if (isColorButton)
+            {
+                _colorPickerOpen = true;
+                HideToolbarTooltip();
+                changed = true;
+            }
+            else if (isStrokeButton)
+            {
+                _strokePickerOpen = true;
+                HideToolbarTooltip();
+                changed = true;
+            }
+            else if (isMergedTool)
+            {
+                _mergedHoldButtonIndex = _hoveredButton;
+                _altCapturePopupOpen = true;
+                EnsureAltPopupSlotsLaidOut();
+                PositionToolbarForm();
+                HideToolbarTooltip();
+                changed = true;
+            }
         }
 
         // 1c. Confirm gear overflow: dismiss when the pointer leaves gear + menu

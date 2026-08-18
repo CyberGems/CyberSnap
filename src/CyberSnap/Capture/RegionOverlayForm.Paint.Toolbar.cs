@@ -314,8 +314,7 @@ public sealed partial class RegionOverlayForm
                     pen.EndCap = LineCap.Round;
                     g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
                 }
-                // Active-state cue: button fill/border carried by PaintButton — the floating accent
-                // pill we used to draw under the icon read as chrome noise for little extra signal.
+                PaintCaptureHoldHint(g, btn, lineColor, buttonIndex: i);
                 continue;
             }
 
@@ -350,8 +349,7 @@ public sealed partial class RegionOverlayForm
                 int glossAlpha = colorAlpha > 200 ? 100 : 70;
                 using (var hlBrush = new SolidBrush(Color.FromArgb(glossAlpha, 255, 255, 255)))
                     g.FillEllipse(hlBrush, hlX, hlY, hlW, hlH);
-                // Active-state cue comes from PaintButton's border/fill — skipping the accent pill keeps
-                // the chrome lighter here too (see strokeWidth button above).
+                PaintCaptureHoldHint(g, btn, baseColor, buttonIndex: i);
                 continue;
             }
 
@@ -566,9 +564,9 @@ public sealed partial class RegionOverlayForm
             && (_mergedHoldButtonIndex == buttonIndex
                 || (_mergedHoldButtonIndex < 0 && (buttonIndex == _mergedCaptureButtonIndex || buttonIndex == _mergedRecordButtonIndex)));
 
-        bool popupForThis = _altCapturePopupOpen
-            && (_mergedHoldButtonIndex == buttonIndex
-                || (_mergedHoldButtonIndex < 0 && (buttonIndex == _mergedCaptureButtonIndex || buttonIndex == _mergedRecordButtonIndex)));
+        bool popupForThis = (_altCapturePopupOpen && (_mergedHoldButtonIndex == buttonIndex || (_mergedHoldButtonIndex < 0 && (buttonIndex == _mergedCaptureButtonIndex || buttonIndex == _mergedRecordButtonIndex))))
+            || (_colorPickerOpen && buttonIndex == ColorButtonIndex)
+            || (_strokePickerOpen && buttonIndex == StrokeWidthButtonIndex);
 
         // Tiny bottom-right corner chevron pointing outward along the diagonal.
         // Stroke-based instead of fill-based so the open direction reads unambiguously.
@@ -606,6 +604,7 @@ public sealed partial class RegionOverlayForm
         var state = g.Save();
         PaintToolbar(g);
         if (_colorPickerOpen) PaintColorPicker(g);
+        if (_strokePickerOpen) PaintStrokePicker(g);
         if (_emojiPickerOpen) PaintEmojiPicker(g);
         if (_fontPickerOpen) PaintFontPicker(g);
         if (_altCapturePopupOpen) PaintAltCaptureButton(g);
@@ -825,6 +824,75 @@ public sealed partial class RegionOverlayForm
             if (ToolColors[i] == _toolColor)
                 g.DrawEllipse(GetSwatchSelectionPen(), swatchRect);
         }
+        g.SmoothingMode = SmoothingMode.Default;
+    }
+
+    private void PaintStrokePicker(Graphics g)
+    {
+        int pad = UiChrome.ScaleInt(6);
+        int itemH = UiChrome.ScaleInt(26);
+        int pw = UiChrome.ScaleInt(130);
+        int ph = pad * 2 + StrokeWidths.Length * itemH;
+
+        var strokeBtn = _toolbarButtons[StrokeWidthButtonIndex];
+        _strokePickerRect = PositionPopupFromAnchor(strokeBtn, pw, ph);
+
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        WindowsDockRenderer.PaintSurface(g, _strokePickerRect);
+
+        int px = _strokePickerRect.X;
+        int py = _strokePickerRect.Y;
+
+        var (uiFont, _, _, _) = GetTextToolbarFonts();
+        EnsurePickerChrome();
+
+        for (int i = 0; i < StrokeWidths.Length; i++)
+        {
+            float sw = StrokeWidths[i];
+            int iy = py + pad + i * itemH;
+            var itemRect = new Rectangle(px + pad, iy, pw - pad * 2, itemH);
+
+            bool active = Math.Abs(_strokeWidth - sw) < 0.01f;
+            bool hovered = _hoveredStrokePickerIndex == i;
+
+            if (active || hovered)
+            {
+                using var itemPath = WindowsDockRenderer.RoundedRect(itemRect, 4f);
+                int fillA = active ? 40 : 20;
+                using var itemBg = new SolidBrush(Color.FromArgb(fillA, UiChrome.SurfaceHover.R, UiChrome.SurfaceHover.G, UiChrome.SurfaceHover.B));
+                g.FillPath(itemBg, itemPath);
+                if (active)
+                {
+                    using var activePen = new Pen(UiChrome.AccentColor, 1.2f);
+                    g.DrawPath(activePen, itemPath);
+                }
+            }
+
+            // Left side: preview line of thickness sw in _toolColor
+            float lineY = iy + itemH / 2f;
+            float lineX1 = itemRect.X + UiChrome.ScaleFloat(8f);
+            float lineX2 = lineX1 + UiChrome.ScaleFloat(54f);
+            using (var pen = new Pen(_toolColor, Math.Max(1f, sw)))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+                g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
+            }
+
+            // Right side: "{sw} px"
+            string label = $"{sw} px";
+            int textAlpha = active ? 255 : hovered ? 230 : 170;
+            var textColor = active ? UiChrome.AccentColor : UiChrome.SurfaceTextPrimary;
+            using var textBrush = new SolidBrush(Color.FromArgb(textAlpha, textColor.R, textColor.G, textColor.B));
+            var textRect = new RectangleF(lineX2 + UiChrome.ScaleFloat(6f), iy, itemRect.Right - (lineX2 + UiChrome.ScaleFloat(6f)), itemH);
+            using var sf = new StringFormat
+            {
+                Alignment = StringAlignment.Far,
+                LineAlignment = StringAlignment.Center
+            };
+            g.DrawString(label, uiFont, textBrush, textRect, sf);
+        }
+
         g.SmoothingMode = SmoothingMode.Default;
     }
 
