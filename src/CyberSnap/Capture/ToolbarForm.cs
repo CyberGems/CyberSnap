@@ -70,8 +70,11 @@ public sealed class ToolbarForm : Form
     {
         // While the user is actively drawing an annotation, the layered toolbar's bitmap must
         // stay untouched: a repaint mid-drag could composite stale pixels over the live preview
-        // (the "invisible mask" users see at the bottom edge when the action/annotation dock
-        // sits near the selection). The next MarkToolbarRenderDirty + UpdateSurface after the
+        if (IsDisposed || Disposing || _owner == null || _owner.IsDisposed || _owner.Disposing)
+            return;
+
+        // Freeze during drag: user is resizing or moving an annotation handle; refreshing here
+        // would fight the overlay's GDI+ render tick and tear handles. Once mouse-up fires the
         // drag ends will pick up the new state and repaint normally.
         if (_owner.IsAnnotationDragInProgress())
             return;
@@ -89,12 +92,19 @@ public sealed class ToolbarForm : Form
             return;
         }
 
-        if (_surface == null || _surface.Width != sz.Width || _surface.Height != sz.Height)
+        try
         {
-            _surfaceGraphics?.Dispose();
-            _surface?.Dispose();
-            _surface = new Bitmap(sz.Width, sz.Height, PixelFormat.Format32bppPArgb);
-            _surfaceGraphics = Graphics.FromImage(_surface);
+            if (_surface == null || _surface.Width != sz.Width || _surface.Height != sz.Height)
+            {
+                _surfaceGraphics?.Dispose();
+                _surface?.Dispose();
+                _surface = new Bitmap(sz.Width, sz.Height, PixelFormat.Format32bppPArgb);
+                _surfaceGraphics = Graphics.FromImage(_surface);
+            }
+        }
+        catch
+        {
+            return;
         }
 
         // _owner paints using overlay-client coordinates (e.g. _toolbarRect).
