@@ -111,6 +111,7 @@ public sealed partial class RegionOverlayForm
                 || _toolbarRect.Contains(e.Location)
                 || IsPointInAltToolPopup(e.Location)
                 || (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
+                || (_strokePickerOpen && _strokePickerRect.Contains(e.Location))
                 || (_fontPickerOpen && _fontPickerRect.Contains(e.Location))
                 || (_emojiPickerOpen && _emojiPickerRect.Contains(e.Location)))
             {
@@ -218,6 +219,7 @@ public sealed partial class RegionOverlayForm
 
         bool recentlyClosedMenu = (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250;
         bool hadOpenPopup = _colorPickerOpen
+            || _strokePickerOpen
             || _fontPickerOpen
             || _emojiPickerOpen
             || _altCapturePopupOpen
