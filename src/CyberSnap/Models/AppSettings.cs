@@ -535,6 +535,8 @@ public sealed class AppSettings
     public bool HasSeenQuickStartGuide { get; set; }
     /// <summary>Last Group-1 (annotation) tool id used during capture confirm, restored next time.</summary>
     public string? LastAnnotationToolId { get; set; }
+    /// <summary>Whether to remember and restore the last used annotation tool upon region confirmation.</summary>
+    public bool RememberAnnotationTool { get; set; } = true;
 
     /// <summary>Include the mouse pointer in still-image captures (screenshots).
     /// Video / GIF recordings have their own per-format flags below.</summary>

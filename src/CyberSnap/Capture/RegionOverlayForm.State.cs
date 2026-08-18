@@ -1318,6 +1318,7 @@ public sealed partial class RegionOverlayForm
         var settings = Services.SettingsService.LoadStatic();
         _confirmPillShowLabels = settings?.ConfirmPillShowLabels ?? false;
         _confirmDoneShowLabel = settings?.ConfirmDoneShowLabel ?? true;
+        _rememberAnnotationTool = settings?.RememberAnnotationTool ?? true;
         RebuildConfirmChromeKinds();
         RecomputeConfirmButtonWidth();
         _hasSelection = false;
@@ -1665,6 +1666,9 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     private void TryRestoreLastAnnotationTool()
     {
+        if (!_rememberAnnotationTool)
+            return;
+
         var settings = Services.SettingsService.LoadStatic();
         var lastId = settings?.LastAnnotationToolId;
         if (string.IsNullOrWhiteSpace(lastId))
@@ -2650,6 +2654,13 @@ public sealed partial class RegionOverlayForm
             LayoutConfirmChromeRects();
             Invalidate();
         }
+    }
+
+    private void ToggleRememberAnnotationTool()
+    {
+        _rememberAnnotationTool = !_rememberAnnotationTool;
+        RememberAnnotationToolChanged?.Invoke(_rememberAnnotationTool);
+        _toolbarContextMenu?.Close();
     }
 
     private void ToggleConfirmPillShowLabels()

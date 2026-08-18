@@ -612,6 +612,7 @@ public partial class App
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
                 overlay.SetConfirmPillShowLabels(_settingsService.Settings.ConfirmPillShowLabels);
                 overlay.SetConfirmDoneShowLabel(_settingsService.Settings.ConfirmDoneShowLabel);
+                overlay.SetRememberAnnotationTool(_settingsService.Settings.RememberAnnotationTool);
                 overlay.EnabledToolsChanged += enabledTools =>
                 {
                     // Merge with latest cached settings to avoid overwriting changes
@@ -659,6 +660,14 @@ public partial class App
                     _settingsService!.Settings.ConfirmDoneShowLabel = showLabel;
                     _settingsService.Save();
                 };
+                overlay.RememberAnnotationToolChanged += remember =>
+                {
+                    var latest = Services.SettingsService.LoadStatic();
+                    if (latest != null)
+                        _settingsService!.Settings = latest;
+                    _settingsService!.Settings.RememberAnnotationTool = remember;
+                    _settingsService.Save();
+                };
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);
                 overlay.SetToolColor(System.Drawing.Color.FromArgb(_settingsService.Settings.ToolColorArgb));
                 overlay.ToolColorChanged += color =>
@@ -691,6 +700,7 @@ public partial class App
                 overlay.LastAnnotationToolChanged += toolId =>
                 {
                     if (string.IsNullOrWhiteSpace(toolId)) return;
+                    if (!_settingsService!.Settings.RememberAnnotationTool) return;
                     if (string.Equals(_settingsService!.Settings.LastAnnotationToolId, toolId, StringComparison.OrdinalIgnoreCase))
                         return;
                     _settingsService.Settings.LastAnnotationToolId = toolId;
