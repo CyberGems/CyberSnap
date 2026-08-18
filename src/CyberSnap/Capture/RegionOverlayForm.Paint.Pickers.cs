@@ -84,21 +84,22 @@ public sealed partial class RegionOverlayForm
                 g.FillPath(_pickerSearchBg!, searchPath);
                 g.DrawPath(_pickerFocusBorder!, searchPath);
             }
-            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             var searchFont = GetPickerSearchFont();
             string placeholder = Services.LocalizationService.Translate("Search...");
             string searchDisplay = _emojiSearch.Length > 0 ? _emojiSearch : placeholder;
-            var searchBrush = SketchRenderer.GetToolColorBrush(_emojiSearch.Length > 0
-                ? UiChrome.SurfaceTextPrimary
-                : UiChrome.SurfaceTextMuted);
-            g.DrawString(searchDisplay, searchFont, searchBrush, searchRect.X + 8, searchRect.Y + 6);
+            Color searchColor = _emojiSearch.Length > 0 ? UiChrome.SurfaceTextPrimary : UiChrome.SurfaceTextMuted;
+            var textRect = new Rectangle(searchRect.X + 10, searchRect.Y, searchRect.Width - 20, searchRect.Height);
+            TextRenderer.DrawText(g, searchDisplay, searchFont, textRect, searchColor,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+
             // Text cursor
             if (_emojiSearch.Length > 0)
             {
-                float cursorX = searchRect.X + 8 + g.MeasureString(_emojiSearch, searchFont).Width - 2;
-                g.DrawLine(_pickerCursorPen!, cursorX, searchRect.Y + 6, cursorX, searchRect.Bottom - 6);
+                var measured = TextRenderer.MeasureText(g, _emojiSearch, searchFont, Size.Empty, TextFormatFlags.NoPadding);
+                float cursorX = textRect.X + measured.Width + 1;
+                int cursorPad = 5;
+                g.DrawLine(_pickerCursorPen!, cursorX, searchRect.Y + cursorPad, cursorX, searchRect.Bottom - cursorPad);
             }
-            g.TextRenderingHint = TextRenderingHint.SystemDefault;
 
             // Emoji grid
             int gridY = py + pad + searchBarH + pad;

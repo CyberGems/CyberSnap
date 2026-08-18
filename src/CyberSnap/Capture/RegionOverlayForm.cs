@@ -1059,14 +1059,14 @@ public sealed partial class RegionOverlayForm : Form
         int dynamicHistorySpan = (int)Math.Round(fullHistoryContent * historyReveal);
 
         // Measure sticky + retractable spans so the column can grow upward from the frame bottom.
-        // Single GroupGap before utilities: [tools + color + stroke] | [utilities].
+        // Uniform buttonSpacing across the entire annotation dock.
         int stickySpan = 0;
         if (triggerIdx >= 0)
             stickySpan += buttonSize + buttonSpacing;
         stickySpan += buttonSize; // color
         stickySpan += buttonSpacing;
         stickySpan += buttonSize; // stroke
-        stickySpan += GroupGap;
+        stickySpan += buttonSpacing;
         stickySpan += dynamicHistorySpan;
         stickySpan += buttonSize; // select is always visible
 
@@ -1196,7 +1196,7 @@ public sealed partial class RegionOverlayForm : Form
         _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
         cy += buttonSize + buttonSpacing;
         _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-        cy += buttonSize + GroupGap;
+        cy += buttonSize + buttonSpacing;
 
         int historyAreaTop = cy;
         _annotationHistoryRevealRect = dynamicHistorySpan > 0
