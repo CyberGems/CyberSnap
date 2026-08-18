@@ -2520,13 +2520,6 @@ public sealed partial class RegionOverlayForm : Form
     /// </summary>
     private void ShowEmptyAreaContextMenu(Point clickLocation)
     {
-        // Respect the master switch — when disabled, fall back to immediate cancel.
-        if (!Services.SettingsService.LoadStatic()?.ConfirmBeforeExit ?? true)
-        {
-            Cancel();
-            return;
-        }
-
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
         menu.Font = UiChrome.ChromeFont(10.5f);
 

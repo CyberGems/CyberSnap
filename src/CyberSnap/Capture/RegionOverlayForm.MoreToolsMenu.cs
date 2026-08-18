@@ -356,31 +356,9 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // Confirm before exit toggle — use the shared app settings instance. A throwaway
-        // svc that re-loads from disk on dispose can overwrite the fresh toggle (the same
-        // class of bug that made the banner toggle "stick but never re-enable").
-        AddMenuSeparatorIfNeeded(menu);
-        var confirmExitEnabled = settings.ConfirmBeforeExit;
-        var confirmExitText = isSpanish ? "Confirmar antes de salir" : "Confirm before exit";
-        var confirmExitItem = WindowsMenuRenderer.Item(confirmExitText, iconId: confirmExitEnabled ? "check" : null, iconSize: 24);
-        confirmExitItem.Click += (s, e) =>
-        {
-            var app = (App)Application.Current;
-            app.SettingsService.Load();
-            var newVal = !app.SettingsService.Settings.ConfirmBeforeExit;
-            app.SettingsService.Settings.ConfirmBeforeExit = newVal;
-            app.SettingsService.Save();
-            // Persist immediately: the user reports the toggle is lost when the capture is
-            // cancelled right after flipping it. Save() only debounces (350ms), so flush now
-            // to remove the race with overlay teardown / any other reader doing a Load().
-            app.SettingsService.FlushPendingWrites();
-            _toolbarContextMenu?.Close();
-        };
-        menu.Items.Add(confirmExitItem);
-
         // Toolbar dock — flat radio section (no nested submenu: multi-monitor DPI).
-        // Only relevant on the capture bar (annotation confirm dock uses frame sides).
-        if (!ShowAnnotationChrome)
+        // Only shown on the capture bar's general menu (⋮ activator), not when right-clicking individual tool buttons.
+        if (!ShowAnnotationChrome && buttonIndex < 0)
             AddToolbarDockMenuSection(menu);
 
         // Help banners toggle
