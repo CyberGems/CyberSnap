@@ -267,10 +267,6 @@ public sealed partial class AnnotationCanvas
         float z = (float)_zoom;
         if (z <= 0.01f) z = 1.0f;
 
-        float penWidthThick = 3.5f / z;
-        float penWidthShadow = 5.5f / z;
-        float len = 12f / z;
-        float barLen = 14f / z;
         float offset = 4f / z; // offset outside bounds
 
         var rect = new RectangleF(
@@ -280,139 +276,71 @@ public sealed partial class AnnotationCanvas
             bounds.Height + 2 * offset
         );
 
-        // Theme-aware accent: cyan reads great on the dark canvas but washes out on the
-        // light one, so on light we use the app's blue accent (Theme.Accent). All selection
-        // chrome (box, handles, move knob) shares this single color.
+        // Theme-aware accent: cyan on dark, accent on light
         var accent = Theme.Accent;
         byte aR = accent.R, aG = accent.G, aB = accent.B;
 
-        // Alpha values
-        int accentAlpha = isSelected ? 255 : 95;
-        int shadowAlpha = isSelected ? 100 : 35;
-        int fillAlpha = isSelected ? 0 : 6; // subtle accent tint
-        int dashAlpha = isSelected ? 180 : 60;
+        int accentAlpha = isSelected ? 255 : 120;
+        int fillAlpha = isSelected ? 0 : 10;
+        int dashAlpha = isSelected ? 200 : 75;
 
         var accentColor = Color.FromArgb(accentAlpha, aR, aG, aB);
-        var shadowColor = Color.FromArgb(shadowAlpha, 0, 0, 0);
 
         // Fill and dash
         if (fillAlpha > 0)
         {
-            using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, aR, aG, aB)))
-            {
-                g.FillRectangle(fillBrush, rect);
-            }
+            using var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, aR, aG, aB));
+            g.FillRectangle(fillBrush, rect);
         }
 
-        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, aR, aG, aB), 1.5f / z))
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, aR, aG, aB), 1.2f / z))
         {
             dashPen.DashStyle = DashStyle.Dash;
             dashPen.DashPattern = new[] { 4f, 3f };
             g.DrawRectangle(dashPen, rect.X, rect.Y, rect.Width, rect.Height);
         }
 
-        // Resize handles (L-corners + mid-edge bars). Skipped for move-only items (fixed-size
-        // badges like step numbers), which keep just the dashed box and the center move knob.
-        float midX = rect.Left + rect.Width / 2f;
-        float midY = rect.Top + rect.Height / 2f;
-        if (!moveOnly)
+        if (moveOnly) return;
+
+        // Figma-style handles: crisp white squares with 1.5px accent border and subtle drop shadow
+        float screenW = bounds.Width * z;
+        float screenH = bounds.Height * z;
+        float hSize = ((screenW < 28 || screenH < 28) ? 6f : 8f) / z;
+        float hHalf = hSize / 2f;
+
+        using var shadowBrush = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
+        using var whiteBrush  = new SolidBrush(Color.White);
+        using var handlePen   = new Pen(accentColor, 1.5f / z);
+
+        void DrawHandle(float cx, float cy)
         {
-            using var thickPen = new Pen(accentColor, penWidthThick) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            using var shadowPen = new Pen(shadowColor, penWidthShadow) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-
-            // 1. Draw Corners (L-shapes)
-            // Top-Left
-            DrawL(g, shadowPen, rect.Left, rect.Top, len, len);
-            DrawL(g, thickPen, rect.Left, rect.Top, len, len);
-
-            // Top-Right
-            DrawL(g, shadowPen, rect.Right, rect.Top, -len, len);
-            DrawL(g, thickPen, rect.Right, rect.Top, -len, len);
-
-            // Bottom-Left
-            DrawL(g, shadowPen, rect.Left, rect.Bottom, len, -len);
-            DrawL(g, thickPen, rect.Left, rect.Bottom, len, -len);
-
-            // Bottom-Right
-            DrawL(g, shadowPen, rect.Right, rect.Bottom, -len, -len);
-            DrawL(g, thickPen, rect.Right, rect.Bottom, -len, -len);
-
-            // 2. Draw Mid-edges (Pills/bars)
-            // Top edge
-            g.DrawLine(shadowPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
-            g.DrawLine(thickPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
-
-            // Bottom edge
-            g.DrawLine(shadowPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
-            g.DrawLine(thickPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
-
-            // Left edge
-            g.DrawLine(shadowPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
-            g.DrawLine(thickPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
-
-            // Right edge
-            g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
-            g.DrawLine(thickPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+            var hr = new RectangleF(cx - hHalf, cy - hHalf, hSize, hSize);
+            g.FillRectangle(shadowBrush, hr.X + 0.8f / z, hr.Y + 1.2f / z, hr.Width, hr.Height);
+            g.FillRectangle(whiteBrush, hr);
+            g.DrawRectangle(handlePen, hr.X, hr.Y, hr.Width, hr.Height);
         }
 
-        // 3. Center move handle — a free-standing 4-way move arrow (✥), rendered on both
-        // hover and selection. There is NO enclosing ring (the arrows ARE the handle, so it
-        // reads as a move cursor, not a circle/target), and it's drawn in SCREEN space — i.e.
-        // outside the zoom transform — so it stays pixel-crisp and a constant size at any zoom
-        // (drawing it inside the scaled transform softened it badly when zoomed in).
+        // 4 Corner handles
+        DrawHandle(rect.Left,  rect.Top);
+        DrawHandle(rect.Right, rect.Top);
+        DrawHandle(rect.Left,  rect.Bottom);
+        DrawHandle(rect.Right, rect.Bottom);
+
+        // Mid-edge handles only on larger objects (>= 56px in screen space)
+        bool showEdgeX = screenW >= 56;
+        bool showEdgeY = screenH >= 56;
+        float midX = rect.Left + rect.Width / 2f;
+        float midY = rect.Top + rect.Height / 2f;
+
+        if (showEdgeX)
         {
-            // Image-space center → screen space, then step out of the zoom/pan transform.
-            float scx = (float)(_pan.X + midX * _zoom);
-            float scy = (float)(_pan.Y + midY * _zoom);
-
-            var gstate = g.Save();
-            g.ResetTransform();
-
-            const float armLen   = 11f;   // reach from center to each arrowhead tip
-            const float gap      = 3.5f;  // central empty gap so the four arrows read as distinct
-            const float headBack = 4.5f;  // how far the arrowhead chevron runs back along the stem
-            const float headW    = 3.4f;  // arrowhead half-width (perpendicular spread)
-
-            // State-aware alphas — dimmer on hover, full on selection (mirrors the box/handles).
-            int glyphA = isSelected ? 255 : 175;
-            // Contrast halo follows the glyph shape (NOT a disc): dark on the dark theme,
-            // light on the light theme, so the arrows pop without painting a circle.
-            int haloA  = isSelected ? 150 : 90;
-            var haloColor  = Theme.IsDark ? Color.FromArgb(haloA, 0, 0, 0)
-                                          : Color.FromArgb(haloA, 255, 255, 255);
-            var glyphColor = Color.FromArgb(glyphA, aR, aG, aB);
-
-            void DrawMoveArrows(Pen p)
-            {
-                // Stems (with a central gap so the four arrows read as distinct)
-                g.DrawLine(p, scx - armLen, scy, scx - gap, scy);
-                g.DrawLine(p, scx + gap,    scy, scx + armLen, scy);
-                g.DrawLine(p, scx, scy - armLen, scx, scy - gap);
-                g.DrawLine(p, scx, scy + gap,    scx, scy + armLen);
-                // Arrowheads (chevrons) at each tip, pointing outward
-                g.DrawLine(p, scx + armLen, scy, scx + armLen - headBack, scy - headW);
-                g.DrawLine(p, scx + armLen, scy, scx + armLen - headBack, scy + headW);
-                g.DrawLine(p, scx - armLen, scy, scx - armLen + headBack, scy - headW);
-                g.DrawLine(p, scx - armLen, scy, scx - armLen + headBack, scy + headW);
-                g.DrawLine(p, scx, scy - armLen, scx - headW, scy - armLen + headBack);
-                g.DrawLine(p, scx, scy - armLen, scx + headW, scy - armLen + headBack);
-                g.DrawLine(p, scx, scy + armLen, scx - headW, scy + armLen - headBack);
-                g.DrawLine(p, scx, scy + armLen, scx + headW, scy + armLen - headBack);
-            }
-
-            using (var halo = new Pen(haloColor, 3.6f)
-            {
-                StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round
-            })
-                DrawMoveArrows(halo);
-
-            using (var glyphPen = new Pen(glyphColor, 1.9f)
-            {
-                StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round
-            })
-                DrawMoveArrows(glyphPen);
-
-            g.Restore(gstate);
+            DrawHandle(midX, rect.Top);
+            DrawHandle(midX, rect.Bottom);
+        }
+        if (showEdgeY)
+        {
+            DrawHandle(rect.Left,  midY);
+            DrawHandle(rect.Right, midY);
         }
     }
 

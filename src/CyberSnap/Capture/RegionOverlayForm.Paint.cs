@@ -1074,12 +1074,7 @@ public sealed partial class RegionOverlayForm
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
-        const float penWidthThick  = 3.5f;
-        const float penWidthShadow = 5.5f;
-        const float len    = 12f;
-        const float barLen = 14f;
         const float offset = 4f; // offset outside bounds
-
         var rect = new RectangleF(
             bounds.X - offset,
             bounds.Y - offset,
@@ -1088,112 +1083,67 @@ public sealed partial class RegionOverlayForm
         );
 
         int accentAlpha = isSelected ? 255 : 120;
-        int shadowAlpha = isSelected ? 100 : 50;
-        int fillAlpha   = isSelected ? 0   : 10;
-        int dashAlpha   = isSelected ? 180 : 80;
+        int fillAlpha   = isSelected ? 0   : 12;
+        int dashAlpha   = isSelected ? 200 : 90;
 
         var accentColor = Color.FromArgb(accentAlpha, 0, 255, 255);
-        var shadowColor = Color.FromArgb(shadowAlpha, 0, 0, 0);
 
         // Subtle cyan fill (hover only)
         if (fillAlpha > 0)
         {
-            using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, 0, 255, 255)))
-                g.FillRectangle(fillBrush, rect);
+            using var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, 0, 255, 255));
+            g.FillRectangle(fillBrush, rect);
         }
 
         // Dashed outline
-        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), 1.5f))
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), 1.2f))
         {
             dashPen.DashStyle = DashStyle.Dash;
             dashPen.DashPattern = new[] { 4f, 3f };
             g.DrawRectangle(dashPen, rect.X, rect.Y, rect.Width, rect.Height);
         }
 
+        // Move-only items (fixed-size badges) show just the dashed box
+        if (moveOnly) return;
+
+        // Figma-style handles: crisp white squares with 1.5px accent border and subtle drop shadow
+        float hSize = (bounds.Width < 28 || bounds.Height < 28) ? 6f : 8f;
+        float hHalf = hSize / 2f;
+
+        using var shadowBrush = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
+        using var whiteBrush  = new SolidBrush(Color.White);
+        using var handlePen   = new Pen(accentColor, 1.5f);
+
+        void DrawHandle(float cx, float cy)
+        {
+            var hr = new RectangleF(cx - hHalf, cy - hHalf, hSize, hSize);
+            g.FillRectangle(shadowBrush, hr.X + 0.8f, hr.Y + 1.2f, hr.Width, hr.Height);
+            g.FillRectangle(whiteBrush, hr);
+            g.DrawRectangle(handlePen, hr.X, hr.Y, hr.Width, hr.Height);
+        }
+
+        // 4 Corner handles
+        DrawHandle(rect.Left,  rect.Top);
+        DrawHandle(rect.Right, rect.Top);
+        DrawHandle(rect.Left,  rect.Bottom);
+        DrawHandle(rect.Right, rect.Bottom);
+
+        // Mid-edge handles only on larger objects (>= 56px)
+        bool showEdgeX = bounds.Width >= 56;
+        bool showEdgeY = bounds.Height >= 56;
         float midX = rect.Left + rect.Width  / 2f;
         float midY = rect.Top  + rect.Height / 2f;
 
-        // Draw center move handle (✥) if size is large enough to show it
-        if (bounds.Width >= 32 && bounds.Height >= 32)
+        if (showEdgeX)
         {
-            const float armLen   = 11f;   // reach from center to each arrowhead tip
-            const float gap      = 3.5f;  // central empty gap so the four arrows read as distinct
-            const float headBack = 4.5f;  // how far the arrowhead chevron runs back along the stem
-            const float headW    = 3.4f;  // arrowhead half-width (perpendicular spread)
-
-            int glyphA = isSelected ? 255 : 175;
-            int haloA  = isSelected ? 150 : 90;
-            var haloColor  = Color.FromArgb(haloA, 0, 0, 0);
-            var glyphColor = Color.FromArgb(glyphA, 0, 255, 255);
-
-            void DrawMoveArrows(Pen p)
-            {
-                g.DrawLine(p, midX - armLen, midY, midX - gap, midY);
-                g.DrawLine(p, midX + gap,    midY, midX + armLen, midY);
-                g.DrawLine(p, midX, midY - armLen, midX, midY - gap);
-                g.DrawLine(p, midX, midY + gap,    midX, midY + armLen);
-
-                g.DrawLine(p, midX + armLen, midY, midX + armLen - headBack, midY - headW);
-                g.DrawLine(p, midX + armLen, midY, midX + armLen - headBack, midY + headW);
-                g.DrawLine(p, midX - armLen, midY, midX - armLen + headBack, midY - headW);
-                g.DrawLine(p, midX - armLen, midY, midX - armLen + headBack, midY + headW);
-                g.DrawLine(p, midX, midY - armLen, midX - headW, midY - armLen + headBack);
-                g.DrawLine(p, midX, midY - armLen, midX + headW, midY - armLen + headBack);
-                g.DrawLine(p, midX, midY + armLen, midX - headW, midY + armLen - headBack);
-                g.DrawLine(p, midX, midY + armLen, midX + headW, midY + armLen - headBack);
-            }
-
-            using (var halo = new Pen(haloColor, 3.6f)
-            {
-                StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round
-            })
-                DrawMoveArrows(halo);
-
-            using (var glyphPen = new Pen(glyphColor, 1.9f)
-            {
-                StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round
-            })
-                DrawMoveArrows(glyphPen);
+            DrawHandle(midX, rect.Top);
+            DrawHandle(midX, rect.Bottom);
         }
-
-        // Move-only items (fixed-size badges) show just the dashed box — no resize handles,
-        // which would otherwise imply a resize the annotation can't actually do.
-        if (moveOnly) return;
-
-        using var thickPen  = new Pen(accentColor, penWidthThick)  { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        using var shadowPen = new Pen(shadowColor, penWidthShadow) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-
-        // L-shaped corners
-        DrawL(g, shadowPen, rect.Left,  rect.Top,     len,  len);
-        DrawL(g, thickPen,  rect.Left,  rect.Top,     len,  len);
-
-        DrawL(g, shadowPen, rect.Right, rect.Top,    -len,  len);
-        DrawL(g, thickPen,  rect.Right, rect.Top,    -len,  len);
-
-        DrawL(g, shadowPen, rect.Left,  rect.Bottom,  len, -len);
-        DrawL(g, thickPen,  rect.Left,  rect.Bottom,  len, -len);
-
-        DrawL(g, shadowPen, rect.Right, rect.Bottom, -len, -len);
-        DrawL(g, thickPen,  rect.Right, rect.Bottom, -len, -len);
-
-        // Mid-edge bars
-        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Top,    midX + barLen / 2f, rect.Top);
-        g.DrawLine(thickPen,  midX - barLen / 2f, rect.Top,    midX + barLen / 2f, rect.Top);
-
-        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
-        g.DrawLine(thickPen,  midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
-
-        g.DrawLine(shadowPen, rect.Left,  midY - barLen / 2f, rect.Left,  midY + barLen / 2f);
-        g.DrawLine(thickPen,  rect.Left,  midY - barLen / 2f, rect.Left,  midY + barLen / 2f);
-
-        g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
-        g.DrawLine(thickPen,  rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
-    }
-
-    private static void DrawL(Graphics g, Pen pen, float x, float y, float dx, float dy)
-    {
-        g.DrawLine(pen, x, y, x + dx, y);
-        g.DrawLine(pen, x, y, x, y + dy);
+        if (showEdgeY)
+        {
+            DrawHandle(rect.Left,  midY);
+            DrawHandle(rect.Right, midY);
+        }
     }
 
     private static Color InterpolateColor(Color c1, Color c2, float t)
