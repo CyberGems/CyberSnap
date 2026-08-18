@@ -721,6 +721,11 @@ public sealed partial class RegionOverlayForm
         ClearRedoEditHistory();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
+        if (ShowAnnotationChrome)
+        {
+            MarkToolbarRenderDirty();
+            RefreshToolbar();
+        }
     }
 
     private void ClearRedoEditHistory()
@@ -738,6 +743,11 @@ public sealed partial class RegionOverlayForm
             command.Dispose();
         _editUndoStack.Clear();
         _editRedoStack.Clear();
+        if (ShowAnnotationChrome)
+        {
+            MarkToolbarRenderDirty();
+            RefreshToolbar();
+        }
     }
 
     private void RefreshNextStepNumber()
@@ -1124,6 +1134,11 @@ public sealed partial class RegionOverlayForm
         ResetSelectedAnnotationState();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
+        if (ShowAnnotationChrome)
+        {
+            MarkToolbarRenderDirty();
+            RefreshToolbar();
+        }
         Invalidate();
         return true;
     }
@@ -1140,6 +1155,11 @@ public sealed partial class RegionOverlayForm
         ResetSelectedAnnotationState();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
+        if (ShowAnnotationChrome)
+        {
+            MarkToolbarRenderDirty();
+            RefreshToolbar();
+        }
         Invalidate();
         return true;
     }
@@ -1360,8 +1380,19 @@ public sealed partial class RegionOverlayForm
         {
             PresentAnnotationToolbarNow();
             EnsureToolbarReady();
-            // If nothing was restored, land on Arrow so the sticky trigger is a drawing tool.
-            EnsureDefaultAnnotationTool();
+            if (_rememberAnnotationTool && !string.IsNullOrEmpty(settings?.LastAnnotationToolId))
+            {
+                EnsureDefaultAnnotationTool();
+            }
+            else
+            {
+                var selectTool = _flyoutTools.FirstOrDefault(t => string.Equals(t.Id, "select", StringComparison.OrdinalIgnoreCase));
+                if (selectTool != null && selectTool.Mode is not null)
+                {
+                    SetTool(selectTool, showHelpBanner: false);
+                }
+                EnsureDefaultAnnotationTool();
+            }
         }
 
         // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.

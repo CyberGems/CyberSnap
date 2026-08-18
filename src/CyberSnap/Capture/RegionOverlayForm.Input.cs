@@ -318,28 +318,37 @@ public sealed partial class RegionOverlayForm
             else if (btn >= CloseButtonIndex + 1 && btn < BtnCount)
             {
                 int flyoutIdx = btn - (CloseButtonIndex + 1);
-                if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length && _flyoutTools[flyoutIdx].Mode.HasValue)
+                if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length)
                 {
-                    if (ShowAnnotationChrome && IsAnnotationToolsTriggerButton(btn)
-                        && string.Equals(_flyoutTools[flyoutIdx].Id, _activeToolId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(_flyoutTools[flyoutIdx].Id, "undo", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Expansion is hover-only. Click on the active trigger only starts
-                        // merge hold-to-switch (if any) — never toggles the strip.
-                        if (IsAnnotationMergeButton(btn))
-                            BeginMergedButtonHold(btn);
+                        UndoLastEdit();
                         return;
                     }
 
-                    bool wasRetractable = ShowAnnotationChrome
-                        && IsRetractableAnnotationFlyoutIndex(flyoutIdx, GetAnnotationTriggerFlyoutIndex());
-
-                    if (IsAnnotationMergeButton(btn))
-                        BeginMergedButtonHold(btn);
-                    else
+                    if (_flyoutTools[flyoutIdx].Mode.HasValue)
                     {
-                        SetTool(_flyoutTools[flyoutIdx]);
-                        if (wasRetractable)
-                            CollapseAnnotationToolsAfterToolPick();
+                        if (ShowAnnotationChrome && IsAnnotationToolsTriggerButton(btn)
+                            && string.Equals(_flyoutTools[flyoutIdx].Id, _activeToolId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Expansion is hover-only. Click on the active trigger only starts
+                            // merge hold-to-switch (if any) — never toggles the strip.
+                            if (IsAnnotationMergeButton(btn))
+                                BeginMergedButtonHold(btn);
+                            return;
+                        }
+
+                        bool wasRetractable = ShowAnnotationChrome
+                            && IsRetractableAnnotationFlyoutIndex(flyoutIdx, GetAnnotationTriggerFlyoutIndex());
+
+                        if (IsAnnotationMergeButton(btn))
+                            BeginMergedButtonHold(btn);
+                        else
+                        {
+                            SetTool(_flyoutTools[flyoutIdx]);
+                            if (wasRetractable)
+                                CollapseAnnotationToolsAfterToolPick();
+                        }
                     }
                 }
             }
