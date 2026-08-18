@@ -230,6 +230,10 @@ public sealed partial class RegionOverlayForm
                     ? LocalizationService.Translate("Hold to show Area Capture tool")
                     : LocalizationService.Translate("Hold to show From Center tool"));
             }
+            else if (button == _mergedRecordButtonIndex)
+            {
+                text += "\n" + LocalizationService.Translate("Hold to show GIF recording");
+            }
 
             return text;
         }

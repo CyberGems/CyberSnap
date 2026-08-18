@@ -589,11 +589,11 @@ public sealed partial class RegionOverlayForm
     {
         bool holdingThis = _isMouseDownOnCaptureBtn
             && (_mergedHoldButtonIndex == buttonIndex
-                || (_mergedHoldButtonIndex < 0 && buttonIndex == _mergedCaptureButtonIndex));
+                || (_mergedHoldButtonIndex < 0 && (buttonIndex == _mergedCaptureButtonIndex || buttonIndex == _mergedRecordButtonIndex)));
 
         bool popupForThis = _altCapturePopupOpen
             && (_mergedHoldButtonIndex == buttonIndex
-                || (_mergedHoldButtonIndex < 0 && buttonIndex == _mergedCaptureButtonIndex));
+                || (_mergedHoldButtonIndex < 0 && (buttonIndex == _mergedCaptureButtonIndex || buttonIndex == _mergedRecordButtonIndex)));
 
         // Tiny bottom-right corner chevron pointing outward along the diagonal.
         // Stroke-based instead of fill-based so the open direction reads unambiguously.
@@ -784,6 +784,12 @@ public sealed partial class RegionOverlayForm
             alts.Add("_activeWindow");
             alts.Add("_repeatLastArea");
 
+            return alts;
+        }
+
+        if (buttonIndex == _mergedRecordButtonIndex)
+        {
+            alts.Add("recordGif");
             return alts;
         }
 
