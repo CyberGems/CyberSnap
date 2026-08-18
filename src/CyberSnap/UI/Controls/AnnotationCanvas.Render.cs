@@ -658,7 +658,7 @@ public sealed partial class AnnotationCanvas
     }
 
     /// <summary>Draws a modern, polished vector image/drop badge with dual-tone layers and smooth lighting.</summary>
-    private void DrawWelcomeIcon(Graphics g, float cx, float cy, float size, Color accentColor, bool isDragOver)
+    private void DrawWelcomeIcon(Graphics g, float cx, float cy, float size, Color accentColor, bool isDragOver, bool isHovered, bool isPressed)
     {
         // 1. Badge container circle with subtle glow and gradient tint
         float radius = size * 0.46f;
@@ -667,16 +667,23 @@ public sealed partial class AnnotationCanvas
         using (var shadowPath = new GraphicsPath())
         {
             shadowPath.AddEllipse(badgeRect.X, badgeRect.Y + 3, badgeRect.Width, badgeRect.Height);
-            using var shadowBrush = new SolidBrush(Color.FromArgb(45, 0, 0, 0));
+            using var shadowBrush = new SolidBrush(Color.FromArgb(isHovered ? 60 : 45, 0, 0, 0));
             g.FillPath(shadowBrush, shadowPath);
         }
 
-        int bgAlpha = isDragOver ? 60 : (EditorColors.IsDark ? 32 : 24);
+        // Ambient glow when hovered or dragging over
+        if (isHovered || isDragOver)
+        {
+            using var glowPen = new Pen(Color.FromArgb(isDragOver ? 50 : 35, accentColor), 6f);
+            g.DrawEllipse(glowPen, badgeRect.X - 1, badgeRect.Y - 1, badgeRect.Width + 2, badgeRect.Height + 2);
+        }
+
+        int bgAlpha = isPressed ? 75 : (isHovered ? 52 : (isDragOver ? 60 : (EditorColors.IsDark ? 32 : 24)));
         using (var bgBrush = new SolidBrush(Color.FromArgb(bgAlpha, accentColor)))
             g.FillEllipse(bgBrush, badgeRect);
 
-        int borderAlpha = isDragOver ? 220 : (EditorColors.IsDark ? 110 : 90);
-        using (var borderPen = new Pen(Color.FromArgb(borderAlpha, accentColor), 1.5f))
+        int borderAlpha = isPressed ? 255 : (isHovered || isDragOver ? 220 : (EditorColors.IsDark ? 110 : 90));
+        using (var borderPen = new Pen(Color.FromArgb(borderAlpha, accentColor), (isHovered || isDragOver) ? 1.75f : 1.5f))
             g.DrawEllipse(borderPen, badgeRect);
 
         // 2. Picture Frame artwork
@@ -948,12 +955,9 @@ public sealed partial class AnnotationCanvas
             ? Color.FromArgb(255, Math.Min(255, EditorColors.BgCard.R + 12), Math.Min(255, EditorColors.BgCard.G + 14), Math.Min(255, EditorColors.BgCard.B + 18))
             : Color.FromArgb(245, 248, 252);
         Color chipBorder = EditorColors.BorderSubtle;
-        bool emphasize = _welcomeDragOver || _welcomeHoverCard;
         Color cardBorder = _welcomeDragOver
             ? Color.FromArgb(220, accent)
-            : emphasize
-                ? Color.FromArgb(160, accent)
-                : EditorColors.BorderSubtle;
+            : EditorColors.BorderSubtle;
         float borderW = _welcomeDragOver ? 2f : 1.25f;
 
         var rect = new Rectangle((int)x, (int)y, (int)width, (int)height);
@@ -988,7 +992,9 @@ public sealed partial class AnnotationCanvas
         float curY = y + paddingV;
         float iconCx = x + width / 2f;
         float iconCy = curY + iconSize / 2f;
-        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, accent, _welcomeDragOver);
+        float iconRadius = iconSize * 0.46f;
+        _welcomeIconRect = new RectangleF(iconCx - iconRadius, iconCy - iconRadius, iconRadius * 2, iconRadius * 2);
+        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, accent, _welcomeDragOver, _welcomeHoverIcon, _welcomePressedIcon);
         curY += iconSize + spacing;
 
         var titleFlags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter

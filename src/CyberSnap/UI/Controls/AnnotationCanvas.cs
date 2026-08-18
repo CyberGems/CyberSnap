@@ -63,10 +63,13 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private bool _welcomeDismissed;      // welcome overlay hidden after first meaningful interaction
     private bool _welcomeDragOver;       // file drag currently over the editor while welcome is shown
     private RectangleF _welcomeCardRect;
+    private RectangleF _welcomeIconRect;
     private readonly RectangleF[] _welcomeChipRects = new RectangleF[3];
     private int _welcomeHoverChip = -1;  // -1 none, 0 Open, 1 Paste, 2 Capture
     private bool _welcomeHoverCard;
+    private bool _welcomeHoverIcon;
     private int _welcomePressedChip = -1;
+    private bool _welcomePressedIcon;
     private bool _isPanning;
     private Point _panStart;
     private PointF _panStartOffset;
@@ -531,7 +534,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _welcomeDismissed = true;
             _welcomeHoverChip = -1;
             _welcomeHoverCard = false;
+            _welcomeHoverIcon = false;
             _welcomePressedChip = -1;
+            _welcomePressedIcon = false;
             _welcomeDragOver = false;
             Invalidate();
         }
@@ -542,26 +547,34 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         if (!IsWelcomeVisible) return false;
 
         bool overCard = _welcomeCardRect.Contains(client);
+        bool overIcon = _welcomeIconRect.Contains(client);
         int chip = HitTestWelcomeChip(client);
 
-        if (overCard != _welcomeHoverCard || chip != _welcomeHoverChip)
+        if (overCard != _welcomeHoverCard || overIcon != _welcomeHoverIcon || chip != _welcomeHoverChip)
         {
             _welcomeHoverCard = overCard;
+            _welcomeHoverIcon = overIcon;
             _welcomeHoverChip = chip;
-            Cursor = chip >= 0 && IsWelcomeChipEnabled(chip) ? Cursors.Hand : Cursors.Default;
+            Cursor = (overIcon || (chip >= 0 && IsWelcomeChipEnabled(chip))) ? Cursors.Hand : Cursors.Default;
             Invalidate();
         }
-        else if (chip >= 0 && IsWelcomeChipEnabled(chip))
+        else if (overIcon || (chip >= 0 && IsWelcomeChipEnabled(chip)))
         {
             Cursor = Cursors.Hand;
         }
 
-        return overCard || chip >= 0;
+        return overCard || overIcon || chip >= 0;
     }
 
     private bool TryWelcomeMouseDown(Point client)
     {
         if (!IsWelcomeVisible) return false;
+        if (_welcomeIconRect.Contains(client))
+        {
+            _welcomePressedIcon = true;
+            Invalidate();
+            return true;
+        }
         int chip = HitTestWelcomeChip(client);
         if (chip < 0 || !IsWelcomeChipEnabled(chip)) return false;
         _welcomePressedChip = chip;
@@ -572,6 +585,16 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private bool TryWelcomeMouseUp(Point client)
     {
         if (!IsWelcomeVisible) return false;
+        if (_welcomePressedIcon)
+        {
+            _welcomePressedIcon = false;
+            Invalidate();
+            if (_welcomeIconRect.Contains(client))
+            {
+                WelcomeOpenRequested?.Invoke();
+                return true;
+            }
+        }
         int pressed = _welcomePressedChip;
         _welcomePressedChip = -1;
         if (pressed < 0) return false;
