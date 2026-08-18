@@ -58,4 +58,4 @@ Root: HKA; Subkey: "Software\Classes\CyberSnap.Project\DefaultIcon"; ValueType: 
 Root: HKA; Subkey: "Software\Classes\CyberSnap.Project\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\CyberSnap.exe"" ""%1"""; Flags: uninsdeletekey
 
 [Run]
-Filename: "{app}\CyberSnap.exe"; Description: "{cm:LaunchProgram,CyberSnap}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\CyberSnap.exe"; Description: "{cm:LaunchProgram,CyberSnap}"; Flags: nowait postinstall

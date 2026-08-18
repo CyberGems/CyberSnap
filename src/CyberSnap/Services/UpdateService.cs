@@ -193,6 +193,7 @@ public static class UpdateService
         var psi = new ProcessStartInfo
         {
             FileName = installerPath,
+            Arguments = "/SILENT /SP- /SUPPRESSMSGBOXES /NORESTART",
             UseShellExecute = true
         };
         Process.Start(psi);
