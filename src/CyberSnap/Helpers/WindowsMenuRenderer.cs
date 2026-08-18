@@ -86,6 +86,18 @@ public static class WindowsMenuRenderer
 
     private static bool IsWin11 => Environment.OSVersion.Version.Build >= 22000;
 
+    public static ToolStripLabel Header(string text)
+    {
+        text = CyberSnap.Services.LocalizationService.Translate(text);
+        return new ToolStripLabel(text)
+        {
+            ForeColor = UiChrome.SurfaceTextMuted,
+            Font = UiChrome.ChromeFont(8.0f, FontStyle.Bold),
+            Padding = new Padding(12, 6, 0, 2),
+            AutoSize = true,
+        };
+    }
+
     public static ToolStripMenuItem Item(
         string text,
         string? shortcut = null,
