@@ -297,6 +297,36 @@ public sealed partial class RegionOverlayForm
         return true; // absorb clicks inside the popup even between swatches
     }
 
+    private int GetStrokePickerItemAt(Point p)
+    {
+        if (!_strokePickerOpen || !_strokePickerRect.Contains(p))
+            return -1;
+
+        int pad = UiChrome.ScaleInt(6);
+        int itemH = UiChrome.ScaleInt(26);
+        int relY = p.Y - (_strokePickerRect.Y + pad);
+        if (relY < 0) return -1;
+        int idx = relY / itemH;
+        return idx >= 0 && idx < StrokeWidths.Length ? idx : -1;
+    }
+
+    private bool HandleStrokePickerClick(Point p)
+    {
+        if (!_strokePickerOpen || !_strokePickerRect.Contains(p)) return false;
+
+        int idx = GetStrokePickerItemAt(p);
+        if (idx >= 0 && idx < StrokeWidths.Length)
+        {
+            StrokeWidth = StrokeWidths[idx];
+            _strokePickerOpen = false;
+            Invalidate(InflateForRepaint(_strokePickerRect, 12));
+            RefreshToolbar();
+            return true;
+        }
+
+        return true; // absorb clicks inside the popup
+    }
+
     private bool HandleFontPickerClick(Point p)
     {
         if (!_fontPickerRect.Contains(p)) return false;

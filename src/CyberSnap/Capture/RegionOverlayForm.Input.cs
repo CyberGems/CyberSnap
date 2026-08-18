@@ -237,7 +237,12 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // 2. Interactive Pickers (Color, Font, Emoji) clicks inside their bounds
+        // 2. Interactive Pickers (Color, Stroke, Font, Emoji) clicks inside their bounds
+        if (_strokePickerOpen && _strokePickerRect.Contains(e.Location))
+        {
+            if (HandleStrokePickerClick(e.Location))
+                return;
+        }
         if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
         {
             if (HandleColorPickerClick(e.Location))
@@ -270,9 +275,15 @@ public sealed partial class RegionOverlayForm
             {
                 if (recentlyClosedMenu && _lastContextMenuBtnIndex == StrokeWidthButtonIndex)
                     return;
-                CycleStrokeWidth();
-                _tooltipButton = -1;
-                ShowToolbarTooltip();
+
+                _emojiPickerOpen = false;
+                _fontPickerOpen = false;
+                _colorPickerOpen = false;
+                CloseAltToolPopup(invalidate: false);
+                _strokePickerOpen = !_strokePickerOpen;
+                HideToolbarTooltip();
+                Invalidate(InflateForRepaint(_strokePickerRect, 12));
+                RefreshToolbar();
                 return;
             }
             if (btn == ColorButtonIndex)

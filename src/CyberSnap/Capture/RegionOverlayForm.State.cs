@@ -168,6 +168,7 @@ public sealed partial class RegionOverlayForm
         else
             Add(InflateIfNeeded(_toolbarRect, Helpers.UiChrome.ScaleInt(12)));
         Add(InflateIfNeeded(GetColorPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
+        Add(InflateIfNeeded(GetStrokePickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         Add(InflateIfNeeded(GetEmojiPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         // Font picker is painted on ToolbarForm near the text; expand only while open.
         if (_fontPickerOpen)
@@ -185,6 +186,7 @@ public sealed partial class RegionOverlayForm
         if (_emojiPickerOpen && _emojiPickerRect.Contains(p)) return true;
         if (_fontPickerOpen && _fontPickerRect.Contains(p)) return true;
         if (_colorPickerOpen && _colorPickerRect.Contains(p)) return true;
+        if (_strokePickerOpen && _strokePickerRect.Contains(p)) return true;
         if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(p)) return true;
         // Confirm chrome (wrapper + pills + handles) counts as overlay UI so the
         // capture magnifier never samples / paints over it (avoids trails).
@@ -1848,6 +1850,8 @@ public sealed partial class RegionOverlayForm
         if (IsPointInAltToolPopup(p))
             return false;
         if (_colorPickerOpen && _colorPickerRect.Contains(p))
+            return false;
+        if (_strokePickerOpen && _strokePickerRect.Contains(p))
             return false;
         if (_fontPickerOpen && _fontPickerRect.Contains(p))
             return false;

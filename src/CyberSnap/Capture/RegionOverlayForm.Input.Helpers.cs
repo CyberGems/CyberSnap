@@ -542,6 +542,16 @@ public sealed partial class RegionOverlayForm
         return PositionPopupFromAnchor(colorBtn, pw, ph);
     }
 
+    private Rectangle GetStrokePickerBounds()
+    {
+        int pad = UiChrome.ScaleInt(6);
+        int itemH = UiChrome.ScaleInt(26);
+        int pw = UiChrome.ScaleInt(130);
+        int ph = pad * 2 + StrokeWidths.Length * itemH;
+        var strokeBtn = _toolbarButtons.Length > StrokeWidthButtonIndex ? _toolbarButtons[StrokeWidthButtonIndex] : Rectangle.Empty;
+        return PositionPopupFromAnchor(strokeBtn, pw, ph);
+    }
+
     private Rectangle GetColorPickerSwatchRect(int index)
     {
         if (_colorPickerRect.IsEmpty || index < 0 || index >= ToolColors.Length)
