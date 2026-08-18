@@ -182,6 +182,11 @@
                 </Border.Effect>
 
                 <Grid>
+                    <!-- Top outer drag strip -->
+                    <Border x:Name="TopDragStrip" Height="8" VerticalAlignment="Top" Background="Transparent" Cursor="SizeAll" Panel.ZIndex="3"/>
+                    <!-- Bottom outer drag strip -->
+                    <Border x:Name="BottomDragStrip" Height="10" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeAll" Panel.ZIndex="3"/>
+
                     <Border x:Name="PeekGrip" Background="{DynamicResource WidgetPeekGripBg}" BorderBrush="{DynamicResource WidgetAccent}"
                             BorderThickness="0" Panel.ZIndex="2" IsHitTestVisible="False">
                         <!-- No own glow: the panel's drop shadow covers the peek. Its own effect
@@ -193,17 +198,16 @@
                         </Border>
                     </Border>
 
-                <Grid x:Name="ControlsGrid" Margin="12,10,12,8">
+                <Grid x:Name="ControlsGrid" Margin="12,8,12,8">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + Config (Draggable) -->
+                        <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + Config -->
                         <RowDefinition Height="Auto"/> <!-- Capture Button -->
                         <RowDefinition Height="Auto"/> <!-- Quick Actions -->
                         <RowDefinition Height="Auto"/> <!-- Settings / Toggles -->
-                        <RowDefinition Height="Auto"/> <!-- Footer Drag Grip Area -->
                     </Grid.RowDefinitions>
 
-                    <!-- Top Title Bar (Draggable Header) -->
-                    <Grid Grid.Row="0" Margin="0,0,0,10" Background="Transparent" Cursor="SizeAll">
+                    <!-- Top Title Bar -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10" Background="Transparent">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -432,14 +436,6 @@
                                           AutomationProperties.Name="Capture cursor"
                                           AutomationProperties.HelpText="Include the mouse pointer in image captures, video, and GIF"/>
                         </Grid>
-                    </Grid>
-
-                    <!-- Footer Drag Grip Area (Draggable Footer) -->
-                    <Grid Grid.Row="4" Margin="0,8,0,0" Height="10" Background="Transparent" Cursor="SizeAll">
-                        <Border Width="24" Height="3" CornerRadius="1.5"
-                                Background="{DynamicResource WidgetTextMuted}"
-                                Opacity="0.22"
-                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                 </Grid>
                 </Grid>
