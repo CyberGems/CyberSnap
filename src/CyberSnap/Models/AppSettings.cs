@@ -919,7 +919,8 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("scan",        "QR & Barcodes",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
         new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
         new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       0), // ruler (annotation, but kept in capture row)
-        new("select",      "Pick",                 '\uE1E3', CaptureMode.Move,        1),
+        new("undo",        "Undo",         '\uE7A7', null,                    1),
+        new("select",      "Pick",         '\uE1E3', CaptureMode.Move,        1),
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1),
         new("text",        "Text",         '\uE197', CaptureMode.Text,        1),
         new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1),

@@ -195,7 +195,8 @@ public sealed partial class RegionOverlayForm
             {
                 for (int i = 0; i < _flyoutTools.Length; i++)
                 {
-                    if (!string.Equals(_flyoutTools[i].Id, "eraser", StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(_flyoutTools[i].Id, "undo", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(_flyoutTools[i].Id, "eraser", StringComparison.OrdinalIgnoreCase))
                         continue;
                     AddMidY(_toolbarButtons[StrokeWidthButtonIndex], _toolbarButtons[flyoutStartIdx + i]);
                     break;
@@ -361,6 +362,17 @@ public sealed partial class RegionOverlayForm
                 WindowsDockRenderer.PaintButton(g, btn, active: false, hovered: hover, accent: danger);
                 int ca = hover ? 255 : 165;
                 DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ca, danger.R, danger.G, danger.B), active: false, flipHorizontal: true);
+                continue;
+            }
+
+            // Undo action button: enabled only when there are edits in the undo stack
+            if (string.Equals(_toolbarToolIds[i], "undo", StringComparison.OrdinalIgnoreCase))
+            {
+                bool canUndo = _editUndoStack.Count > 0;
+                WindowsDockRenderer.PaintButton(g, btn, active: false, hovered: hover && canUndo, accent: tierAccent);
+                int ca = canUndo ? (hover ? 255 : 200) : 90;
+                var baseCol = UiChrome.SurfaceTextPrimary;
+                DrawIcon(g, "undo", btn, Color.FromArgb(ca, baseCol.R, baseCol.G, baseCol.B), active: false);
                 continue;
             }
 

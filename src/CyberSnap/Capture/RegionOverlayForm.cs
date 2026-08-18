@@ -1211,6 +1211,7 @@ public sealed partial class RegionOverlayForm : Form
             }
         }
 
+        PlacePinnedUtility("undo");
         PlacePinnedUtility("eraser");
         PlacePinnedUtility("select");
 
@@ -1237,7 +1238,8 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     private static bool IsPinnedAnnotationUtility(string toolId) =>
-        string.Equals(toolId, "select", StringComparison.OrdinalIgnoreCase)
+        string.Equals(toolId, "undo", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(toolId, "select", StringComparison.OrdinalIgnoreCase)
         || string.Equals(toolId, "eraser", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>

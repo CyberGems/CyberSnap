@@ -270,6 +270,9 @@ public sealed partial class RegionOverlayForm
         bool includeHideHint,
         bool includeUsageHint = true)
     {
+        if (tool.Id == "undo")
+            return LocalizationService.Translate("Undo") + "  (Ctrl+Z)";
+
         var title = tool.Id == "ocr"
             ? LocalizationService.Translate("Extract text (OCR)")
             : LocalizationService.Translate(tool.Label);
