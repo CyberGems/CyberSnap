@@ -105,49 +105,21 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // Draw discrete elegant CyberSnap logo and brand name
+        // Draw question mark icon (Quick Start / help)
         int closeIdx = CloseButtonIndex;
 
-        if (_brandBitmap == null)
-        {
-            try
-            {
-                var logoUri = new Uri("pack://application:,,,/Assets/CyberSnap_square.png", UriKind.Absolute);
-                var streamInfo = System.Windows.Application.GetResourceStream(logoUri);
-                if (streamInfo != null)
-                {
-                    using (var s = streamInfo.Stream)
-                    {
-                        _brandBitmap = new Bitmap(s);
-                    }
-                }
-            }
-            catch { }
-        }
-
-        // Grayscale and opacity Matrix (40% opacity in dark mode, 35% in light mode)
+        // Opacity: 35-40% base, 70-80% on hover
         float baseOpacity = UiChrome.IsDark ? 0.35f : 0.40f;
         float opacity = _hoveredBrand ? (UiChrome.IsDark ? 0.70f : 0.80f) : baseOpacity;
-        float textOpacity = opacity * 0.80f; // Slightly lower opacity than the solid logo to visually balance thin stroke vs solid block density
-        float sat = _hoveredBrand ? 0.7f : 0f; // 0 = greyscale, 0.7 = 70% saturation on hover
-        float isat = 1f - sat;
-        var cm = new ColorMatrix(new float[][]
-        {
-            new float[] { isat * 0.299f + sat, isat * 0.299f,       isat * 0.299f,       0f, 0f },
-            new float[] { isat * 0.587f,       isat * 0.587f + sat, isat * 0.587f,       0f, 0f },
-            new float[] { isat * 0.114f,       isat * 0.114f,       isat * 0.114f + sat, 0f, 0f },
-            new float[] { 0f,                  0f,                  0f,                  opacity, 0f },
-            new float[] { 0f,                  0f,                  0f,                  0f, 1f }
-        });
+        Color brandIconColor = Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary);
 
-        int logoSz = UiChrome.ScaleInt(10); // Reduced by 20% as requested
+        int logoSz = UiChrome.ScaleInt(14);
 
         var oldHint = g.TextRenderingHint;
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit; // Force ClearType subpixel LCD rendering for pristine crispness
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
         if (IsVerticalDock)
         {
-            // Icon-only brand strip for Left/Right docks (no rotated wordmark).
             float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
             float ly = _toolbarRect.Y + pad + UiChrome.ScaleInt(6);
             if (!_brandRect.IsEmpty)
@@ -157,119 +129,18 @@ public sealed partial class RegionOverlayForm
                 ly = _brandRect.Y + (_brandRect.Height - logoSz) / 2f;
             }
             _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
-            _brandTextVisible = false; // vertical dock is icon-only
 
-            if (_brandBitmap != null)
-            {
-                using (var ia = new ImageAttributes())
-                {
-                    ia.SetColorMatrix(cm);
-                    g.DrawImage(_brandBitmap,
-                        new Rectangle((int)lx, (int)ly, logoSz, logoSz),
-                        0, 0, _brandBitmap.Width, _brandBitmap.Height,
-                        GraphicsUnit.Pixel,
-                        ia);
-                }
-            }
-            else
-            {
-                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
-            }
+            FluentIcons.DrawIcon(g, "question", new RectangleF(lx, ly, logoSz, logoSz), brandIconColor, 0f);
         }
         else
         {
-            int tier1Width = ShowAnnotationChrome
-                ? GetToolbarPrimarySpan(
-                    Math.Max(3, CountVisibleAnnotationToolbarButtons()),
-                    1,
-                    buttonSize,
-                    buttonSpacing,
-                    0)
-                : GetToolbarPrimarySpan(_mainBarTools.Length + 1, 1, buttonSize, buttonSpacing, 0);
-            // Capture bar: brand text only makes a comeback once the user hides buttons (the bar
-            // shrinks and the extra room reads as intentional). Until then — or in vertical dock —
-            // it's logo-only. The confirm/annotation dock keeps its previous rule.
-            bool anyHiddenCaptureTools = false;
-            if (!IsVerticalDock)
-            {
-                var s = Services.SettingsService.LoadStatic();
-                var enabled = s?.EnabledTools ?? ToolDef.DefaultEnabledIds();
-                anyHiddenCaptureTools = ToolDef.AllTools.Any(t => t.Group == 0 && !enabled.Contains(t.Id));
-            }
-            bool canShowText = ShowAnnotationChrome
-                || (!IsVerticalDock && _mainBarTools.Length >= 1 && anyHiddenCaptureTools);
+            float brandPad = UiChrome.ScaleFloat(6f);
+            float lx = _brandRect.X + brandPad;
+            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
 
-            // Prefer the first laid-out tool (capture bar or annotation-only confirm dock).
-            // Empty capture slots in confirm mode must not be used — they sit at (0,0) and
-            // push the logo far away from the bar.
-            int firstToolX = GetFirstVisibleToolbarButtonX();
-            if (firstToolX < 0)
-                firstToolX = _toolbarRect.X + pad + UiChrome.ScaleInt(28);
-
-            float availableBrandWidth = Math.Max(0, firstToolX - _brandRect.X);
-            int tempLogoSz = UiChrome.ScaleInt(10);
-            float tempLx = _brandRect.X + UiChrome.ScaleInt(6);
-            float tempTextX = tempLx + tempLogoSz + UiChrome.ScaleInt(6);
-            float tempTextW = firstToolX - tempTextX - UiChrome.ScaleInt(6);
-            
-            bool drawText = canShowText && (tempTextW >= UiChrome.ScaleInt(60));
-            _brandTextVisible = drawText;
-
-            float lx;
-            float ly;
-            
-            if (drawText)
-            {
-                logoSz = tempLogoSz;
-                lx = tempLx;
-                ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
-            }
-            else
-            {
-                logoSz = UiChrome.ScaleInt(14); // Enlarged and centered when text is hidden
-                // Anchor the logo to the left of its strip (just right of the grip), not centred
-                // over the whole reserved width — centring pulls it away from the grip and makes
-                // it read floating/misaligned. Keep a small pad so it doesn't touch the grip.
-                float brandPad = UiChrome.ScaleFloat(6f);
-                lx = _brandRect.X + brandPad;
-                ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
-            }
-            
             _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
-            
-            if (_brandBitmap != null)
-            {
-                using (var ia = new ImageAttributes())
-                {
-                    ia.SetColorMatrix(cm);
-                    g.DrawImage(_brandBitmap, 
-                        new Rectangle((int)lx, (int)ly, logoSz, logoSz), 
-                        0, 0, _brandBitmap.Width, _brandBitmap.Height, 
-                        GraphicsUnit.Pixel, 
-                        ia);
-                }
-            }
-            else
-            {
-                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
-            }
 
-            if (drawText)
-            {
-                using (var brandFont = UiChrome.ChromeFont(5.8f, FontStyle.Bold))
-                using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
-                {
-                    var textRect = new RectangleF(tempTextX, _toolbarRect.Y + pad - UiChrome.ScaleInt(1), tempTextW, buttonSize);
-                    var sf = new StringFormat
-                    {
-                        Alignment = StringAlignment.Near,
-                        LineAlignment = StringAlignment.Center,
-                        FormatFlags = StringFormatFlags.NoWrap,
-                        Trimming = StringTrimming.EllipsisCharacter
-                    };
-                    g.DrawString("CyberSnap", brandFont, textBrush, textRect, sf);
-                }
-            }
+            FluentIcons.DrawIcon(g, "question", new RectangleF(lx, ly, logoSz, logoSz), brandIconColor, 0f);
         }
 
         g.TextRenderingHint = oldHint;

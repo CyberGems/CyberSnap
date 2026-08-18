@@ -233,9 +233,6 @@ public sealed partial class RegionOverlayForm : Form
     private string[] _toolbarToolIds = Array.Empty<string>();
     private CaptureMode?[] _toolbarModes = Array.Empty<CaptureMode?>();
     private string? _activeToolId;
-    /// <summary>True while the horizontal dock actually draws the "CyberSnap" wordmark next to the
-    /// logo; drives the branding click target so it never covers the first capture button.</summary>
-    private bool _brandTextVisible;
     private int _hoveredButton = -1;
     private int _tooltipButton = -1;
     private WindowsToolTip? _toolbarToolTip;
@@ -930,22 +927,8 @@ public sealed partial class RegionOverlayForm : Form
         }
         else
         {
-            int logoSize = UiChrome.ScaleInt(10);
-            int textWidth = UiChrome.ScaleInt(60);
-            // Brand text only shows after the user hides capture buttons; logo-only until then.
-            // Reserving its width anyway leaves a wide empty strip beside the logo. This branch
-            // is the horizontal dock (vertical is handled above), but keep the same guard as the
-            // paint pass (capture bar with ≥1 tool) so layout and paint never disagree on the
-            // reserved width — a mismatch shifts the whole bar.
-            var s = Services.SettingsService.LoadStatic();
-            var enabled = s?.EnabledTools ?? ToolDef.DefaultEnabledIds();
-            bool anyHiddenCaptureTools = ToolDef.AllTools.Any(t => t.Group == 0 && !enabled.Contains(t.Id));
-            bool canShowText = !ShowAnnotationChrome && _mainBarTools.Length >= 1 && anyHiddenCaptureTools;
-            brandWidth = canShowText
-                ? logoSize + textWidth + UiChrome.ScaleInt(24)
-                // Collapsed (logo-only): modest strip — the glyph is anchored to the grip on its
-                // left, so only the gap to the first capture button needs the breathing room.
-                : logoSize + UiChrome.ScaleInt(20);
+            int iconSize = UiChrome.ScaleInt(14);
+            brandWidth = iconSize + UiChrome.ScaleInt(16);
             w = tier1PrimarySpan + brandWidth + gripSize + gripToContentGap;
             h = pad * 2 + buttonSize;
         }
