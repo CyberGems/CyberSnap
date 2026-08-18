@@ -508,7 +508,7 @@ public sealed partial class EditorForm
         {
             try
             {
-                using var ico = WindowIcons.WinForms(WindowIconKind.Editor);
+                using var ico = WindowIcons.WinForms(WindowIconKind.Editor, 32);
                 _brandBitmap = ico.ToBitmap();
             }
             catch { }
@@ -525,13 +525,13 @@ public sealed partial class EditorForm
 
             if (_brandBitmap != null)
             {
-                g.DrawImage(_brandBitmap, new Rectangle(0, cy - 10, 20, 20));
+                g.DrawImage(_brandBitmap, new Rectangle(14, cy - 8, 17, 17));
             }
 
             var titleText = LocalizationService.Translate("Annotations Editor");
-            using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
+            using var font = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
             TextRenderer.DrawText(g, titleText, font,
-                new Rectangle(26, 0, 340, brandPanel.Height),
+                new Rectangle(39, 0, 340, brandPanel.Height),
                 EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         };
