@@ -41,11 +41,6 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private const double MinZoom = 0.2;
     private const double MaxZoom = 8.0;
 
-    // Above this source-pixel count, zoom gestures draw a fast (slightly soft) draft and
-    // refine to crisp on settle. Below it, a full-quality rescale per frame is cheap enough
-    // that the draft would only add a visible blur + snap-back, so we skip it. ~4 MP keeps
-    // typical screenshots (1080p/1200p/1440p) crisp while large images stay fluid.
-    private const long DraftZoomPixelThreshold = 4_000_000;
     public const int MinZoomPercent = 20;
     public const int MaxZoomPercent = 800;
 
@@ -1126,23 +1121,17 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     }
 
     /// <summary>
-    /// Marks an active zoom gesture so the next repaints draw the base image fast
-    /// (cheap interpolation straight from the source) instead of rebuilding the crisp
+    /// Marks an active zoom gesture so intermediate repaints draw the base image fast
+    /// (cheap bilinear interpolation straight from the source) instead of rebuilding the crisp
     /// pre-scaled cache on every wheel tick. A one-shot timer clears the flag shortly
     /// after the last zoom step and forces one final high-quality repaint.
     /// </summary>
     private void BeginZoomInteraction()
     {
-        // Small images rebuild the crisp cache cheaply enough every frame; engaging the
-        // draft path would only add a perceptible blur and a snap back to sharp. Reserve
-        // it for large bitmaps where the per-frame bicubic rescale is the actual cost.
-        if ((long)_baseBitmap.Width * _baseBitmap.Height < DraftZoomPixelThreshold)
-            return;
-
         _zoomInteracting = true;
         if (_zoomSettleTimer is null)
         {
-            _zoomSettleTimer = new System.Windows.Forms.Timer { Interval = 140 };
+            _zoomSettleTimer = new System.Windows.Forms.Timer { Interval = 100 };
             _zoomSettleTimer.Tick += (_, _) =>
             {
                 _zoomSettleTimer!.Stop();
