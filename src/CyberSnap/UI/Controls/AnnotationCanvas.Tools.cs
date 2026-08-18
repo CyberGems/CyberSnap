@@ -3097,30 +3097,35 @@ public sealed partial class AnnotationCanvas
         // Non-resizable items expose only the center move knob (handle 8), never a resize handle.
         if (IsResizable(selected))
         {
-            var handles = new[] {
-                new Point(selRect.X, selRect.Y),                           // 0: TL
-                new Point(selRect.Right - 1, selRect.Y),                   // 1: TR
-                new Point(selRect.X, selRect.Bottom - 1),                  // 2: BL
-                new Point(selRect.Right - 1, selRect.Bottom - 1),          // 3: BR
-                new Point(selRect.X + selRect.Width / 2, selRect.Y),       // 4: Top
-                new Point(selRect.X, selRect.Y + selRect.Height / 2),      // 5: Left
-                new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2),// 6: Right
-                new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1)// 7: Bottom
+            // 4 Corners: 0: TL, 1: TR, 2: BL, 3: BR
+            var corners = new[] {
+                new Point(selRect.X, selRect.Y),
+                new Point(selRect.Right - 1, selRect.Y),
+                new Point(selRect.X, selRect.Bottom - 1),
+                new Point(selRect.Right - 1, selRect.Bottom - 1)
             };
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 4; i++)
             {
-                var hr = WindowsHandleRenderer.HitRect(handles[i]);
+                var hr = WindowsHandleRenderer.HitRect(corners[i]);
                 if (hr.Contains(screenPt)) return i;
             }
-        }
 
-        // Handle 8: center move knob — circular hit area sized to cover the 4-way arrow glyph.
-        var center = new Point(selRect.X + selRect.Width / 2, selRect.Y + selRect.Height / 2);
-        const int centerHitRadius = 14;
-        int cdx = screenPt.X - center.X;
-        int cdy = screenPt.Y - center.Y;
-        if (cdx * cdx + cdy * cdy <= centerHitRadius * centerHitRadius)
-            return 8;
+            // Mid-edges only if screen size >= 56px
+            if (screenRect.Width >= 56)
+            {
+                var topHr = WindowsHandleRenderer.HitRect(new Point(selRect.X + selRect.Width / 2, selRect.Y));
+                if (topHr.Contains(screenPt)) return 4; // Top
+                var btmHr = WindowsHandleRenderer.HitRect(new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1));
+                if (btmHr.Contains(screenPt)) return 7; // Bottom
+            }
+            if (screenRect.Height >= 56)
+            {
+                var leftHr = WindowsHandleRenderer.HitRect(new Point(selRect.X, selRect.Y + selRect.Height / 2));
+                if (leftHr.Contains(screenPt)) return 5; // Left
+                var rightHr = WindowsHandleRenderer.HitRect(new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2));
+                if (rightHr.Contains(screenPt)) return 6; // Right
+            }
+        }
 
         return -1;
     }
