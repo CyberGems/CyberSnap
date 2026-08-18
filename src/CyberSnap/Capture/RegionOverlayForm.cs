@@ -2527,94 +2527,84 @@ public sealed partial class RegionOverlayForm : Form
             return;
         }
 
-        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
-        menu.Font = UiChrome.ChromeFont(11.0f);
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
+        menu.Font = UiChrome.ChromeFont(10.5f);
 
-        var isSpanish = string.Equals(
-            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
-            "es", StringComparison.OrdinalIgnoreCase);
+        // --- 1. Category: "Captura" / "Capture" ---
+        menu.Items.Add(WindowsMenuRenderer.Header("Capture"));
 
-        if (_mode == CaptureMode.ScrollCapture)
-        {
-            var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
-            cancelItem.Click += (_, _) => Cancel();
-            menu.Items.Add(cancelItem);
-        }
-        else if (_mode == CaptureMode.Ruler)
-        {
-            var cancelRulerLabel = isSpanish ? "Cancelar dibujo de reglas" : "Cancel ruler drawing";
-            var cancelRulerItem = WindowsMenuRenderer.Item(cancelRulerLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
-            cancelRulerItem.Click += (_, _) => Cancel();
-            menu.Items.Add(cancelRulerItem);
+        // Area Capture
+        var areaItem = WindowsMenuRenderer.Item("Area Capture", iconId: "rect", active: _mode == CaptureMode.Rectangle, iconSize: 22);
+        areaItem.Click += (_, _) => SetMode(CaptureMode.Rectangle, "rect");
+        menu.Items.Add(areaItem);
 
-            menu.Items.Add(new ToolStripSeparator());
+        // From Center
+        var centerItem = WindowsMenuRenderer.Item("From Center", iconId: "captureRect", active: _mode == CaptureMode.Center, iconSize: 22);
+        centerItem.Click += (_, _) => SetMode(CaptureMode.Center, "center");
+        menu.Items.Add(centerItem);
 
-            var fsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-            var fsItem = WindowsMenuRenderer.Item(fsLabel, iconId: "captureRect", iconSize: 24);
-            fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
-            menu.Items.Add(fsItem);
+        // Scroll Capture
+        var scrollItem = WindowsMenuRenderer.Item("Scroll Capture", iconId: "scrollCapture", active: _mode == CaptureMode.ScrollCapture, iconSize: 22);
+        scrollItem.Click += (_, _) => SetMode(CaptureMode.ScrollCapture, "scroll");
+        menu.Items.Add(scrollItem);
 
-            var cancelLabel = LocalizationService.Translate("Cancel capture");
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
-            cancelItem.Click += (_, _) => Cancel();
-            menu.Items.Add(cancelItem);
-        }
-        else if (_mode == CaptureMode.ColorPicker)
-        {
-            var cancelLabel = isSpanish ? "Cancelar selección de color" : "Cancel color picker";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
-            cancelItem.Click += (_, _) => Cancel();
-            menu.Items.Add(cancelItem);
-        }
-        else if (_mode == CaptureMode.Ocr)
-        {
-            var autoCopy = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
-            var autoCopyItem = WindowsMenuRenderer.Item(
-                isSpanish ? "Auto-copiar texto OCR" : "Auto-copy OCR text",
-                iconSize: 24);
-            autoCopyItem.ToolTipText = isSpanish
-                ? "Copia el texto OCR al portapapeles (usa el Auto-copy global; no abre la ventana de resultados)"
-                : "Copy OCR text to the clipboard (uses global Auto-copy; skips the result window)";
-            autoCopyItem.Image = autoCopy ? FluentIcons.RenderBitmap("check",
-                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
-            autoCopyItem.Click += (_, _) =>
-            {
-                var current = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
-                SettingsService.SetOcrAutoCopyToClipboard(!current);
-            };
-            menu.Items.Add(autoCopyItem);
-            menu.Items.Add(new ToolStripSeparator());
+        // Full Screen
+        var fsItem = WindowsMenuRenderer.Item("Fullscreen capture", iconId: "fullscreen", iconSize: 22);
+        fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
+        menu.Items.Add(fsItem);
 
-            var cancelLabel = isSpanish ? "Cancelar extracción de texto" : "Cancel text extraction";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
-            cancelItem.Click += (_, _) => Cancel();
-            menu.Items.Add(cancelItem);
-        }
-        else
-        {
-            var fsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-            var fsItem = WindowsMenuRenderer.Item(fsLabel, iconId: "captureRect", iconSize: 24);
-            fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
-            menu.Items.Add(fsItem);
-        }
+        // Screen Recorder (MP4)
+        var recordItem = WindowsMenuRenderer.Item("Screen Recorder (MP4)", iconId: "record", active: _mode == CaptureMode.Record, iconSize: 22);
+        recordItem.Click += (_, _) => SetMode(CaptureMode.Record, "record");
+        menu.Items.Add(recordItem);
+
+        // Screen Recorder (GIF)
+        var recordGifItem = WindowsMenuRenderer.Item("Screen Recorder (GIF)", iconId: "recordGif", active: _mode == CaptureMode.RecordGif, iconSize: 22);
+        recordGifItem.Click += (_, _) => SetMode(CaptureMode.RecordGif, "recordGif");
+        menu.Items.Add(recordGifItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
-        // Harmless "resume" action sits above the destructive one.
-        var closeLabel = isSpanish ? "Continuar editando" : "Continue editing";
-        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "undo", iconSize: 24);
-        closeItem.Click += (_, _) => menu.Close();
-        menu.Items.Add(closeItem);
+        // --- 2. Category: "Herramientas" / "Tools" ---
+        menu.Items.Add(WindowsMenuRenderer.Header("Tools"));
 
-        // Cancel goes last, under its own separator (clear of the safe default actions).
+        // OCR
+        var ocrItem = WindowsMenuRenderer.Item("OCR", iconId: "ocr", active: _mode == CaptureMode.Ocr, iconSize: 22);
+        ocrItem.Click += (_, _) => SetMode(CaptureMode.Ocr, "ocr");
+        menu.Items.Add(ocrItem);
+
+        // QR & Barcodes
+        var qrItem = WindowsMenuRenderer.Item("QR & Barcodes", iconId: "scan", active: _mode == CaptureMode.Scan, iconSize: 22);
+        qrItem.Click += (_, _) => SetMode(CaptureMode.Scan, "scan");
+        menu.Items.Add(qrItem);
+
+        // Color Picker
+        var pickerItem = WindowsMenuRenderer.Item("Color Picker", iconId: "picker", active: _mode == CaptureMode.ColorPicker, iconSize: 22);
+        pickerItem.Click += (_, _) => SetMode(CaptureMode.ColorPicker, "picker");
+        menu.Items.Add(pickerItem);
+
+        // Ruler
+        var rulerItem = WindowsMenuRenderer.Item("Ruler", iconId: "ruler", active: _mode == CaptureMode.Ruler, iconSize: 22);
+        rulerItem.Click += (_, _) => SetMode(CaptureMode.Ruler, "ruler");
+        menu.Items.Add(rulerItem);
+
         menu.Items.Add(new ToolStripSeparator());
+
+        // --- 3. Exit / Navigation Actions ---
+        // "Regresar" / "Back"
+        var backItem = WindowsMenuRenderer.Item("Return", iconId: "undo", iconSize: 22);
+        backItem.Click += (_, _) => menu.Close();
+        menu.Items.Add(backItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        // "Cancelar captura" / "Cancel capture" (with "close" X icon)
         var cancelCaptureLabel = LocalizationService.Translate("Cancel capture");
-        var cancelCaptureItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
+        var cancelCaptureItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", danger: true, dangerIconOnly: true, iconSize: 22);
         cancelCaptureItem.Click += (_, _) => Cancel();
         menu.Items.Add(cancelCaptureItem);
 
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 240, itemHeight: 38);
         menu.Show(PointToScreen(clickLocation));
     }
 
