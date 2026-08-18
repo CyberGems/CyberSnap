@@ -721,11 +721,7 @@ public sealed partial class RegionOverlayForm
         ClearRedoEditHistory();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
-        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
-        {
-            MarkToolbarRenderDirty();
-            RefreshToolbar();
-        }
+        UpdateHistoryUtilitiesVisibility(animate: true);
     }
 
     private void ClearRedoEditHistory()
@@ -743,11 +739,7 @@ public sealed partial class RegionOverlayForm
             command.Dispose();
         _editUndoStack.Clear();
         _editRedoStack.Clear();
-        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
-        {
-            MarkToolbarRenderDirty();
-            RefreshToolbar();
-        }
+        UpdateHistoryUtilitiesVisibility(animate: false);
     }
 
     private void RefreshNextStepNumber()
@@ -1134,10 +1126,12 @@ public sealed partial class RegionOverlayForm
         ResetSelectedAnnotationState();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
-        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
+        UpdateHistoryUtilitiesVisibility(animate: true);
+        if (!HasConfirmAnnotations() && string.Equals(_activeToolId, "eraser", StringComparison.OrdinalIgnoreCase))
         {
-            MarkToolbarRenderDirty();
-            RefreshToolbar();
+            var selectTool = _flyoutTools.FirstOrDefault(t => string.Equals(t.Id, "select", StringComparison.OrdinalIgnoreCase));
+            if (selectTool != null)
+                SetTool(selectTool, showHelpBanner: false);
         }
         Invalidate();
         return true;
@@ -1155,11 +1149,7 @@ public sealed partial class RegionOverlayForm
         ResetSelectedAnnotationState();
         RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
-        if (ShowAnnotationChrome && !IsDisposed && !Disposing)
-        {
-            MarkToolbarRenderDirty();
-            RefreshToolbar();
-        }
+        UpdateHistoryUtilitiesVisibility(animate: true);
         Invalidate();
         return true;
     }
@@ -1363,6 +1353,8 @@ public sealed partial class RegionOverlayForm
         _hoveredConfirmSizeReadout = false;
         ResetConfirmModesExpanded(collapsed: true);
         ResetAnnotationToolsExpanded(collapsed: true);
+        _historyUtilitiesRevealAmt = (HasConfirmAnnotations() || _editUndoStack.Count > 0) ? 1f : 0f;
+        _historyUtilitiesTargetAmt = _historyUtilitiesRevealAmt;
 
         // Annotation column FIRST, then destination pills. Laying out pills before CalcToolbar
         // used the capture-phase toolbar rect and shoved the dock toward the left of the monitor
@@ -1471,6 +1463,62 @@ public sealed partial class RegionOverlayForm
             }
             RememberAnnotationDrawingToolId(preferred.Id);
         }
+    }
+
+    private void UpdateHistoryUtilitiesVisibility(bool animate = true)
+    {
+        bool shouldShow = HasConfirmAnnotations() || _editUndoStack.Count > 0;
+        float target = shouldShow ? 1f : 0f;
+        if (Math.Abs(_historyUtilitiesTargetAmt - target) < 0.001f)
+        {
+            if (ShowAnnotationChrome && !IsDisposed && !Disposing)
+            {
+                MarkToolbarRenderDirty();
+                RefreshToolbar();
+            }
+            return;
+        }
+
+        _historyUtilitiesTargetAmt = target;
+        if (!animate || UI.Motion.Disabled)
+        {
+            _historyUtilitiesAnimTimer?.Stop();
+            _historyUtilitiesRevealAmt = target;
+            if (ShowAnnotationChrome && !IsDisposed && !Disposing)
+            {
+                MarkToolbarRenderDirty();
+                RefreshToolbar();
+            }
+            return;
+        }
+
+        _historyUtilitiesAnimTimer ??= new System.Windows.Forms.Timer { Interval = 16 };
+        _historyUtilitiesAnimTimer.Tick -= OnHistoryUtilitiesAnimTick;
+        _historyUtilitiesAnimTimer.Tick += OnHistoryUtilitiesAnimTick;
+        _historyUtilitiesAnimTimer.Start();
+    }
+
+    private void OnHistoryUtilitiesAnimTick(object? sender, EventArgs e)
+    {
+        if (IsDisposed || Disposing || !ShowAnnotationChrome)
+        {
+            _historyUtilitiesAnimTimer?.Stop();
+            return;
+        }
+
+        float diff = _historyUtilitiesTargetAmt - _historyUtilitiesRevealAmt;
+        if (Math.Abs(diff) < 0.02f)
+        {
+            _historyUtilitiesRevealAmt = _historyUtilitiesTargetAmt;
+            _historyUtilitiesAnimTimer?.Stop();
+        }
+        else
+        {
+            _historyUtilitiesRevealAmt += diff * 0.28f;
+        }
+
+        MarkToolbarRenderDirty();
+        RefreshToolbar();
     }
 
     private void ResetAnnotationToolsExpanded(bool collapsed)

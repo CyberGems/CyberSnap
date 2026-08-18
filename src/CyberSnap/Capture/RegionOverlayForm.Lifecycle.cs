@@ -637,6 +637,8 @@ public sealed partial class RegionOverlayForm
             _annotationToolsExpandTimer.Dispose();
             _annotationToolsCollapseTimer.Stop();
             _annotationToolsCollapseTimer.Dispose();
+            _historyUtilitiesAnimTimer?.Stop();
+            _historyUtilitiesAnimTimer?.Dispose();
             _hoverHoldTimer?.Stop();
             _hoverHoldTimer?.Dispose();
             _magGfx.Dispose();

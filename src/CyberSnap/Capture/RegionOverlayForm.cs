@@ -155,6 +155,12 @@ public sealed partial class RegionOverlayForm : Form
     private string? _annotationDrawingToolId;
     /// <summary>Growing clip window for retractable tools above the sticky cluster.</summary>
     private Rectangle _annotationRetractRevealRect = Rectangle.Empty;
+    /// <summary>Reveal fraction for undo + eraser utilities (0..1). Slides in when annotations exist.</summary>
+    private float _historyUtilitiesRevealAmt;
+    private float _historyUtilitiesTargetAmt;
+    private System.Windows.Forms.Timer? _historyUtilitiesAnimTimer;
+    /// <summary>Clip window for sliding undo + eraser utilities.</summary>
+    private Rectangle _annotationHistoryRevealRect = Rectangle.Empty;
     /// <summary>
     /// Stable host rect (full expanded height, bottom-flush). ToolbarForm keeps this size so
     /// expand/collapse only repaints — resizing the layered HWND caused DPI ghost trails.
@@ -1047,8 +1053,13 @@ public sealed partial class RegionOverlayForm : Form
         // Active selection chrome reads tighter against the brand; keep inactive spacing as-is.
         int gapBrandToActiveTrigger = triggerActive ? UiChrome.ScaleInt(8) : 0;
 
+        float historyReveal = Math.Clamp(_historyUtilitiesRevealAmt, 0f, 1f);
+        int historyUnit = buttonSize + buttonSpacing;
+        int fullHistoryContent = historyUnit * 2; // for undo and eraser
+        int dynamicHistorySpan = (int)Math.Round(fullHistoryContent * historyReveal);
+
         // Measure sticky + retractable spans so the column can grow upward from the frame bottom.
-        // GroupGap around the painted separators: trigger | color/stroke | eraser/select.
+        // GroupGap around the painted separators: trigger | color/stroke | utilities.
         int stickySpan = 0;
         if (triggerIdx >= 0)
             stickySpan += buttonSize;
@@ -1058,18 +1069,8 @@ public sealed partial class RegionOverlayForm : Form
         stickySpan += buttonSpacing;
         stickySpan += buttonSize; // stroke
         stickySpan += GroupGap;
-        int pinnedUtilityCount = 0;
-        for (int i = 0; i < _flyoutTools.Length; i++)
-        {
-            if (i == triggerIdx)
-                continue;
-            if (!IsPinnedAnnotationUtility(_flyoutTools[i].Id))
-                continue;
-            if (pinnedUtilityCount > 0)
-                stickySpan += buttonSpacing;
-            stickySpan += buttonSize;
-            pinnedUtilityCount++;
-        }
+        stickySpan += dynamicHistorySpan;
+        stickySpan += buttonSize; // select is always visible
 
         // Full retractable content height (icons stay full-size; the column height lerps).
         int fullRetractContent = 0;
@@ -1199,21 +1200,38 @@ public sealed partial class RegionOverlayForm : Form
         _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
         cy += buttonSize + GroupGap;
 
-        void PlacePinnedUtility(string id)
+        int historyAreaTop = cy;
+        _annotationHistoryRevealRect = dynamicHistorySpan > 0
+            ? new Rectangle(colX, historyAreaTop, buttonSize, dynamicHistorySpan)
+            : Rectangle.Empty;
+
+        if (dynamicHistorySpan > 0 && historyReveal > 0.001f)
         {
-            for (int i = 0; i < _flyoutTools.Length; i++)
+            int placeY = historyAreaTop + dynamicHistorySpan - fullHistoryContent;
+            void PlaceHistoryUtility(string id)
             {
-                if (!string.Equals(_flyoutTools[i].Id, id, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
-                cy += buttonSize + buttonSpacing;
-                return;
+                for (int i = 0; i < _flyoutTools.Length; i++)
+                {
+                    if (!string.Equals(_flyoutTools[i].Id, id, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, placeY, buttonSize, buttonSize);
+                    placeY += buttonSize + buttonSpacing;
+                    return;
+                }
             }
+            PlaceHistoryUtility("undo");
+            PlaceHistoryUtility("eraser");
         }
 
-        PlacePinnedUtility("undo");
-        PlacePinnedUtility("eraser");
-        PlacePinnedUtility("select");
+        cy = historyAreaTop + dynamicHistorySpan;
+
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            if (!string.Equals(_flyoutTools[i].Id, "select", StringComparison.OrdinalIgnoreCase))
+                continue;
+            _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            break;
+        }
 
         // Overflow menu moved to the confirm-frame gear pill — keep activator empty here
         // so capture-phase CalcCaptureOnlyToolbar remains the only place that paints ⋯.
