@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CyberSnap.Capture;
 using CyberSnap.Helpers;
@@ -17,6 +18,10 @@ namespace CyberSnap.UI.Editor;
 /// </summary>
 internal sealed class EmojiPickerPopup : Form
 {
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
+    private const int EM_SETCUEBANNER = 0x1501;
+
     private readonly EmojiRenderer _renderer = new();
     private readonly EmojiGrid _grid;
     private readonly TextBox _search;
@@ -59,6 +64,15 @@ internal sealed class EmojiPickerPopup : Form
             Height = 28,
             PlaceholderText = LocalizationService.Translate("Search..."),
         };
+        void ApplyCueBanner()
+        {
+            if (_search.IsHandleCreated)
+            {
+                SendMessage(_search.Handle, EM_SETCUEBANNER, (IntPtr)1, LocalizationService.Translate("Search..."));
+            }
+        }
+        _search.HandleCreated += (_, _) => ApplyCueBanner();
+        ApplyCueBanner();
         _search.TextChanged += (_, _) => _grid.SetFilter(_search.Text);
         _search.KeyDown += (sender, e) =>
         {

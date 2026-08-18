@@ -165,41 +165,6 @@ public sealed partial class RegionOverlayForm
                 }
             }
         }
-        else
-        {
-            // Annotation dock: sticky trigger/color/stroke/eraser/select + retractable strip.
-            // Dividers only between buttons that are actual Y-neighbors (never flyout-index midpoints
-            // across the sticky/retractable split — that put lines over tools like Flecha).
-            void AddMidY(Rectangle above, Rectangle below)
-            {
-                if (above.Width <= 0 || below.Width <= 0) return;
-                int gap = below.Y - above.Bottom;
-                if (gap < 0 || gap > GroupGap + UiChrome.ScaleInt(4))
-                    return; // not visually adjacent
-                dividerPositions.Add((above.Bottom + below.Y) / 2);
-            }
-
-            int flyoutStartIdx = FlyoutStartIndex;
-
-            // Single unified divider on the annotation dock: separates the drawing suite
-            // (all tools + color + stroke) from the bottom utilities (undo / eraser / select).
-            if (StrokeWidthButtonIndex < _toolbarButtons.Length
-                && _toolbarButtons[StrokeWidthButtonIndex].Width > 0)
-            {
-                for (int i = 0; i < _flyoutTools.Length; i++)
-                {
-                    if (!string.Equals(_flyoutTools[i].Id, "undo", StringComparison.OrdinalIgnoreCase)
-                        && !string.Equals(_flyoutTools[i].Id, "eraser", StringComparison.OrdinalIgnoreCase)
-                        && !string.Equals(_flyoutTools[i].Id, "select", StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    if (_toolbarButtons[flyoutStartIdx + i].Width > 0)
-                    {
-                        AddMidY(_toolbarButtons[StrokeWidthButtonIndex], _toolbarButtons[flyoutStartIdx + i]);
-                        break;
-                    }
-                }
-            }
-        }
 
         foreach (int pos in dividerPositions.Distinct())
         {
