@@ -572,11 +572,11 @@ public sealed partial class RegionOverlayForm : Form
     private int _emojiWarmupIndex;
     private bool _emojiWarmupPending;
     private const int EmojiPickerColumns = 8;
-    private const int EmojiPickerVisibleRows = 4;
-    private const int EmojiPickerIconSize = 32;
-    private const int EmojiPickerPadding = 8;
-    private const int EmojiPickerSearchBarHeight = 32;
-    private const float EmojiPickerRenderSize = 22f;
+    private const int EmojiPickerVisibleRows = 8;
+    private const int EmojiPickerIconSize = 40;
+    private const int EmojiPickerPadding = 10;
+    private const int EmojiPickerSearchBarHeight = 28;
+    private const float EmojiPickerRenderSize = 24f;
 
     // Full emoji palette (searchable by name) — shared with the editor's emoji picker.
     private static readonly (string emoji, string name)[] EmojiPalette = EmojiCatalog.Items;
@@ -1059,12 +1059,10 @@ public sealed partial class RegionOverlayForm : Form
         int dynamicHistorySpan = (int)Math.Round(fullHistoryContent * historyReveal);
 
         // Measure sticky + retractable spans so the column can grow upward from the frame bottom.
-        // GroupGap around the painted separators: trigger | color/stroke | utilities.
+        // Single GroupGap before utilities: [tools + color + stroke] | [utilities].
         int stickySpan = 0;
         if (triggerIdx >= 0)
-            stickySpan += buttonSize;
-        if (triggerIdx >= 0)
-            stickySpan += GroupGap;
+            stickySpan += buttonSize + buttonSpacing;
         stickySpan += buttonSize; // color
         stickySpan += buttonSpacing;
         stickySpan += buttonSize; // stroke
@@ -1087,7 +1085,7 @@ public sealed partial class RegionOverlayForm : Form
 
         int retractSpan = (int)Math.Round(fullRetractContent * expandAmt);
         int retractToStickyGap = (fullRetractContent > 0 && stickySpan > 0 && expandAmt > 0.001f)
-            ? (int)Math.Round(GroupGap * expandAmt)
+            ? (int)Math.Round(buttonSpacing * expandAmt)
             : 0;
 
         // Extra air only when the trigger sits directly under the brand (collapsed).
@@ -1187,12 +1185,12 @@ public sealed partial class RegionOverlayForm : Form
         if (retractSpan > 0 && stickySpan > 0)
             cy += retractToStickyGap;
 
-        // Sticky: drawing-tool trigger → color → stroke → eraser → select (utilities never move)
+        // Sticky: drawing-tool trigger → color → stroke → [separator] → utilities
         if (triggerIdx >= 0)
         {
             cy += brandToTriggerExtra;
             _toolbarButtons[drawingStartIdx + triggerIdx] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            cy += buttonSize + GroupGap;
+            cy += buttonSize + buttonSpacing;
         }
 
         _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);

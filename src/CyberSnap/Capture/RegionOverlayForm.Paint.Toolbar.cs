@@ -180,75 +180,24 @@ public sealed partial class RegionOverlayForm
             }
 
             int flyoutStartIdx = FlyoutStartIndex;
-            int triggerIdx = GetAnnotationTriggerFlyoutIndex();
 
-            // Sticky separators: trigger | color/stroke | eraser/select
-            if (triggerIdx >= 0
-                && ColorButtonIndex < _toolbarButtons.Length
-                && _toolbarButtons[ColorButtonIndex].Width > 0)
-            {
-                AddMidY(_toolbarButtons[flyoutStartIdx + triggerIdx], _toolbarButtons[ColorButtonIndex]);
-            }
-
+            // Single unified divider on the annotation dock: separates the drawing suite
+            // (all tools + color + stroke) from the bottom utilities (undo / eraser / select).
             if (StrokeWidthButtonIndex < _toolbarButtons.Length
                 && _toolbarButtons[StrokeWidthButtonIndex].Width > 0)
             {
                 for (int i = 0; i < _flyoutTools.Length; i++)
                 {
                     if (!string.Equals(_flyoutTools[i].Id, "undo", StringComparison.OrdinalIgnoreCase)
-                        && !string.Equals(_flyoutTools[i].Id, "eraser", StringComparison.OrdinalIgnoreCase))
+                        && !string.Equals(_flyoutTools[i].Id, "eraser", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(_flyoutTools[i].Id, "select", StringComparison.OrdinalIgnoreCase))
                         continue;
-                    AddMidY(_toolbarButtons[StrokeWidthButtonIndex], _toolbarButtons[flyoutStartIdx + i]);
-                    break;
+                    if (_toolbarButtons[flyoutStartIdx + i].Width > 0)
+                    {
+                        AddMidY(_toolbarButtons[StrokeWidthButtonIndex], _toolbarButtons[flyoutStartIdx + i]);
+                        break;
+                    }
                 }
-            }
-
-            // Retractable strip: same placement order as layout (high flyout index → top).
-            // Sep indices mark "after tool N" in flyout order; when sticky tools are pulled out,
-            // find the visual neighbors that still sandwich that boundary.
-            var tier2Seps = GetAnnotationGroupSepFlyoutIndices();
-            var retractOrdered = new List<int>();
-            for (int i = _flyoutTools.Length - 1; i >= 0; i--)
-            {
-                if (!IsRetractableAnnotationFlyoutIndex(i, triggerIdx))
-                    continue;
-                int btnIdx = flyoutStartIdx + i;
-                if (btnIdx >= _toolbarButtons.Length || _toolbarButtons[btnIdx].Width <= 0)
-                    continue;
-                if (!_annotationRetractRevealRect.IsEmpty
-                    && !_toolbarButtons[btnIdx].IntersectsWith(_annotationRetractRevealRect))
-                    continue;
-                retractOrdered.Add(i);
-            }
-
-            for (int k = 0; k < retractOrdered.Count - 1; k++)
-            {
-                int aboveFly = retractOrdered[k];
-                int belowFly = retractOrdered[k + 1];
-                int lo = Math.Min(aboveFly, belowFly);
-                int hi = Math.Max(aboveFly, belowFly);
-                bool needSep = false;
-                for (int s = lo; s < hi; s++)
-                {
-                    if (!tier2Seps.Contains(s))
-                        continue;
-                    needSep = true;
-                    break;
-                }
-                if (!needSep)
-                    continue;
-                AddMidY(
-                    _toolbarButtons[flyoutStartIdx + aboveFly],
-                    _toolbarButtons[flyoutStartIdx + belowFly]);
-            }
-
-            // Group break between retractable strip and sticky trigger.
-            if (triggerIdx >= 0 && retractOrdered.Count > 0)
-            {
-                int bottomRetract = retractOrdered[^1];
-                AddMidY(
-                    _toolbarButtons[flyoutStartIdx + bottomRetract],
-                    _toolbarButtons[flyoutStartIdx + triggerIdx]);
             }
         }
 

@@ -444,10 +444,10 @@ public sealed partial class RegionOverlayForm
         int gridY = _emojiPickerRect.Y + pad + searchBarH + pad;
         int relX = p.X - _emojiPickerRect.X - pad;
         int relY = p.Y - gridY;
-        int col = relX / (emojiSize + pad);
-        int row = relY / (emojiSize + pad);
+        int col = relX / emojiSize;
+        int row = relY / emojiSize;
         int idx = (_emojiScrollOffset + row) * cols + col;
-        return col >= 0 && col < cols && row >= 0 && idx >= 0 && idx < filtered.Length;
+        return col >= 0 && col < cols && row >= 0 && row < EmojiPickerVisibleRows && idx >= 0 && idx < filtered.Length;
     }
 
     private bool IsPointInColorPickerSwatch(Point p)
@@ -474,11 +474,11 @@ public sealed partial class RegionOverlayForm
 
         int relX = p.X - _emojiPickerRect.X - pad;
         int relY = p.Y - gridY;
-        int col = relX / (emojiSize + pad);
-        int row = relY / (emojiSize + pad);
+        int col = relX / emojiSize;
+        int row = relY / emojiSize;
         int idx = (_emojiScrollOffset + row) * cols + col;
 
-        if (col >= 0 && col < cols && row >= 0 && idx < filtered.Length)
+        if (col >= 0 && col < cols && row >= 0 && row < EmojiPickerVisibleRows && idx >= 0 && idx < filtered.Length)
         {
             _selectedEmoji = filtered[idx].emoji;
             _isPlacingEmoji = true;

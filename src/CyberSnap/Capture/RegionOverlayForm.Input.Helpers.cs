@@ -257,8 +257,8 @@ public sealed partial class RegionOverlayForm
                 _emojiScrollOffset = 0;
                 int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding, visibleRows = EmojiPickerVisibleRows;
                 int searchBarH = EmojiPickerSearchBarHeight;
-                int pw = cols * (emojiSize + pad) + pad;
-                int ph = searchBarH + pad + visibleRows * (emojiSize + pad) + pad;
+                int pw = cols * emojiSize + pad * 2;
+                int ph = pad + searchBarH + pad + visibleRows * emojiSize + pad;
                 _emojiPickerRect = PositionPopupFromAnchor(_toolbarRect, pw, ph);
                 EnsureToolbarReady();
                 ShowEmojiSearchBox();
@@ -569,8 +569,8 @@ public sealed partial class RegionOverlayForm
         int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding;
         int searchBarH = EmojiPickerSearchBarHeight;
         int visibleRows = EmojiPickerVisibleRows;
-        int pw = cols * (emojiSize + pad) + pad;
-        int ph = searchBarH + pad + visibleRows * (emojiSize + pad) + pad;
+        int pw = cols * emojiSize + pad * 2;
+        int ph = pad + searchBarH + pad + visibleRows * emojiSize + pad;
         return PositionPopupFromAnchor(_toolbarRect, pw, ph);
     }
 
