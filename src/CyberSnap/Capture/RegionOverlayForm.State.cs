@@ -340,7 +340,7 @@ public sealed partial class RegionOverlayForm
                 ? _annotationFrameDockSide == CaptureDockSide.Right
                 : IsRightDock;
 
-            x = isRight ? anchor.X - width - gap : anchor.Right + gap;
+            x = isRight ? anchor.Right + gap : anchor.X - width - gap;
             y = anchor.Y + (anchor.Height / 2) - (height / 2);
             var margin = Helpers.UiChrome.ScaleInt(8);
             y = Math.Clamp(y, clampBounds.Top + margin, Math.Max(clampBounds.Top + margin, clampBounds.Bottom - height - margin));
