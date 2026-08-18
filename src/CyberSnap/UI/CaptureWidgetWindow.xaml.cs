@@ -1018,8 +1018,8 @@ public partial class CaptureWidgetWindow : Window
         _dragStartPoint = GetCursorPositionInDips();
         _dragStartOffset = _settings.WidgetDockPositionOffset;
         CaptureMouse();
-        Cursor = System.Windows.Input.Cursors.Hand;
-        Mouse.OverrideCursor = System.Windows.Input.Cursors.Hand;
+        Cursor = System.Windows.Input.Cursors.SizeAll;
+        Mouse.OverrideCursor = System.Windows.Input.Cursors.SizeAll;
         ForceCursor = true;
         e.Handled = true;
     }
@@ -1633,14 +1633,14 @@ public partial class CaptureWidgetWindow : Window
     [DllImport("user32.dll")]
     private static extern IntPtr SetCursor(IntPtr hCursor);
 
-    private const int IDC_HAND = 32649;
+    private const int IDC_SIZEALL = 32646;
     private const int WM_SETCURSOR = 0x0020;
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (msg == WM_SETCURSOR && (_isDragging || _isDragArmed))
         {
-            var hCursor = LoadCursor(IntPtr.Zero, IDC_HAND);
+            var hCursor = LoadCursor(IntPtr.Zero, IDC_SIZEALL);
             SetCursor(hCursor);
             handled = true;
             return (IntPtr)1;

@@ -71,32 +71,90 @@
             </Setter>
         </Style>
 
-        <!-- Toggle Switch Style (Cyberpunk neon look) -->
+        <!-- Premium Modern Toggle Switch Style -->
         <Style x:Key="WidgetToggleSwitch" TargetType="ToggleButton">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Width" Value="32"/>
+            <Setter Property="Width" Value="34"/>
             <Setter Property="Height" Value="18"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Grid>
-                            <Border x:Name="Track" Width="32" Height="18" CornerRadius="9"
-                                    Background="{DynamicResource WidgetToggleTrackBg}" BorderBrush="{DynamicResource WidgetToggleTrackBorder}" BorderThickness="1"/>
-                            <Border x:Name="Thumb" Width="14" Height="14" CornerRadius="7"
-                                    Background="{DynamicResource WidgetToggleThumbBg}" HorizontalAlignment="Left" Margin="2,0,0,0"/>
+                        <Grid Width="34" Height="18" Background="Transparent" SnapsToDevicePixels="True">
+                            <!-- Track Background -->
+                            <Border x:Name="Track" Width="34" Height="18" CornerRadius="9"
+                                    Background="{DynamicResource WidgetToggleTrackBg}"
+                                    BorderBrush="{DynamicResource WidgetToggleTrackBorder}"
+                                    BorderThickness="1.2"
+                                    SnapsToDevicePixels="True"/>
+
+                            <!-- Thumb (Smooth Sliding with Drop Shadow) -->
+                            <Border x:Name="Thumb" Width="12" Height="12" CornerRadius="6"
+                                    HorizontalAlignment="Left" Margin="3,3,0,3"
+                                    Background="{DynamicResource WidgetToggleThumbBg}"
+                                    SnapsToDevicePixels="True">
+                                <Border.RenderTransform>
+                                    <TranslateTransform x:Name="ThumbOffset" X="0"/>
+                                </Border.RenderTransform>
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="3" ShadowDepth="1" Direction="270" Opacity="0.35"/>
+                                </Border.Effect>
+                            </Border>
                         </Grid>
+
                         <ControlTemplate.Triggers>
+                            <!-- Checked State -->
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Track" Property="Background" Value="{DynamicResource WidgetAccent}"/>
                                 <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WidgetAccent}"/>
-                                <Setter TargetName="Thumb" Property="Background" Value="White"/>
-                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,2,0"/>
+                                <Setter TargetName="Thumb" Property="Background" Value="#FFFFFF"/>
+                                <Setter TargetName="Track" Property="Effect" Value="{StaticResource CyanGlow}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbOffset"
+                                                             Storyboard.TargetProperty="X"
+                                                             To="16" Duration="0:0:0.14">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbOffset"
+                                                             Storyboard.TargetProperty="X"
+                                                             To="0" Duration="0:0:0.14">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
+
+                            <!-- Mouse Over States -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Thumb" Property="Background" Value="{DynamicResource WidgetToggleThumbHoverBg}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WidgetAccentHover}"/>
                             </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="False"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Thumb" Property="Background" Value="{DynamicResource WidgetToggleThumbHoverBg}"/>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource WidgetAccentHover}"/>
+                            </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -135,16 +193,17 @@
                         </Border>
                     </Border>
 
-                <Grid x:Name="ControlsGrid" Margin="12,10,12,12">
+                <Grid x:Name="ControlsGrid" Margin="12,10,12,8">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + Config -->
+                        <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + Config (Draggable) -->
                         <RowDefinition Height="Auto"/> <!-- Capture Button -->
                         <RowDefinition Height="Auto"/> <!-- Quick Actions -->
                         <RowDefinition Height="Auto"/> <!-- Settings / Toggles -->
+                        <RowDefinition Height="Auto"/> <!-- Footer Drag Grip Area -->
                     </Grid.RowDefinitions>
 
-                    <!-- Top Title Bar -->
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <!-- Top Title Bar (Draggable Header) -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10" Background="Transparent" Cursor="SizeAll">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -204,9 +263,15 @@
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Grid Background="Transparent">
-                                        <!-- Glow/Outer Ring -->
-                                        <Path x:Name="OuterRing" Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2" Fill="{DynamicResource WidgetAccent}" Stretch="Uniform" Width="54" Height="54"/>
-                                        <!-- Center content: scales (A) + glow intensifies (B) on hover -->
+                                        <!-- Outer Ring with scaling + glow on hover -->
+                                        <Path x:Name="OuterRing" Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2"
+                                              Fill="{DynamicResource WidgetAccent}" Stretch="Uniform" Width="54" Height="54"
+                                              RenderTransformOrigin="0.5,0.5">
+                                            <Path.RenderTransform>
+                                                <ScaleTransform x:Name="RingScale" ScaleX="1" ScaleY="1"/>
+                                            </Path.RenderTransform>
+                                        </Path>
+                                        <!-- Center content: scales + glow intensifies on hover -->
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                                           RenderTransformOrigin="0.5,0.5">
                                             <ContentPresenter.RenderTransform>
@@ -220,21 +285,30 @@
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="OuterRing" Property="Effect" Value="{DynamicResource CyanGlow}"/>
+                                            <Setter TargetName="OuterRing" Property="Fill" Value="{DynamicResource WidgetAccentHover}"/>
                                             <Trigger.EnterActions>
                                                 <BeginStoryboard>
                                                     <Storyboard>
-                                                        <!-- A: subtle pop -->
+                                                        <!-- A: pop center & outer ring -->
+                                                        <DoubleAnimation Storyboard.TargetName="RingScale" Storyboard.TargetProperty="ScaleX"
+                                                                         To="1.06" Duration="0:0:0.12">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetName="RingScale" Storyboard.TargetProperty="ScaleY"
+                                                                         To="1.06" Duration="0:0:0.12">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
                                                         <DoubleAnimation Storyboard.TargetName="CenterScale" Storyboard.TargetProperty="ScaleX"
-                                                                         To="1.25" Duration="0:0:0.12">
-                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                                         To="1.30" Duration="0:0:0.12">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
                                                         <DoubleAnimation Storyboard.TargetName="CenterScale" Storyboard.TargetProperty="ScaleY"
-                                                                         To="1.25" Duration="0:0:0.12">
-                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                                         To="1.30" Duration="0:0:0.12">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
                                                         <!-- B: center glow intensifies -->
                                                         <DoubleAnimation Storyboard.TargetName="CenterGlow" Storyboard.TargetProperty="BlurRadius"
-                                                                         To="20" Duration="0:0:0.12"/>
+                                                                         To="22" Duration="0:0:0.12"/>
                                                         <DoubleAnimation Storyboard.TargetName="CenterGlow" Storyboard.TargetProperty="Opacity"
                                                                          To="1" Duration="0:0:0.12"/>
                                                     </Storyboard>
@@ -243,6 +317,14 @@
                                             <Trigger.ExitActions>
                                                 <BeginStoryboard>
                                                     <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="RingScale" Storyboard.TargetProperty="ScaleX"
+                                                                         To="1" Duration="0:0:0.18">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetName="RingScale" Storyboard.TargetProperty="ScaleY"
+                                                                         To="1" Duration="0:0:0.18">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
                                                         <DoubleAnimation Storyboard.TargetName="CenterScale" Storyboard.TargetProperty="ScaleX"
                                                                          To="1" Duration="0:0:0.18">
                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
@@ -350,6 +432,14 @@
                                           AutomationProperties.Name="Capture cursor"
                                           AutomationProperties.HelpText="Include the mouse pointer in image captures, video, and GIF"/>
                         </Grid>
+                    </Grid>
+
+                    <!-- Footer Drag Grip Area (Draggable Footer) -->
+                    <Grid Grid.Row="4" Margin="0,8,0,0" Height="10" Background="Transparent" Cursor="SizeAll">
+                        <Border Width="24" Height="3" CornerRadius="1.5"
+                                Background="{DynamicResource WidgetTextMuted}"
+                                Opacity="0.22"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                 </Grid>
                 </Grid>
