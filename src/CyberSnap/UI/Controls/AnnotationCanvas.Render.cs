@@ -134,15 +134,13 @@ public sealed partial class AnnotationCanvas
         }
 
         // Zoomed out (< 1): the expensive bicubic-downscale case.
-        // During an active zoom gesture, stretch the last settled cache (≈ screen-sized,
-        // far fewer source pixels to sample than the full-res bitmap) for a cheap draft;
-        // the settle timer then rebuilds the crisp cache once. Only the full source as a
-        // fallback when no cache exists yet.
+        // During an active zoom gesture, draw with fast bilinear filtering directly from the base bitmap;
+        // the settle timer then rebuilds the crisp high-quality bicubic cache once zooming stops.
         if (_zoomInteracting)
         {
             g.InterpolationMode = InterpolationMode.Bilinear;
             g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.DrawImage((Image?)_scaledCache ?? _baseBitmap, _pan.X, _pan.Y, scaledW, scaledH);
+            g.DrawImage(_baseBitmap, _pan.X, _pan.Y, scaledW, scaledH);
             return;
         }
 
