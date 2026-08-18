@@ -489,7 +489,7 @@ public sealed partial class EditorForm
             Dock = DockStyle.Top,
             Height = 44,
             BackColor = Color.Transparent,
-            Padding = new Padding(22, 0, 18, 0),
+            Padding = new Padding(0, 0, 18, 0),
         };
         _titleBarPanel.MouseDown += BeginWindowDrag;
 
@@ -503,12 +503,12 @@ public sealed partial class EditorForm
         _brandPanel = brandPanel;
         brandPanel.MouseDown += BeginWindowDrag;
 
-        // Load logo bitmap from Editor.ico
+        // Load logo bitmap from Editor.ico (high-res for scaling)
         if (_brandBitmap == null)
         {
             try
             {
-                using var ico = WindowIcons.WinForms(WindowIconKind.Editor, 32);
+                using var ico = WindowIcons.WinForms(WindowIconKind.Editor, 48);
                 _brandBitmap = ico.ToBitmap();
             }
             catch { }
@@ -521,17 +521,25 @@ public sealed partial class EditorForm
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+            double dpiScale = DeviceDpi / 96.0;
+            double totalScale = dpiScale * UiChrome.UiScale;
+
+            int iconSize = Math.Max(18, (int)Math.Round(17 * totalScale));
+            int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
+            int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
             int cy = brandPanel.Height / 2;
 
             if (_brandBitmap != null)
             {
-                g.DrawImage(_brandBitmap, new Rectangle(14, cy - 8, 17, 17));
+                g.DrawImage(_brandBitmap, new Rectangle(leftPad, cy - (iconSize / 2), iconSize, iconSize));
             }
 
             var titleText = LocalizationService.Translate("Annotations Editor");
-            using var font = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
+            using var font = UiChrome.ChromeFont(10.5f, FontStyle.Bold);
+            int textX = leftPad + iconSize + textGap;
             TextRenderer.DrawText(g, titleText, font,
-                new Rectangle(39, 0, 340, brandPanel.Height),
+                new Rectangle(textX, 0, brandPanel.Width - textX, brandPanel.Height),
                 EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         };
