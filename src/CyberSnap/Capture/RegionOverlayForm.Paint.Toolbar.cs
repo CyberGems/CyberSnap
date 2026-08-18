@@ -275,19 +275,33 @@ public sealed partial class RegionOverlayForm
         // 4. Draw all buttons
         var previousClip = g.Clip;
         bool clipRetract = ShowAnnotationChrome && !_annotationRetractRevealRect.IsEmpty;
+        bool clipHistory = ShowAnnotationChrome && !_annotationHistoryRevealRect.IsEmpty;
         for (int i = 0; i < BtnCount; i++)
         {
             var btn = _toolbarButtons[i];
             if (btn.Width <= 0 || btn.Height <= 0)
                 continue;
 
-            if (IsRetractableAnnotationToolbarButton(i))
+            bool isHistoryUtility = ShowAnnotationChrome &&
+                (string.Equals(_toolbarToolIds[i], "undo", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(_toolbarToolIds[i], "eraser", StringComparison.OrdinalIgnoreCase));
+
+            if (isHistoryUtility)
+            {
+                if (_historyUtilitiesRevealAmt <= 0.001f || !_annotationHistoryRevealRect.IntersectsWith(btn))
+                    continue;
+                if (clipHistory && _historyUtilitiesRevealAmt < 0.999f)
+                    g.SetClip(Rectangle.Intersect(_annotationHistoryRevealRect, Rectangle.Round(g.ClipBounds)), CombineMode.Replace);
+                else
+                    g.Clip = previousClip;
+            }
+            else if (IsRetractableAnnotationToolbarButton(i))
             {
                 if (!clipRetract || !btn.IntersectsWith(_annotationRetractRevealRect))
                     continue;
                 g.SetClip(Rectangle.Intersect(_annotationRetractRevealRect, Rectangle.Round(g.ClipBounds)), CombineMode.Replace);
             }
-            else if (clipRetract)
+            else
             {
                 g.Clip = previousClip;
             }
