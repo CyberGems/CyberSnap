@@ -44,14 +44,15 @@ public static class WindowIcons
         return frame;
     }
 
-    public static DrawingIcon WinForms(WindowIconKind kind)
+    public static DrawingIcon WinForms(WindowIconKind kind, int? size = null)
     {
+        int targetSize = size ?? 0;
         var path = ResolveIconPath(kind);
         if (path != null)
-            return new DrawingIcon(path);
+            return targetSize > 0 ? new DrawingIcon(path, targetSize, targetSize) : new DrawingIcon(path);
 
         using var stream = OpenPackResourceStream(kind);
-        return new DrawingIcon(stream);
+        return targetSize > 0 ? new DrawingIcon(stream, targetSize, targetSize) : new DrawingIcon(stream);
     }
 
     public static string FilePath(WindowIconKind kind) =>
@@ -60,7 +61,7 @@ public static class WindowIcons
     public static string ResourceUri(WindowIconKind kind) =>
         $"pack://application:,,,/Assets/Icons/{FileNames[kind]}";
 
-    private static Stream OpenIconStream(WindowIconKind kind)
+    public static Stream OpenIconStream(WindowIconKind kind)
     {
         var path = ResolveIconPath(kind);
         if (path != null)

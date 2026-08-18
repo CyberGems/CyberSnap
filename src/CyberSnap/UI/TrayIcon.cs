@@ -1,3 +1,4 @@
+using System.IO;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows;
@@ -254,7 +255,17 @@ public sealed class TrayIcon : IDisposable
     private static Icon CreateDefaultIcon()
     {
         Theme.Refresh();
-        return CreateLogoIcon(recording: false);
+        int size = SystemInformation.SmallIconSize.Width;
+        if (size <= 0) size = 16;
+
+        try
+        {
+            return WindowIcons.WinForms(WindowIconKind.Main, size);
+        }
+        catch
+        {
+            return CreateLogoIcon(recording: false);
+        }
     }
 
     private static Icon CreateRecordingIcon()
@@ -267,14 +278,86 @@ public sealed class TrayIcon : IDisposable
     {
         try
         {
-            using var source = LoadLogoBitmap();
-            var icon = CreateOwnedIcon(source);
-            return recording ? OverlayRecordingDot(icon) : icon;
+            int size = SystemInformation.SmallIconSize.Width;
+            if (size <= 0) size = 16;
+
+            Icon baseIcon;
+            try
+            {
+                baseIcon = WindowIcons.WinForms(WindowIconKind.Main, size);
+            }
+            catch
+            {
+                using var source = LoadTrayBitmap(size);
+                baseIcon = CreateOwnedIcon(source);
+            }
+
+            return recording ? OverlayRecordingDot(baseIcon) : baseIcon;
         }
         catch
         {
             return CreateFallbackIcon(recording);
         }
+    }
+
+    private static Bitmap LoadTrayBitmap(int targetSize)
+    {
+        try
+        {
+            using var stream = WindowIcons.OpenIconStream(WindowIconKind.Main);
+            using var buffer = new MemoryStream();
+            stream.CopyTo(buffer);
+            buffer.Position = 0;
+
+            var decoder = BitmapDecoder.Create(buffer, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            var frame = decoder.Frames
+                .OrderBy(f => Math.Abs(f.PixelWidth - targetSize))
+                .ThenByDescending(f => f.PixelWidth)
+                .First();
+
+            return BitmapSourceToGdiBitmap(frame, targetSize);
+        }
+        catch
+        {
+            using var source = LoadLogoBitmap();
+            var target = new Bitmap(targetSize, targetSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using var g = Graphics.FromImage(target);
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.CompositingQuality = CompositingQuality.HighQuality;
+            g.DrawImage(source, new Rectangle(0, 0, targetSize, targetSize));
+            return target;
+        }
+    }
+
+    private static Bitmap BitmapSourceToGdiBitmap(BitmapSource frame, int targetSize)
+    {
+        var converted = new FormatConvertedBitmap(frame, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+        int stride = converted.PixelWidth * 4;
+        byte[] pixels = new byte[stride * converted.PixelHeight];
+        converted.CopyPixels(pixels, stride, 0);
+
+        var srcBmp = new Bitmap(converted.PixelWidth, converted.PixelHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        var data = srcBmp.LockBits(new Rectangle(0, 0, converted.PixelWidth, converted.PixelHeight),
+            System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        System.Runtime.InteropServices.Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+        srcBmp.UnlockBits(data);
+
+        if (srcBmp.Width == targetSize && srcBmp.Height == targetSize)
+            return srcBmp;
+
+        var resized = new Bitmap(targetSize, targetSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using (var g = Graphics.FromImage(resized))
+        {
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.CompositingQuality = CompositingQuality.HighQuality;
+            g.DrawImage(srcBmp, new Rectangle(0, 0, targetSize, targetSize));
+        }
+        srcBmp.Dispose();
+        return resized;
     }
 
     private static Bitmap LoadLogoBitmap()
@@ -291,14 +374,10 @@ public sealed class TrayIcon : IDisposable
         converted.CopyPixels(pixels, stride, 0);
 
         var bitmap = new Bitmap(frame.PixelWidth, frame.PixelHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-        for (int y = 0; y < frame.PixelHeight; y++)
-        {
-            for (int x = 0; x < frame.PixelWidth; x++)
-            {
-                int i = y * stride + x * 4;
-                bitmap.SetPixel(x, y, Color.FromArgb(pixels[i + 3], pixels[i + 2], pixels[i + 1], pixels[i]));
-            }
-        }
+        var data = bitmap.LockBits(new Rectangle(0, 0, frame.PixelWidth, frame.PixelHeight),
+            System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        System.Runtime.InteropServices.Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+        bitmap.UnlockBits(data);
 
         return bitmap;
     }
@@ -306,11 +385,15 @@ public sealed class TrayIcon : IDisposable
     private static Icon OverlayRecordingDot(Icon baseIcon)
     {
         using var baseBmp = baseIcon.ToBitmap();
-        var bmp = new Bitmap(baseBmp.Width, baseBmp.Height);
+        var bmp = new Bitmap(baseBmp.Width, baseBmp.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         using var g = Graphics.FromImage(bmp);
-        g.DrawImage(baseBmp, 0, 0);
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        int d = Math.Max(8, bmp.Width / 3);
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.CompositingQuality = CompositingQuality.HighQuality;
+        g.DrawImage(baseBmp, 0, 0);
+
+        int d = Math.Max(6, (int)Math.Round(bmp.Width * 0.38));
         int x = bmp.Width - d - 1, y = bmp.Height - d - 1;
         using var white = new SolidBrush(Color.White);
         g.FillEllipse(white, x - 1, y - 1, d + 2, d + 2);
@@ -323,21 +406,26 @@ public sealed class TrayIcon : IDisposable
 
     private static Icon CreateFallbackIcon(bool recording)
     {
+        int size = SystemInformation.SmallIconSize.Width;
+        if (size <= 0) size = 16;
         var strokeColor = Theme.IsDark ? Color.White : Color.Black;
-        var bmp = new Bitmap(32, 32);
+        var bmp = new Bitmap(size, size, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         using var g = Graphics.FromImage(bmp);
         g.Clear(Color.FromArgb(0, 0, 0, 0));
-        using var pen = new Pen(strokeColor, 3f);
+        using var pen = new Pen(strokeColor, Math.Max(1.5f, size / 10f));
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.DrawLine(pen, 6, 4, 16, 16);
-        g.DrawLine(pen, 26, 4, 16, 16);
-        g.DrawLine(pen, 16, 16, 16, 28);
+        float half = size / 2f;
+        g.DrawLine(pen, size * 0.18f, size * 0.12f, half, half);
+        g.DrawLine(pen, size * 0.82f, size * 0.12f, half, half);
+        g.DrawLine(pen, half, half, half, size * 0.88f);
         if (recording)
         {
+            int d = Math.Max(6, (int)Math.Round(size * 0.38));
+            int x = size - d - 1, y = size - d - 1;
             using var halo = new SolidBrush(strokeColor);
-            g.FillEllipse(halo, 20, 21, 12, 12);
+            g.FillEllipse(halo, x - 1, y - 1, d + 2, d + 2);
             using var red = new SolidBrush(Color.FromArgb(239, 68, 68));
-            g.FillEllipse(red, 21, 22, 10, 10);
+            g.FillEllipse(red, x, y, d, d);
         }
         return CreateOwnedIcon(bmp);
     }
@@ -353,14 +441,43 @@ public sealed class TrayIcon : IDisposable
 
     private static Icon CreateOwnedIcon(Bitmap bitmap)
     {
-        var handle = bitmap.GetHicon();
+        IntPtr hbmColor = bitmap.GetHbitmap(Color.FromArgb(0, 0, 0, 0));
+        IntPtr hbmMask = Native.Gdi32.CreateBitmap(bitmap.Width, bitmap.Height, 1, 1, IntPtr.Zero);
+
+        var iconInfo = new Native.User32.ICONINFO
+        {
+            fIcon = true,
+            xHotspot = 0,
+            yHotspot = 0,
+            hbmMask = hbmMask,
+            hbmColor = hbmColor
+        };
+
+        IntPtr hIcon = Native.User32.CreateIconIndirect(ref iconInfo);
+
+        Native.Gdi32.DeleteObject(hbmColor);
+        Native.Gdi32.DeleteObject(hbmMask);
+
+        if (hIcon == IntPtr.Zero)
+        {
+            var fallbackHandle = bitmap.GetHicon();
+            try
+            {
+                return (Icon)Icon.FromHandle(fallbackHandle).Clone();
+            }
+            finally
+            {
+                Native.User32.DestroyIcon(fallbackHandle);
+            }
+        }
+
         try
         {
-            return (Icon)Icon.FromHandle(handle).Clone();
+            return (Icon)Icon.FromHandle(hIcon).Clone();
         }
         finally
         {
-            Native.User32.DestroyIcon(handle);
+            Native.User32.DestroyIcon(hIcon);
         }
     }
 

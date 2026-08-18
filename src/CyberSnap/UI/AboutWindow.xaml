@@ -5,8 +5,8 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:Services="clr-namespace:CyberSnap.Services"
         Title="About ᐧ CyberSnap"
-        Height="500" Width="740"
-        MinHeight="420" MinWidth="600"
+        Height="540" Width="740"
+        MinHeight="440" MinWidth="600"
         ResizeMode="CanResize"
         WindowStartupLocation="Manual"
         Background="Transparent"
@@ -196,7 +196,7 @@
                       HorizontalScrollBarVisibility="Disabled" Padding="18,12,18,18">
             <StackPanel>
                 <!-- Hero: branding + description -->
-                <Grid Margin="0,4,0,32">
+                <Grid Margin="0,4,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*" MinWidth="200"/>
@@ -210,8 +210,9 @@
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                         </Border>
                         <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="CyberSnap" FontSize="32" FontWeight="Bold" FontFamily="Segoe UI Variable Display"
-                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            <TextBlock FontSize="32" FontWeight="Bold" FontFamily="Segoe UI Variable Display">
+                                <Run Text="Cyber" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/><Run Text="Snap" Foreground="#6ACBDC"/>
+                            </TextBlock>
                             <TextBlock x:Name="AboutVersionText" FontSize="14" Opacity="0.5" Margin="0,4,0,0"/>
                         </StackPanel>
                     </StackPanel>
