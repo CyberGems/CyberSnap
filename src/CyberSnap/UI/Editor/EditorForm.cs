@@ -595,6 +595,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         _canvas.DragEnter += OnEditorDragEnter;
         _canvas.DragLeave += OnEditorDragLeave;
         _canvas.DragDrop += OnEditorDragDrop;
+        _canvas.WelcomeNewCanvasRequested = () => DoNewCanvas();
         _canvas.WelcomeOpenRequested = () => DoOpen();
         _canvas.WelcomePasteRequested = () => DoPaste();
         _canvas.WelcomeCaptureRequested = () =>
@@ -1546,9 +1547,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void DoOpen()
     {
-        if (_canvas.IsDefaultBlank)
-            _canvas.DismissWelcomeOverlay();
-
         if (_canvas.IsDirty)
         {
             if (!PromptSaveChanges())

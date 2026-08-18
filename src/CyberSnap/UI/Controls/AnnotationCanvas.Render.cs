@@ -845,7 +845,27 @@ public sealed partial class AnnotationCanvas
 
         switch (chipType)
         {
-            case 0: // Folder (Open)
+            case 0: // New Canvas (plus / canvas document)
+            {
+                float w = 11.5f, h = 12f;
+                float x = cx - w / 2f, y = cy - h / 2f + 0.5f;
+                g.DrawLines(pen, new[]
+                {
+                    new PointF(x + w * 0.62f, y),
+                    new PointF(x, y),
+                    new PointF(x, y + h),
+                    new PointF(x + w, y + h),
+                    new PointF(x + w, y + w * 0.38f),
+                    new PointF(x + w * 0.62f, y),
+                    new PointF(x + w * 0.62f, y + w * 0.38f),
+                    new PointF(x + w, y + w * 0.38f)
+                });
+                float px = x + w * 0.35f, py = y + h * 0.62f;
+                g.DrawLine(pen, px - 2.2f, py, px + 2.2f, py);
+                g.DrawLine(pen, px, py - 2.2f, px, py + 2.2f);
+                break;
+            }
+            case 1: // Folder (Open)
             {
                 float w = 13f, h = 9.5f;
                 float x = cx - w / 2f, y = cy - h / 2f + 0.5f;
@@ -863,7 +883,7 @@ public sealed partial class AnnotationCanvas
                 });
                 break;
             }
-            case 1: // Clipboard (Paste)
+            case 2: // Clipboard (Paste)
             {
                 float w = 9.5f, h = 12f;
                 float x = cx - w / 2f, y = cy - h / 2f + 0.5f;
@@ -879,7 +899,7 @@ public sealed partial class AnnotationCanvas
                 g.DrawRectangle(pen, x + 2.5f, y - 0.5f, w - 5f, 2.8f);
                 break;
             }
-            case 2: // Camera / Crop (Capture)
+            case 3: // Camera / Crop (Capture)
             {
                 float w = 12.5f, h = 10f;
                 float x = cx - w / 2f, y = cy - h / 2f + 1f;
@@ -915,6 +935,7 @@ public sealed partial class AnnotationCanvas
 
         var titleText = LocalizationService.Translate("Drop an image or project");
         var hintText = LocalizationService.Translate("Double-click · drag and drop");
+        var newLabel = LocalizationService.Translate("New canvas");
         var openLabel = LocalizationService.Translate("Open");
         var pasteLabel = LocalizationService.Translate("Paste");
         var captureLabel = LocalizationService.Translate("Capture");
@@ -924,21 +945,22 @@ public sealed partial class AnnotationCanvas
         var hintSize = TextRenderer.MeasureText(g, hintText, subFont, new Size(int.MaxValue, int.MaxValue),
             TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
 
-        float paddingH = 32;
+        float paddingH = 28;
         float paddingV = 24;
         float spacing = 10;
         float iconSize = 56;
         float chipH = 32;
-        float chipGap = 10;
-        float chipMinW = 92;
+        float chipGap = 8;
+        float chipMinW = 84;
 
-        float openW = Math.Max(chipMinW, TextRenderer.MeasureText(g, openLabel, chipFont).Width + 38);
-        float pasteW = Math.Max(chipMinW, TextRenderer.MeasureText(g, pasteLabel, chipFont).Width + 38);
-        float captureW = Math.Max(chipMinW, TextRenderer.MeasureText(g, captureLabel, chipFont).Width + 38);
-        float chipsRowW = openW + pasteW + captureW + chipGap * 2;
+        float newW = Math.Max(chipMinW, TextRenderer.MeasureText(g, newLabel, chipFont).Width + 34);
+        float openW = Math.Max(chipMinW, TextRenderer.MeasureText(g, openLabel, chipFont).Width + 34);
+        float pasteW = Math.Max(chipMinW, TextRenderer.MeasureText(g, pasteLabel, chipFont).Width + 34);
+        float captureW = Math.Max(chipMinW, TextRenderer.MeasureText(g, captureLabel, chipFont).Width + 34);
+        float chipsRowW = newW + openW + pasteW + captureW + chipGap * 3;
 
         float contentW = Math.Max(titleSize.Width, Math.Max(hintSize.Width, chipsRowW));
-        float width = Math.Max(contentW + paddingH * 2, 380);
+        float width = Math.Max(contentW + paddingH * 2, 450);
         float height = paddingV * 2 + iconSize + spacing + titleSize.Height + spacing
             + hintSize.Height + spacing + 6 + chipH;
 
@@ -1010,17 +1032,20 @@ public sealed partial class AnnotationCanvas
 
         // Action chips
         float chipsStartX = x + (width - chipsRowW) / 2f;
-        _welcomeChipRects[0] = new RectangleF(chipsStartX, curY, openW, chipH);
-        _welcomeChipRects[1] = new RectangleF(chipsStartX + openW + chipGap, curY, pasteW, chipH);
-        _welcomeChipRects[2] = new RectangleF(chipsStartX + openW + chipGap + pasteW + chipGap, curY, captureW, chipH);
+        _welcomeChipRects[0] = new RectangleF(chipsStartX, curY, newW, chipH);
+        _welcomeChipRects[1] = new RectangleF(chipsStartX + newW + chipGap, curY, openW, chipH);
+        _welcomeChipRects[2] = new RectangleF(chipsStartX + newW + chipGap + openW + chipGap, curY, pasteW, chipH);
+        _welcomeChipRects[3] = new RectangleF(chipsStartX + newW + chipGap + openW + chipGap + pasteW + chipGap, curY, captureW, chipH);
 
-        bool pasteEnabled = IsWelcomeChipEnabled(1);
-        DrawWelcomeChip(g, _welcomeChipRects[0], openLabel, chipFont, 0, true,
+        bool pasteEnabled = IsWelcomeChipEnabled(2);
+        DrawWelcomeChip(g, _welcomeChipRects[0], newLabel, chipFont, 0, true,
             _welcomeHoverChip == 0, _welcomePressedChip == 0, titleColor, subColor, accent, chipBg, chipBorder);
-        DrawWelcomeChip(g, _welcomeChipRects[1], pasteLabel, chipFont, 1, pasteEnabled,
+        DrawWelcomeChip(g, _welcomeChipRects[1], openLabel, chipFont, 1, true,
             _welcomeHoverChip == 1, _welcomePressedChip == 1, titleColor, subColor, accent, chipBg, chipBorder);
-        DrawWelcomeChip(g, _welcomeChipRects[2], captureLabel, chipFont, 2, true,
+        DrawWelcomeChip(g, _welcomeChipRects[2], pasteLabel, chipFont, 2, pasteEnabled,
             _welcomeHoverChip == 2, _welcomePressedChip == 2, titleColor, subColor, accent, chipBg, chipBorder);
+        DrawWelcomeChip(g, _welcomeChipRects[3], captureLabel, chipFont, 3, true,
+            _welcomeHoverChip == 3, _welcomePressedChip == 3, titleColor, subColor, accent, chipBg, chipBorder);
     }
 
     private void RenderGuides(Graphics g)
