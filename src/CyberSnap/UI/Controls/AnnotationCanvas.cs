@@ -1117,7 +1117,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         BeginZoomInteraction();
         NotifyScrollbarActivity();
         Invalidate();
-        OnStateChanged();
+        Update(); // force synchronous repaint so WM_PAINT messages don't queue up
     }
 
     /// <summary>
@@ -1137,6 +1137,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
                 _zoomSettleTimer!.Stop();
                 _zoomInteracting = false;
                 Invalidate(); // rebuilds the HQ cache for the settled zoom level
+                OnStateChanged(); // deferred UI refresh (toolbar, zoom label, slider)
             };
         }
         _zoomSettleTimer.Stop();
