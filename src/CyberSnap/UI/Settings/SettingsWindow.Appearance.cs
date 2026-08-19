@@ -142,7 +142,7 @@ public partial class SettingsWindow
             [HotkeysTab] = "\uE765", // Hotkeys
             [HistoryTab] = "\uEB9F", // History
             [UploadsTab] = "\uE898", // Uploads
-            [BackupDataTab] = "\uEA35", // Backup & Data
+            [BackupDataTab] = "\uE72C", // Backup & Data
         };
 
         foreach (var kvp in iconMap)

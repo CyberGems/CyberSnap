@@ -173,8 +173,8 @@ public partial class CyberSnapTitleBar : UserControl
         // If the pointer is still over Close, keep the high-contrast hover glyph.
         var closeIconColor = CloseBtn.IsMouseOver ? TitleBarCloseHoverIconColor : titleIcon;
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", closeIconColor, 18);
-        // Hamburger burger menu icon
-        BurgerIcon.Source = RenderHamburgerIcon(titleIcon, 18);
+        // Hamburger burger menu icon (crisp Fluent vector)
+        BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18);
         // "Open editor" shortcut \u2014 the Fluent "Compose" icon (shared with the tray/widget menus)
         AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18);
         AnnotationIcon.Opacity = 1.0;
@@ -200,6 +200,21 @@ public partial class CyberSnapTitleBar : UserControl
         ApplyTooltipPlacement(PinBtn);
     }
 
+    private static System.Windows.Controls.Image CreateMenuIcon(string id, System.Drawing.Color color, int size = 16)
+    {
+        var img = new System.Windows.Controls.Image
+        {
+            Source = Helpers.FluentIcons.RenderWpf(id, color, size),
+            Width = size,
+            Height = size,
+            SnapsToDevicePixels = true,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+        };
+        RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+        return img;
+    }
+
     private void InitializeActionBtn(System.Drawing.Color titleIcon)
     {
         if (OwnerWindow is SettingsWindow settingsWin)
@@ -219,7 +234,7 @@ public partial class CyberSnapTitleBar : UserControl
             var editorItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Annotations Editor"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 16), Width = 16, Height = 16 },
+                Icon = CreateMenuIcon("compose", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open the post-capture editor for annotations.")
             };
             editorItem.Click += (_, _) =>
@@ -235,7 +250,7 @@ public partial class CyberSnapTitleBar : UserControl
             var galleryItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Capture Gallery"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("history", titleIcon, 16), Width = 16, Height = 16 },
+                Icon = CreateMenuIcon("history", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open the Capture Gallery")
             };
             galleryItem.Click += (_, _) =>
@@ -250,8 +265,8 @@ public partial class CyberSnapTitleBar : UserControl
             // Achievements / Logros
             var achievementsItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Achievements"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("trophy", titleIcon, 16), Width = 16, Height = 16 },
+                Header = LocalizationService.Translate("Achievements..."),
+                Icon = CreateMenuIcon("trophy", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open Achievements")
             };
             achievementsItem.Click += (_, _) =>
@@ -269,7 +284,7 @@ public partial class CyberSnapTitleBar : UserControl
             var wizardItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Setup wizard"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
+                Icon = CreateMenuIcon("gear", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Re-run the setup wizard")
             };
             wizardItem.Click += (_, _) =>
@@ -284,8 +299,8 @@ public partial class CyberSnapTitleBar : UserControl
             // About CyberSnap
             var aboutItem = new MenuItem
             {
-                Header = LocalizationService.Translate("About CyberSnap"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("info", titleIcon, 16), Width = 16, Height = 16 },
+                Header = LocalizationService.Translate("About CyberSnap..."),
+                Icon = CreateMenuIcon("info", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open About CyberSnap")
             };
             aboutItem.Click += (_, _) =>
@@ -299,12 +314,15 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
+                BurgerBtn.Background = Theme.Brush(Theme.AccentHover);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
 
             menu.Closed += (_, _) =>
             {
                 RecordContextMenuClosed();
+                if (!BurgerBtn.IsMouseOver)
+                    BurgerBtn.Background = System.Windows.Media.Brushes.Transparent;
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
@@ -316,8 +334,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             ActionBtn.Visibility = Visibility.Visible;
             ActionBtn.ToolTip = LocalizationService.Translate("Menu");
-            // Render hamburger icon ☰ as bitmap (streamline set has no "menu"/"navigation" icon)
-            ActionIcon.Source = RenderHamburgerIcon(titleIcon, 18);
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18);
 
             // Build burger menu with toggles + Configuration
             var menu = new ContextMenu();
@@ -345,6 +362,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
+                ActionBtn.Background = Theme.Brush(Theme.AccentHover);
                 var settings = ((App)Application.Current).GetSettings();
                 searchToggle.IsChecked = settings.ShowImageSearchBar;
                 pruneToggle.IsChecked = settings.ShowAutoPrune;
@@ -355,7 +373,7 @@ public partial class CyberSnapTitleBar : UserControl
             var configItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Configuration..."),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
+                Icon = CreateMenuIcon("gear", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open the full Configuration window")
             };
             configItem.Click += (_, _) =>
@@ -370,8 +388,8 @@ public partial class CyberSnapTitleBar : UserControl
 
             var achievementsItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Achievements"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("trophy", titleIcon, 16), Width = 16, Height = 16 },
+                Header = LocalizationService.Translate("Achievements..."),
+                Icon = CreateMenuIcon("trophy", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open Achievements")
             };
             achievementsItem.Click += (_, _) =>
@@ -385,8 +403,8 @@ public partial class CyberSnapTitleBar : UserControl
 
             var aboutItem = new MenuItem
             {
-                Header = LocalizationService.Translate("About CyberSnap"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("info", titleIcon, 16), Width = 16, Height = 16 },
+                Header = LocalizationService.Translate("About CyberSnap..."),
+                Icon = CreateMenuIcon("info", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open About CyberSnap")
             };
             aboutItem.Click += (_, _) =>
@@ -398,7 +416,12 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(aboutItem);
 
-            menu.Closed += (_, _) => RecordContextMenuClosed();
+            menu.Closed += (_, _) =>
+            {
+                RecordContextMenuClosed();
+                if (!ActionBtn.IsMouseOver)
+                    ActionBtn.Background = System.Windows.Media.Brushes.Transparent;
+            };
 
             ActionBtn.ContextMenu = menu;
         }
@@ -420,10 +443,25 @@ public partial class CyberSnapTitleBar : UserControl
             var menu = new ContextMenu();
             menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
 
+            if (OwnerWindow is CapturePreviewDialog previewWindow)
+            {
+                var autoCloseToggle = new MenuItem
+                {
+                    Header = LocalizationService.Translate("Autoclose this window"),
+                    IsCheckable = true,
+                    ToolTip = LocalizationService.Translate("The preview window auto-closes when the timer expires.")
+                };
+                autoCloseToggle.Checked += (_, _) => previewWindow.SetAutoCloseEnabled(true);
+                autoCloseToggle.Unchecked += (_, _) => previewWindow.SetAutoCloseEnabled(false);
+                menu.Opened += (_, _) => autoCloseToggle.IsChecked = previewWindow.IsAutoCloseEnabled;
+                menu.Items.Add(autoCloseToggle);
+                menu.Items.Add(new Separator());
+            }
+
             var configItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Configuration..."),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
+                Icon = CreateMenuIcon("gear", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open the full Configuration window")
             };
             configItem.Click += (_, _) =>
@@ -437,8 +475,8 @@ public partial class CyberSnapTitleBar : UserControl
 
             var achievementsItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Achievements"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("trophy", titleIcon, 16), Width = 16, Height = 16 },
+                Header = LocalizationService.Translate("Achievements..."),
+                Icon = CreateMenuIcon("trophy", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open Achievements")
             };
             achievementsItem.Click += (_, _) =>
@@ -450,24 +488,10 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(achievementsItem);
 
-            if (OwnerWindow is CapturePreviewDialog previewWindow)
-            {
-                var autoCloseToggle = new MenuItem
-                {
-                    Header = LocalizationService.Translate("Capture preview auto-close"),
-                    IsCheckable = true,
-                    ToolTip = LocalizationService.Translate("The preview window auto-closes when the timer expires.")
-                };
-                autoCloseToggle.Checked += (_, _) => previewWindow.SetAutoCloseEnabled(true);
-                autoCloseToggle.Unchecked += (_, _) => previewWindow.SetAutoCloseEnabled(false);
-                menu.Opened += (_, _) => autoCloseToggle.IsChecked = previewWindow.IsAutoCloseEnabled;
-                menu.Items.Add(autoCloseToggle);
-            }
-
             var aboutItem = new MenuItem
             {
-                Header = LocalizationService.Translate("About CyberSnap"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("info", titleIcon, 16), Width = 16, Height = 16 },
+                Header = LocalizationService.Translate("About CyberSnap..."),
+                Icon = CreateMenuIcon("info", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open About CyberSnap")
             };
             aboutItem.Click += (_, _) =>
@@ -481,11 +505,14 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
+                BurgerBtn.Background = Theme.Brush(Theme.AccentHover);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
             menu.Closed += (_, _) =>
             {
                 RecordContextMenuClosed();
+                if (!BurgerBtn.IsMouseOver)
+                    BurgerBtn.Background = System.Windows.Media.Brushes.Transparent;
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
@@ -598,6 +625,11 @@ public partial class CyberSnapTitleBar : UserControl
     private void TitleBtn_MouseLeave(object sender, MouseEventArgs e)
     {
         if (sender is not Border border)
+            return;
+
+        if (ReferenceEquals(border, BurgerBtn) && BurgerBtn.ContextMenu?.IsOpen == true)
+            return;
+        if (ReferenceEquals(border, ActionBtn) && ActionBtn.ContextMenu?.IsOpen == true)
             return;
 
         border.Background = System.Windows.Media.Brushes.Transparent;
