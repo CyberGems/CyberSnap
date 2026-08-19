@@ -216,7 +216,7 @@
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE898;"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="Backup">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xEA35;"/>
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE72C;"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="About">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE946;"/>

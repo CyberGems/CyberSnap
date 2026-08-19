@@ -11,7 +11,7 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Topmost="False"
-        Icon="pack://application:,,,/Assets/Icons/CyberSnap.ico"
+        Icon="pack://application:,,,/Assets/Icons/Preview.ico"
         PreviewKeyDown="Window_PreviewKeyDown"
         SizeChanged="Window_SizeChanged">
 
