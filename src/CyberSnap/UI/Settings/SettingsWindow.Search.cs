@@ -185,6 +185,7 @@ public partial class SettingsWindow
             (HotkeysPanel,    "hotkeys",       "Hotkeys"),
             (HistoryPanel,    "history",       "Gallery"),
             (UploadsPanel,    "uploads",       "Uploads"),
+            (BackupDataPanel, "backup",        "Backup & Data"),
         };
 
         _panelMap.Clear();
@@ -359,7 +360,7 @@ public partial class SettingsWindow
         {
             SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
             CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
-            HotkeysPanel, HistoryPanel, UploadsPanel
+            HotkeysPanel, HistoryPanel, UploadsPanel, BackupDataPanel
         };
 
         var originalVisibility = new Visibility[allPanels.Length];
@@ -743,6 +744,9 @@ public partial class SettingsWindow
             ["uploads"]       = UploadsTab,
             ["upload"]        = UploadsTab,
             ["editor"]        = EditorTab,
+            ["backup"]        = BackupDataTab,
+            ["backup & data"] = BackupDataTab,
+            ["data"]          = BackupDataTab,
         };
 
         if (tabMap.TryGetValue(pageKey, out var tab))

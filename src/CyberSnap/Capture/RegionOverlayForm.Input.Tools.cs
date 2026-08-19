@@ -1582,10 +1582,9 @@ public sealed partial class RegionOverlayForm
                     else if (isScroll) ScrollRegionSelected?.Invoke(clickRect);
                     else
                     {
-                        // Area / center capture: always lock the region first (annotation + actions).
                         _autoDetectRect = Rectangle.Empty;
                         _autoDetectActive = false;
-                        EnterConfirmMode(clickRect, e.Location);
+                        RegionSelected?.Invoke(clickRect);
                     }
                 }
                 else if (_selectionRect.Width > 2 && _selectionRect.Height > 2)
