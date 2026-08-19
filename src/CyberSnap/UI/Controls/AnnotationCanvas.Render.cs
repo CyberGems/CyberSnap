@@ -25,12 +25,6 @@ public sealed partial class AnnotationCanvas
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-        // During an active zoom gesture, skip the expensive annotation re-rasterization.
-        // GDI+ must rasterize every pen stroke, text glyph, blur rect, etc. through the
-        // ScaleTransform on every frame, which is the dominant cost with 5+ annotations.
-        // The settle timer forces a single full-quality repaint when the gesture ends.
-        bool skipAnnotations = _zoomInteracting && _annotations.Count > 0;
-
         // Apply zoom/pan as a single transform so annotations stored in image-space
         // render to screen-space without further math per draw call.
         var state = g.Save();
@@ -43,12 +37,9 @@ public sealed partial class AnnotationCanvas
             g.SetClip(new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height));
             try
             {
-                if (!skipAnnotations)
-                {
-                    RenderAnnotations(g);
-                    RenderToolPreview(g);
-                    RenderInlineTextPreview(g);
-                }
+                RenderAnnotations(g);
+                RenderToolPreview(g);
+                RenderInlineTextPreview(g);
             }
             finally
             {
@@ -60,20 +51,17 @@ public sealed partial class AnnotationCanvas
             g.Restore(state);
         }
 
-        if (!skipAnnotations)
-            RenderResizeHandles(g);
+        RenderResizeHandles(g);
         RenderCropOverlay(g);
         RenderCheckerboardFrame(g);
-        if (!skipAnnotations)
-            RenderGuides(g);
+        RenderGuides(g);
         RenderToolBanner(g);
-        if (!skipAnnotations)
-            RenderCursorToolPreview(g);
+        RenderCursorToolPreview(g);
 
         if (IsDefaultBlank && !_welcomeDismissed && ShowWelcomeBanner)
             RenderWelcomeText(g);
 
-        if (_inlineTextBox is not null && !skipAnnotations)
+        if (_inlineTextBox is not null)
             RenderInlineTextToolbar(g);
 
         RenderScrollbars(g);
