@@ -141,6 +141,8 @@ public partial class SettingsWindow
             [OcrTab] = "\uE8C8", // OCR
             [HotkeysTab] = "\uE765", // Hotkeys
             [HistoryTab] = "\uEB9F", // History
+            [UploadsTab] = "\uE898", // Uploads
+            [BackupDataTab] = "\uEA35", // Backup & Data
         };
 
         foreach (var kvp in iconMap)
@@ -729,6 +731,7 @@ public partial class SettingsWindow
             OcrPanel.Visibility = Visibility.Collapsed;
             HistoryPanel.Visibility = Visibility.Collapsed;
             UploadsPanel.Visibility = Visibility.Collapsed;
+            BackupDataPanel.Visibility = Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Visible;
 
             PageTitleText.Text = LocalizationService.Translate("Search Results");
@@ -747,6 +750,7 @@ public partial class SettingsWindow
             OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             UploadsPanel.Visibility = UploadsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            BackupDataPanel.Visibility = BackupDataTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Collapsed;
 
             PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
@@ -800,6 +804,7 @@ public partial class SettingsWindow
         if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (HistoryTab.IsChecked == true) return "Gallery";
         if (UploadsTab.IsChecked == true) return "Uploads";
+        if (BackupDataTab.IsChecked == true) return "Backup & Data";
         return "General";
     }
 
