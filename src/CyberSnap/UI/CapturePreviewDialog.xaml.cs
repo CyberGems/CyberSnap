@@ -521,9 +521,12 @@ namespace CyberSnap.UI
             _countdownPausedForMotion = false;
             CancelCursorIdleTimer();
             SetCountdownRingShown(true, keepLayoutSlot: true);
-            // Hovering Done already: keep the ring slot but fade it out (invite UX).
+            // Hovering Done already: keep the ring slot but hide it instantly (invite UX).
             if (_primaryButtonHovered)
-                FadeCountdownRing(0);
+            {
+                CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
+                CountdownRingHost.Opacity = 0.0;
+            }
             else
                 EnsureCountdownRingVisible();
             UpdateDoneCountdownText(timeoutSec);
@@ -721,12 +724,19 @@ namespace CyberSnap.UI
         private void EnsureCountdownRingVisible()
         {
             CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
-            CountdownRingHost.Opacity = 1.0;
+            CountdownRingHost.Opacity = _primaryButtonHovered ? 0.0 : 1.0;
         }
 
         /// <summary>Fades the countdown ring opacity. Layout slot is preserved.</summary>
         private void FadeCountdownRing(double targetOpacity)
         {
+            if (targetOpacity <= 0.0 || _primaryButtonHovered)
+            {
+                CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
+                CountdownRingHost.Opacity = 0.0;
+                return;
+            }
+
             var fade = new DoubleAnimation(targetOpacity, Motion.Ms(CountdownFadeMs))
             {
                 EasingFunction = Motion.Ease(targetOpacity > CountdownMotionOpacity
@@ -1328,9 +1338,14 @@ namespace CyberSnap.UI
             if (_autoCloseArmed && CountdownRingHost.Visibility == Visibility.Visible)
             {
                 if (invite)
-                    FadeCountdownRing(0);
+                {
+                    CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
+                    CountdownRingHost.Opacity = 0.0;
+                }
                 else if (!_isClosing)
+                {
                     FadeCountdownRing(_countdownPausedForMotion ? CountdownMotionOpacity : 1.0);
+                }
             }
 
             if (_pillSimRunning)
