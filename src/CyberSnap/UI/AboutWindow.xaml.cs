@@ -158,7 +158,7 @@ public partial class AboutWindow : Window
             UpdateBtn.Content = LocalizationService.Translate("Check Now");
             UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
             UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
-            AboutTitleBar.Title = LocalizationService.Translate("About");
+            AboutTitleBar.Title = LocalizationService.Translate("About ᐧ CyberSnap");
             AboutFooterCopyright.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterWebsiteBtn.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterGithubBtn.ToolTip = LocalizationService.Translate("View project on GitHub");
