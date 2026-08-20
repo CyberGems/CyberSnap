@@ -497,7 +497,7 @@ public sealed partial class EditorForm
         var brandPanel = new Panel
         {
             Dock = DockStyle.Left,
-            Width = 380,
+            Width = CalculateBrandWidth(),
             BackColor = Color.Transparent,
         };
         _brandPanel = brandPanel;
@@ -851,6 +851,19 @@ public sealed partial class EditorForm
         InitializeMenuHoverTriggers();
 
         return _topBarPanel;
+    }
+
+    private int CalculateBrandWidth()
+    {
+        double dpiScale = DeviceDpi / 96.0;
+        double totalScale = dpiScale * UiChrome.UiScale;
+        int iconSize = Math.Max(20, (int)Math.Round(19.5 * totalScale));
+        int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
+        int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
+        var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
+        using var font = UiChrome.ChromeFont(10.5f, FontStyle.Bold);
+        var textSize = TextRenderer.MeasureText(titleText, font);
+        return leftPad + iconSize + textGap + textSize.Width + 16;
     }
 
     private Control BuildToolSection()
