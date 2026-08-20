@@ -48,21 +48,35 @@ public sealed class TrayIcon : IDisposable
 
         _notifyIcon.MouseClick += (_, e) =>
         {
-            if (e.Button == MouseButtons.Left)
+            try
             {
-                if (Capture.RecordingForm.Current != null)
-                    Capture.RecordingForm.Current.RequestStop();
-                else
-                    OnCapture?.Invoke();
+                if (e.Button == MouseButtons.Left)
+                {
+                    if (Capture.RecordingForm.Current != null)
+                        Capture.RecordingForm.Current.RequestStop();
+                    else
+                        OnCapture?.Invoke();
+                }
+                else if (e.Button == MouseButtons.Right)
+                    ShowMenu();
             }
-            else if (e.Button == MouseButtons.Right)
-                ShowMenu();
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("tray.mouseclick", ex);
+            }
         };
 
         _notifyIcon.MouseDoubleClick += (_, e) =>
         {
-            if (e.Button == MouseButtons.Left)
-                OnCapture?.Invoke();
+            try
+            {
+                if (e.Button == MouseButtons.Left)
+                    OnCapture?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("tray.mousedoubleclick", ex);
+            }
         };
 
         _menu = CreateThemedMenu();
@@ -224,15 +238,22 @@ public sealed class TrayIcon : IDisposable
     {
         try
         {
-            _activeWpfMenu?.Close();
+            try
+            {
+                _activeWpfMenu?.Close();
+            }
+            catch { }
+
+            // Capture physical cursor position immediately upon tray click
+            var clickPoint = System.Windows.Forms.Cursor.Position;
+
+            _activeWpfMenu = new TrayContextMenuWindow(this, clickPoint);
+            _activeWpfMenu.Show();
         }
-        catch { }
-
-        // Capture physical cursor position immediately upon tray click
-        var clickPoint = System.Windows.Forms.Cursor.Position;
-
-        _activeWpfMenu = new TrayContextMenuWindow(this, clickPoint);
-        _activeWpfMenu.Show();
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("tray.showmenu", ex);
+        }
     }
 
     public void TriggerCapture() => OnCapture?.Invoke();

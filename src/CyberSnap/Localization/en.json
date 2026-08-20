@@ -323,6 +323,8 @@
   "You can also:": "Action options:",
   "Configure automatic actions": "Configure automatic actions",
   "More": "More",
+  "Open in viewer": "Open in viewer",
+  "Open in system default viewer": "Open in system default viewer",
   "Print": "Print",
   "Print this capture.": "Print this capture.",
   "Print failed": "Print failed",

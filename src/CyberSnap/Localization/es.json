@@ -364,6 +364,8 @@
   "You can also:": "Acciones opcionales:",
   "Configure automatic actions": "Configurar acciones automáticas",
   "More": "Más",
+  "Open in viewer": "Abrir en visor",
+  "Open in system default viewer": "Abrir en el visor del sistema",
   "Print": "Imprimir",
   "Print this capture.": "Imprimir esta captura.",
   "Print failed": "Error al imprimir",

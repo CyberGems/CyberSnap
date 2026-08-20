@@ -291,9 +291,10 @@ namespace CyberSnap.UI
             SaveText.Text = LocalizationService.Translate("Save");
             CopyText.Text = LocalizationService.Translate("Copy");
             EditText.Text = LocalizationService.Translate("Edit");
+            OpenViewerText.Text = LocalizationService.Translate("Open in viewer");
             PrintText.Text = LocalizationService.Translate("Print");
             PrintBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Print this capture."), "Ctrl+P");
-            DeleteText.Text = LocalizationService.Translate("Delete capture");
+            DeleteText.Text = LocalizationService.Translate("Delete");
             DeleteBtn.ToolTip = LocalizationService.Translate(
                 "The saved file will be permanently deleted from disk and removed from the Gallery.");
             MoreText.Text = LocalizationService.Translate("More");
@@ -309,6 +310,7 @@ namespace CyberSnap.UI
             SaveBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Save a copy of the image"), "Ctrl+S");
             CopyBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Copy to clipboard"), "Ctrl+C");
             EditBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in the annotation editor"), "Ctrl+E");
+            OpenViewerBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in system default viewer"), "Ctrl+O");
 
             // Tooltip placement: anchor each tip above its control. UpdateContinueOrExitButton
             // rewrites CancelBtn.ToolTip on state changes — SetPlacement survives that because
@@ -318,6 +320,7 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(SaveBtn);
             ApplyTooltipPlacement(CopyBtn);
             ApplyTooltipPlacement(EditBtn);
+            ApplyTooltipPlacement(OpenViewerBtn);
             ApplyTooltipPlacement(PrintBtn);
             ApplyTooltipPlacement(MoreBtn);
             ApplyTooltipPlacement(DeleteBtn);
@@ -436,6 +439,7 @@ namespace CyberSnap.UI
             SetPreviewIcon(SaveIcon, "save", primaryIconColor, 13);
             SetPreviewIcon(CopyIcon, "copy", primaryIconColor, 13);
             SetPreviewIcon(EditIcon, "draw", primaryIconColor, 13);
+            SetPreviewIcon(OpenViewerIcon, "eye", primaryIconColor, 13);
             SetPreviewIcon(PrintIcon, "print", primaryIconColor, 13);
             SetPreviewIcon(DeleteIcon, "trash", DeleteAccentRed, 13);
             SetPreviewIcon(ShareIcon, "share", primaryIconColor, 14);
@@ -1663,6 +1667,24 @@ namespace CyberSnap.UI
             chip.StatusRotation.Angle = 0;
         }
 
+        private void GetPhysicalBaseDimensions(BitmapSource bmp, out double baseW, out double baseH)
+        {
+            double dpiScale = 1.0;
+            try
+            {
+                var dpi = VisualTreeHelper.GetDpi(this);
+                if (dpi.DpiScaleX > 0)
+                    dpiScale = dpi.DpiScaleX;
+            }
+            catch { }
+
+            double uiScale = UiScale.Current > 0 ? UiScale.Current : 1.0;
+            // 1 physical screen pixel = (1.0 / (dpiScale * uiScale)) DIPs inside RootBorder LayoutTransform.
+            double physicalToDip = 1.0 / (dpiScale * uiScale);
+            baseW = bmp.PixelWidth * physicalToDip;
+            baseH = bmp.PixelHeight * physicalToDip;
+        }
+
         // ── Zoom & pan implementation ───────────────────────────────────
         private void ApplyZoom()
         {
@@ -1674,22 +1696,24 @@ namespace CyberSnap.UI
             // handler (hooked in the constructor) call ApplyZoom() again.
             if (availW <= 0 || availH <= 0) return;
 
+            GetPhysicalBaseDimensions(bmp, out double baseW, out double baseH);
+
             if (_zoomToFit)
             {
                 // Fit large images to the viewport, but never upscale small captures.
                 // The canvas still fills the viewport so the image remains centered.
                 ZoomCanvas.Width = availW;
                 ZoomCanvas.Height = availH;
-                _currentZoom = Math.Min(1.0, Math.Min(availW / bmp.Width, availH / bmp.Height));
-                PreviewImage.Width = bmp.Width * _currentZoom;
-                PreviewImage.Height = bmp.Height * _currentZoom;
+                _currentZoom = Math.Min(1.0, Math.Min(availW / baseW, availH / baseH));
+                PreviewImage.Width = baseW * _currentZoom;
+                PreviewImage.Height = baseH * _currentZoom;
             }
             else
             {
-                // Absolute-size mode: the image is exactly _currentZoom × bitmap pixels.
+                // Absolute-size mode: at zoom=1.0, 1 physical capture pixel = 1 physical screen pixel.
                 // When it exceeds the viewport the ScrollViewer enables pan (scrollbars hidden).
-                double scaledW = _currentZoom * bmp.Width;
-                double scaledH = _currentZoom * bmp.Height;
+                double scaledW = _currentZoom * baseW;
+                double scaledH = _currentZoom * baseH;
                 ZoomCanvas.Width = Math.Max(availW, scaledW);
                 ZoomCanvas.Height = Math.Max(availH, scaledH);
                 PreviewImage.Width = scaledW;
@@ -1784,9 +1808,11 @@ namespace CyberSnap.UI
             double vpH = ZoomViewport.ViewportHeight;
             if (vpW <= 0 || vpH <= 0) return;
 
-            double oldScale = Math.Min(PreviewImage.ActualWidth / bmp.Width, PreviewImage.ActualHeight / bmp.Height);
-            double contentW = bmp.Width * oldScale;
-            double contentH = bmp.Height * oldScale;
+            GetPhysicalBaseDimensions(bmp, out double baseW, out double baseH);
+
+            double oldScale = Math.Min(PreviewImage.ActualWidth / baseW, PreviewImage.ActualHeight / baseH);
+            double contentW = baseW * oldScale;
+            double contentH = baseH * oldScale;
             double padX = PreviewImage.ActualWidth > 0 ? Math.Max(0, (PreviewImage.ActualWidth - contentW) / 2) : 0;
             double padY = PreviewImage.ActualHeight > 0 ? Math.Max(0, (PreviewImage.ActualHeight - contentH) / 2) : 0;
 
@@ -1806,12 +1832,12 @@ namespace CyberSnap.UI
             ZoomViewport.UpdateLayout();
 
             // When _zoomToFit is false, Stretch="Uniform" inside an exact-size
-            // (bitmap*zoom) PreviewImage fills the whole element: no padding.
+            // (base*zoom) PreviewImage fills the whole element: no padding.
             if (Math.Abs(_currentZoom - oldZoom) < double.Epsilon)
                 return;
 
-            double newContentX = relX * (_currentZoom * bmp.Width);
-            double newContentY = relY * (_currentZoom * bmp.Height);
+            double newContentX = relX * (_currentZoom * baseW);
+            double newContentY = relY * (_currentZoom * baseH);
             ZoomViewport.ScrollToHorizontalOffset(newContentX - ptInSv.X);
             ZoomViewport.ScrollToVerticalOffset(newContentY - ptInSv.Y);
 
@@ -2002,14 +2028,17 @@ namespace CyberSnap.UI
             bool saveAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.Save);
             bool copyAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.Clipboard);
             bool editAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.Editor);
+            bool viewerAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.SystemViewer);
 
             SaveBtn.Visibility = saveAuto ? Visibility.Collapsed : Visibility.Visible;
             CopyBtn.Visibility = copyAuto ? Visibility.Collapsed : Visibility.Visible;
             EditBtn.Visibility = editAuto ? Visibility.Collapsed : Visibility.Visible;
+            OpenViewerBtn.Visibility = viewerAuto ? Visibility.Collapsed : Visibility.Visible;
 
             SaveBtn.IsEnabled = !saveAuto;
             CopyBtn.IsEnabled = !copyAuto;
             EditBtn.IsEnabled = !editAuto;
+            OpenViewerBtn.IsEnabled = !viewerAuto;
 
             // Delete only makes sense once the capture actually exists on disk.
             DeleteBtn.Visibility = CanDeleteSavedCapture() ? Visibility.Visible : Visibility.Collapsed;
@@ -2018,6 +2047,7 @@ namespace CyberSnap.UI
                 SaveBtn.Visibility == Visibility.Visible
                 || CopyBtn.Visibility == Visibility.Visible
                 || EditBtn.Visibility == Visibility.Visible
+                || OpenViewerBtn.Visibility == Visibility.Visible
                 || PrintBtn.Visibility == Visibility.Visible
                 || DeleteBtn.Visibility == Visibility.Visible
                 || MoreBtn.Visibility == Visibility.Visible;
@@ -2077,6 +2107,14 @@ namespace CyberSnap.UI
             if (_isClosing)
                 return;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Edit;
+            CommitAndClose(true);
+        }
+
+        private void OpenViewerBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isClosing)
+                return;
+            SelectedAction = RegionOverlayForm.ConfirmCommitAction.Viewer;
             CommitAndClose(true);
         }
 
@@ -2255,6 +2293,12 @@ namespace CyberSnap.UI
                 if (e.Key == Key.E && EditBtn.IsEnabled && EditBtn.IsVisible)         // Ctrl+E — edit
                 {
                     EditBtn_Click(EditBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.O && OpenViewerBtn.IsEnabled && OpenViewerBtn.IsVisible) // Ctrl+O — open in viewer
+                {
+                    OpenViewerBtn_Click(OpenViewerBtn, new RoutedEventArgs());
                     e.Handled = true;
                     return;
                 }

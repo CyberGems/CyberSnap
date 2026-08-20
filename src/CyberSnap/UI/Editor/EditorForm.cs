@@ -486,13 +486,20 @@ public sealed partial class EditorForm : Form, IMessageFilter
         };
         _clipboardMonitorTimer.Tick += (_, _) =>
         {
-            if (_pasteButton != null)
+            try
             {
-                bool hasImage = Clipboard.ContainsImage();
-                if (_pasteButton.Enabled != hasImage)
+                if (_pasteButton != null)
                 {
-                    _pasteButton.Enabled = hasImage;
+                    bool hasImage = Clipboard.ContainsImage();
+                    if (_pasteButton.Enabled != hasImage)
+                    {
+                        _pasteButton.Enabled = hasImage;
+                    }
                 }
+            }
+            catch
+            {
+                // Clipboard might be locked by another application or thread; safely ignore
             }
         };
         _clipboardMonitorTimer.Start();

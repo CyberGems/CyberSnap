@@ -311,6 +311,16 @@
                                         <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
+                                <Button x:Name="OpenViewerBtn" Click="OpenViewerBtn_Click"
+                                        Style="{StaticResource PreviewActionButton}"
+                                        Margin="0,0,6,6">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Image x:Name="OpenViewerIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <TextBlock x:Name="OpenViewerText" Text="Open in viewer" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button x:Name="PrintBtn" Click="PrintBtn_Click"
                                         Style="{StaticResource PreviewActionButton}"
                                         Margin="0,0,6,6">
@@ -319,6 +329,17 @@
                                                VerticalAlignment="Center"
                                                RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="PrintText" Text="Print" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
+                                        Style="{StaticResource PreviewActionButton}"
+                                        Margin="0,0,6,6"
+                                        Visibility="Collapsed">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <TextBlock x:Name="DeleteText" Text="Delete" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
                                 <Button x:Name="MoreBtn" Click="MoreBtn_Click"
@@ -330,17 +351,6 @@
                                                VerticalAlignment="Center"
                                                RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="MoreText" Text="More" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6"
-                                        Visibility="Collapsed">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="DeleteText" Text="Delete capture" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
                             </WrapPanel>
