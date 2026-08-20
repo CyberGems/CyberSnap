@@ -397,7 +397,7 @@ namespace CyberSnap.UI
             if (sideBySide)
             {
                 PreviewCol.Width = new GridLength(1, GridUnitType.Star);
-                ActionsCol.Width = new GridLength(268);
+                ActionsCol.Width = new GridLength(285);
                 PreviewRow.Height = new GridLength(1, GridUnitType.Star);
                 ActionsRow.Height = new GridLength(0);
 
@@ -1426,7 +1426,7 @@ namespace CyberSnap.UI
             // Row: [pill]  status — status glyph stays outside the chip.
             var row = new DockPanel
             {
-                Margin = new Thickness(0, 0, 0, 8),
+                Margin = new Thickness(0, 0, 0, 6),
                 LastChildFill = true
             };
 
