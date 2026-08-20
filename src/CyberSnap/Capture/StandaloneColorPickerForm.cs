@@ -341,10 +341,13 @@ public sealed class StandaloneColorPickerForm : Form
     private void CloseMagnifier()
     {
         if (_magnifierForm != null)
-            WindowDetector.UnregisterIgnoredWindow(_magnifierForm.Handle);
-        _magnifierForm?.Close();
-        _magnifierForm?.Dispose();
-        _magnifierForm = null;
+        {
+            if (_magnifierForm.IsHandleCreated)
+                WindowDetector.UnregisterIgnoredWindow(_magnifierForm.Handle);
+            _magnifierForm.Close();
+            _magnifierForm.Dispose();
+            _magnifierForm = null;
+        }
     }
 
     /// <summary>

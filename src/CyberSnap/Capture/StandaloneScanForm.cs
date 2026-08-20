@@ -81,7 +81,8 @@ public sealed class StandaloneScanForm : Form
     {
         if (disposing)
         {
-            WindowDetector.UnregisterIgnoredWindow(Handle);
+            if (IsHandleCreated)
+                WindowDetector.UnregisterIgnoredWindow(Handle);
             WindowDetector.ClearSnapshot();
             _banner.Dispose();
             _screenshot?.Dispose();

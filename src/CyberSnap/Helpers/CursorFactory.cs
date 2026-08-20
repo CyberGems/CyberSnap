@@ -21,7 +21,16 @@ internal static class CursorFactory
             if (_hiddenCursor is null)
             {
                 using var bmp = new Bitmap(1, 1, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                _hiddenCursor = new Cursor(bmp.GetHicon());
+                var hIcon = bmp.GetHicon();
+                try
+                {
+                    _hiddenCursor = new Cursor(hIcon);
+                }
+                catch
+                {
+                    DestroyIcon(hIcon);
+                    _hiddenCursor = Cursors.Default;
+                }
             }
             return _hiddenCursor;
         }

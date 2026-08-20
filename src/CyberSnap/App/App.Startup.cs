@@ -158,7 +158,20 @@ public partial class App
             else
                 AppDiagnostics.LogWarning("appdomain.unhandled", args.ExceptionObject?.ToString() ?? "Unknown unhandled exception.");
         };
-        DispatcherUnhandledException += (_, args) => AppDiagnostics.LogError("dispatcher.unhandled", args.Exception);
+        DispatcherUnhandledException += (sender, args) =>
+        {
+            AppDiagnostics.LogError("dispatcher.unhandled", args.Exception);
+            // Defend against Win32Exception 1816 (ERROR_NOT_ENOUGH_QUOTA) in HwndTarget / DWM composition
+            // or transient COM/OLE clipboard locks to avoid terminating the entire process.
+            if (args.Exception is System.ComponentModel.Win32Exception w32 && w32.NativeErrorCode == 1816)
+            {
+                args.Handled = true;
+            }
+            else if (args.Exception is System.Runtime.InteropServices.COMException)
+            {
+                args.Handled = true;
+            }
+        };
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
             AppDiagnostics.LogError("tasks.unobserved", args.Exception);

@@ -118,7 +118,8 @@ public sealed class StandaloneOcrForm : Form
         if (disposing)
         {
             SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopyToClipboardChanged;
-            WindowDetector.UnregisterIgnoredWindow(Handle);
+            if (IsHandleCreated)
+                WindowDetector.UnregisterIgnoredWindow(Handle);
             WindowDetector.ClearSnapshot();
             _contextMenu?.Dispose();
             _banner.Dispose();

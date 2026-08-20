@@ -182,7 +182,8 @@ public partial class App
                     }
                     else
                     {
-                        bool wantViewer = settings.OpenInSystemViewerAfterCapture
+                        bool wantViewer = commitAction == RegionOverlayForm.ConfirmCommitAction.Viewer
+                            || settings.OpenInSystemViewerAfterCapture
                             || action == AfterCaptureAction.OpenInSystemViewer;
                         bool hadPersistentFile = savedToDisk;
                         string? viewerPath = hadPersistentFile ? persisted.FilePath : null;

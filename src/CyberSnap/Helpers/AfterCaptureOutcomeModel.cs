@@ -59,12 +59,12 @@ public static class AfterCaptureOutcomeModel
 {
     public static AfterCapturePillKind[] AllPills { get; } =
     [
-        AfterCapturePillKind.Save,
         AfterCapturePillKind.Preview,
+        AfterCapturePillKind.Clipboard,
+        AfterCapturePillKind.Save,
         AfterCapturePillKind.Notification,
         AfterCapturePillKind.Editor,
         AfterCapturePillKind.SystemViewer,
-        AfterCapturePillKind.Clipboard,
         AfterCapturePillKind.Share
     ];
 
@@ -75,8 +75,8 @@ public static class AfterCaptureOutcomeModel
     public static int FlowDisplayOrder(AfterCapturePillKind pill) => pill switch
     {
         AfterCapturePillKind.Preview => 0,
-        AfterCapturePillKind.Save => 1,
-        AfterCapturePillKind.Clipboard => 2,
+        AfterCapturePillKind.Clipboard => 1,
+        AfterCapturePillKind.Save => 2,
         AfterCapturePillKind.Notification => 3,
         AfterCapturePillKind.Editor => 4,
         AfterCapturePillKind.SystemViewer => 5,

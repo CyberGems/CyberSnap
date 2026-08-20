@@ -43,7 +43,8 @@ public sealed partial class RegionOverlayForm : Form
         Copy,
         Edit,
         Share,
-        History
+        History,
+        Viewer
     }
 
     /// <summary>
@@ -2270,11 +2271,7 @@ public sealed partial class RegionOverlayForm : Form
         }
     }
 
-    private static Cursor CreateBlankCursor()
-    {
-        using var bmp = new Bitmap(1, 1, PixelFormat.Format32bppArgb);
-        return new Cursor(bmp.GetHicon());
-    }
+    private static Cursor CreateBlankCursor() => CursorFactory.HiddenCursor;
 
     private static Rectangle NormRect(Point a, Point b) =>
         new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
