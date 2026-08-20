@@ -182,7 +182,8 @@ public partial class App
                     }
                     else
                     {
-                        bool wantViewer = commitAction == RegionOverlayForm.ConfirmCommitAction.Viewer
+                        bool isExplicitViewer = commitAction == RegionOverlayForm.ConfirmCommitAction.Viewer;
+                        bool wantViewer = isExplicitViewer
                             || settings.OpenInSystemViewerAfterCapture
                             || action == AfterCaptureAction.OpenInSystemViewer;
                         bool hadPersistentFile = savedToDisk;
@@ -196,7 +197,7 @@ public partial class App
                             viewerPath = MaterializeTempViewerFile(persisted.Output);
 
                         if (viewerPath != null)
-                            openedViewer = TryOpenSystemViewerAfterCapture(settings, action, viewerPath);
+                            openedViewer = TryOpenSystemViewerAfterCapture(settings, action, viewerPath, force: isExplicitViewer);
 
                         bool createdTempForViewer = wantViewer && !hadPersistentFile && viewerPath != null;
                         if (createdTempForViewer)
@@ -853,9 +854,11 @@ public partial class App
     private static bool TryOpenSystemViewerAfterCapture(
         Models.AppSettings settings,
         AfterCaptureAction action,
-        string? filePath)
+        string? filePath,
+        bool force = false)
     {
-        bool wantViewer = settings.OpenInSystemViewerAfterCapture
+        bool wantViewer = force
+            || settings.OpenInSystemViewerAfterCapture
             || action == AfterCaptureAction.OpenInSystemViewer;
         if (!wantViewer || string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             return false;

@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         Title="Capture Preview"
-        Height="460" Width="820"
-        MinHeight="360" MinWidth="520"
+        Height="520" Width="860"
+        MinHeight="440" MinWidth="580"
         ResizeMode="CanResize"
         WindowStartupLocation="Manual"
         Background="Transparent"
@@ -132,7 +132,7 @@
             <Grid x:Name="MainLayout" Grid.Row="1" Margin="14,2,14,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="PreviewCol" Width="*"/>
-                    <ColumnDefinition x:Name="ActionsCol" Width="268"/>
+                    <ColumnDefinition x:Name="ActionsCol" Width="285"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition x:Name="PreviewRow" Height="*"/>
@@ -271,96 +271,98 @@
 
                         <!-- You can also — anchored to the bottom, right above the primary CTA,
                              so the breathing room stays under the pills instead of mid-card. -->
-                        <StackPanel x:Name="OptionalActionsSection" Grid.Row="1" Margin="0,16,0,0"
-                                    VerticalAlignment="Bottom">
-                            <TextBlock x:Name="OptionalActionsHeaderLabel"
-                                       Text="You can also:"
-                                       FontSize="11.5" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                       Margin="0,0,0,8"
-                                       TextTrimming="CharacterEllipsis"/>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                      PanningMode="VerticalOnly" Focusable="False" Margin="0,10,0,0">
+                            <StackPanel x:Name="OptionalActionsSection" VerticalAlignment="Top">
+                                <TextBlock x:Name="OptionalActionsHeaderLabel"
+                                           Text="You can also:"
+                                           FontSize="11.5" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                           Margin="0,0,0,6"
+                                           TextTrimming="CharacterEllipsis"/>
 
-                            <WrapPanel x:Name="OptionalActionsPanel" Orientation="Horizontal">
-                                <Button x:Name="SaveBtn" Click="SaveBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="SaveIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="SaveText" Text="Save" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="CopyBtn" Click="CopyBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="CopyIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="CopyText" Text="Copy" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="EditBtn" Click="EditBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="OpenViewerBtn" Click="OpenViewerBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="OpenViewerIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="OpenViewerText" Text="Open in viewer" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="PrintBtn" Click="PrintBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="PrintText" Text="Print" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6"
-                                        Visibility="Collapsed">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="DeleteText" Text="Delete" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="MoreBtn" Click="MoreBtn_Click"
-                                        Style="{StaticResource PreviewActionButton}"
-                                        Margin="0,0,6,6"
-                                        ToolTip="More">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="MoreIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="MoreText" Text="More" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                            </WrapPanel>
+                                <WrapPanel x:Name="OptionalActionsPanel" Orientation="Horizontal">
+                                    <Button x:Name="SaveBtn" Click="SaveBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="SaveIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="SaveText" Text="Save" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="CopyBtn" Click="CopyBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="CopyIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="CopyText" Text="Copy" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="EditBtn" Click="EditBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="OpenViewerBtn" Click="OpenViewerBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="OpenViewerIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="OpenViewerText" Text="Open in viewer" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="PrintBtn" Click="PrintBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="PrintText" Text="Print" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6"
+                                            Visibility="Collapsed">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="DeleteText" Text="Delete" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="MoreBtn" Click="MoreBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6"
+                                            ToolTip="More">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="MoreIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="MoreText" Text="More" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
 
-                            <!-- Hidden action hosts kept for Share/Gallery (opened via More menu) -->
-                            <Button x:Name="ShareBtn" Click="ShareBtn_Click" Visibility="Collapsed" Height="0" Width="0" Padding="0"/>
-                            <Button x:Name="GalleryBtn" Click="GalleryBtn_Click" Visibility="Collapsed" Height="0" Width="0" Padding="0"/>
-                            <Image x:Name="ShareIcon" Width="0" Height="0" Visibility="Collapsed"/>
-                            <Image x:Name="GalleryIcon" Width="0" Height="0" Visibility="Collapsed"/>
-                        </StackPanel>
+                                <!-- Hidden action hosts kept for Share/Gallery (opened via More menu) -->
+                                <Button x:Name="ShareBtn" Click="ShareBtn_Click" Visibility="Collapsed" Height="0" Width="0" Padding="0"/>
+                                <Button x:Name="GalleryBtn" Click="GalleryBtn_Click" Visibility="Collapsed" Height="0" Width="0" Padding="0"/>
+                                <Image x:Name="ShareIcon" Width="0" Height="0" Visibility="Collapsed"/>
+                                <Image x:Name="GalleryIcon" Width="0" Height="0" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </ScrollViewer>
 
                         <!-- Primary CTA + auto-close countdown ring docked right (skip-ad style). -->
                         <StackPanel Grid.Row="2" Margin="0,14,0,0">
