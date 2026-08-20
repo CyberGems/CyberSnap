@@ -1109,7 +1109,7 @@
         </Grid.RowDefinitions>
 
         <controls:CyberSnapTitleBar x:Name="SettingsTitleBar" Grid.Row="0"
-                                  Title="CyberSnap"
+                                  Title="Configuration ⋅ CyberSnap"
                                   CloseRequested="TitleBar_CloseRequested"/>
 
         <!-- Sidebar + Content -->

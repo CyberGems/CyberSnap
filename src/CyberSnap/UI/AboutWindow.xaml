@@ -189,7 +189,7 @@
         </Grid.RowDefinitions>
 
         <controls:CyberSnapTitleBar x:Name="AboutTitleBar" Grid.Row="0"
-                                  Title="About"
+                                  Title="About ⋅ CyberSnap"
                                   CloseRequested="TitleBar_CloseRequested"/>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"

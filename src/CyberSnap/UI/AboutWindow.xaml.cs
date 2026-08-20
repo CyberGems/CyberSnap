@@ -173,7 +173,7 @@ public partial class AboutWindow : Window
 
     private void UpdateWindowTitle()
     {
-        var aboutLabel = LocalizationService.Translate("About");
+        var aboutLabel = LocalizationService.Translate("About ᐧ CyberSnap");
         AboutTitleBar.Title = aboutLabel;
         WindowTitles.ApplyTaskbar(this, WindowTitles.About, _settingsService.Settings.InterfaceLanguage);
     }

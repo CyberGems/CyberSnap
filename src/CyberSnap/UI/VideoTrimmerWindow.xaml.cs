@@ -103,7 +103,7 @@ namespace CyberSnap.UI
             LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
             var lang = settingsService.Settings.InterfaceLanguage;
             WindowTitles.ApplyTaskbar(this, WindowTitles.Trimmer, lang);
-            TrimmerTitleBar.Title = LocalizationService.Translate("Video & GIF Trimmer");
+            TrimmerTitleBar.Title = LocalizationService.Translate(lang, WindowTitles.Trimmer);
             
             _lastPlaybackUpdate = DateTime.UtcNow;
             CompositionTarget.Rendering += OnRendering;

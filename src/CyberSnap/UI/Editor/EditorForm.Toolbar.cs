@@ -535,7 +535,7 @@ public sealed partial class EditorForm
                 g.DrawImage(_brandBitmap, new Rectangle(leftPad, cy - (iconSize / 2), iconSize, iconSize));
             }
 
-            var titleText = LocalizationService.Translate("Annotations Editor");
+            var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
             using var font = UiChrome.ChromeFont(10.5f, FontStyle.Bold);
             int textX = leftPad + iconSize + textGap;
             TextRenderer.DrawText(g, titleText, font,

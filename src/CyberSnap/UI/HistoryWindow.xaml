@@ -400,7 +400,7 @@
                 </Grid.RowDefinitions>
 
                 <controls:CyberSnapTitleBar x:Name="SettingsTitleBar" Grid.Row="0"
-                                            Title="Capture Gallery"
+                                            Title="Capture Gallery ⋅ CyberSnap"
                                             CloseRequested="TitleBar_CloseRequested"/>
 
                 <!-- Hidden checked RadioButton for keeping conditional checks in history partial files intact -->

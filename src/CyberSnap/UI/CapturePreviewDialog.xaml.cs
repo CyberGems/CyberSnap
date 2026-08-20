@@ -279,7 +279,7 @@ namespace CyberSnap.UI
         {
             var lang = _settingsService.Settings.InterfaceLanguage;
             Helpers.WindowTitles.ApplyTaskbar(this, Helpers.WindowTitles.Preview, lang);
-            TitleBar.Title = LocalizationService.Translate("Capture Preview");
+            TitleBar.Title = LocalizationService.Translate(lang, Helpers.WindowTitles.Preview);
             TitleBar.CloseToolTip = WithHotkeyHint(
                 LocalizationService.Translate("Cancel and discard pending actions."),
                 "Esc");
