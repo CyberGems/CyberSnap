@@ -605,7 +605,7 @@ public partial class SettingsWindow
 
     private void UpdateWindowTitle()
     {
-        var configLabel = LocalizationService.Translate("Configuration");
+        var configLabel = LocalizationService.Translate("Configuration ᐧ CyberSnap");
         SettingsTitleBar.Title = configLabel;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Settings, _settingsService.Settings.InterfaceLanguage);
     }

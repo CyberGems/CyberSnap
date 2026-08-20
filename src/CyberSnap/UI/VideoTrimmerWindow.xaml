@@ -581,7 +581,7 @@
 
             <Grid Grid.Row="0">
                 <controls:CyberSnapTitleBar x:Name="TrimmerTitleBar"
-                                            Title="Video &amp; GIF Trimmer"
+                                            Title="Video &amp; GIF Trimmer ⋅ CyberSnap"
                                             ShowPinButton="True"
                                             CloseRequested="TitleBar_CloseRequested"
                                             PinRequested="TitleBar_PinRequested"/>

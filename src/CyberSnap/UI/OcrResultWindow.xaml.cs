@@ -70,7 +70,7 @@ public partial class OcrResultWindow : Window
         LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
         var lang = settingsService.Settings.InterfaceLanguage;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Ocr, lang);
-        OcrTitleBar.Title = LocalizationService.Translate("Text extraction (OCR)");
+        OcrTitleBar.Title = LocalizationService.Translate(lang, WindowTitles.Ocr);
 
         Loaded += (_, _) =>
         {

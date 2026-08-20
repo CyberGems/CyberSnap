@@ -381,7 +381,7 @@
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="OcrTitleBar" Grid.Row="0"
-                                      Title="Text extraction (OCR)"
+                                      Title="Text Extraction (OCR) ⋅ CyberSnap"
                                       ShowPinButton="True"
                                       CloseRequested="TitleBar_CloseRequested"
                                       PinRequested="TitleBar_PinRequested"/>
