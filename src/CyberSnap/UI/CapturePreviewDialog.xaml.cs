@@ -44,8 +44,8 @@ namespace CyberSnap.UI
         /// <summary>True while the countdown is paused because the cursor is moving over the window.</summary>
         private bool _countdownPausedForMotion;
         private DispatcherTimer? _cursorIdleTimer;
+        private DispatcherTimer? _sheenTimer;
         private SolidColorBrush? _ctaBorderBrush;
-        private Storyboard? _ctaSheenStoryboard;
         private bool _ctaBorderPulseActive;
         private bool _primaryButtonHovered;
         private bool _didCenterOnOpen;
@@ -334,6 +334,8 @@ namespace CyberSnap.UI
         {
             ContentRendered -= CapturePreviewDialog_ContentRendered;
             Topmost = _isPinned;
+
+            StartCtaBorderPulse();
 
             // Defer until layout/DPI settle — SourceInitialized GetWindowRect is still short
             // at 150% with AllowsTransparency + UiScale LayoutTransform.
@@ -1015,9 +1017,9 @@ namespace CyberSnap.UI
             var accent = Theme.Accent;
             try
             {
-                CtaSheenStopMid.Color = System.Windows.Media.Color.FromArgb(90, accent.R, accent.G, accent.B);
-                CtaSheenStopEdge1.Color = System.Windows.Media.Color.FromArgb(28, 255, 255, 255);
-                CtaSheenStopEdge2.Color = System.Windows.Media.Color.FromArgb(28, 255, 255, 255);
+                CtaSheenStopMid.Color = System.Windows.Media.Color.FromArgb(210, 255, 255, 255);
+                CtaSheenStopEdge1.Color = System.Windows.Media.Color.FromArgb(85, accent.R, accent.G, accent.B);
+                CtaSheenStopEdge2.Color = System.Windows.Media.Color.FromArgb(85, accent.R, accent.G, accent.B);
             }
             catch { }
 
@@ -1027,8 +1029,7 @@ namespace CyberSnap.UI
                     accent.R, accent.G, accent.B));
             _ctaBorderBrush = new SolidColorBrush(accent) { Opacity = CtaBorderOpacityRest };
             CancelBtn.BorderBrush = _ctaBorderBrush;
-            if (wasPulsing || _autoCloseArmed)
-                StartCtaBorderPulse();
+            StartCtaBorderPulse();
 
             CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
             PreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
@@ -1051,46 +1052,53 @@ namespace CyberSnap.UI
 
             StopCtaSheen();
 
-            // Slide animation across the button width
-            var slideAnim = new DoubleAnimationUsingKeyFrames();
-            slideAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            slideAnim.KeyFrames.Add(new SplineDoubleKeyFrame(370, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(950)), new KeySpline(0.2, 0.0, 0.2, 1.0)));
-            slideAnim.KeyFrames.Add(new LinearDoubleKeyFrame(370, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(3.4))));
+            _sheenTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3.5)
+            };
+            _sheenTimer.Tick += (_, _) => TriggerSingleSheenSweep();
+            _sheenTimer.Start();
 
-            // Opacity keyframes: fade in at start of sweep, hold, fade out at end, stay invisible during pause
+            // Run first sweep after dialog visual tree loads
+            Dispatcher.BeginInvoke(new Action(TriggerSingleSheenSweep), DispatcherPriority.Loaded);
+        }
+
+        private void TriggerSingleSheenSweep()
+        {
+            if (_isClosing || CtaSheenBar is null || CtaSheenTranslate is null || Motion.Disabled)
+                return;
+
+            double targetWidth = CancelBtn.ActualWidth > 50 ? CancelBtn.ActualWidth + 220 : 480;
+
+            var slideAnim = new DoubleAnimation(0, targetWidth, TimeSpan.FromMilliseconds(900))
+            {
+                EasingFunction = Motion.Ease(Motion.SmoothInOut)
+            };
+
             var opacityAnim = new DoubleAnimationUsingKeyFrames();
             opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(120))));
-            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(780))));
-            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(950))));
-            opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(3.4))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(100))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(700))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(900))));
 
-            _ctaSheenStoryboard = new Storyboard
-            {
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-            Storyboard.SetTarget(slideAnim, CtaSheenTranslate);
-            Storyboard.SetTargetProperty(slideAnim, new PropertyPath(TranslateTransform.XProperty));
-
-            Storyboard.SetTarget(opacityAnim, CtaSheenBar);
-            Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(UIElement.OpacityProperty));
-
-            _ctaSheenStoryboard.Children.Add(slideAnim);
-            _ctaSheenStoryboard.Children.Add(opacityAnim);
-            _ctaSheenStoryboard.Begin();
+            CtaSheenTranslate.BeginAnimation(TranslateTransform.XProperty, slideAnim);
+            CtaSheenBar.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
         }
 
         private void StopCtaSheen()
         {
-            if (_ctaSheenStoryboard is not null)
+            if (_sheenTimer is not null)
             {
-                _ctaSheenStoryboard.Stop();
-                _ctaSheenStoryboard = null;
+                _sheenTimer.Stop();
+                _sheenTimer = null;
             }
-            if (CtaSheenBar is not null)
-                CtaSheenBar.Opacity = 0;
             if (CtaSheenTranslate is not null)
-                CtaSheenTranslate.X = 0;
+                CtaSheenTranslate.BeginAnimation(TranslateTransform.XProperty, null);
+            if (CtaSheenBar is not null)
+            {
+                CtaSheenBar.BeginAnimation(UIElement.OpacityProperty, null);
+                CtaSheenBar.Opacity = 0.0;
+            }
         }
 
         /// <summary>
