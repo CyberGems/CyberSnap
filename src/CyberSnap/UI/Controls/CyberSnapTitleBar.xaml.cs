@@ -425,7 +425,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             ActionBtn.ContextMenu = menu;
         }
-        else if (OwnerWindow is AboutWindow or AchievementsWindow)
+        else if (OwnerWindow is AboutWindow)
         {
             AnnotationBtn.Visibility = Visibility.Collapsed;
             ActionBtn.Visibility = Visibility.Collapsed;
@@ -433,7 +433,7 @@ public partial class CyberSnapTitleBar : UserControl
         }
         else if (OwnerWindow is not null)
         {
-            // OCR / Trimmer / Capture Preview / other chrome windows: About + Configuration
+            // OCR / Trimmer / Capture Preview / Achievements / other chrome windows: About + Configuration
             AnnotationBtn.Visibility = Visibility.Collapsed;
             ActionBtn.Visibility = Visibility.Collapsed;
 
@@ -473,20 +473,23 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(configItem);
 
-            var achievementsItem = new MenuItem
+            if (OwnerWindow is not AchievementsWindow)
             {
-                Header = LocalizationService.Translate("Achievements..."),
-                Icon = CreateMenuIcon("trophy", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open Achievements")
-            };
-            achievementsItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowAchievements());
-            };
-            menu.Items.Add(achievementsItem);
+                var achievementsItem = new MenuItem
+                {
+                    Header = LocalizationService.Translate("Achievements..."),
+                    Icon = CreateMenuIcon("trophy", titleIcon, 16),
+                    ToolTip = LocalizationService.Translate("Open Achievements")
+                };
+                achievementsItem.Click += (_, _) =>
+                {
+                    menu.IsOpen = false;
+                    _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                        System.Windows.Threading.DispatcherPriority.Background,
+                        () => ((App)Application.Current).ShowAchievements());
+                };
+                menu.Items.Add(achievementsItem);
+            }
 
             var aboutItem = new MenuItem
             {

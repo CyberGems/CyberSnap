@@ -78,7 +78,7 @@ public partial class AchievementsWindow : Window
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         OuterBorder.Background = Theme.Brush(Theme.BgPrimary);
         OuterBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
-        Icon = WindowIcons.Wpf(WindowIconKind.Main);
+        Icon = WindowIcons.Wpf(WindowIconKind.Achievements);
         Foreground = Theme.Brush(Theme.TextPrimary);
         UiScale.ApplyToWindow(this, OuterBorder, scaleWindowBounds: false);
         AchievementsTitleBar.RefreshIcons();
@@ -101,7 +101,7 @@ public partial class AchievementsWindow : Window
 
     private void UpdateWindowTitle()
     {
-        var label = LocalizationService.Translate("Achievements");
+        var label = LocalizationService.Translate("Achievements ᐧ CyberSnap");
         AchievementsTitleBar.Title = label;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Achievements, _settingsService.Settings.InterfaceLanguage);
     }

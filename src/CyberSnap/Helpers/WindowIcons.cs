@@ -14,7 +14,8 @@ public enum WindowIconKind
     Ocr,
     Trimmer,
     Editor,
-    Preview
+    Preview,
+    Achievements
 }
 
 public static class WindowIcons
@@ -28,6 +29,7 @@ public static class WindowIcons
         [WindowIconKind.Trimmer] = "Trimmer.ico",
         [WindowIconKind.Editor] = "Editor.ico",
         [WindowIconKind.Preview] = "Preview.ico",
+        [WindowIconKind.Achievements] = "Achievements.ico",
     };
 
     public static ImageSource Wpf(WindowIconKind kind, int size = 32)

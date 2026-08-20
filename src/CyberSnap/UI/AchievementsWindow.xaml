@@ -12,7 +12,7 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
-        Icon="pack://application:,,,/Assets/Icons/CyberSnap.ico">
+        Icon="pack://application:,,,/Assets/Icons/Achievements.ico">
 
     <Window.Resources>
         <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="#FFF0F0F0"/>
@@ -32,6 +32,60 @@
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Focusable" Value="False"/>
         </Style>
+
+        <!-- Themed scrollbar (same as Settings and History windows) -->
+        <Style x:Key="SettingsScrollThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Opacity" Value="0.35"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border CornerRadius="3" Background="{DynamicResource ThemeTextSecondaryBrush}" Margin="0,2,8,2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+                <Trigger Property="IsDragging" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SettingsScrollBarStyle" TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Background="Transparent" Width="{TemplateBinding Width}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="0,6,0,6">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource SettingsScrollThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource SettingsScrollBarStyle}"/>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
@@ -53,7 +107,7 @@
                 </Grid.RowDefinitions>
 
                 <controls:CyberSnapTitleBar x:Name="AchievementsTitleBar" Grid.Row="0"
-                                            Title="Achievements"
+                                            Title="Achievements ⋅ CyberSnap"
                                             CloseRequested="TitleBar_CloseRequested"/>
 
                 <ScrollViewer Grid.Row="1"
@@ -61,6 +115,14 @@
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="24,16,24,24">
                     <StackPanel HorizontalAlignment="Stretch">
+                        <TextBlock Text="Track your capture milestones, active streaks, and unlocked badges as you use CyberSnap."
+                                   FontSize="12.5"
+                                   FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,16"
+                                   Services:LocalizationService.SourceText="Track your capture milestones, active streaks, and unlocked badges as you use CyberSnap."/>
+
                         <TextBlock Text="Your progress" Style="{StaticResource SectionLabel}"
                                    Services:LocalizationService.SourceText="Your progress"/>
 
