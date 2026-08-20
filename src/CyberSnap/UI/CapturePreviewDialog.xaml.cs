@@ -26,10 +26,10 @@ namespace CyberSnap.UI
         private const int CursorIdleResumeMs = 650;
         private const int CountdownFadeMs = 220;
         /// <summary>Resting opacity for the Done CTA accent hairline (quiet, not shouty).</summary>
-        private const double CtaBorderOpacityRest = 0.22;
+        private const double CtaBorderOpacityRest = 0.35;
         /// <summary>Peak opacity for the Done-border breathe — wide enough to read, still soft.</summary>
-        private const double CtaBorderOpacityPeak = 0.58;
-        private const double CtaBorderBreatheSeconds = 2.6;
+        private const double CtaBorderOpacityPeak = 0.75;
+        private const double CtaBorderBreatheSeconds = 2.4;
         /// <summary>How far the Done chevron nudges right on hover (invite to proceed).</summary>
         private const double ChevronInviteSlidePx = 7;
         private const int ChevronInviteMs = 200;
@@ -45,6 +45,7 @@ namespace CyberSnap.UI
         private bool _countdownPausedForMotion;
         private DispatcherTimer? _cursorIdleTimer;
         private SolidColorBrush? _ctaBorderBrush;
+        private Storyboard? _ctaSheenStoryboard;
         private bool _ctaBorderPulseActive;
         private bool _primaryButtonHovered;
         private bool _didCenterOnOpen;
@@ -1012,6 +1013,14 @@ namespace CyberSnap.UI
             bool wasPulsing = _ctaBorderPulseActive;
             StopCtaBorderPulse(resetOpacity: false);
             var accent = Theme.Accent;
+            try
+            {
+                CtaSheenStopMid.Color = System.Windows.Media.Color.FromArgb(90, accent.R, accent.G, accent.B);
+                CtaSheenStopEdge1.Color = System.Windows.Media.Color.FromArgb(28, 255, 255, 255);
+                CtaSheenStopEdge2.Color = System.Windows.Media.Color.FromArgb(28, 255, 255, 255);
+            }
+            catch { }
+
             Resources["ThemePrimaryCtaBorderBrush"] = Theme.Brush(
                 System.Windows.Media.Color.FromArgb(
                     (byte)Math.Clamp((int)(CtaBorderOpacityRest * 255), 0, 255),
@@ -1033,11 +1042,64 @@ namespace CyberSnap.UI
         }
 
         /// <summary>
-        /// Cheap "life" on the Done CTA: one looping Opacity animation on the accent
-        /// SolidColorBrush. No DropShadow, no extra visuals — GPU cost is negligible.
+        /// Periodic luminous sheen sweep across the primary CTA button surface (Option C).
+        /// </summary>
+        private void StartCtaSheen()
+        {
+            if (Motion.Disabled || CtaSheenBar is null || CtaSheenTranslate is null)
+                return;
+
+            StopCtaSheen();
+
+            // Slide animation across the button width
+            var slideAnim = new DoubleAnimationUsingKeyFrames();
+            slideAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            slideAnim.KeyFrames.Add(new SplineDoubleKeyFrame(370, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(950)), new KeySpline(0.2, 0.0, 0.2, 1.0)));
+            slideAnim.KeyFrames.Add(new LinearDoubleKeyFrame(370, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(3.4))));
+
+            // Opacity keyframes: fade in at start of sweep, hold, fade out at end, stay invisible during pause
+            var opacityAnim = new DoubleAnimationUsingKeyFrames();
+            opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(120))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(780))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(950))));
+            opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(3.4))));
+
+            _ctaSheenStoryboard = new Storyboard
+            {
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            Storyboard.SetTarget(slideAnim, CtaSheenTranslate);
+            Storyboard.SetTargetProperty(slideAnim, new PropertyPath(TranslateTransform.XProperty));
+
+            Storyboard.SetTarget(opacityAnim, CtaSheenBar);
+            Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(UIElement.OpacityProperty));
+
+            _ctaSheenStoryboard.Children.Add(slideAnim);
+            _ctaSheenStoryboard.Children.Add(opacityAnim);
+            _ctaSheenStoryboard.Begin();
+        }
+
+        private void StopCtaSheen()
+        {
+            if (_ctaSheenStoryboard is not null)
+            {
+                _ctaSheenStoryboard.Stop();
+                _ctaSheenStoryboard = null;
+            }
+            if (CtaSheenBar is not null)
+                CtaSheenBar.Opacity = 0;
+            if (CtaSheenTranslate is not null)
+                CtaSheenTranslate.X = 0;
+        }
+
+        /// <summary>
+        /// Cheap "life" on the Done CTA: looping accent border breathe and luminous sheen sweep.
         /// </summary>
         private void StartCtaBorderPulse()
         {
+            StartCtaSheen();
+
             if (_ctaBorderBrush is null)
                 return;
 
@@ -1064,6 +1126,8 @@ namespace CyberSnap.UI
 
         private void StopCtaBorderPulse(bool resetOpacity = true)
         {
+            StopCtaSheen();
+
             if (_ctaBorderBrush is null)
             {
                 _ctaBorderPulseActive = false;

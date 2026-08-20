@@ -408,12 +408,38 @@
                         <Button x:Name="CancelBtn" Click="CancelBtn_Click"
                                 Style="{StaticResource PreviewPrimaryButton}"
                                 HorizontalAlignment="Stretch">
-                            <Grid HorizontalAlignment="Stretch" MinHeight="24">
+                            <Grid HorizontalAlignment="Stretch" MinHeight="24" ClipToBounds="True">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
+
+                                <!-- Luminous sheen sweep rectangle (Option C) -->
+                                <Rectangle x:Name="CtaSheenBar" Grid.ColumnSpan="3"
+                                           Width="65" Height="60"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Stretch"
+                                           Margin="-75,-12,0,-12"
+                                           IsHitTestVisible="False"
+                                           Opacity="0">
+                                    <Rectangle.Fill>
+                                        <LinearGradientBrush x:Name="CtaSheenBrush" StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#00FFFFFF" Offset="0.0"/>
+                                            <GradientStop x:Name="CtaSheenStopEdge1" Color="#20FFFFFF" Offset="0.25"/>
+                                            <GradientStop x:Name="CtaSheenStopMid" Color="#50FFFFFF" Offset="0.5"/>
+                                            <GradientStop x:Name="CtaSheenStopEdge2" Color="#20FFFFFF" Offset="0.75"/>
+                                            <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Rectangle.Fill>
+                                    <Rectangle.RenderTransform>
+                                        <TransformGroup>
+                                            <SkewTransform AngleX="-28"/>
+                                            <TranslateTransform x:Name="CtaSheenTranslate" X="0"/>
+                                        </TransformGroup>
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
+
                                 <StackPanel Grid.Column="1" Orientation="Horizontal"
                                             HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center"
