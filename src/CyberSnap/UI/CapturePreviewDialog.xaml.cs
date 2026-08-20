@@ -299,7 +299,7 @@ namespace CyberSnap.UI
             ZoomOutBtn.ToolTip = LocalizationService.Translate("Zoom out");
             ZoomInBtn.ToolTip = LocalizationService.Translate("Zoom in");
             ZoomFitBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Fit to window"), "Ctrl+0");
-            ZoomLevelText.ToolTip = WithHotkeyHint(LocalizationService.Translate("Click for actual size (100%)"), "Ctrl+1");
+            ZoomLevelBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Click for actual size (100%)"), "Ctrl+1");
 
             // Optional-action tooltips: previously Edit/Copy/Save had none, so hovering
             // them gave no feedback. Each also carries its hotkey as a discreet suffix.
@@ -324,7 +324,7 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(ZoomOutBtn);
             ApplyTooltipPlacement(ZoomInBtn);
             ApplyTooltipPlacement(ZoomFitBtn);
-            ApplyTooltipPlacement(ZoomLevelText);
+            ApplyTooltipPlacement(ZoomLevelBtn);
 
             UpdateContinueOrExitButton();
         }
@@ -1846,7 +1846,7 @@ namespace CyberSnap.UI
             ZoomToFitWindow();
         }
 
-        private void ZoomLevelText_Click(object sender, MouseButtonEventArgs e)
+        private void ZoomLevelBtn_Click(object sender, RoutedEventArgs e)
         {
             ZoomActualSize();
         }
