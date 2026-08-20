@@ -63,6 +63,43 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="PreviewZoomPercentButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="MinWidth" Value="42"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#35FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#35FFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#50FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="PreviewPrimaryButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -188,17 +225,19 @@
                                     <Image x:Name="ZoomOutIcon" Width="12" Height="12"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
-                                <TextBlock x:Name="ZoomLevelText"
-                                           Text="100%"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Margin="8,0"
-                                           VerticalAlignment="Center"
-                                           Cursor="Hand"
-                                           MouseLeftButtonDown="ZoomLevelText_Click"
-                                           ToolTip="{x:Null}"
-                                           MinWidth="40" TextAlignment="Center"/>
+                                <Button x:Name="ZoomLevelBtn" Style="{StaticResource PreviewZoomPercentButton}"
+                                        Click="ZoomLevelBtn_Click"
+                                        Margin="4,0"
+                                        ToolTip="{x:Null}"
+                                        AutomationProperties.Name="Reset zoom to actual size">
+                                    <TextBlock x:Name="ZoomLevelText"
+                                               Text="100%"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Center"/>
+                                </Button>
                                 <Button x:Name="ZoomInBtn" Style="{StaticResource PreviewIconButton}"
                                         Click="ZoomInBtn_Click"
                                         Width="24" Height="24"
