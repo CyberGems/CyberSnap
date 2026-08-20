@@ -24,11 +24,7 @@ namespace CyberSnap.UI
         private const int AutoCloseFadeMs = 280;
         /// <summary>Resume auto-close after the pointer stops moving over the window.</summary>
         private const int CursorIdleResumeMs = 650;
-        /// <summary>How long the ring takes to refill to the full timeout while the cursor moves.</summary>
-        private const int CountdownRefillMs = 360;
         private const int CountdownFadeMs = 220;
-        /// <summary>Dimmed opacity while the cursor is moving (refill in progress).</summary>
-        private const double CountdownMotionOpacity = 0.42;
         /// <summary>Resting opacity for the Done CTA accent hairline (quiet, not shouty).</summary>
         private const double CtaBorderOpacityRest = 0.22;
         /// <summary>Peak opacity for the Done-border breathe — wide enough to read, still soft.</summary>
@@ -646,57 +642,18 @@ namespace CyberSnap.UI
             CountdownRingArc.Data = geometry;
         }
 
-        private void BeginCountdownRefill()
-        {
-            if (!_autoCloseArmed || _isPinned || _autoCloseDurationSeconds <= 0)
-                return;
-
-            // Stop the depleting clock and animate back up to a full timeout grant.
-            _countdownEpoch++;
-            double from = Math.Clamp(CountdownFraction, 0, 1);
-            BeginAnimation(CountdownFractionProperty, null);
-            SetCurrentValue(CountdownFractionProperty, from);
-
-            if (from >= 0.999)
-            {
-                SetCurrentValue(CountdownFractionProperty, 1.0);
-                UpdateCountdownRingArc(1.0);
-                ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
-                return;
-            }
-
-            int epoch = ++_countdownEpoch;
-            var refill = new DoubleAnimation(from, 1.0, TimeSpan.FromMilliseconds(CountdownRefillMs))
-            {
-                EasingFunction = Motion.Ease(Motion.SmoothOut),
-                FillBehavior = FillBehavior.HoldEnd
-            };
-            refill.Completed += (_, _) =>
-            {
-                if (epoch != _countdownEpoch)
-                    return;
-                BeginAnimation(CountdownFractionProperty, null);
-                SetCurrentValue(CountdownFractionProperty, 1.0);
-                UpdateCountdownRingArc(1.0);
-                ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
-            };
-            BeginAnimation(CountdownFractionProperty, refill);
-        }
-
         private void ResumeAutoCloseAfterCursorIdle()
         {
             if (_isPinned || !_autoCloseArmed || _autoCloseDurationSeconds <= 0)
                 return;
 
-            // Capture the live fraction (may be mid-refill) before switching to deplete.
             _countdownEpoch++;
-            double fraction = Math.Clamp(CountdownFraction, 0, 1);
             BeginAnimation(CountdownFractionProperty, null);
-            SetCurrentValue(CountdownFractionProperty, fraction);
-            UpdateCountdownRingArc(fraction);
-            ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
+            SetCurrentValue(CountdownFractionProperty, 1.0);
+            UpdateCountdownRingArc(1.0);
+            ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
             FadeCountdownRing(_primaryButtonHovered ? 0.0 : 1.0);
-            StartCountdownAnimation(fraction);
+            StartCountdownAnimation(1.0);
         }
 
         private void StopAutoCloseCountdown(bool resetProgress)
@@ -736,18 +693,19 @@ namespace CyberSnap.UI
         {
             if (targetOpacity <= 0.0 || _primaryButtonHovered)
             {
-                CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
-                CountdownRingHost.Opacity = 0.0;
+                var fadeOut = new DoubleAnimation(0.0, Motion.Ms(CountdownFadeMs))
+                {
+                    EasingFunction = Motion.Ease(Motion.SmoothIn)
+                };
+                CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, fadeOut);
                 return;
             }
 
-            var fade = new DoubleAnimation(targetOpacity, Motion.Ms(CountdownFadeMs))
+            var fadeIn = new DoubleAnimation(targetOpacity, Motion.Ms(CountdownFadeMs))
             {
-                EasingFunction = Motion.Ease(targetOpacity > CountdownMotionOpacity
-                    ? Motion.SmoothOut
-                    : Motion.SmoothIn)
+                EasingFunction = Motion.Ease(Motion.SmoothOut)
             };
-            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, fade);
+            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, fadeIn);
         }
 
         /// <summary>
@@ -781,10 +739,13 @@ namespace CyberSnap.UI
             if (!_countdownPausedForMotion)
             {
                 _countdownPausedForMotion = true;
-                // Soften the ring while motion pauses the clock and refills to full timeout.
-                // Stay fully hidden while Done is hovered (invite UX owns opacity).
-                BeginCountdownRefill();
-                FadeCountdownRing(_primaryButtonHovered ? 0.0 : CountdownMotionOpacity);
+                _countdownEpoch++;
+                BeginAnimation(CountdownFractionProperty, null);
+                SetCurrentValue(CountdownFractionProperty, 1.0);
+                UpdateCountdownRingArc(1.0);
+                ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
+                // Completely hide the timer ring while moving the cursor, matching button hover
+                FadeCountdownRing(0.0);
             }
 
             ScheduleCursorIdleResume();
@@ -1343,12 +1304,11 @@ namespace CyberSnap.UI
             {
                 if (invite)
                 {
-                    CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
-                    CountdownRingHost.Opacity = 0.0;
+                    FadeCountdownRing(0.0);
                 }
                 else if (!_isClosing)
                 {
-                    FadeCountdownRing(_countdownPausedForMotion ? CountdownMotionOpacity : 1.0);
+                    FadeCountdownRing(_countdownPausedForMotion ? 0.0 : 1.0);
                 }
             }
 
