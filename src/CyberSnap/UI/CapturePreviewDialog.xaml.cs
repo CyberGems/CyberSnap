@@ -1632,7 +1632,7 @@ namespace CyberSnap.UI
             });
         }
 
-        /// <summary>Completed badge: circular disc with a centered check inside (Fluent-style).</summary>
+        /// <summary>Completed mark: standalone checkmark without circular background.</summary>
         private static BitmapSource RenderCheckBadge(System.Drawing.Color color, int pixelSize)
         {
             var accentBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B));
@@ -1640,17 +1640,15 @@ namespace CyberSnap.UI
 
             return RenderVector(pixelSize, ctx =>
             {
-                ctx.DrawEllipse(accentBrush, null, new System.Windows.Point(10, 10), 9, 9);
-
-                // Check mark: two-segment stroke (6.8,10.4 -> 9.4,13 -> 13.4,7.4).
+                // Standalone checkmark: clean two-segment stroke across 20x20 canvas.
                 var check = new PathGeometry();
-                var f = new PathFigure { StartPoint = new System.Windows.Point(6.8, 10.4), IsClosed = false };
-                f.Segments.Add(new LineSegment(new System.Windows.Point(9.4, 13), true));
-                f.Segments.Add(new LineSegment(new System.Windows.Point(13.4, 7.4), true));
+                var f = new PathFigure { StartPoint = new System.Windows.Point(4.5, 10.5), IsClosed = false };
+                f.Segments.Add(new LineSegment(new System.Windows.Point(8.5, 14.5), true));
+                f.Segments.Add(new LineSegment(new System.Windows.Point(15.8, 6.2), true));
                 check.Figures.Add(f);
                 check.Freeze();
 
-                ctx.DrawGeometry(null, new System.Windows.Media.Pen(System.Windows.Media.Brushes.White, 1.9)
+                ctx.DrawGeometry(null, new System.Windows.Media.Pen(accentBrush, 2.3)
                 {
                     StartLineCap = PenLineCap.Round,
                     EndLineCap = PenLineCap.Round,
