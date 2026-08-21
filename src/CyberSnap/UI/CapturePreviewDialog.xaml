@@ -458,18 +458,18 @@
                                 <!-- Luminous Sheen Layer covering full button geometry -->
                                 <Border CornerRadius="8" ClipToBounds="True" IsHitTestVisible="False">
                                     <Rectangle x:Name="CtaSheenBar"
-                                               Width="90"
+                                               Width="120"
                                                HorizontalAlignment="Left"
                                                VerticalAlignment="Stretch"
-                                               Margin="-110,-5,0,-5"
+                                               Margin="-140,-5,0,-5"
                                                IsHitTestVisible="False"
                                                Opacity="0">
                                         <Rectangle.Fill>
                                             <LinearGradientBrush x:Name="CtaSheenBrush" StartPoint="0,0" EndPoint="1,0">
                                                 <GradientStop Color="#00FFFFFF" Offset="0.0"/>
-                                                <GradientStop x:Name="CtaSheenStopEdge1" Color="#40FFFFFF" Offset="0.22"/>
-                                                <GradientStop x:Name="CtaSheenStopMid" Color="#D0FFFFFF" Offset="0.5"/>
-                                                <GradientStop x:Name="CtaSheenStopEdge2" Color="#40FFFFFF" Offset="0.78"/>
+                                                <GradientStop x:Name="CtaSheenStopEdge1" Color="#15FFFFFF" Offset="0.25"/>
+                                                <GradientStop x:Name="CtaSheenStopMid" Color="#45FFFFFF" Offset="0.5"/>
+                                                <GradientStop x:Name="CtaSheenStopEdge2" Color="#15FFFFFF" Offset="0.75"/>
                                                 <GradientStop Color="#00FFFFFF" Offset="1.0"/>
                                             </LinearGradientBrush>
                                         </Rectangle.Fill>

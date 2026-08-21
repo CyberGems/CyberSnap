@@ -1017,9 +1017,9 @@ namespace CyberSnap.UI
             var accent = Theme.Accent;
             try
             {
-                CtaSheenStopMid.Color = System.Windows.Media.Color.FromArgb(210, 255, 255, 255);
-                CtaSheenStopEdge1.Color = System.Windows.Media.Color.FromArgb(85, accent.R, accent.G, accent.B);
-                CtaSheenStopEdge2.Color = System.Windows.Media.Color.FromArgb(85, accent.R, accent.G, accent.B);
+                CtaSheenStopMid.Color = System.Windows.Media.Color.FromArgb(80, 255, 255, 255);
+                CtaSheenStopEdge1.Color = System.Windows.Media.Color.FromArgb(32, accent.R, accent.G, accent.B);
+                CtaSheenStopEdge2.Color = System.Windows.Media.Color.FromArgb(32, accent.R, accent.G, accent.B);
             }
             catch { }
 
@@ -1042,6 +1042,9 @@ namespace CyberSnap.UI
             UpdateOptionalActionsAvailability();
         }
 
+        private const double SheenIntervalSeconds = 4.8;
+        private const int SheenSweepDurationMs = 1600;
+
         /// <summary>
         /// Periodic luminous sheen sweep across the primary CTA button surface (Option C).
         /// </summary>
@@ -1054,7 +1057,7 @@ namespace CyberSnap.UI
 
             _sheenTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(3.5)
+                Interval = TimeSpan.FromSeconds(SheenIntervalSeconds)
             };
             _sheenTimer.Tick += (_, _) => TriggerSingleSheenSweep();
             _sheenTimer.Start();
@@ -1068,18 +1071,18 @@ namespace CyberSnap.UI
             if (_isClosing || CtaSheenBar is null || CtaSheenTranslate is null || Motion.Disabled)
                 return;
 
-            double targetWidth = CancelBtn.ActualWidth > 50 ? CancelBtn.ActualWidth + 220 : 480;
+            double targetWidth = CancelBtn.ActualWidth > 50 ? CancelBtn.ActualWidth + 280 : 520;
 
-            var slideAnim = new DoubleAnimation(0, targetWidth, TimeSpan.FromMilliseconds(900))
+            var slideAnim = new DoubleAnimation(0, targetWidth, TimeSpan.FromMilliseconds(SheenSweepDurationMs))
             {
                 EasingFunction = Motion.Ease(Motion.SmoothInOut)
             };
 
             var opacityAnim = new DoubleAnimationUsingKeyFrames();
             opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(100))));
-            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(700))));
-            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(900))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.75, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(220))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.75, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1300))));
+            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(SheenSweepDurationMs))));
 
             CtaSheenTranslate.BeginAnimation(TranslateTransform.XProperty, slideAnim);
             CtaSheenBar.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
