@@ -167,7 +167,7 @@ public partial class CaptureWidgetWindow : Window
         Theme.Refresh();
         
         // Define colors/brushes for widget based on IsDark
-        var bg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(242, 13, 15, 26) : System.Windows.Media.Color.FromArgb(242, 223, 226, 234);
+        var bg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(13, 15, 26) : System.Windows.Media.Color.FromRgb(223, 226, 234);
         var accent = Theme.IsGray ? System.Windows.Media.Color.FromRgb(184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromRgb(0, 255, 255) : System.Windows.Media.Color.FromRgb(0, 120, 215);
         var accentHover = Theme.IsGray ? System.Windows.Media.Color.FromRgb(214, 218, 224) : Theme.IsDark ? System.Windows.Media.Color.FromRgb(128, 255, 255) : System.Windows.Media.Color.FromRgb(50, 150, 240);
         var text = Theme.IsDark ? System.Windows.Media.Color.FromRgb(230, 240, 255) : System.Windows.Media.Color.FromRgb(26, 26, 26);
