@@ -744,11 +744,12 @@ namespace CyberSnap.UI
             {
                 _countdownPausedForMotion = true;
                 _countdownEpoch++;
+                double current = Math.Clamp(CountdownFraction, 0, 1);
                 BeginAnimation(CountdownFractionProperty, null);
-                SetCurrentValue(CountdownFractionProperty, 1.0);
-                UpdateCountdownRingArc(1.0);
-                ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
-                // Completely hide the timer ring while moving the cursor, matching button hover
+                SetCurrentValue(CountdownFractionProperty, current);
+                UpdateCountdownRingArc(current);
+                ShowDoneCountdownSeconds(current * _autoCloseDurationSeconds);
+                // Completely hide the timer ring while preserving current value during fade-out
                 FadeCountdownRing(0.0);
             }
 
