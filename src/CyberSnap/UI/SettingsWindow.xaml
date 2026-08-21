@@ -1540,15 +1540,15 @@
                                     <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show cursor in captures and recordings" Style="{StaticResource SettingTitle}"
-                                               Services:LocalizationService.SourceText="Show cursor in captures and recordings"/>
-                                    <TextBlock Text="Include the pointer in image captures, video, and GIF. Scrolling captures never include the cursor. Same master control as the floating widget." Style="{StaticResource SettingDescription}"
-                                               Services:LocalizationService.SourceText="Include the pointer in image captures, video, and GIF. Scrolling captures never include the cursor. Same master control as the floating widget."/>
+                                    <TextBlock Text="Show cursor in captures" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Show cursor in captures"/>
+                                    <TextBlock Text="Include the mouse pointer in still captures. Same control as on the floating widget." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Include the mouse pointer in still captures. Same control as on the floating widget."/>
                                 </StackPanel>
                                 <CheckBox x:Name="ShowCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Include the pointer in image captures, video, and GIF"
-                                          Services:LocalizationService.SourceToolTip="Include the pointer in image captures, video, and GIF"
-                                          AutomationProperties.Name="Show cursor in captures and recordings"
+                                          ToolTip="Include the mouse pointer in still captures. Same control as on the floating widget."
+                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures. Same control as on the floating widget."
+                                          AutomationProperties.Name="Show cursor in captures"
                                           Checked="ShowCursorCheck_Changed" Unchecked="ShowCursorCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -3052,13 +3052,13 @@
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Capture cursor" Style="{StaticResource SettingTitle}"
                                                Services:LocalizationService.SourceText="Capture cursor"/>
-                                    <TextBlock Text="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget." Style="{StaticResource SettingDescription}"
-                                               Services:LocalizationService.SourceText="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget."/>
+                                    <TextBlock Text="Include the mouse pointer in still captures. Same control as on the floating widget." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Include the mouse pointer in still captures. Same control as on the floating widget."/>
                                 </StackPanel>
                                 <CheckBox x:Name="WidgetCaptureCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Capture cursor"
-                                          ToolTip="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget."
-                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget."
+                                          ToolTip="Include the mouse pointer in still captures. Same control as on the floating widget."
+                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures. Same control as on the floating widget."
                                           Checked="WidgetCaptureCursorCheck_Changed" Unchecked="WidgetCaptureCursorCheck_Changed"/>
                             </Grid>
                             <Border x:Name="WidgetCaptureCursorSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>

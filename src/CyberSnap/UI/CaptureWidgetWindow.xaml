@@ -426,15 +426,15 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Capture cursor" FontSize="11" Foreground="{DynamicResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
                                        Margin="0,0,8,0" VerticalAlignment="Center"
-                                       ToolTip="Include the mouse pointer in image captures, video, and GIF"
+                                       ToolTip="Include the mouse pointer in still captures"
                                        Services:LocalizationService.SourceText="Capture cursor"
-                                       Services:LocalizationService.SourceToolTip="Include the mouse pointer in image captures, video, and GIF"/>
+                                       Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures"/>
                             <ToggleButton x:Name="CaptureCursorToggle" Grid.Column="1" Style="{StaticResource WidgetToggleSwitch}"
                                           Checked="CaptureCursorToggle_Changed" Unchecked="CaptureCursorToggle_Changed"
-                                          ToolTip="Include the mouse pointer in image captures, video, and GIF"
-                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in image captures, video, and GIF"
+                                          ToolTip="Include the mouse pointer in still captures"
+                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures"
                                           AutomationProperties.Name="Capture cursor"
-                                          AutomationProperties.HelpText="Include the mouse pointer in image captures, video, and GIF"/>
+                                          AutomationProperties.HelpText="Include the mouse pointer in still captures"/>
                         </Grid>
                     </Grid>
                 </Grid>
