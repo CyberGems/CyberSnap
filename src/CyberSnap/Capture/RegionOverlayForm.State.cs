@@ -2973,12 +2973,14 @@ public sealed partial class RegionOverlayForm
 
         int offset = UiChrome.ScaleInt(18);
         int margin = UiChrome.ScaleInt(10);
+        int padX = UiChrome.ScaleInt(10);
+        int padY = UiChrome.ScaleInt(8);
 
         float anchorX = r.Left + _confirmButtonAnchorFracX * r.Width;
         float anchorY = r.Top + _confirmButtonAnchorFracY * r.Height;
         var monitor = GetConfirmButtonMonitorClientBounds(new Point((int)Math.Round(anchorX), (int)Math.Round(anchorY)));
-        int minX = monitor.Left + margin;
-        int maxX = monitor.Right - margin;
+        int minX = monitor.Left + margin + padX;
+        int maxX = monitor.Right - margin - padX;
         int minY = monitor.Top + margin;
         int maxY = monitor.Bottom - margin;
         int maxTop = Math.Max(minY, maxY - bh);
@@ -3005,10 +3007,10 @@ public sealed partial class RegionOverlayForm
         // the frame on the side opposite the annotation column so it stays clear of it.
         // Use the collapsed width for side fit so expanding modes grow left without flipping sides.
         int sideGap = UiChrome.ScaleInt(12);
-        int sideLeft = r.Left - sideGap - collapsedClusterW;
-        int sideRight = r.Right + sideGap;
-        bool leftSideFits = sideLeft >= monitor.Left + margin;
-        bool rightSideFits = sideRight + collapsedClusterW <= monitor.Right - margin;
+        int sideLeft = r.Left - sideGap - collapsedClusterW - padX;
+        int sideRight = r.Right + sideGap + padX;
+        bool leftSideFits = sideLeft - padX >= monitor.Left + margin;
+        bool rightSideFits = sideRight + collapsedClusterW + padX <= monitor.Right - margin;
         bool annotationRight = _annotationFrameDockSide == CaptureDockSide.Right;
         bool oppositeSideFits = annotationRight ? leftSideFits : rightSideFits;
 
@@ -3048,26 +3050,23 @@ public sealed partial class RegionOverlayForm
         {
             int clear = UiChrome.ScaleInt(8);
             if (_annotationFrameDockSide == CaptureDockSide.Right)
-                maxX = Math.Min(maxX, _toolbarRect.Left - clear);
+                maxX = Math.Min(maxX, _toolbarRect.Left - clear - padX);
             else if (_annotationFrameDockSide == CaptureDockSide.Left)
-                minX = Math.Max(minX, _toolbarRect.Right + clear);
+                minX = Math.Max(minX, _toolbarRect.Right + clear + padX);
         }
 
-        // Prefer the pill strip under the capture frame width (L-shape), not past the frame edge
-        // that hosts the annotation column. This edge clamp is GEOMETRIC (about the frame, not the
-        // annotation bar), so it must apply even when the annotation chrome is hidden (OCR) — else
-        // the dock floats ~anchorW/2 right of the frame and jumps left when the bar appears.
-        // Derive the side from frame/monitor geometry since _annotationFrameDockSide is stale when
-        // the annotation toolbar never ran (OCR flow).
+        // Escuadra: Align confirmation dock with the selection frame's right vertical edge
+        // so that its outer wrapper does not exceed r.Right, matching the annotation bar's escuadra alignment.
         if (r.Width > 0)
         {
-            bool effectiveRight = ShowAnnotationChrome
-                ? _annotationFrameDockSide == CaptureDockSide.Right
-                : r.Right + collapsedClusterW <= maxX; // annotation chrome would sit right if it fits
-            if (effectiveRight)
-                maxX = Math.Min(maxX, r.Right);
-            else
-                minX = Math.Max(minX, r.Left - collapsedClusterW - Math.Max(UiChrome.ScaleInt(20), r.Width / 3));
+            if (insidePlacement)
+            {
+                maxX = Math.Min(maxX, r.Right - insidePad - padX);
+            }
+            else if (!sidePlacement)
+            {
+                maxX = Math.Min(maxX, r.Right - padX);
+            }
         }
 
         if (maxX < minX)
@@ -3076,10 +3075,8 @@ public sealed partial class RegionOverlayForm
         // Anchor Image + actions using the collapsed strip so alternate modes grow to the left
         // of Image without shoving Preview / Done / Cancel.
         int imageIdx = IndexOfConfirmChrome(ConfirmChromeKind.ModeImage);
-        int anchorBtnW = imageIdx >= 0 ? fullWidths[imageIdx] : (widths.Length > 0 ? widths[^1] : bh);
         int collapsedClusterLeft = ResolveConfirmChromeClusterLeft(
-            collapsedClusterW, anchorBtnW, r, anchorX, minX, maxX,
-            sidePlacement, insidePlacement, annotationRight, sideLeft, sideRight);
+            collapsedClusterW, minX, maxX, sidePlacement, annotationRight, sideLeft, sideRight);
 
         int imageLeftCollapsed = collapsedClusterLeft + gripW + gripToContentGap;
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
@@ -3203,8 +3200,6 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            int padX = UiChrome.ScaleInt(10);
-            int padY = UiChrome.ScaleInt(8);
             var union = Rectangle.Union(_confirmGripRect, pillUnion);
             _confirmChromeWrapperRect = Rectangle.Inflate(union, padX, padY);
         }
@@ -3242,13 +3237,9 @@ public sealed partial class RegionOverlayForm
 
     private int ResolveConfirmChromeClusterLeft(
         int clusterW,
-        int anchorBtnW,
-        Rectangle r,
-        float anchorX,
         int minX,
         int maxX,
         bool sidePlacement,
-        bool insidePlacement,
         bool annotationRight,
         int sideLeft,
         int sideRight)
@@ -3258,17 +3249,10 @@ public sealed partial class RegionOverlayForm
         {
             clusterLeft = annotationRight ? sideLeft : sideRight;
         }
-        else if (insidePlacement)
-        {
-            clusterLeft = (int)Math.Round(anchorX - clusterW);
-        }
         else
         {
-            int anchorCenter = (int)Math.Round(anchorX - anchorBtnW / 2f);
-            clusterLeft = anchorCenter - (clusterW - anchorBtnW);
-            int frameCenterLeft = r.Left + (r.Width - clusterW) / 2;
-            if (clusterLeft + clusterW < r.Left || clusterLeft > r.Right)
-                clusterLeft = frameCenterLeft;
+            // Escuadra: right-align the confirmation dock with the selection frame's right vertical edge
+            clusterLeft = maxX - clusterW;
         }
 
         if (clusterW >= maxX - minX)
