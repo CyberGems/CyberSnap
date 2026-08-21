@@ -216,6 +216,7 @@ namespace CyberSnap.UI
             // "Processing") fast-forward the pill simulation so the CTA is ready to click.
             CancelBtn.MouseEnter += (_, _) => OnPrimaryButtonMouseEnter();
             CancelBtn.MouseLeave += (_, _) => OnPrimaryButtonMouseLeave();
+            CancelBtn.SizeChanged += (_, _) => UpdateSheenClip();
 
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
@@ -1066,10 +1067,27 @@ namespace CyberSnap.UI
             Dispatcher.BeginInvoke(new Action(TriggerSingleSheenSweep), DispatcherPriority.Loaded);
         }
 
+        private void UpdateSheenClip()
+        {
+            if (CtaSheenHost is null || CancelBtn is null)
+                return;
+
+            double w = CancelBtn.ActualWidth;
+            double h = CancelBtn.ActualHeight;
+            if (w > 0 && h > 0)
+            {
+                var geom = new RectangleGeometry(new Rect(0, 0, w, h), 8, 8);
+                geom.Freeze();
+                CtaSheenHost.Clip = geom;
+            }
+        }
+
         private void TriggerSingleSheenSweep()
         {
             if (_isClosing || CtaSheenBar is null || CtaSheenTranslate is null || Motion.Disabled)
                 return;
+
+            UpdateSheenClip();
 
             double targetWidth = CancelBtn.ActualWidth > 50 ? CancelBtn.ActualWidth + 280 : 520;
 

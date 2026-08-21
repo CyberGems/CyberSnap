@@ -456,7 +456,7 @@
                                 </Button>
 
                                 <!-- Luminous Sheen Layer covering full button geometry -->
-                                <Border CornerRadius="8" ClipToBounds="True" IsHitTestVisible="False">
+                                <Border x:Name="CtaSheenHost" CornerRadius="8" IsHitTestVisible="False">
                                     <Rectangle x:Name="CtaSheenBar"
                                                Width="120"
                                                HorizontalAlignment="Left"
