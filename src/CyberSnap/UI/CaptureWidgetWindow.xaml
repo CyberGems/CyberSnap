@@ -19,7 +19,7 @@
 
     <Window.Resources>
         <!-- CyberGems / Cyberpunk Styles -->
-        <SolidColorBrush x:Key="WidgetBg" Color="#0D0F1A" Opacity="0.95"/>
+        <SolidColorBrush x:Key="WidgetBg" Color="#0D0F1A"/>
         <SolidColorBrush x:Key="WidgetAccent" Color="#00FFFF"/>
         <SolidColorBrush x:Key="WidgetAccentHover" Color="#80FFFF"/>
         <SolidColorBrush x:Key="WidgetText" Color="#E6F0FF"/>
