@@ -401,6 +401,7 @@ public sealed partial class RegionOverlayForm : Form
     // Ruler tool
     private Point _rulerStart;
     private bool _isRulerDragging;
+    private bool _rulerPillHoverTip;
 
     // Tracks the union of pixels painted by the most recent PaintAnnotations call,
     // so InvalidateLivePreview can always re-clear the previous frame's live overlay
