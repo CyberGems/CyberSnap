@@ -1,5 +1,5 @@
+using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -11,14 +11,14 @@ namespace CyberSnap.Capture;
 
 /// <summary>
 /// Standalone color picker activated via global hotkey or tray menu.
-/// Overlays a screenshot of all monitors with a magnifier that follows the cursor.
+/// Shows a live magnifier that follows the cursor over the real screen.
 /// Left-click picks the color and copies its HEX value to the clipboard.
 /// Right-click or Escape to close.
 /// </summary>
 public sealed class StandaloneColorPickerForm : Form
 {
-    private readonly Bitmap _screenshot;
     private readonly BannerLayeredForm _banner;
+    private readonly System.Windows.Forms.Timer _trackTimer;
     private PickerMagnifierForm? _magnifierForm;
     private Color _pickedColor = Color.Black;
 
@@ -32,11 +32,16 @@ public sealed class StandaloneColorPickerForm : Form
     private string _hexStr = "000000";
     private string _rgbStr = "0, 0, 0";
     private Point _cursorPos;
-    private int _bmpW, _bmpH;
-    private int[] _pixelData;
-    private bool _closed;
 
-    // Magnifier rendering
+    private const int CaptureRegionSize = 21;
+    private const int CaptureHalf = CaptureRegionSize / 2;
+    private const int CaptureIntervalMs = 30;
+
+    private int _captureW, _captureH;
+    private Rectangle _captureBounds;
+    private int[] _livePixelData = Array.Empty<int>();
+    private readonly Stopwatch _captureTimer = new();
+
     private Bitmap? _magBitmap;
     private int[] _magPixels = Array.Empty<int>();
     private int _lastMagSampleX = -1;
@@ -49,7 +54,6 @@ public sealed class StandaloneColorPickerForm : Form
 
     public StandaloneColorPickerForm()
     {
-        // Give the tray context menu time to fully dismiss before screenshot
         Thread.Sleep(80);
 
         var bounds = SystemInformation.VirtualScreen;
@@ -58,34 +62,21 @@ public sealed class StandaloneColorPickerForm : Form
         TopMost = true;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
-        DoubleBuffered = true;
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        KeyPreview = true;
+        BackColor = Color.Black;
+        Opacity = 0.01;
 
-        Theme.Refresh();
-        var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
-        _screenshot = bmp;
-        _bmpW = _screenshot.Width;
-        _bmpH = _screenshot.Height;
+        var cursor = Cursor.Position;
+        _cursorPos = new Point(cursor.X - bounds.X, cursor.Y - bounds.Y);
 
-        // Extract pixel data for fast color sampling
-        _pixelData = new int[_bmpW * _bmpH];
-        var bits = _screenshot.LockBits(new Rectangle(0, 0, _bmpW, _bmpH),
-            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-        try
-        {
-            Marshal.Copy(bits.Scan0, _pixelData, 0, _pixelData.Length);
-        }
-        finally
-        {
-            _screenshot.UnlockBits(bits);
-        }
+        _trackTimer = new System.Windows.Forms.Timer { Interval = Math.Max(1, UiChrome.FrameIntervalMs) };
+        _trackTimer.Tick += OnTrackTick;
 
         _magBitmap = new Bitmap(PW, PH, PixelFormat.Format32bppArgb);
         _magPixels = new int[PW * PH];
 
         Cursor = CursorFactory.EyedropperCursor;
 
-        // ── Banner ──
         var pickerLabel = LocalizationService.Translate("Color picker") + ": ";
         var pickerAction = LocalizationService.Translate("Click to pick color & copy HEX")
             + " · " + LocalizationService.Translate("Right-click or Esc to close");
@@ -93,38 +84,62 @@ public sealed class StandaloneColorPickerForm : Form
             new BannerSegment[]
             {
                 new(pickerLabel, StandaloneToolBanner.LabelColor),
-                new(pickerAction, null), // theme accent
+                new(pickerAction, null),
             },
-            Screen.FromPoint(Cursor.Position).WorkingArea,
+            Screen.FromPoint(cursor).WorkingArea,
             iconId: "picker");
 
-        // Initial magnifier at cursor position
-        UpdateMagnifierAtCursor();
+        _captureTimer.Start();
     }
 
-        protected override void Dispose(bool disposing)
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        CaptureWindowExclusion.Apply(this);
+        CaptureWindowExclusion.SetLogicalBounds(Handle, static () => Rectangle.Empty);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
         {
-            if (disposing)
-            {
-                _banner.Dispose();
+            _trackTimer.Stop();
+            _trackTimer.Tick -= OnTrackTick;
+            _trackTimer.Dispose();
+            if (IsHandleCreated)
+                CaptureWindowExclusion.Unregister(Handle);
+            _banner.Dispose();
             CloseMagnifier();
-            _screenshot?.Dispose();
             _magBitmap?.Dispose();
         }
         base.Dispose(disposing);
     }
 
-    // ── Lifecycle ──
-
-        protected override void OnShown(EventArgs e)
+    protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
         _banner.ShowFor(this);
         Activate();
         Focus();
+        SyncCursorFromScreen();
+        UpdateMagnifierAtCursor();
+        _trackTimer.Start();
     }
 
-    // ── Keyboard ──
+    private void OnTrackTick(object? sender, EventArgs e)
+    {
+        if (!IsHandleCreated || IsDisposed)
+            return;
+
+        SyncCursorFromScreen();
+        _banner.DismissIfHovered(Cursor.Position);
+        UpdateMagnifierAtCursor();
+    }
+
+    private void SyncCursorFromScreen()
+    {
+        _cursorPos = PointToClient(Cursor.Position);
+    }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
@@ -136,14 +151,10 @@ public sealed class StandaloneColorPickerForm : Form
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
-    // ── Mouse ──
-
     protected override void OnMouseMove(MouseEventArgs e)
     {
         _cursorPos = e.Location;
-
         _banner.DismissIfHovered(PointToScreen(e.Location));
-
         UpdateMagnifierAtCursor();
         base.OnMouseMove(e);
     }
@@ -158,24 +169,25 @@ public sealed class StandaloneColorPickerForm : Form
 
         if (e.Button == MouseButtons.Left)
         {
+            _cursorPos = e.Location;
             PickColor();
         }
 
         base.OnMouseDown(e);
     }
 
+    private Point CursorScreenPoint => PointToScreen(_cursorPos);
+
     private void PickColor()
     {
-        int cx = Math.Clamp(_cursorPos.X, 0, _bmpW - 1);
-        int cy = Math.Clamp(_cursorPos.Y, 0, _bmpH - 1);
+        CaptureLiveRegion();
+        if (!TrySampleCursorPixel(out int argb))
+            return;
 
-        // Re-read pixel directly from screenshot to ensure accuracy
-        var argb = _pixelData[cy * _bmpW + cx];
         var color = Color.FromArgb(argb);
         PickedColor = color;
         string hex = $"{color.R:X2}{color.G:X2}{color.B:X2}";
 
-        // Copy to clipboard
         try
         {
             Clipboard.SetText($"#{hex}");
@@ -185,16 +197,11 @@ public sealed class StandaloneColorPickerForm : Form
             AppDiagnostics.LogWarning("standalone-colorpicker.clipboard", ex.Message);
         }
 
-        // Save to history
         HistoryService.QuickSaveColor(hex);
-
-        // Count toward milestones and streak.
         App.NotifyStandaloneCapture(isColor: true);
 
-        // Close the picker first so the screenshot is released
         Close();
 
-        // Show toast on the WPF dispatcher thread (we're on a WinForms STA thread)
         var wpfColor = System.Windows.Media.Color.FromRgb(color.R, color.G, color.B);
         try
         {
@@ -213,47 +220,90 @@ public sealed class StandaloneColorPickerForm : Form
         }
     }
 
-    // ── Paint ──
-
-    protected override void OnPaint(PaintEventArgs e)
+    private void CaptureLiveRegion()
     {
-        if (_closed) return;
-        var g = e.Graphics;
+        var screen = CursorScreenPoint;
+        var virtualScreen = SystemInformation.VirtualScreen;
+        int regionX = screen.X - CaptureHalf;
+        int regionY = screen.Y - CaptureHalf;
 
-        // Draw screenshot as background
-        g.DrawImage(_screenshot, ClientRectangle);
+        if (regionX < virtualScreen.Left)
+            regionX = virtualScreen.Left;
+        if (regionY < virtualScreen.Top)
+            regionY = virtualScreen.Top;
+        if (regionX + CaptureRegionSize > virtualScreen.Right)
+            regionX = Math.Max(virtualScreen.Left, virtualScreen.Right - CaptureRegionSize);
+        if (regionY + CaptureRegionSize > virtualScreen.Bottom)
+            regionY = Math.Max(virtualScreen.Top, virtualScreen.Bottom - CaptureRegionSize);
+
+        var region = new Rectangle(regionX, regionY, CaptureRegionSize, CaptureRegionSize);
+        using var bmp = ScreenCapture.CaptureRegionForRecording(region, includeCursor: false);
+
+        _captureW = bmp.Width;
+        _captureH = bmp.Height;
+        _captureBounds = new Rectangle(regionX, regionY, _captureW, _captureH);
+
+        if (_livePixelData.Length != _captureW * _captureH)
+            _livePixelData = new int[_captureW * _captureH];
+
+        var bits = bmp.LockBits(new Rectangle(0, 0, _captureW, _captureH),
+            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            Marshal.Copy(bits.Scan0, _livePixelData, 0, _livePixelData.Length);
+        }
+        finally
+        {
+            bmp.UnlockBits(bits);
+        }
     }
 
-    protected override void OnFormClosed(FormClosedEventArgs e)
+    private bool TrySampleCursorPixel(out int argb)
     {
-        _closed = true;
-        base.OnFormClosed(e);
-    }
+        argb = 0;
+        if (_captureW <= 0 || _captureH <= 0 || _livePixelData.Length < _captureW * _captureH)
+            return false;
 
-    // ── Magnifier ──
+        var screen = CursorScreenPoint;
+        int cx = Math.Clamp(screen.X - _captureBounds.Left, 0, _captureW - 1);
+        int cy = Math.Clamp(screen.Y - _captureBounds.Top, 0, _captureH - 1);
+        argb = _livePixelData[cy * _captureW + cx];
+        return true;
+    }
 
     private void UpdateMagnifierAtCursor()
     {
-        int cx = Math.Clamp(_cursorPos.X, 0, _bmpW - 1);
-        int cy = Math.Clamp(_cursorPos.Y, 0, _bmpH - 1);
+        var screen = CursorScreenPoint;
+        bool pixelChanged = screen.X != _lastMagSampleX || screen.Y != _lastMagSampleY;
+        bool timeElapsed = _captureTimer.ElapsedMilliseconds >= CaptureIntervalMs;
+        bool needsCapture = _captureW <= 0 || !_captureBounds.Contains(screen);
 
-        int argb = _pixelData[cy * _bmpW + cx];
-        _pickedColor = Color.FromArgb(argb);
-        _hexStr = $"{_pickedColor.R:X2}{_pickedColor.G:X2}{_pickedColor.B:X2}";
-        _rgbStr = $"R: {_pickedColor.R}  G: {_pickedColor.G}  B: {_pickedColor.B}";
-
-        // Only rebuild magnifier bitmap if we moved to a different pixel
-        if (cx == _lastMagSampleX && cy == _lastMagSampleY)
+        bool recapture = timeElapsed || needsCapture;
+        if (recapture)
         {
-            // Just update the existing magnifier form with new color info
+            _captureTimer.Restart();
+            CaptureLiveRegion();
+        }
+
+        if (!pixelChanged && !recapture)
+        {
             EnsureMagnifierForm();
             _magnifierForm?.UpdateMagnifier(_magBitmap!, _cursorPos, _pickedColor, _hexStr, _rgbStr);
             return;
         }
 
-        _lastMagSampleX = cx;
-        _lastMagSampleY = cy;
+        _lastMagSampleX = screen.X;
+        _lastMagSampleY = screen.Y;
 
+        if (!TrySampleCursorPixel(out int argb))
+            return;
+
+        _pickedColor = Color.FromArgb(argb);
+        _hexStr = $"{_pickedColor.R:X2}{_pickedColor.G:X2}{_pickedColor.B:X2}";
+        _rgbStr = $"R: {_pickedColor.R}  G: {_pickedColor.G}  B: {_pickedColor.B}";
+
+        int cx = Math.Clamp(screen.X - _captureBounds.Left, 0, _captureW - 1);
+        int cy = Math.Clamp(screen.Y - _captureBounds.Top, 0, _captureH - 1);
         BuildMagnifierPixels(cx, cy);
 
         EnsureMagnifierForm();
@@ -276,8 +326,8 @@ public sealed class StandaloneColorPickerForm : Form
             for (int gx = 0; gx < Grid; gx++)
             {
                 int sx = cx - half + gx;
-                int c = ((uint)sx < (uint)_bmpW && (uint)sy < (uint)_bmpH)
-                    ? _pixelData[sy * _bmpW + sx] : unchecked((int)0xFF000000);
+                int c = ((uint)sx < (uint)_captureW && (uint)sy < (uint)_captureH)
+                    ? _livePixelData[sy * _captureW + sx] : unchecked((int)0xFF000000);
 
                 int ox = PPad + gx * Cell;
                 int oy = PPad + gy * Cell;
@@ -295,7 +345,6 @@ public sealed class StandaloneColorPickerForm : Form
             }
         }
 
-        // Center pixel border (white crosshair)
         int bx = PPad + half * Cell, byVal = PPad + half * Cell;
         const int w = unchecked((int)0xFFFFFFFF);
         for (int i = -1; i <= Cell; i++)
@@ -350,11 +399,7 @@ public sealed class StandaloneColorPickerForm : Form
         }
     }
 
-    /// <summary>
-    /// Position the magnifier to the top-right of the cursor, flipping if near screen edges.
-    /// Uses actual form size after UpdateMagnifier may have resized it.
-    /// </summary>
-    private void PositionMagnifier(Point cursor)
+    private void PositionMagnifier(Point cursorClient)
     {
         if (_magnifierForm is null) return;
 
@@ -362,22 +407,20 @@ public sealed class StandaloneColorPickerForm : Form
         int formW = _magnifierForm.Width;
         int formH = _magnifierForm.Height;
 
-        int x = cursor.X + offset;
-        int y = cursor.Y - formH - offset;
+        var screen = PointToScreen(cursorClient);
+        int x = screen.X + offset;
+        int y = screen.Y - formH - offset;
 
-        // Flip horizontally if too close to right edge
-        if (x + formW > _bmpW - 8)
-            x = cursor.X - formW - offset;
+        var virtualScreen = SystemInformation.VirtualScreen;
+        if (x + formW > virtualScreen.Right - 8)
+            x = screen.X - formW - offset;
+        if (y < virtualScreen.Top + 8)
+            y = screen.Y + offset;
 
-        // Flip vertically if too close to top edge
-        if (y < 8)
-            y = cursor.Y + offset;
+        x = Math.Clamp(x, virtualScreen.Left + 4, virtualScreen.Right - formW - 4);
+        y = Math.Clamp(y, virtualScreen.Top + 4, virtualScreen.Bottom - formH - 4);
 
-        // Clamp
-        x = Math.Clamp(x, 4, _bmpW - formW - 4);
-        y = Math.Clamp(y, 4, _bmpH - formH - 4);
-
-        _magnifierForm.Left = x + Bounds.Left;
-        _magnifierForm.Top = y + Bounds.Top;
+        _magnifierForm.Left = x;
+        _magnifierForm.Top = y;
     }
 }
