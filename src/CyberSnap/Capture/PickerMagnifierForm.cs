@@ -12,7 +12,7 @@ public sealed class PickerMagnifierForm : Form
     public const int LensSize = 110;
     public const int Pad = 5;
     public const int TotalW = LensSize + Pad * 2;
-    public const int MinFormW = 200;
+    public const int MinFormW = 252;
 
     private const int InfoGap = 10;
     private const int InfoH = 58;
@@ -277,7 +277,7 @@ public sealed class PickerMagnifierForm : Form
 
         var oldHint = g.TextRenderingHint;
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-        using var sf = new StringFormat(StringFormat.GenericTypographic)
+        using var sf = new StringFormat
         {
             Alignment = StringAlignment.Near,
             LineAlignment = StringAlignment.Center,

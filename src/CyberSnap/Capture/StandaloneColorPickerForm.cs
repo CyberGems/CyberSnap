@@ -19,6 +19,7 @@ public sealed class StandaloneColorPickerForm : Form
 {
     private readonly BannerLayeredForm _banner;
     private readonly System.Windows.Forms.Timer _trackTimer;
+    private CaptureEscapeKeyHook? _escapeHook;
     private PickerMagnifierForm? _magnifierForm;
     private Color _pickedColor = Color.Black;
 
@@ -106,6 +107,8 @@ public sealed class StandaloneColorPickerForm : Form
             _trackTimer.Stop();
             _trackTimer.Tick -= OnTrackTick;
             _trackTimer.Dispose();
+            _escapeHook?.Dispose();
+            _escapeHook = null;
             if (IsHandleCreated)
                 CaptureWindowExclusion.Unregister(Handle);
             _banner.Dispose();
@@ -121,6 +124,8 @@ public sealed class StandaloneColorPickerForm : Form
         _banner.ShowFor(this);
         Activate();
         Focus();
+        _escapeHook?.Dispose();
+        _escapeHook = CaptureEscapeKeyHook.Install(this, CloseFromEscape);
         SyncCursorFromScreen();
         UpdateMagnifierAtCursor();
         _trackTimer.Start();
@@ -139,6 +144,12 @@ public sealed class StandaloneColorPickerForm : Form
     private void SyncCursorFromScreen()
     {
         _cursorPos = PointToClient(Cursor.Position);
+    }
+
+    private void CloseFromEscape()
+    {
+        if (!IsDisposed)
+            Close();
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
