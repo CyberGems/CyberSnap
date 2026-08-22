@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Windows.Forms;
+using System.Drawing.Imaging;
+using System.Drawing.Text;
 using CyberSnap.Helpers;
 
 namespace CyberSnap.Capture;
@@ -30,6 +31,40 @@ public static class RulerRenderer
     // Close button (standalone ruler)
     private const float CloseButtonSize = 20f;
     private const float CloseButtonPad = 6f; // extra space between text and close button
+
+    // GDI+ grayscale AA — ClearType fringes on light chrome and on the overlay's 32bppPArgb bake.
+    private static readonly StringFormat PillTextFormat = CreatePillTextFormat();
+    private static Bitmap? _measureBitmap;
+    private static Graphics? _measureGraphics;
+
+    private static StringFormat CreatePillTextFormat()
+    {
+        var sf = (StringFormat)StringFormat.GenericTypographic.Clone();
+        sf.Alignment = StringAlignment.Near;
+        sf.LineAlignment = StringAlignment.Center;
+        sf.FormatFlags |= StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces;
+        sf.Trimming = StringTrimming.None;
+        return sf;
+    }
+
+    private static Graphics MeasureGraphics
+    {
+        get
+        {
+            if (_measureGraphics is not null)
+                return _measureGraphics;
+            _measureBitmap = new Bitmap(1, 1, PixelFormat.Format32bppPArgb);
+            _measureGraphics = Graphics.FromImage(_measureBitmap);
+            _measureGraphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            return _measureGraphics;
+        }
+    }
+
+    private static SizeF MeasurePillText(Graphics g, string text, Font font)
+        => g.MeasureString(text, font, PointF.Empty, PillTextFormat);
+
+    private static SizeF MeasurePillText(string text, Font font)
+        => MeasurePillText(MeasureGraphics, text, font);
 
     /// <summary>Last painted close-button bounds (cached during Paint for accurate hit-testing).</summary>
     public static RectangleF LastCloseButtonBounds { get; private set; }
@@ -89,7 +124,7 @@ public static class RulerRenderer
         float angle = MathF.Atan2(dy, dx) * 180f / MathF.PI;
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
         // Endpoint arrowheads — triangles pointing inward along the ruler line.
         // The tip IS the exact measurement point. The base gives a perpendicular reference.
@@ -125,8 +160,8 @@ public static class RulerRenderer
         int hPx = (int)MathF.Round(MathF.Abs(dy));
         string distText = $"{distPx}px";
         string restText = $"  \u2022  W: {wPx}px  H: {hPx}px  \u2022  {angle:0.0}\u00b0";
-        var distSz = TextRenderer.MeasureText(g, distText, _distFont!);
-        var restSz = TextRenderer.MeasureText(g, restText, _font!);
+        var distSz = MeasurePillText(g, distText, _distFont!);
+        var restSz = MeasurePillText(g, restText, _font!);
         float maxH = Math.Max(distSz.Height, restSz.Height);
 
         float scaledCloseBtn = CloseButtonSize * dpiScale;
@@ -138,14 +173,10 @@ public static class RulerRenderer
         using var path = RoundedRect(label, 8f);
         g.FillPath(_bgBrush!, path);
         g.DrawPath(_borderPen!, path);
-        // Center the text block horizontally within the label
-        // Use TextRenderer (GDI) for accurate measurement and rendering
-        var distRect = new Rectangle((int)(label.X + LabelPadH), (int)(label.Y + LabelPadV), distSz.Width, (int)maxH);
-        var restRect = new Rectangle(distRect.Right, (int)(label.Y + LabelPadV), restSz.Width, (int)maxH);
-        TextRenderer.DrawText(g, distText, _distFont!, distRect, _accentBrush!.Color,
-            TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-        TextRenderer.DrawText(g, restText, _font!, restRect, _fgBrush!.Color,
-            TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        var distRect = new RectangleF(label.X + LabelPadH, label.Y + LabelPadV, distSz.Width + 3f, maxH);
+        var restRect = new RectangleF(distRect.Right, label.Y + LabelPadV, restSz.Width + 3f, maxH);
+        g.DrawString(distText, _distFont!, _accentBrush!, distRect, PillTextFormat);
+        g.DrawString(restText, _font!, _fgBrush!, restRect, PillTextFormat);
 
         // Draw close button (standalone ruler mode)
         if (showCloseButton)
@@ -175,7 +206,7 @@ public static class RulerRenderer
             LastCloseButtonBounds = RectangleF.Empty;
         }
 
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
+        g.TextRenderingHint = TextRenderingHint.SystemDefault;
         g.SmoothingMode = SmoothingMode.Default;
     }
 
@@ -241,8 +272,8 @@ public static class RulerRenderer
         int hPx = (int)MathF.Round(MathF.Abs(dy));
         string distText = $"{distPx}px";
         string restText = $"  •  W: {wPx}px  H: {hPx}px  •  {angle:0.0}°";
-        var distSz = TextRenderer.MeasureText(distText, _distFont!);
-        var restSz = TextRenderer.MeasureText(restText, _font!);
+        var distSz = MeasurePillText(distText, _distFont!);
+        var restSz = MeasurePillText(restText, _font!);
 
         var labelF = ComputeLabelRect(from, to, clientBounds, distSz, restSz);
         var labelRect = Rectangle.Round(labelF);
@@ -270,8 +301,8 @@ public static class RulerRenderer
         int hPx = (int)MathF.Round(MathF.Abs(dy));
         string distText = $"{distPx}px";
         string restText = $"  •  W: {wPx}px  H: {hPx}px  •  {angle:0.0}°";
-        var distSz = TextRenderer.MeasureText(distText, _distFont!);
-        var restSz = TextRenderer.MeasureText(restText, _font!);
+        var distSz = MeasurePillText(distText, _distFont!);
+        var restSz = MeasurePillText(restText, _font!);
         float extraWidth = (CloseButtonSize + CloseButtonPad) * dpiScale;
         return ComputeLabelRect(from, to, clientBounds, distSz, restSz, extraWidth);
     }
@@ -321,7 +352,7 @@ public static class RulerRenderer
 
     /// <summary>Computes the floating label rectangle for the given ruler, matching Paint()'s layout
     /// exactly. Factored out so live-drag invalidation can target the label's true position.</summary>
-    private static RectangleF ComputeLabelRect(Point from, Point to, Rectangle clientBounds, Size distSz, Size restSz, float extraWidth = 0)
+    private static RectangleF ComputeLabelRect(Point from, Point to, Rectangle clientBounds, SizeF distSz, SizeF restSz, float extraWidth = 0)
     {
         float dx = to.X - from.X;
         float dy = to.Y - from.Y;
