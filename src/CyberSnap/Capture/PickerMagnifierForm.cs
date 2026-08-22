@@ -276,11 +276,16 @@ public sealed class PickerMagnifierForm : Form
         var rgbRect = new Rectangle(textX, hexRect.Bottom - 2, textW, (pillH - 12) / 2 + 2);
 
         var oldHint = g.TextRenderingHint;
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-        TextRenderer.DrawText(g, hexLabel, _hexFont, hexRect, UiChrome.SurfaceTextPrimary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-        TextRenderer.DrawText(g, rgbLabel, _rgbFont, rgbRect, UiChrome.SurfaceTextPrimary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+        using var sf = new StringFormat(StringFormat.GenericTypographic)
+        {
+            Alignment = StringAlignment.Near,
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces,
+            Trimming = StringTrimming.None
+        };
+        g.DrawString(hexLabel, _hexFont, _labelBrush, hexRect, sf);
+        g.DrawString(rgbLabel, _rgbFont, _labelBrush, rgbRect, sf);
         g.TextRenderingHint = oldHint;
     }
 
