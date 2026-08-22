@@ -594,4 +594,135 @@ public sealed partial class RegionOverlayForm
         }
         return new Rectangle(px, py, pw, ph);
     }
+
+    private float OverlayDpiScale => DeviceDpi / 96f;
+
+    private bool TryGetRulerPillTarget(out int index, out RulerAnnotation ruler)
+    {
+        ruler = default!;
+        if (_selectPreviewAnnotation is RulerAnnotation preview)
+        {
+            index = _selectedAnnotationIndex;
+            ruler = preview;
+            return index >= 0;
+        }
+
+        if (_selectedAnnotationIndex >= 0
+            && _selectedAnnotationIndex < _undoStack.Count
+            && _undoStack[_selectedAnnotationIndex] is RulerAnnotation selected)
+        {
+            index = _selectedAnnotationIndex;
+            ruler = selected;
+            return true;
+        }
+
+        for (int i = _undoStack.Count - 1; i >= 0; i--)
+        {
+            if (_undoStack[i] is RulerAnnotation ru)
+            {
+                index = i;
+                ruler = ru;
+                return true;
+            }
+        }
+
+        index = -1;
+        return false;
+    }
+
+    private void PaintRulerPillChrome(Graphics g)
+    {
+        if (_mode != CaptureMode.Ruler || _isRulerDragging)
+            return;
+        if (!TryGetRulerPillTarget(out _, out var ru))
+            return;
+
+        RulerRenderer.Paint(g, ru.From, ru.To, ClientRectangle, UiChrome.IsDark,
+            showCloseButton: true, showExitButton: true, dpiScale: OverlayDpiScale);
+    }
+
+    private Rectangle GetRulerPillChromeBounds()
+    {
+        if (_mode != CaptureMode.Ruler || _isRulerDragging)
+            return Rectangle.Empty;
+        if (!TryGetRulerPillTarget(out _, out var ru))
+            return Rectangle.Empty;
+
+        var label = RulerRenderer.GetLabelBounds(ru.From, ru.To, ClientRectangle, OverlayDpiScale,
+            showCloseButton: true, showExitButton: true);
+        var bounds = Rectangle.Round(label);
+        bounds.Inflate(12, 12);
+        return bounds;
+    }
+
+    private bool TryHandleRulerPillButton(Point point)
+    {
+        if (_mode != CaptureMode.Ruler || _isRulerDragging)
+            return false;
+
+        if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastCloseButtonBounds, point))
+        {
+            HideToolbarTooltip();
+            _rulerPillHoverTip = false;
+            var chrome = GetRulerPillChromeBounds();
+            if (TryGetRulerPillTarget(out int index, out _))
+                DeleteAnnotationAt(index);
+            if (!chrome.IsEmpty)
+                Invalidate(chrome);
+            return true;
+        }
+
+        if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastExitButtonBounds, point))
+        {
+            HideToolbarTooltip();
+            _rulerPillHoverTip = false;
+            SetMode(CaptureMode.Rectangle, "rect");
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Returns true when the cursor is over a pill action so callers can keep the hand cursor.</summary>
+    private bool UpdateRulerPillHover(Point point)
+    {
+        if (_mode != CaptureMode.Ruler || _isRulerDragging)
+        {
+            if (_rulerPillHoverTip)
+            {
+                HideToolbarTooltip();
+                _rulerPillHoverTip = false;
+            }
+            return false;
+        }
+
+        string? tip = null;
+        RectangleF anchor = RectangleF.Empty;
+        if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastCloseButtonBounds, point))
+        {
+            tip = LocalizationService.Translate("Clear measurement — stay in ruler mode");
+            anchor = RulerRenderer.LastCloseButtonBounds;
+        }
+        else if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastExitButtonBounds, point))
+        {
+            tip = LocalizationService.Translate("Exit ruler");
+            anchor = RulerRenderer.LastExitButtonBounds;
+        }
+
+        if (tip is null)
+        {
+            if (_rulerPillHoverTip)
+            {
+                HideToolbarTooltip();
+                _rulerPillHoverTip = false;
+            }
+            return false;
+        }
+
+        Cursor = Cursors.Hand;
+        _rulerPillHoverTip = true;
+        _toolbarToolTip ??= new WindowsToolTip();
+        _toolbarToolTip.ShowNear(this, tip, RectangleToScreen(Rectangle.Round(anchor)), ToolTipPlacement.Above, singleLine: true);
+        return true;
+    }
 }

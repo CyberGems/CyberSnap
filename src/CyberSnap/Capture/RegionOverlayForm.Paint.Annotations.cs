@@ -179,6 +179,8 @@ public sealed partial class RegionOverlayForm
         if (_selectPreviewAnnotation is not null)
             RenderAnnotationTo(g, _selectPreviewAnnotation);
 
+        PaintRulerPillChrome(g);
+
         // Color/emoji/font picker popups are painted on the separate ToolbarForm
 
         // Snapshot the bounds we just (potentially) drew onto so the next
@@ -233,6 +235,7 @@ public sealed partial class RegionOverlayForm
             r = U(r, GetAnnotationBounds(_selectPreviewAnnotation));
         if (ShouldPaintCursorToolChip(_chipGateCursor))
             r = U(r, GetCursorChipRect(_lastCursorPos));
+        r = U(r, GetRulerPillChromeBounds());
 
         return r.Width > 0 && r.Height > 0 ? InflateForRepaint(r, 8) : Rectangle.Empty;
     }

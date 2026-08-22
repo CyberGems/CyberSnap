@@ -12,14 +12,13 @@ namespace CyberSnap.Capture;
 /// </summary>
 public static class RulerRenderer
 {
-    private static readonly Pen ShadowPen = new(Color.FromArgb(70, 0, 0, 0), 3f)
-        { StartCap = LineCap.Flat, EndCap = LineCap.Flat };
-
     private static Pen? _linePen;
+    private static Pen? _haloPen;
     private static SolidBrush? _bgBrush;
     private static Pen? _borderPen;
     private static SolidBrush? _fgBrush;
     private static SolidBrush? _accentBrush;
+    private static SolidBrush? _haloBrush;
     private static Font? _font;
     private static Font? _distFont;
     private static int _themeKey;
@@ -69,6 +68,9 @@ public static class RulerRenderer
     /// <summary>Last painted close-button bounds (cached during Paint for accurate hit-testing).</summary>
     public static RectangleF LastCloseButtonBounds { get; private set; }
 
+    /// <summary>Last painted exit-tool button bounds (cached during Paint for accurate hit-testing).</summary>
+    public static RectangleF LastExitButtonBounds { get; private set; }
+
     /// <summary>Create the (theme-independent) label fonts if not already created.
     /// Safe to call outside a paint pass — needed for bounds computation during drag.</summary>
     private static void EnsureFonts()
@@ -88,29 +90,37 @@ public static class RulerRenderer
         var border = isDark
             ? Color.FromArgb(160, 0, 200, 215)
             : Color.FromArgb(160, 0, 110, 205);
-        int key = HashCode.Combine(text.ToArgb(), pill.ToArgb(), border.ToArgb());
+        var accent = isDark
+            ? Color.FromArgb(0, 200, 215)
+            : Color.FromArgb(0, 110, 205);
+        // Contrast ring so the shaft stays readable on both light and dark screenshots.
+        var halo = isDark
+            ? Color.FromArgb(210, 0, 0, 0)
+            : Color.FromArgb(240, 255, 255, 255);
+        int key = HashCode.Combine(text.ToArgb(), pill.ToArgb(), border.ToArgb(), halo.ToArgb());
         if (_linePen != null && _themeKey == key) return;
 
         _linePen?.Dispose();
+        _haloPen?.Dispose();
         _bgBrush?.Dispose();
         _borderPen?.Dispose();
         _fgBrush?.Dispose();
         _accentBrush?.Dispose();
+        _haloBrush?.Dispose();
 
-        var accent = isDark
-            ? Color.FromArgb(0, 200, 215)
-            : Color.FromArgb(0, 110, 205);
-        _linePen = new Pen(text, 1.8f) { StartCap = LineCap.Flat, EndCap = LineCap.Flat };
+        _linePen = new Pen(text, 2f) { StartCap = LineCap.Flat, EndCap = LineCap.Flat };
+        _haloPen = new Pen(halo, 5f) { StartCap = LineCap.Flat, EndCap = LineCap.Flat, LineJoin = LineJoin.Round };
         _bgBrush = new SolidBrush(pill);
         _borderPen = new Pen(border, 1.0f);
         _fgBrush = new SolidBrush(text);
         _accentBrush = new SolidBrush(accent);
+        _haloBrush = new SolidBrush(halo);
         EnsureFonts();
         _themeKey = key;
     }
 
     /// <summary>Paint the ruler line, ticks, and floating distance/angle label.</summary>
-    public static void Paint(Graphics g, Point from, Point to, Rectangle clientBounds, bool isDark, bool showCloseButton = false, float dpiScale = 1f)
+    public static void Paint(Graphics g, Point from, Point to, Rectangle clientBounds, bool isDark, bool showCloseButton = false, bool showExitButton = false, float dpiScale = 1f)
     {
         EnsureChrome(isDark);
 
@@ -142,12 +152,12 @@ public static class RulerRenderer
             float sy0 = from.Y + dirY * arrowH;
             float sx1 = to.X - dirX * arrowH;
             float sy1 = to.Y - dirY * arrowH;
-            g.DrawLine(ShadowPen, sx0 + 1, sy0 + 1, sx1 + 1, sy1 + 1);
+            g.DrawLine(_haloPen!, sx0, sy0, sx1, sy1);
             g.DrawLine(_linePen!, sx0, sy0, sx1, sy1);
         }
         else
         {
-            g.DrawLine(ShadowPen, from.X + 1, from.Y + 1, to.X + 1, to.Y + 1);
+            g.DrawLine(_haloPen!, from, to);
             g.DrawLine(_linePen!, from, to);
         }
 
@@ -166,7 +176,7 @@ public static class RulerRenderer
 
         float scaledCloseBtn = CloseButtonSize * dpiScale;
         float scaledClosePad = CloseButtonPad * dpiScale;
-        float extraWidth = showCloseButton ? scaledCloseBtn + scaledClosePad : 0;
+        float extraWidth = ActionButtonsExtraWidth(showCloseButton, showExitButton, dpiScale);
         var label = ComputeLabelRect(from, to, clientBounds, distSz, restSz, extraWidth);
 
         PaintLabelShadow(g, label, 8f, 48, 1f);
@@ -178,32 +188,25 @@ public static class RulerRenderer
         g.DrawString(distText, _distFont!, _accentBrush!, distRect, PillTextFormat);
         g.DrawString(restText, _font!, _fgBrush!, restRect, PillTextFormat);
 
-        // Draw close button (standalone ruler mode)
-        if (showCloseButton)
+        LastCloseButtonBounds = RectangleF.Empty;
+        LastExitButtonBounds = RectangleF.Empty;
+        if (showCloseButton || showExitButton)
         {
-            var closeRect = new RectangleF(
-                label.Right - LabelPadH - scaledCloseBtn,
-                label.Y + (label.Height - scaledCloseBtn) / 2f,
-                scaledCloseBtn, scaledCloseBtn);
-
-            LastCloseButtonBounds = closeRect;
-
-            using var closePath = RoundedRect(closeRect, scaledCloseBtn / 2f);
-            g.FillPath(_bgBrush!, closePath);
-            g.DrawPath(_borderPen!, closePath);
-
-            // Draw "×" centered
-            float crossInset = scaledCloseBtn * 0.28f;
-            float cx = closeRect.X + scaledCloseBtn / 2f;
-            float cy = closeRect.Y + scaledCloseBtn / 2f;
-            float half = scaledCloseBtn / 2f - crossInset;
-            using var crossPen = new Pen(_fgBrush!.Color, 1.5f * dpiScale) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            g.DrawLine(crossPen, cx - half, cy - half, cx + half, cy + half);
-            g.DrawLine(crossPen, cx + half, cy - half, cx - half, cy + half);
-        }
-        else
-        {
-            LastCloseButtonBounds = RectangleF.Empty;
+            float btnY = label.Y + (label.Height - scaledCloseBtn) / 2f;
+            float nextRight = label.Right - LabelPadH;
+            if (showExitButton)
+            {
+                var exitRect = new RectangleF(nextRight - scaledCloseBtn, btnY, scaledCloseBtn, scaledCloseBtn);
+                LastExitButtonBounds = exitRect;
+                PaintPillIconButton(g, exitRect, "signOutLeave", dpiScale, flipHorizontal: true);
+                nextRight = exitRect.X - scaledClosePad;
+            }
+            if (showCloseButton)
+            {
+                var closeRect = new RectangleF(nextRight - scaledCloseBtn, btnY, scaledCloseBtn, scaledCloseBtn);
+                LastCloseButtonBounds = closeRect;
+                PaintPillIconButton(g, closeRect, "close", dpiScale);
+            }
         }
 
         g.TextRenderingHint = TextRenderingHint.SystemDefault;
@@ -289,7 +292,7 @@ public static class RulerRenderer
     }
 
     /// <summary>Returns the floating label chip bounds for a ruler (for hit-testing drag-from-chip).</summary>
-    public static RectangleF GetLabelBounds(Point from, Point to, Rectangle clientBounds, float dpiScale = 1f)
+    public static RectangleF GetLabelBounds(Point from, Point to, Rectangle clientBounds, float dpiScale = 1f, bool showCloseButton = false, bool showExitButton = false)
     {
         EnsureFonts();
         float dx = to.X - from.X;
@@ -303,19 +306,46 @@ public static class RulerRenderer
         string restText = $"  •  W: {wPx}px  H: {hPx}px  •  {angle:0.0}°";
         var distSz = MeasurePillText(distText, _distFont!);
         var restSz = MeasurePillText(restText, _font!);
-        float extraWidth = (CloseButtonSize + CloseButtonPad) * dpiScale;
+        float extraWidth = ActionButtonsExtraWidth(showCloseButton, showExitButton, dpiScale);
         return ComputeLabelRect(from, to, clientBounds, distSz, restSz, extraWidth);
     }
 
-    /// <summary>Returns the close (×) button bounds inside the ruler label chip (for standalone mode).</summary>
-    public static RectangleF GetCloseButtonBounds(Point from, Point to, Rectangle clientBounds, float dpiScale = 1f)
+    /// <summary>Returns the close (×) button bounds inside the ruler label chip.</summary>
+    public static RectangleF GetCloseButtonBounds(Point from, Point to, Rectangle clientBounds, float dpiScale = 1f, bool showExitButton = false)
     {
-        var label = GetLabelBounds(from, to, clientBounds, dpiScale);
+        var label = GetLabelBounds(from, to, clientBounds, dpiScale, showCloseButton: true, showExitButton);
         float scaledSize = CloseButtonSize * dpiScale;
+        float scaledPad = CloseButtonPad * dpiScale;
+        float right = label.Right - LabelPadH;
+        if (showExitButton)
+            right -= scaledSize + scaledPad;
         return new RectangleF(
-            label.Right - LabelPadH - scaledSize,
+            right - scaledSize,
             label.Y + (label.Height - scaledSize) / 2f,
             scaledSize, scaledSize);
+    }
+
+    public static bool HitTestCachedButton(RectangleF bounds, Point p, int inflate = 4)
+    {
+        if (bounds.IsEmpty) return false;
+        var hit = Rectangle.Round(bounds);
+        hit.Inflate(inflate, inflate);
+        return hit.Contains(p);
+    }
+
+    private static float ActionButtonsExtraWidth(bool showCloseButton, bool showExitButton, float dpiScale)
+    {
+        int count = (showCloseButton ? 1 : 0) + (showExitButton ? 1 : 0);
+        if (count == 0) return 0;
+        return count * (CloseButtonSize + CloseButtonPad) * dpiScale;
+    }
+
+    private static void PaintPillIconButton(Graphics g, RectangleF rect, string iconId, float dpiScale, bool flipHorizontal = false)
+    {
+        using var path = RoundedRect(rect, rect.Height / 2f);
+        g.FillPath(_bgBrush!, path);
+        g.DrawPath(_borderPen!, path);
+        FluentIcons.DrawIcon(g, iconId, rect, _fgBrush!.Color, iconInset: 3.1f * dpiScale, flipHorizontal: flipHorizontal);
     }
 
     /// <summary>Draws a filled triangular arrowhead. Tip is at (x,y), pointing in (dirX,dirY).
@@ -332,16 +362,14 @@ public static class RulerRenderer
         float bx2 = tx + dirX * height - nx * halfWidth;
         float by2 = ty + dirY * height - ny * halfWidth;
 
-        // Shadow
-        using var shadowBrush = new SolidBrush(Color.FromArgb(48, 0, 0, 0));
-        g.FillPolygon(shadowBrush, new PointF[]
+        float halo = 2.2f;
+        g.FillPolygon(_haloBrush!, new PointF[]
         {
-            new(tx + 1, ty + 1),
-            new(bx1 + 1, by1 + 1),
-            new(bx2 + 1, by2 + 1),
+            new(tx - dirX * halo, ty - dirY * halo),
+            new(tx + dirX * (height + halo) + nx * (halfWidth + halo), ty + dirY * (height + halo) + ny * (halfWidth + halo)),
+            new(tx + dirX * (height + halo) - nx * (halfWidth + halo), ty + dirY * (height + halo) - ny * (halfWidth + halo)),
         });
 
-        // Accent fill
         g.FillPolygon(_accentBrush!, new PointF[]
         {
             new(tx, ty),

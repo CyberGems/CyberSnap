@@ -987,6 +987,9 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        if (UpdateRulerPillHover(e.Location))
+            return;
+
         if (ShowCaptureMagnifier && ToolDef.IsCaptureTool(_mode) && !_isSelecting && ShouldShowCaptureMagnifierAt(e.Location))
             UpdateCaptureMagnifier(e.Location);
         else if (_captureMagnifierForm is { Visible: true }

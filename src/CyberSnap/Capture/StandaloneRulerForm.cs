@@ -34,9 +34,10 @@ public sealed class StandaloneRulerForm : Form
     // ── Banner (reusable animated instruction overlay) ──
     private readonly BannerLayeredForm _banner;
 
-    // ── Close button on the measurement chip ──
+    // ── Close / exit buttons on the measurement chip ──
     private readonly ToolTip _chipTooltip;
-    private bool _cursorOverCloseButton;
+    private enum ChipHover { None, Close, Exit }
+    private ChipHover _chipHover;
     private readonly float _dpiScale;
 
     // ── Context menu (empty-area right-click) ──
@@ -240,12 +241,14 @@ public sealed class StandaloneRulerForm : Form
             // Check if clicking the close button on the measurement chip
             if (_hasLastMeasurement)
             {
-                var closeRect = RulerRenderer.LastCloseButtonBounds;
-                var hitRect = Rectangle.Round(closeRect);
-                hitRect.Inflate(4, 4);
-                if (hitRect.Contains(e.Location))
+                if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastCloseButtonBounds, e.Location))
                 {
                     ClearMeasurement();
+                    return;
+                }
+                if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastExitButtonBounds, e.Location))
+                {
+                    Close();
                     return;
                 }
             }
@@ -348,28 +351,33 @@ public sealed class StandaloneRulerForm : Form
                 _ => CursorFactory.PrecisionCursor
             };
 
-            // Track hover over the close button on the chip — use cached bounds from last paint
-            var closeRect = RulerRenderer.LastCloseButtonBounds;
-            if (closeRect.IsEmpty) { _cursorOverCloseButton = false; }
-            else
+            // Track hover over chip action buttons — use cached bounds from last paint
+            var hover = ChipHover.None;
+            string? tip = null;
+            if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastCloseButtonBounds, e.Location))
             {
-                var hitRect = Rectangle.Round(closeRect);
-                hitRect.Inflate(4, 4);
-                bool overClose = hitRect.Contains(e.Location);
-                if (overClose)
+                hover = ChipHover.Close;
+                tip = LocalizationService.Translate("Clear measurement — stay in ruler mode");
+            }
+            else if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastExitButtonBounds, e.Location))
+            {
+                hover = ChipHover.Exit;
+                tip = LocalizationService.Translate("Exit ruler");
+            }
+
+            if (hover != ChipHover.None)
+            {
+                if (_chipHover != hover)
                 {
-                    if (!_cursorOverCloseButton)
-                    {
-                        _cursorOverCloseButton = true;
-                        _chipTooltip.SetToolTip(this, LocalizationService.Translate("Borrar medición — sigue en modo regla"));
-                    }
-                    Cursor = Cursors.Hand; // override every frame — HitTestRuler may have set Cross
+                    _chipHover = hover;
+                    _chipTooltip.SetToolTip(this, tip);
                 }
-                else if (_cursorOverCloseButton)
-                {
-                    _cursorOverCloseButton = false;
-                    _chipTooltip.SetToolTip(this, "");
-                }
+                Cursor = Cursors.Hand;
+            }
+            else if (_chipHover != ChipHover.None)
+            {
+                _chipHover = ChipHover.None;
+                _chipTooltip.SetToolTip(this, "");
             }
         }
 
@@ -421,7 +429,7 @@ public sealed class StandaloneRulerForm : Form
         }
         else if (_hasLastMeasurement)
         {
-            RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark, showCloseButton: true, dpiScale: _dpiScale);
+            RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark, showCloseButton: true, showExitButton: true, dpiScale: _dpiScale);
         }
     }
 
@@ -469,7 +477,7 @@ public sealed class StandaloneRulerForm : Form
             return EditState.Moving;
 
         // Check if inside the label chip — allows dragging from the measurement box
-        var labelBounds = RulerRenderer.GetLabelBounds(_lastFrom, _lastTo, ClientRectangle);
+        var labelBounds = RulerRenderer.GetLabelBounds(_lastFrom, _lastTo, ClientRectangle, _dpiScale, showCloseButton: true, showExitButton: true);
         labelBounds.Inflate(4, 4);
         if (labelBounds.Contains(p))
             return EditState.Moving;
@@ -489,7 +497,7 @@ public sealed class StandaloneRulerForm : Form
     {
         _hasLastMeasurement = false;
         _editState = EditState.None;
-        _cursorOverCloseButton = false;
+        _chipHover = ChipHover.None;
         _chipTooltip.SetToolTip(this, "");
         Cursor = CursorFactory.PrecisionCursor;
         Invalidate();
