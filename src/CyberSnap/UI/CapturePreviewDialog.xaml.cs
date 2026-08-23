@@ -1799,11 +1799,10 @@ namespace CyberSnap.UI
 
         private void UpdateZoomCursor()
         {
-            // Hand cursor only when panning is actually possible.
             bool canPan = !_zoomToFit
                 && (ZoomViewport.ScrollableWidth > 1 || ZoomViewport.ScrollableHeight > 1);
             if (!_isPanning)
-                ZoomViewport.Cursor = canPan ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow;
+                ZoomViewport.Cursor = canPan ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Arrow;
         }
 
         private void UpdateZoomControlsVisibility()
@@ -1987,7 +1986,7 @@ namespace CyberSnap.UI
                 _panStartHorizontalOffset = ZoomViewport.HorizontalOffset;
                 _panStartVerticalOffset = ZoomViewport.VerticalOffset;
                 ZoomViewport.CaptureMouse();
-                ZoomViewport.Cursor = System.Windows.Input.Cursors.Hand;
+                ZoomViewport.Cursor = System.Windows.Input.Cursors.SizeAll;
                 e.Handled = true;
             }
         }
@@ -2142,6 +2141,7 @@ namespace CyberSnap.UI
                     ScaleDimensionsText.Text = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px → {dims}";
                 ScaleDimensionsText.ToolTip = dims;
             }
+            UpdateOptionalActionsAvailability();
         }
 
         /// <summary>Fully cancels the auto-close countdown after a user interaction
@@ -2221,7 +2221,7 @@ namespace CyberSnap.UI
             OpenViewerBtn.Visibility = viewerAuto ? Visibility.Collapsed : Visibility.Visible;
 
             SaveBtn.IsEnabled = !saveAuto;
-            CopyBtn.IsEnabled = true;
+            CopyBtn.IsEnabled = IsScaled || !copyAuto;
             EditBtn.IsEnabled = !editAuto;
             OpenViewerBtn.IsEnabled = !viewerAuto;
 
