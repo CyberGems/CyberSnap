@@ -1,13 +1,12 @@
 # CyberSnap
 
-<!-- TODO: add real screenshots to docs/screenshots/ and replace the placeholders below -->
+<!-- Placeholder screenshots: add real images under docs/screenshots/ and update the paths below -->
 
 <p align="center">
   <img src="src/CyberSnap/Assets/CyberSnap_square.png" width="160" alt="CyberSnap logo" />
 </p>
 
 <p align="center">
-  <!-- TODO: confirm license (GPL-3.0 provisional) -->
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License" />
   <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4.svg" alt="Platform" />
   <img src="https://img.shields.io/badge/.NET-9.0-512BD4.svg" alt=".NET" />
@@ -19,11 +18,12 @@ tool for Windows, built by **CyberGems**. It combines a floating capture widget,
 annotation editor, multilingual text recognition (OCR), local image search, video trimming
 and multi-destination upload in a single .NET 9 / WPF desktop application.
 
-> Official site: [CyberGems.org](https://CyberGems.org) · Source: [github.com/CyberGems/CyberSnap](https://github.com/CyberGems/CyberSnap)
+> Official site: [cybergems.org](https://cybergems.org/) · Source: [github.com/CyberGems/CyberSnap](https://github.com/CyberGems/CyberSnap)
 
 ## Screenshots
 
-<!-- TODO: add real images and update the paths -->
+> Note: screenshots are placeholders. Add real images under `docs/screenshots/` and update
+> the paths below.
 | Capture widget | Annotation editor | Gallery / History |
 | --- | --- | --- |
 | ![Capture widget](docs/screenshots/capture-widget.png) | ![Editor](docs/screenshots/editor.png) | ![Gallery](docs/screenshots/gallery.png) |
@@ -34,7 +34,7 @@ and multi-destination upload in a single .NET 9 / WPF desktop application.
 
 ## Features
 
-- **Floating Capture Widget** — a always-available on-screen widget to start any capture in
+- **Floating Capture Widget** — an always-available on-screen widget to start any capture in
   one click, with an optional "open in editor" toggle and always-on-top support.
 - **Flexible capture** — area, active window, full screen and *scroll capture* (long,
   scrollable pages stitched into one image).
@@ -76,7 +76,7 @@ installer:
 - creates Start Menu and (optionally) desktop shortcuts,
 - offers to launch CyberSnap when Windows starts.
 
-> Downloads: [github.com/CyberGems/CyberSnap/releases](https://github.com/CyberGems/CyberSnap/releases)
+> **Downloads:** [github.com/CyberGems/CyberSnap/releases](https://github.com/CyberGems/CyberSnap/releases)
 
 ## Building from source
 
@@ -122,19 +122,15 @@ Repeat the command with `-r win-x86` or `-r win-arm64` for the other architectur
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) from
 `CyberSnap.iss`, which packages the contents of `./publish-win64`.
 
-<!-- TODO: document the exact .iss build step if it differs -->
-
 ## Quick start
 
 - The app lives in the **system tray**; use the **floating Capture Widget** to start quick
   captures.
 - Open the **Annotation editor** with `CyberSnap.exe --editor` (or the "CyberSnap Editor"
   shortcut created by the installer).
-- **Capture actions** (area, active window, full screen, scroll capture, MP4/GIF recording,
+- **Capture actions** (area, repeat area, active window, full screen, scroll capture, MP4/GIF recording,
   OCR, color picker, code scan, ruler) are bound to **configurable hotkeys** in *Settings*.
 - The **history** of captures, OCR text, codes and colors is browsable from the *Gallery*.
-
-<!-- TODO: list the real default hotkeys here if desired -->
 
 ## Configuration and data
 
@@ -158,20 +154,22 @@ recompiling.
 
 ## Troubleshooting
 
-<!-- TODO: expand with real cases -->
 - **Hotkey conflict:** if a hotkey does not respond, another program may be using it; reassign
   it in *Settings* (CyberSnap includes conflict detection).
-- **OCR not working:** verify the Tesseract language data (`tessdata`) is available for the
-  selected language.
 - **App won't start:** make sure the .NET 9 runtime is installed, or use a *self-contained* build.
 
 ## Contributing
 
-<!-- TODO: add contribution guide / Code of Conduct if applicable -->
-Contributions are welcome. Please open an issue or pull request describing the change.
+Contributions are welcome. Please open an issue describing the change before starting large
+work, and submit pull requests against the main branch.
+
+
+## Acknowledgments
+
+Originally forked from [OddSnap](https://github.com/jasperdevs/odd-snap) by [jasperdevs](https://github.com/jasperdevs). CyberSnap has since been extensively rewritten and expanded by [CyberGems](https://cybergems.org/).
+
+This project also builds on open-source components including Tesseract OCR, ZXing, SQLite and Inno Setup — thanks to their authors and maintainers.
 
 ## License
 
-<!-- TODO: confirm between MIT and GPL; the bundled LICENSE file is GPL-3.0 -->
-Distributed under the terms of the **GNU General Public License v3.0**. See
-[`LICENSE`](LICENSE) for details.
+CyberSnap is distributed under the terms of the **GNU General Public License v3.0**. See [`LICENSE`](LICENSE) for the full license text.
