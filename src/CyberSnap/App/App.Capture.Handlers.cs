@@ -17,7 +17,8 @@ public partial class App
         Bitmap result,
         RegionOverlayForm.ConfirmCommitAction commitAction = RegionOverlayForm.ConfirmCommitAction.Default,
         string? alreadySavedPath = null,
-        bool clipboardAlreadyCopied = false)
+        bool clipboardAlreadyCopied = false,
+        bool isExplicitScaled = false)
     {
         var settings = _settingsService!.Settings;
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
@@ -63,7 +64,7 @@ public partial class App
             }
         }
 
-        _ = PersistCaptureAsync(result, requestedPath, saveHistory: settings.SaveHistory)
+        _ = PersistCaptureAsync(result, requestedPath, saveHistory: settings.SaveHistory, isExplicitScaled: isExplicitScaled)
             .ContinueWith(task =>
             {
                 if (task.IsFaulted)
@@ -554,10 +555,11 @@ public partial class App
     private Task<PersistedCaptureResult> PersistCaptureAsync(
         Bitmap source,
         string? requestedPath,
-        bool saveHistory)
+        bool saveHistory,
+        bool isExplicitScaled = false)
     {
         var settings = _settingsService!.Settings;
-        int maxLongEdge = settings.CaptureMaxLongEdge;
+        int maxLongEdge = isExplicitScaled ? 0 : settings.CaptureMaxLongEdge;
         var captureFormat = settings.CaptureImageFormat;
         int jpegQuality = settings.JpegQuality;
 

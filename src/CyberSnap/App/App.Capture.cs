@@ -780,16 +780,29 @@ public partial class App
                                 // the widget stays responsive and a follow-up capture replaces this dialog.
                                 ShowCapturePreviewDialog(dialog, result =>
                                 {
+                                    bool isScaled = dialog.ScaleFactor != 1;
+                                    var effective = isScaled ? dialog.EffectiveBitmap : cropped;
+                                    string? effectiveSavePath = isScaled ? null : earlySavePath;
+                                    bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
                                     if (result == true)
                                     {
-                                        HandleCaptureResult(cropped, dialog.SelectedAction, earlySavePath, dialog.ClipboardAlreadyCopied);
+                                        if (isScaled && !string.IsNullOrEmpty(earlySavePath) && File.Exists(earlySavePath))
+                                        {
+                                            try { File.Delete(earlySavePath); } catch { }
+                                        }
+                                        HandleCaptureResult(effective, dialog.SelectedAction, effectiveSavePath, effectiveCopied, isExplicitScaled: isScaled);
+                                        if (isScaled)
+                                        {
+                                            try { cropped.Dispose(); } catch { }
+                                        }
                                     }
                                     else
                                     {
-                                        // false = user cancelled (Esc / X / Delete).
-                                        // null = replaced by a newer capture (its own preview owns
-                                        //   the reset now; do NOT ResetCapturing twice).
-                                        cropped.Dispose();
+                                        try { effective.Dispose(); } catch { }
+                                        if (isScaled)
+                                        {
+                                            try { cropped.Dispose(); } catch { }
+                                        }
                                         if (result == false)
                                             ResetCapturing();
                                     }
@@ -1041,13 +1054,29 @@ public partial class App
             var dialog = new UI.CapturePreviewDialog(bmp, _settingsService, monitorPoint, earlySavePath, copiedEarly);
             ShowCapturePreviewDialog(dialog, result =>
             {
+                bool isScaled = dialog.ScaleFactor != 1;
+                var effective = isScaled ? dialog.EffectiveBitmap : bmp;
+                string? effectiveSavePath = isScaled ? null : earlySavePath;
+                bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
                 if (result == true)
                 {
-                    HandleCaptureResult(bmp, dialog.SelectedAction, earlySavePath, dialog.ClipboardAlreadyCopied);
+                    if (isScaled && !string.IsNullOrEmpty(earlySavePath) && File.Exists(earlySavePath))
+                    {
+                        try { File.Delete(earlySavePath); } catch { }
+                    }
+                    HandleCaptureResult(effective, dialog.SelectedAction, effectiveSavePath, effectiveCopied, isExplicitScaled: isScaled);
+                    if (isScaled)
+                    {
+                        try { bmp.Dispose(); } catch { }
+                    }
                 }
                 else
                 {
-                    bmp.Dispose();
+                    try { effective.Dispose(); } catch { }
+                    if (isScaled)
+                    {
+                        try { bmp.Dispose(); } catch { }
+                    }
                     if (result == false)
                         ResetCapturing();
                 }

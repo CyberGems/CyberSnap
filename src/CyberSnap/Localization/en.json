@@ -1841,5 +1841,16 @@
   "Track your capture milestones, active streaks, and unlocked badges as you use CyberSnap.": "Track your capture milestones, active streaks, and unlocked badges as you use CyberSnap.",
   "New ruler": "New ruler",
   "Capture current screen": "Capture current screen",
-  "Delete ruler": "Delete ruler"
+  "Delete ruler": "Delete ruler",
+  "Scale": "Scale",
+  "Original size": "Original size",
+  "Scale to 2x": "Scale to 2×",
+  "Scale to 4x": "Scale to 4×",
+  "Scaling not available": "Scaling not available",
+  "Scaling failed": "Scaling failed",
+  "Not enough memory to scale this image": "Not enough memory to scale this image",
+  "Scaling to {0}× would exceed {1}px limit": "Scaling to {0}× would exceed {1}px limit",
+  "Scaling to {0}× would exceed pixel limit": "Scaling to {0}× would exceed pixel limit",
+  "Scaling to 2× would exceed limit ({0}px / {1} MP)": "Scaling to 2× would exceed limit ({0}px / {1} MP)",
+  "Scaling to 4× would exceed limit ({0}px / {1} MP)": "Scaling to 4× would exceed limit ({0}px / {1} MP)"
 }

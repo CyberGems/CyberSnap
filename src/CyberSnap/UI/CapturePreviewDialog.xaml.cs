@@ -77,6 +77,13 @@ namespace CyberSnap.UI
         private bool _zoomPointerInside;
         private DispatcherTimer? _zoomHideTimer;
 
+        private Bitmap? _scaledBitmap;
+        private int _scaleFactor = 1;
+
+        public Bitmap EffectiveBitmap => _scaledBitmap ?? _capturedBitmap;
+        public int ScaleFactor => _scaleFactor;
+        public bool IsScaled => _scaleFactor != 1;
+
         private static readonly System.Drawing.Color PillDoneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
         private static readonly System.Drawing.Color PillPendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
         private static readonly System.Drawing.Color DeleteAccentRed = System.Drawing.Color.FromArgb(255, 239, 83, 80);
@@ -231,10 +238,10 @@ namespace CyberSnap.UI
             UpdateIcons();
 
             PreviewImage.Source = BitmapPerf.ToBitmapSource(bitmap);
+            UpdateScaleControls();
             ApplyZoom();
             ZoomViewport.SizeChanged += (_, _) =>
             {
-                // Recalculate after the viewport changes so fit mode tracks the available canvas.
                 ApplyZoom();
             };
             Loaded += (_, _) =>
@@ -302,6 +309,10 @@ namespace CyberSnap.UI
             ZoomInBtn.ToolTip = LocalizationService.Translate("Zoom in");
             ZoomFitBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Fit to window"), "Ctrl+0");
             ZoomLevelBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Click for actual size (100%)"), "Ctrl+1");
+            ScaleLabel.Text = LocalizationService.Translate("Scale");
+            Scale1xBtn.ToolTip = LocalizationService.Translate("Original size");
+            Scale2xBtn.ToolTip = LocalizationService.Translate("Scale to 2x");
+            Scale4xBtn.ToolTip = LocalizationService.Translate("Scale to 4x");
 
             // Optional-action tooltips: previously Edit/Copy/Save had none, so hovering
             // them gave no feedback. Each also carries its hotkey as a discreet suffix.
@@ -327,8 +338,12 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(ZoomInBtn);
             ApplyTooltipPlacement(ZoomFitBtn);
             ApplyTooltipPlacement(ZoomLevelBtn);
+            ApplyTooltipPlacement(Scale1xBtn);
+            ApplyTooltipPlacement(Scale2xBtn);
+            ApplyTooltipPlacement(Scale4xBtn);
 
             UpdateContinueOrExitButton();
+            UpdateScaleControls();
         }
 
         private void CapturePreviewDialog_ContentRendered(object? sender, EventArgs e)
@@ -1793,9 +1808,6 @@ namespace CyberSnap.UI
 
         private void UpdateZoomControlsVisibility()
         {
-            // Fade-in only when the pointer is inside the preview frame AND a bitmap is loaded;
-            // otherwise fade out. When the pointer leaves, wait a short delay so moving across
-            // the overlay itself doesn't cause flicker.
             bool shouldShow = _zoomPointerInside && PreviewImage.Source is BitmapSource;
             SetZoomOverlayVisibility(shouldShow);
         }
@@ -1804,11 +1816,20 @@ namespace CyberSnap.UI
         {
             double target = visible ? 1.0 : 0.0;
             ZoomControlsOverlay.IsHitTestVisible = visible;
+            if (ScaleControlsOverlay != null) ScaleControlsOverlay.IsHitTestVisible = visible;
             var fade = new DoubleAnimation(target, Motion.Ms(180))
             {
                 EasingFunction = Motion.Ease(visible ? Motion.SmoothOut : Motion.SmoothIn)
             };
             ZoomControlsOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
+            if (ScaleControlsOverlay != null)
+            {
+                var scaleFade = new DoubleAnimation(target, Motion.Ms(180))
+                {
+                    EasingFunction = Motion.Ease(visible ? Motion.SmoothOut : Motion.SmoothIn)
+                };
+                ScaleControlsOverlay.BeginAnimation(UIElement.OpacityProperty, scaleFade);
+            }
         }
 
         private void CancelZoomHideTimer()
@@ -2010,13 +2031,125 @@ namespace CyberSnap.UI
             ScheduleZoomControlsHide();
         }
 
+        private void Scale1xBtn_Click(object sender, RoutedEventArgs e) => TryApplyScale(1);
+        private void Scale2xBtn_Click(object sender, RoutedEventArgs e) => TryApplyScale(2);
+        private void Scale4xBtn_Click(object sender, RoutedEventArgs e) => TryApplyScale(4);
+
+        private void TryApplyScale(int factor)
+        {
+            if (_isClosing) return;
+            if (factor == _scaleFactor) return;
+            if (factor == 1)
+            {
+                ApplyScaleFactor(1);
+                return;
+            }
+            if (!ImageScaleService.TryGetScaledSize(_capturedBitmap.Width, _capturedBitmap.Height, factor, out int dstW, out int dstH, out string? err))
+            {
+                string detail = err == "Scale exceeds max dimension"
+                    ? string.Format(LocalizationService.Translate("Scaling to {0}× would exceed {1}px limit"), factor, ImageScaleService.MaxDimension)
+                    : string.Format(LocalizationService.Translate("Scaling to {0}× would exceed pixel limit"), factor);
+                ToastWindow.ShowError(LocalizationService.Translate("Scaling not available"), detail);
+                UpdateScaleControls();
+                return;
+            }
+            try
+            {
+                ApplyScaleFactor(factor);
+            }
+            catch (OutOfMemoryException)
+            {
+                ToastWindow.ShowError(LocalizationService.Translate("Scaling failed"), LocalizationService.Translate("Not enough memory to scale this image"));
+            }
+            catch (Exception ex)
+            {
+                ToastWindow.ShowError(LocalizationService.Translate("Scaling failed"), ex.Message);
+            }
+        }
+
+        private void ApplyScaleFactor(int factor)
+        {
+            if (factor == _scaleFactor && factor == 1 && _scaledBitmap == null) { UpdateScaleControls(); return; }
+            if (factor == 1)
+            {
+                if (_scaledBitmap != null)
+                {
+                    try { _scaledBitmap.Dispose(); } catch { }
+                    _scaledBitmap = null;
+                }
+                _scaleFactor = 1;
+                PreviewImage.Source = BitmapPerf.ToBitmapSource(_capturedBitmap);
+            }
+            else
+            {
+                Bitmap scaled;
+                try { scaled = ImageScaleService.Scale(_capturedBitmap, factor); }
+                catch { throw; }
+                if (_scaledBitmap != null)
+                {
+                    try { _scaledBitmap.Dispose(); } catch { }
+                }
+                _scaledBitmap = scaled;
+                _scaleFactor = factor;
+                PreviewImage.Source = BitmapPerf.ToBitmapSource(scaled);
+            }
+            UpdateScaleControls();
+            if (factor != 1)
+            {
+                _zoomToFit = false;
+                _currentZoom = 1.0;
+                ApplyZoom();
+                ZoomViewport.UpdateLayout();
+                double offX = Math.Max(0, (ZoomViewport.ExtentWidth - ZoomViewport.ViewportWidth) / 2);
+                double offY = Math.Max(0, (ZoomViewport.ExtentHeight - ZoomViewport.ViewportHeight) / 2);
+                ZoomViewport.ScrollToHorizontalOffset(offX);
+                ZoomViewport.ScrollToVerticalOffset(offY);
+            }
+            else
+            {
+                _zoomToFit = true;
+                _currentZoom = 1.0;
+                ApplyZoom();
+            }
+            CancelAutoCloseOnInteraction();
+        }
+
+        private void UpdateScaleControls()
+        {
+            if (Scale1xBtn == null || Scale2xBtn == null || Scale4xBtn == null) return;
+            bool can2 = ImageScaleService.IsFactorAvailable(_capturedBitmap.Width, _capturedBitmap.Height, 2);
+            bool can4 = ImageScaleService.IsFactorAvailable(_capturedBitmap.Width, _capturedBitmap.Height, 4);
+            Scale2xBtn.IsEnabled = can2;
+            Scale4xBtn.IsEnabled = can4;
+            if (!can2) Scale2xBtn.ToolTip = string.Format(LocalizationService.Translate("Scaling to 2× would exceed limit ({0}px / {1} MP)"), ImageScaleService.MaxDimension, ImageScaleService.MaxPixels / 1_000_000);
+            if (!can4) Scale4xBtn.ToolTip = string.Format(LocalizationService.Translate("Scaling to 4× would exceed limit ({0}px / {1} MP)"), ImageScaleService.MaxDimension, ImageScaleService.MaxPixels / 1_000_000);
+            if (can2) Scale2xBtn.ToolTip = LocalizationService.Translate("Scale to 2x");
+            if (can4) Scale4xBtn.ToolTip = LocalizationService.Translate("Scale to 4x");
+            Scale1xBtn.ToolTip = LocalizationService.Translate("Original size");
+            var activeStyle = (Style)Resources["PreviewScaleButtonActive"];
+            var normalStyle = (Style)Resources["PreviewScaleButton"];
+            Scale1xBtn.Style = _scaleFactor == 1 ? activeStyle : normalStyle;
+            Scale2xBtn.Style = _scaleFactor == 2 ? activeStyle : normalStyle;
+            Scale4xBtn.Style = _scaleFactor == 4 ? activeStyle : normalStyle;
+            if (ScaleDimensionsText != null)
+            {
+                int w = EffectiveBitmap.Width;
+                int h = EffectiveBitmap.Height;
+                string dims = $"{w} × {h}px";
+                if (_scaleFactor == 1)
+                    ScaleDimensionsText.Text = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px";
+                else
+                    ScaleDimensionsText.Text = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px → {dims}";
+                ScaleDimensionsText.ToolTip = dims;
+            }
+        }
+
         /// <summary>Fully cancels the auto-close countdown after a user interaction
         /// (zoom, pan, or any action button). Unlike the cursor-motion pause,
         /// this stops the countdown entirely and hides the ring.</summary>
         private void CancelAutoCloseOnInteraction()
         {
             StopAutoCloseCountdown(resetProgress: true);
-            // Hidden (not Collapsed): keep the layout slot so Done/Continue doesn't jump.
             SetCountdownRingShown(false, keepLayoutSlot: true);
             ResetCountdownRingVisual();
         }
@@ -2083,12 +2216,12 @@ namespace CyberSnap.UI
             bool viewerAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.SystemViewer);
 
             SaveBtn.Visibility = saveAuto ? Visibility.Collapsed : Visibility.Visible;
-            CopyBtn.Visibility = copyAuto ? Visibility.Collapsed : Visibility.Visible;
+            CopyBtn.Visibility = Visibility.Visible;
             EditBtn.Visibility = editAuto ? Visibility.Collapsed : Visibility.Visible;
             OpenViewerBtn.Visibility = viewerAuto ? Visibility.Collapsed : Visibility.Visible;
 
             SaveBtn.IsEnabled = !saveAuto;
-            CopyBtn.IsEnabled = !copyAuto;
+            CopyBtn.IsEnabled = true;
             EditBtn.IsEnabled = !editAuto;
             OpenViewerBtn.IsEnabled = !viewerAuto;
 
