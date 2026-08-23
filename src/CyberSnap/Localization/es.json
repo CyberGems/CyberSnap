@@ -2205,5 +2205,16 @@
   "Track your capture milestones, active streaks, and unlocked badges as you use CyberSnap.": "Sigue tus hitos de captura, rachas activas y medallas desbloqueadas mientras usas CyberSnap.",
   "New ruler": "Nueva regla",
   "Capture current screen": "Capturar pantalla actual",
-  "Delete ruler": "Borrar regla"
+  "Delete ruler": "Borrar regla",
+  "Scale": "Escalar",
+  "Original size": "Tamaño original",
+  "Scale to 2x": "Escalar a 2×",
+  "Scale to 4x": "Escalar a 4×",
+  "Scaling not available": "Escalado no disponible",
+  "Scaling failed": "Error al escalar",
+  "Not enough memory to scale this image": "No hay memoria suficiente para escalar esta imagen",
+  "Scaling to {0}× would exceed {1}px limit": "Escalar a {0}× superaría el límite de {1}px",
+  "Scaling to {0}× would exceed pixel limit": "Escalar a {0}× superaría el límite de píxeles",
+  "Scaling to 2× would exceed limit ({0}px / {1} MP)": "Escalar a 2× superaría el límite ({0}px / {1} MP)",
+  "Scaling to 4× would exceed limit ({0}px / {1} MP)": "Escalar a 4× superaría el límite ({0}px / {1} MP)"
 }

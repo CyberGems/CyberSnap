@@ -100,6 +100,53 @@
             </Setter>
         </Style>
 
+        <Style x:Key="PreviewScaleButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#0AFFFFFF"/>
+            <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1AFFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#35FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#28FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.38"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PreviewScaleButtonActive" TargetType="Button" BasedOn="{StaticResource PreviewScaleButton}">
+            <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryButtonForegroundBrush}"/>
+        </Style>
+
         <Style x:Key="PreviewPrimaryButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -259,6 +306,50 @@
                                     <Image x:Name="ZoomFitIcon" Width="12" Height="12"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Scale controls overlay — bottom-left, same level as zoom -->
+                        <Border x:Name="ScaleControlsOverlay"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Margin="10,0,0,10"
+                                Padding="6,5"
+                                CornerRadius="8"
+                                Background="#CC1B1B1A"
+                                BorderBrush="#30FFFFFF"
+                                BorderThickness="1"
+                                Cursor="Arrow"
+                                Opacity="0"
+                                IsHitTestVisible="False">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="ScaleLabel"
+                                           Text="Scale"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           Margin="2,0,6,0"/>
+                                <Button x:Name="Scale1xBtn" Style="{StaticResource PreviewScaleButton}"
+                                        Click="Scale1xBtn_Click"
+                                        Content="1×"
+                                        AutomationProperties.Name="1x"/>
+                                <Button x:Name="Scale2xBtn" Style="{StaticResource PreviewScaleButton}"
+                                        Click="Scale2xBtn_Click"
+                                        Content="2×"
+                                        Margin="4,0,0,0"
+                                        AutomationProperties.Name="2x"/>
+                                <Button x:Name="Scale4xBtn" Style="{StaticResource PreviewScaleButton}"
+                                        Click="Scale4xBtn_Click"
+                                        Content="4×"
+                                        Margin="4,0,0,0"
+                                        AutomationProperties.Name="4x"/>
+                                <TextBlock x:Name="ScaleDimensionsText"
+                                           Margin="8,0,2,0"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                           FontSize="10"
+                                           VerticalAlignment="Center"
+                                           Opacity="0.9"/>
                             </StackPanel>
                         </Border>
                     </Grid>
