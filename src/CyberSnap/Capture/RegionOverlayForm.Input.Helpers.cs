@@ -223,17 +223,22 @@ public sealed partial class RegionOverlayForm
         _autoDetectRect = Rectangle.Empty;
         _lastAutoDetectRect = Rectangle.Empty;
 
-        if (m == CaptureMode.ColorPicker)
+        if (m is CaptureMode.ColorPicker or CaptureMode.Ruler)
         {
-            _pickerTimer.Stop();
-            _pickerReady = false;
-            Cursor = CursorFactory.EyedropperCursor;
-        }
-        else
-        {
+            // Close layered magnifiers before Hide/ExitThread — otherwise a TopMost loupe
+            // can outlive the overlay (and the standalone tool then looks "stuck").
             _pickerTimer.Stop();
             CloseMagWindow();
+            CloseCaptureMagnifier();
+            if (m == CaptureMode.ColorPicker)
+                StandaloneColorPickerRequested?.Invoke();
+            else
+                StandaloneRulerRequested?.Invoke();
+            return;
         }
+
+        _pickerTimer.Stop();
+        CloseMagWindow();
 
         // Emoji mode: toggle picker if already in emoji mode
         if (m == CaptureMode.Emoji)
@@ -388,6 +393,9 @@ public sealed partial class RegionOverlayForm
     private void SwitchModeFromHotkey(CaptureMode mode)
     {
         SetMode(mode);
+        // Color Picker / Ruler / Record close this overlay from SetMode; don't touch a disposing form.
+        if (IsDisposed || Disposing || !Visible)
+            return;
         Focus();
         Invalidate();
         UpdateToolbarSurfaceOnly();

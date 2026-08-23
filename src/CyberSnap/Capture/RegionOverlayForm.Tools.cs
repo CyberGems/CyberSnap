@@ -15,14 +15,24 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     public Bitmap RenderAnnotatedBitmap()
     {
-        return new Bitmap(GetCommittedAnnotationsBitmap());
+        // Always include every annotation (the overlay display bitmap may skip the live
+        // ruler-pill target so chrome can paint it once with action buttons).
+        var bitmap = new Bitmap(_bmpW, _bmpH, PixelFormat.Format32bppPArgb);
+        using (var g = Graphics.FromImage(bitmap))
+        {
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.DrawImageUnscaled(_screenshot, 0, 0);
+            g.CompositingMode = CompositingMode.SourceOver;
+            RenderAnnotationsTo(g);
+        }
+        return bitmap;
     }
 
     /// <summary>
     /// Shared annotation rendering: iterates the typed undo stack and draws each annotation.
     /// Used by both on-screen paint and final bitmap rendering.
     /// </summary>
-    private void RenderAnnotationsTo(Graphics g)
+    private void RenderAnnotationsTo(Graphics g, int additionalSkipIndex = -1)
     {
         using var paintedBlurRegion = new Region();
         paintedBlurRegion.MakeEmpty();
@@ -33,7 +43,7 @@ public sealed partial class RegionOverlayForm
         {
             for (int i = 0; i < _undoStack.Count; i++)
             {
-                if (i == _renderSkipIndex) continue;
+                if (i == _renderSkipIndex || i == additionalSkipIndex) continue;
                 switch (_undoStack[i])
                 {
                     case BlurRect blur:

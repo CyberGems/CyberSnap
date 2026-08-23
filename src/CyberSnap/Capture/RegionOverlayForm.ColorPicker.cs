@@ -32,6 +32,12 @@ public sealed partial class RegionOverlayForm
 
     private void OnPickerTick(object? sender, EventArgs e)
     {
+        if (IsDisposed || Disposing || !Visible)
+        {
+            _pickerTimer.Stop();
+            return;
+        }
+
         if (_pickerBusy)
             return;
 
@@ -87,6 +93,7 @@ public sealed partial class RegionOverlayForm
 
     private void RenderColorPickerFrame(Point overlayPoint)
     {
+        if (IsDisposed || Disposing || !Visible) return;
         if (_pickerBusy) return;
         if (_pickerReady &&
             overlayPoint == _lastRenderedPickerPoint &&
@@ -149,6 +156,12 @@ public sealed partial class RegionOverlayForm
 
     private void RenderCaptureMagnifierFrame(Point overlayPoint)
     {
+        if (IsDisposed || Disposing || !Visible)
+        {
+            HideCaptureMagnifier();
+            return;
+        }
+
         if (!ShouldShowCaptureMagnifierAt(overlayPoint))
         {
             HideCaptureMagnifier();

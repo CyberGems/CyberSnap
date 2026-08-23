@@ -624,6 +624,16 @@ public sealed partial class RegionOverlayForm : Form
     public event Action? SelectionCancelled;
     public event Action<Models.RecordingFormat>? RecordingRequested;
     /// <summary>
+    /// Raised when the capture-bar Color Picker is chosen. The overlay must close first so the
+    /// standalone picker can sample the live desktop instead of the frozen screenshot.
+    /// </summary>
+    public event Action? StandaloneColorPickerRequested;
+    /// <summary>
+    /// Raised when the capture-bar Ruler is chosen. The overlay must close first so the
+    /// standalone ruler (one measurement, its own context menu) can take over.
+    /// </summary>
+    public event Action? StandaloneRulerRequested;
+    /// <summary>
     /// Raised when the user picks a self-contained capture action from the Area flyout that runs
     /// right away without a region selection ("_fullscreen" / "_activeWindow" / "_repeatLastArea").
     /// </summary>

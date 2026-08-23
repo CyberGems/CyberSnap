@@ -866,7 +866,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Ruler:
                 if (TryHandleRulerPillButton(e.Location))
                     return;
-                // Ruler is an annotation tool — don't hide the toolbar while measuring.
+                HideToolbarForCaptureTool();
                 // Clear any ruler selected via right-click so its frame doesn't linger over the new drag.
                 if (_selectedAnnotationIndex >= 0)
                 {

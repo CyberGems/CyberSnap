@@ -83,6 +83,14 @@ public partial class App
 
     private void OnToolHotkeyPressed(CaptureMode mode)
     {
+        if (mode == CaptureMode.Ruler)
+        {
+            if (TrySwitchActiveOverlay(CaptureMode.Ruler))
+                return;
+            OnStandaloneRulerHotkeyPressed();
+            return;
+        }
+
         if (TrySwitchActiveOverlay(mode))
             return;
 
@@ -103,12 +111,13 @@ public partial class App
 
     private void OnPickerHotkeyPressed()
     {
+        // If the area-capture overlay is already up, switching to ColorPicker closes it and
+        // launches the standalone picker (same path as the capture-bar button). Otherwise
+        // skip the frozen overlay entirely — both entry points sample the live desktop.
         if (TrySwitchActiveOverlay(CaptureMode.ColorPicker))
             return;
 
-        if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
-        HideSettingsForCapture();
-        LaunchOverlay(CaptureMode.ColorPicker);
+        OnStandaloneColorPickerHotkeyPressed();
     }
 
     private void OnGifHotkeyPressed()
@@ -206,17 +215,18 @@ public partial class App
             try
             {
                 Theme.Refresh();
-                using var form = new StandaloneRulerForm(onCaptureFullscreen: (captureAll) =>
+                using var form = new StandaloneRulerForm(onCapture: bmp =>
                 {
-                    // Dispatch back to main thread for capture
                     Dispatcher.BeginInvoke(() =>
                     {
-                        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+                        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0)
+                        {
+                            bmp.Dispose();
+                            return;
+                        }
+
                         HideSettingsForCapture();
-                        if (captureAll)
-                            LaunchWithDelay(CaptureFullscreenNow);
-                        else
-                            LaunchWithDelay(CaptureCurrentScreenNow);
+                        OpenStandaloneCapturePreview(bmp);
                     });
                 });
                 System.Windows.Forms.Application.Run(form);

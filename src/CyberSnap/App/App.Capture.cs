@@ -567,6 +567,18 @@ public partial class App
 
     private void LaunchOverlay(CaptureMode initialMode)
     {
+        if (initialMode == CaptureMode.ColorPicker)
+        {
+            OnStandaloneColorPickerHotkeyPressed();
+            return;
+        }
+
+        if (initialMode == CaptureMode.Ruler)
+        {
+            OnStandaloneRulerHotkeyPressed();
+            return;
+        }
+
         LaunchWithDelay(() => LaunchOverlayNow(initialMode));
     }
 
@@ -906,6 +918,26 @@ public partial class App
                         LaunchGifRecording(fmt, rect.IsEmpty ? (System.Drawing.Rectangle?)null : rect));
                 };
 
+                bool handoffStandalonePicker = false;
+                bool handoffStandaloneRuler = false;
+
+                overlay.StandaloneColorPickerRequested += () =>
+                {
+                    // Close the frozen overlay first so the standalone tool screenshots the
+                    // live desktop. Do not ExitThread here — Close() ends Application.Run,
+                    // and FormClosed launches the tool after this window is actually gone.
+                    handoffStandalonePicker = true;
+                    overlay.Hide();
+                    overlay.Close();
+                };
+
+                overlay.StandaloneRulerRequested += () =>
+                {
+                    handoffStandaloneRuler = true;
+                    overlay.Hide();
+                    overlay.Close();
+                };
+
                 overlay.ColorPicked += hex =>
                 {
                     Dispatcher.BeginInvoke(() =>
@@ -948,7 +980,14 @@ public partial class App
                     if (outcomeDelegatedToPreview)
                         return;
 
-                    Dispatcher.BeginInvoke(ResetCapturing);
+                    Dispatcher.BeginInvoke(() =>
+                    {
+                        ResetCapturing();
+                        if (handoffStandalonePicker)
+                            OnStandaloneColorPickerHotkeyPressed();
+                        else if (handoffStandaloneRuler)
+                            OnStandaloneRulerHotkeyPressed();
+                    });
                 };
 
                 try
@@ -976,6 +1015,50 @@ public partial class App
         thread.SetApartmentState(ApartmentState.STA);
         thread.IsBackground = true;
         thread.Start();
+    }
+
+    /// <summary>
+    /// Opens the capture Preview for a bitmap produced by a standalone tool (ruler, …)
+    /// so the user can save, copy, or edit instead of only getting a toast.
+    /// </summary>
+    private void OpenStandaloneCapturePreview(Bitmap bmp)
+    {
+        try
+        {
+            var latest = Services.SettingsService.LoadStatic();
+            if (latest != null)
+                _settingsService!.Settings = latest;
+
+            var monitorPoint = System.Windows.Forms.Cursor.Position;
+            UI.PopupWindowHelper.SetMonitorHintPoint(monitorPoint);
+
+            var settings = _settingsService!.Settings;
+            bool copiedEarly = false;
+            if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
+                copiedEarly = TryCopyCaptureOutputToClipboard(bmp, null);
+
+            string? earlySavePath = TrySaveCaptureFileEarly(bmp, settings);
+            var dialog = new UI.CapturePreviewDialog(bmp, _settingsService, monitorPoint, earlySavePath, copiedEarly);
+            ShowCapturePreviewDialog(dialog, result =>
+            {
+                if (result == true)
+                {
+                    HandleCaptureResult(bmp, dialog.SelectedAction, earlySavePath, dialog.ClipboardAlreadyCopied);
+                }
+                else
+                {
+                    bmp.Dispose();
+                    if (result == false)
+                        ResetCapturing();
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("capture.preview-dispatch", ex);
+            try { bmp.Dispose(); } catch { }
+            ResetCapturing();
+        }
     }
 
     private static bool TryCopyCaptureTextToClipboard(string text)
