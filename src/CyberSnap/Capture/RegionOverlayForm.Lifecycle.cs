@@ -85,6 +85,15 @@ public sealed partial class RegionOverlayForm
         if (_confirmDocksHiddenForFrameManip)
             return;
 
+        // Ruler hides the capture bar so it does not cover the measurement. Stay hidden if
+        // a later RefreshToolbar/EnsureToolbarReady runs while still in ruler mode.
+        if (_mode == CaptureMode.Ruler)
+        {
+            if (_toolbarForm != null && !_toolbarForm.IsDisposed && _toolbarForm.Visible)
+                _toolbarForm.Hide();
+            return;
+        }
+
         // Confirming without annotation chrome (e.g. OCR text-extraction) never shows a toolbar:
         // the only chrome is the confirm dock. Keep any leftover toolbar hidden.
         if (_isConfirmingSelection && !ShowAnnotationChrome)

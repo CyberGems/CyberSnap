@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
@@ -21,10 +22,12 @@ public sealed class StandaloneRulerForm : Form
     private Point _cursorPos;
     private bool _closed;
 
-    // Last committed measurement persists on screen until next drag
-    private Point _lastFrom;
-    private Point _lastTo;
-    private bool _hasLastMeasurement;
+    private readonly Action<Bitmap>? _onCapture;
+    private long _ignoreInputUntilTick;
+
+    private readonly List<(Point From, Point To)> _measurements = new();
+    private int _activeIndex = -1;
+    private bool _appendNextDrag;
 
     // Post-drag editing: move or resize the committed ruler
     private enum EditState { None, Moving, ResizingFrom, ResizingTo }
@@ -40,16 +43,13 @@ public sealed class StandaloneRulerForm : Form
     private ChipHover _chipHover;
     private readonly float _dpiScale;
 
-    // ── Context menu (empty-area right-click) ──
     private readonly ContextMenuStrip _contextMenu;
+    private readonly ToolStripMenuItem _deleteRulerItem;
+    private int _contextDeleteIndex = -1;
 
-    // ── Callback to trigger a screen capture from the main App thread ──
-    // true = capture all screens; false = capture only the screen where the cursor is
-    private readonly Action<bool>? _onCaptureFullscreen;
-
-    public StandaloneRulerForm(Action<bool>? onCaptureFullscreen = null)
+    public StandaloneRulerForm(Action<Bitmap>? onCapture = null)
     {
-        _onCaptureFullscreen = onCaptureFullscreen;
+        _onCapture = onCapture;
         _dpiScale = DeviceDpi / 96f;
 
         // Give the tray context menu time to fully dismiss before screenshot
@@ -138,26 +138,25 @@ public sealed class StandaloneRulerForm : Form
         // ── Context menu (shown on right-click over empty area) ──
         _contextMenu = WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
-        var newRulerItem = WindowsMenuRenderer.Item("Nueva regla", "+", iconId: "ruler");
-        newRulerItem.Click += (_, _) => ClearMeasurement();
+        var newRulerItem = WindowsMenuRenderer.Item("New ruler", "+", iconId: "ruler");
+        newRulerItem.Click += (_, _) => BeginNewRuler();
         _contextMenu.Items.Add(newRulerItem);
 
-        var captureItem = WindowsMenuRenderer.Item("Capturar pantalla", "Enter", iconId: "captureRect");
-        captureItem.Click += (_, _) =>
+        _deleteRulerItem = WindowsMenuRenderer.Item("Delete ruler", iconId: "trash", danger: true, dangerIconOnly: true);
+        _deleteRulerItem.Click += (_, _) =>
         {
-            _closed = true;
-            bool captureAll = ShouldCaptureAllScreens();
-            BeginInvoke(() =>
-            {
-                _onCaptureFullscreen?.Invoke(captureAll);
-                Close();
-            });
+            if (_contextDeleteIndex >= 0)
+                RemoveMeasurementAt(_contextDeleteIndex);
         };
+        _contextMenu.Items.Add(_deleteRulerItem);
+
+        var captureItem = WindowsMenuRenderer.Item("Capture current screen", "Enter", iconId: "captureRect");
+        captureItem.Click += (_, _) => CaptureWithRulers();
         _contextMenu.Items.Add(captureItem);
 
         _contextMenu.Items.Add(new ToolStripSeparator());
 
-        var exitItem = WindowsMenuRenderer.Item("Salir", "Esc", iconId: "signOutLeave", danger: true, dangerIconOnly: true);
+        var exitItem = WindowsMenuRenderer.Item("Exit", "Esc", iconId: "signOutLeave", danger: true, dangerIconOnly: true);
         exitItem.Click += (_, _) => Close();
         _contextMenu.Items.Add(exitItem);
 
@@ -179,6 +178,7 @@ public sealed class StandaloneRulerForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        _ignoreInputUntilTick = Environment.TickCount64 + 250;
         _banner.ShowFor(this);
     }
 
@@ -197,17 +197,10 @@ public sealed class StandaloneRulerForm : Form
                 Close();
                 return true;
             case Keys.Oemplus or Keys.Add when (keyData & Keys.Modifiers) == 0:
-                // "+" → clear measurement, ready for new ruler
-                ClearMeasurement();
+                BeginNewRuler();
                 return true;
             case Keys.Enter when (keyData & Keys.Modifiers) == 0:
-                _closed = true;
-                bool captureAll = ShouldCaptureAllScreens();
-                BeginInvoke(() =>
-                {
-                    _onCaptureFullscreen?.Invoke(captureAll);
-                    Close();
-                });
+                CaptureWithRulers();
                 return true;
         }
         return base.ProcessCmdKey(ref msg, keyData);
@@ -217,6 +210,9 @@ public sealed class StandaloneRulerForm : Form
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        if (Environment.TickCount64 < _ignoreInputUntilTick)
+            return;
+
         if (e.Button == MouseButtons.Right)
         {
             // If context menu is disabled, right-click exits immediately
@@ -225,25 +221,28 @@ public sealed class StandaloneRulerForm : Form
                 Close();
                 return;
             }
-            // If cursor is over the ruler or its chip, close immediately (existing behavior)
-            if (_hasLastMeasurement && IsOverRulerOrChip(e.Location))
+            // Empty area and drawn rulers share the same menu; over a ruler we also
+            // offer Delete ruler instead of leaving the tool.
+            var (hit, hitIndex) = HitTestRulers(e.Location);
+            if (hit != EditState.None && hitIndex >= 0)
             {
-                Close();
+                _activeIndex = hitIndex;
+                Invalidate();
+                ShowContextMenu(e.Location, deleteIndex: hitIndex);
                 return;
             }
-            // Otherwise show context menu on empty area
-            _contextMenu.Show(this, e.Location);
+
+            ShowContextMenu(e.Location, deleteIndex: -1);
             return;
         }
 
         if (e.Button == MouseButtons.Left)
         {
-            // Check if clicking the close button on the measurement chip
-            if (_hasLastMeasurement)
+            if (_activeIndex >= 0)
             {
                 if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastCloseButtonBounds, e.Location))
                 {
-                    ClearMeasurement();
+                    RemoveMeasurementAt(_activeIndex);
                     return;
                 }
                 if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastExitButtonBounds, e.Location))
@@ -253,31 +252,29 @@ public sealed class StandaloneRulerForm : Form
                 }
             }
 
-            // If there's a committed ruler, check if we're editing it
-            if (_hasLastMeasurement && _editState == EditState.None)
+            if (_editState == EditState.None)
             {
-                var hit = HitTestRuler(e.Location);
-                switch (hit)
+                var (hit, hitIndex) = HitTestRulers(e.Location);
+                if (hit != EditState.None && hitIndex >= 0)
                 {
-                    case EditState.Moving:
-                        _editState = EditState.Moving;
-                        _editOffset = new Point(e.Location.X - _lastFrom.X, e.Location.Y - _lastFrom.Y);
-                        Invalidate();
-                        return;
-                    case EditState.ResizingFrom:
-                        _editState = EditState.ResizingFrom;
-                        Invalidate();
-                        return;
-                    case EditState.ResizingTo:
-                        _editState = EditState.ResizingTo;
-                        Invalidate();
-                        return;
+                    _activeIndex = hitIndex;
+                    _editState = hit;
+                    var (from, _) = _measurements[hitIndex];
+                    _editOffset = new Point(e.Location.X - from.X, e.Location.Y - from.Y);
+                    Invalidate();
+                    return;
                 }
             }
 
-            // Not editing existing ruler — start a fresh drag
+            bool replaceSingle = !_appendNextDrag && _measurements.Count == 1;
+            _appendNextDrag = false;
+            if (replaceSingle)
+            {
+                _measurements.Clear();
+                _activeIndex = -1;
+            }
+
             _editState = EditState.None;
-            _hasLastMeasurement = false;
             _isDragging = true;
             _rulerStart = e.Location;
             _cursorPos = e.Location;
@@ -303,47 +300,48 @@ public sealed class StandaloneRulerForm : Form
             var newEnd = GetRulerEnd(e.Location);
             Invalidate(SweepBounds(_rulerStart, oldEnd, _rulerStart, newEnd));
         }
-        else if (_editState != EditState.None)
+        else if (_editState != EditState.None && _activeIndex >= 0)
         {
-            var oldFrom = _lastFrom;
-            var oldTo = _lastTo;
+            var (oldFrom, oldTo) = _measurements[_activeIndex];
+            var from = oldFrom;
+            var to = oldTo;
             switch (_editState)
             {
                 case EditState.Moving:
                 {
                     int newFromX = e.Location.X - _editOffset.X;
                     int newFromY = e.Location.Y - _editOffset.Y;
-                    int moveDx = newFromX - _lastFrom.X;
-                    int moveDy = newFromY - _lastFrom.Y;
+                    int moveDx = newFromX - from.X;
+                    int moveDy = newFromY - from.Y;
                     if ((ModifierKeys & Keys.Shift) != 0)
                     {
                         var snapped = LineSnapHelper.SnapEndTo45Degrees(Point.Empty, new Point(moveDx, moveDy));
                         moveDx = snapped.X;
                         moveDy = snapped.Y;
-                        newFromX = _lastFrom.X + moveDx;
-                        newFromY = _lastFrom.Y + moveDy;
+                        newFromX = from.X + moveDx;
+                        newFromY = from.Y + moveDy;
                     }
-                    _lastFrom = new Point(newFromX, newFromY);
-                    _lastTo = new Point(_lastTo.X + moveDx, _lastTo.Y + moveDy);
+                    from = new Point(newFromX, newFromY);
+                    to = new Point(to.X + moveDx, to.Y + moveDy);
                     break;
                 }
                 case EditState.ResizingFrom:
-                    _lastFrom = (ModifierKeys & Keys.Shift) != 0
-                        ? LineSnapHelper.SnapEndTo45Degrees(_lastTo, e.Location)
+                    from = (ModifierKeys & Keys.Shift) != 0
+                        ? LineSnapHelper.SnapEndTo45Degrees(to, e.Location)
                         : e.Location;
                     break;
                 case EditState.ResizingTo:
-                    _lastTo = (ModifierKeys & Keys.Shift) != 0
-                        ? LineSnapHelper.SnapEndTo45Degrees(_lastFrom, e.Location)
+                    to = (ModifierKeys & Keys.Shift) != 0
+                        ? LineSnapHelper.SnapEndTo45Degrees(from, e.Location)
                         : e.Location;
                     break;
             }
-            Invalidate(SweepBounds(oldFrom, oldTo, _lastFrom, _lastTo));
+            _measurements[_activeIndex] = (from, to);
+            Invalidate(SweepBounds(oldFrom, oldTo, from, to));
         }
-        else if (_hasLastMeasurement)
+        else if (_measurements.Count > 0)
         {
-            // Update cursor to hint editability
-            var hit = HitTestRuler(e.Location);
+            var (hit, _) = HitTestRulers(e.Location);
             Cursor = hit switch
             {
                 EditState.Moving => Cursors.SizeAll,
@@ -351,15 +349,14 @@ public sealed class StandaloneRulerForm : Form
                 _ => CursorFactory.PrecisionCursor
             };
 
-            // Track hover over chip action buttons — use cached bounds from last paint
             var hover = ChipHover.None;
             string? tip = null;
-            if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastCloseButtonBounds, e.Location))
+            if (_activeIndex >= 0 && RulerRenderer.HitTestCachedButton(RulerRenderer.LastCloseButtonBounds, e.Location))
             {
                 hover = ChipHover.Close;
                 tip = LocalizationService.Translate("Clear measurement — stay in ruler mode");
             }
-            else if (RulerRenderer.HitTestCachedButton(RulerRenderer.LastExitButtonBounds, e.Location))
+            else if (_activeIndex >= 0 && RulerRenderer.HitTestCachedButton(RulerRenderer.LastExitButtonBounds, e.Location))
             {
                 hover = ChipHover.Exit;
                 tip = LocalizationService.Translate("Exit ruler");
@@ -398,9 +395,8 @@ public sealed class StandaloneRulerForm : Form
                 base.OnMouseUp(e);
                 return;
             }
-            _lastFrom = _rulerStart;
-            _lastTo = end;
-            _hasLastMeasurement = true;
+            _measurements.Add((_rulerStart, end));
+            _activeIndex = _measurements.Count - 1;
             Invalidate();
         }
         else if (_editState != EditState.None && e.Button == MouseButtons.Left)
@@ -421,15 +417,24 @@ public sealed class StandaloneRulerForm : Form
         // Draw screenshot as background
         g.DrawImage(_screenshot, ClientRectangle);
 
-        // Draw ruler if dragging or last measurement persists
+        for (int i = 0; i < _measurements.Count; i++)
+        {
+            if (i == _activeIndex && !_isDragging)
+                continue;
+            var (from, to) = _measurements[i];
+            RulerRenderer.Paint(g, from, to, ClientRectangle, Theme.IsDark, dpiScale: _dpiScale);
+        }
+
         if (_isDragging)
         {
             var end = GetRulerEnd(_cursorPos);
-            RulerRenderer.Paint(g, _rulerStart, end, ClientRectangle, Theme.IsDark);
+            RulerRenderer.Paint(g, _rulerStart, end, ClientRectangle, Theme.IsDark, dpiScale: _dpiScale);
         }
-        else if (_hasLastMeasurement)
+        else if (_activeIndex >= 0 && _activeIndex < _measurements.Count)
         {
-            RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark, showCloseButton: true, showExitButton: true, dpiScale: _dpiScale);
+            var (from, to) = _measurements[_activeIndex];
+            RulerRenderer.Paint(g, from, to, ClientRectangle, Theme.IsDark,
+                showCloseButton: true, showExitButton: true, dpiScale: _dpiScale);
         }
     }
 
@@ -454,53 +459,140 @@ public sealed class StandaloneRulerForm : Form
         return LineSnapHelper.SnapEndTo45Degrees(_rulerStart, current);
     }
 
-    /// <summary>Hit-test the committed ruler: returns which part the cursor is near.
-    /// Also checks the label chip so the ruler can be dragged from the measurement box.</summary>
-    private EditState HitTestRuler(Point p)
+    /// <summary>Hit-test committed rulers, last-drawn first so overlapping tips pick the newest.</summary>
+    private (EditState State, int Index) HitTestRulers(Point p)
     {
-        if (!_hasLastMeasurement) return EditState.None;
+        for (int i = _measurements.Count - 1; i >= 0; i--)
+        {
+            var state = HitTestRuler(p, _measurements[i].From, _measurements[i].To,
+                includeChip: true, withButtons: i == _activeIndex);
+            if (state != EditState.None)
+                return (state, i);
+        }
+        return (EditState.None, -1);
+    }
 
+    private EditState HitTestRuler(Point p, Point from, Point to, bool includeChip, bool withButtons = false)
+    {
         const int endpointRadius = 16;
         const int lineThreshold = 10;
 
-        // Check endpoints first (they take priority over the line)
-        int distFrom = DistSq(p, _lastFrom);
-        int distTo = DistSq(p, _lastTo);
-        if (distFrom <= endpointRadius * endpointRadius)
+        if (DistSq(p, from) <= endpointRadius * endpointRadius)
             return EditState.ResizingFrom;
-        if (distTo <= endpointRadius * endpointRadius)
+        if (DistSq(p, to) <= endpointRadius * endpointRadius)
             return EditState.ResizingTo;
 
-        // Check distance to the line segment
-        float lineDist = DistToSegmentSq(p, _lastFrom, _lastTo);
-        if (lineDist <= lineThreshold * lineThreshold)
+        if (DistToSegmentSq(p, from, to) <= lineThreshold * lineThreshold)
             return EditState.Moving;
 
-        // Check if inside the label chip — allows dragging from the measurement box
-        var labelBounds = RulerRenderer.GetLabelBounds(_lastFrom, _lastTo, ClientRectangle, _dpiScale, showCloseButton: true, showExitButton: true);
-        labelBounds.Inflate(4, 4);
-        if (labelBounds.Contains(p))
-            return EditState.Moving;
+        if (includeChip)
+        {
+            var labelBounds = RulerRenderer.GetLabelBounds(from, to, ClientRectangle, _dpiScale,
+                showCloseButton: withButtons, showExitButton: withButtons);
+            labelBounds.Inflate(4, 4);
+            if (labelBounds.Contains(p))
+                return EditState.Moving;
+        }
 
         return EditState.None;
     }
 
-    /// <summary>Returns true if the cursor is over the ruler line, its endpoints, or the measurement chip.</summary>
-    private bool IsOverRulerOrChip(Point p)
+    private bool IsOverRulerOrChip(Point p) => HitTestRulers(p).State != EditState.None;
+
+    private void ShowContextMenu(Point location, int deleteIndex)
     {
-        // HitTestRuler now checks the chip too, so this is all we need
-        return _hasLastMeasurement && HitTestRuler(p) != EditState.None;
+        _contextDeleteIndex = deleteIndex;
+        _deleteRulerItem.Visible = deleteIndex >= 0;
+        WindowsMenuRenderer.NormalizeItemWidths(_contextMenu, minWidth: 240);
+        _contextMenu.Show(this, location);
     }
 
-    /// <summary>Clear the current measurement and reset state for a fresh ruler drag.</summary>
-    private void ClearMeasurement()
+    private void BeginNewRuler()
     {
-        _hasLastMeasurement = false;
+        _appendNextDrag = true;
+        _activeIndex = -1;
+        _editState = EditState.None;
+        _chipHover = ChipHover.None;
+        _chipTooltip.SetToolTip(this, "");
+        Cursor = CursorFactory.PrecisionCursor;
+        _banner.Revive();
+        Invalidate();
+    }
+
+    private void RemoveMeasurementAt(int index)
+    {
+        if (index < 0 || index >= _measurements.Count)
+            return;
+        _measurements.RemoveAt(index);
+        _activeIndex = _measurements.Count == 0 ? -1 : Math.Min(index, _measurements.Count - 1);
         _editState = EditState.None;
         _chipHover = ChipHover.None;
         _chipTooltip.SetToolTip(this, "");
         Cursor = CursorFactory.PrecisionCursor;
         Invalidate();
+    }
+
+    private void CaptureWithRulers()
+    {
+        Bitmap? composed = null;
+        try
+        {
+            composed = RenderCaptureBitmap(currentScreenOnly: !ShouldCaptureAllScreens());
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("standalone-ruler.capture", ex);
+            composed?.Dispose();
+            return;
+        }
+
+        _closed = true;
+        var bmp = composed;
+        var callback = _onCapture;
+        BeginInvoke(() =>
+        {
+            try
+            {
+                if (callback is null)
+                    bmp.Dispose();
+                else
+                    callback(bmp);
+            }
+            catch
+            {
+                bmp.Dispose();
+            }
+            Close();
+        });
+    }
+
+    private Bitmap RenderCaptureBitmap(bool currentScreenOnly)
+    {
+        var composed = new Bitmap(_screenshot.Width, _screenshot.Height, _screenshot.PixelFormat);
+        using (var g = Graphics.FromImage(composed))
+        {
+            g.DrawImageUnscaled(_screenshot, 0, 0);
+            var bounds = new Rectangle(0, 0, composed.Width, composed.Height);
+            foreach (var (from, to) in _measurements)
+                RulerRenderer.Paint(g, from, to, bounds, Theme.IsDark, dpiScale: _dpiScale);
+            if (_isDragging)
+                RulerRenderer.Paint(g, _rulerStart, GetRulerEnd(_cursorPos), bounds, Theme.IsDark, dpiScale: _dpiScale);
+        }
+
+        if (!currentScreenOnly)
+            return composed;
+
+        var screen = Screen.FromPoint(Cursor.Position).Bounds;
+        var virtualScreen = SystemInformation.VirtualScreen;
+        var crop = Rectangle.Intersect(
+            new Rectangle(screen.X - virtualScreen.X, screen.Y - virtualScreen.Y, screen.Width, screen.Height),
+            new Rectangle(0, 0, composed.Width, composed.Height));
+        if (crop.Width <= 0 || crop.Height <= 0)
+            return composed;
+
+        var cropped = composed.Clone(crop, composed.PixelFormat);
+        composed.Dispose();
+        return cropped;
     }
     /// <summary>Returns true if Enter should capture all screens (per user setting).</summary>
     private static bool ShouldCaptureAllScreens()

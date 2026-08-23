@@ -1283,13 +1283,17 @@ public sealed partial class RegionOverlayForm
             return _committedAnnotationsBitmap;
 
         _committedAnnotationsBitmap?.Dispose();
+        int pillSkip = -1;
+        if (_mode == CaptureMode.Ruler && !_isRulerDragging)
+            TryGetRulerPillTarget(out pillSkip, out _);
+
         var bitmap = new Bitmap(_bmpW, _bmpH, PixelFormat.Format32bppPArgb);
         using (var g = Graphics.FromImage(bitmap))
         {
             g.CompositingMode = CompositingMode.SourceCopy;
             g.DrawImageUnscaled(_screenshot, 0, 0);
             g.CompositingMode = CompositingMode.SourceOver;
-            RenderAnnotationsTo(g);
+            RenderAnnotationsTo(g, pillSkip);
         }
 
         _committedAnnotationsBitmap = bitmap;

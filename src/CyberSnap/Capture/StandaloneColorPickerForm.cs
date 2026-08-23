@@ -131,9 +131,16 @@ public sealed class StandaloneColorPickerForm : Form
         _trackTimer.Start();
     }
 
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        _trackTimer.Stop();
+        CloseMagnifier();
+        base.OnFormClosing(e);
+    }
+
     private void OnTrackTick(object? sender, EventArgs e)
     {
-        if (!IsHandleCreated || IsDisposed)
+        if (!IsHandleCreated || IsDisposed || Disposing || !Visible)
             return;
 
         SyncCursorFromScreen();
@@ -284,6 +291,9 @@ public sealed class StandaloneColorPickerForm : Form
 
     private void UpdateMagnifierAtCursor()
     {
+        if (IsDisposed || Disposing || !Visible)
+            return;
+
         var screen = CursorScreenPoint;
         bool pixelChanged = screen.X != _lastMagSampleX || screen.Y != _lastMagSampleY;
         bool timeElapsed = _captureTimer.ElapsedMilliseconds >= CaptureIntervalMs;
