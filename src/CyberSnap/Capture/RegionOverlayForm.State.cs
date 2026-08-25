@@ -2164,7 +2164,7 @@ public sealed partial class RegionOverlayForm
     {
         ConfirmChromeKind.Cancel => "close",
         ConfirmChromeKind.Retry => "redo",
-        ConfirmChromeKind.Done => "check",
+        ConfirmChromeKind.Done => "enter",
         ConfirmChromeKind.ModeImage => "captureRect",
         ConfirmChromeKind.ModeOcr => "ocr",
         ConfirmChromeKind.ModeVideo => "record",
