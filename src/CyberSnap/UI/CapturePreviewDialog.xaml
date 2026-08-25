@@ -516,8 +516,12 @@
                                                 <Grid.RenderTransform>
                                                     <TranslateTransform x:Name="CancelIconSlide"/>
                                                 </Grid.RenderTransform>
-                                                <Image x:Name="CancelIcon" Width="14" Height="14"
-                                                       RenderTransformOrigin="0.5,0.5"/>
+                                                <Image x:Name="CancelIcon" Width="16" Height="16"
+                                                       RenderTransformOrigin="0.5,0.5">
+                                                    <Image.RenderTransform>
+                                                        <ScaleTransform x:Name="CancelIconScale" ScaleX="1" ScaleY="1"/>
+                                                    </Image.RenderTransform>
+                                                </Image>
                                             </Grid>
                                         </StackPanel>
                                         <!-- Countdown ring around the seconds numeral: the accent arc depletes
@@ -542,6 +546,14 @@
                                                        FontSize="9"
                                                        FontWeight="SemiBold"
                                                        Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                            <Path x:Name="AutoClosePauseIcon"
+                                                  Visibility="Collapsed"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Width="10" Height="10"
+                                                  Stretch="Uniform"
+                                                  Fill="{DynamicResource ThemeTextSecondaryBrush}"
+                                                  Data="M2,1 H4 V9 H2 Z M6,1 H8 V9 H6 Z"/>
                                         </Grid>
                                     </Grid>
                                 </Button>

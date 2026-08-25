@@ -30,9 +30,8 @@ namespace CyberSnap.UI
         /// <summary>Peak opacity for the Done-border breathe — wide enough to read, still soft.</summary>
         private const double CtaBorderOpacityPeak = 0.75;
         private const double CtaBorderBreatheSeconds = 2.4;
-        /// <summary>How far the Done chevron nudges right on hover (invite to proceed).</summary>
-        private const double ChevronInviteSlidePx = 7;
-        private const int ChevronInviteMs = 200;
+        private const double EnterInviteZoomScale = 0.88;
+        private const int EnterInviteMs = 180;
         private const int PillSimInitialDelayMs = 200;
         private const int PillSimWorkMs = 1000;
 
@@ -540,14 +539,7 @@ namespace CyberSnap.UI
             _countdownPausedForMotion = false;
             CancelCursorIdleTimer();
             SetCountdownRingShown(true, keepLayoutSlot: true);
-            // Hovering Done already: keep the ring slot but hide it instantly (invite UX).
-            if (_primaryButtonHovered)
-            {
-                CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
-                CountdownRingHost.Opacity = 0.0;
-            }
-            else
-                EnsureCountdownRingVisible();
+            EnsureCountdownRingVisible();
             UpdateDoneCountdownText(timeoutSec);
             UpdateCountdownRingArc(1.0);
             StartCtaBorderPulse();
@@ -666,12 +658,15 @@ namespace CyberSnap.UI
             if (_isPinned || !_autoCloseArmed || _autoCloseDurationSeconds <= 0)
                 return;
 
+            bool wasHovered = _primaryButtonHovered;
+            SetCountdownPausedVisual(wasHovered);
+            if (wasHovered)
+                return;
             _countdownEpoch++;
             BeginAnimation(CountdownFractionProperty, null);
             SetCurrentValue(CountdownFractionProperty, 1.0);
             UpdateCountdownRingArc(1.0);
             ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
-            FadeCountdownRing(_primaryButtonHovered ? 0.0 : 1.0);
             StartCountdownAnimation(1.0);
         }
 
@@ -704,7 +699,36 @@ namespace CyberSnap.UI
         private void EnsureCountdownRingVisible()
         {
             CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
-            CountdownRingHost.Opacity = _primaryButtonHovered ? 0.0 : 1.0;
+            CountdownRingHost.Opacity = 1.0;
+            SetCountdownPausedVisual(_countdownPausedForMotion || _primaryButtonHovered);
+        }
+
+        private void SetCountdownPausedVisual(bool paused)
+        {
+            if (AutoClosePauseIcon == null || AutoCloseCountdownText == null || CountdownRingHost == null)
+                return;
+            if (CountdownRingHost.Visibility != Visibility.Visible && _autoCloseArmed)
+                CountdownRingHost.Visibility = Visibility.Visible;
+            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
+            CountdownRingHost.Opacity = 1.0;
+            AutoClosePauseIcon.Visibility = paused ? Visibility.Visible : Visibility.Collapsed;
+            AutoCloseCountdownText.Visibility = paused ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void AnimateRingRefillAccelerated()
+        {
+            double current = Math.Clamp(CountdownFraction, 0, 1);
+            if (current >= 0.999)
+                return;
+            _countdownEpoch++;
+            BeginAnimation(CountdownFractionProperty, null);
+            SetCurrentValue(CountdownFractionProperty, current);
+            var refill = new DoubleAnimation(current, 1.0, Motion.Ms(320))
+            {
+                EasingFunction = Motion.Ease(Motion.SmoothIn),
+                FillBehavior = FillBehavior.HoldEnd
+            };
+            BeginAnimation(CountdownFractionProperty, refill);
         }
 
         /// <summary>Fades the countdown ring opacity. Layout slot is preserved.</summary>
@@ -746,7 +770,7 @@ namespace CyberSnap.UI
 
         private void ResetCountdownRingVisual()
         {
-            EnsureCountdownRingVisible();
+            SetCountdownPausedVisual(false);
             _lastCountdownSecondText = -1;
         }
 
@@ -758,14 +782,8 @@ namespace CyberSnap.UI
             if (!_countdownPausedForMotion)
             {
                 _countdownPausedForMotion = true;
-                _countdownEpoch++;
-                double current = Math.Clamp(CountdownFraction, 0, 1);
-                BeginAnimation(CountdownFractionProperty, null);
-                SetCurrentValue(CountdownFractionProperty, current);
-                UpdateCountdownRingArc(current);
-                ShowDoneCountdownSeconds(current * _autoCloseDurationSeconds);
-                // Completely hide the timer ring while preserving current value during fade-out
-                FadeCountdownRing(0.0);
+                SetCountdownPausedVisual(true);
+                AnimateRingRefillAccelerated();
             }
 
             ScheduleCursorIdleResume();
@@ -1401,23 +1419,24 @@ namespace CyberSnap.UI
             SetPrimaryButtonInvite(false);
         }
 
-        /// <summary>
-        /// Done/Continue hover invite: hide the timer set and nudge the trailing chevron
-        /// further right — a soft cue to proceed.
-        /// </summary>
         private void SetPrimaryButtonInvite(bool invite)
         {
             _primaryButtonHovered = invite;
 
-            if (_autoCloseArmed && CountdownRingHost.Visibility == Visibility.Visible)
+            if (_autoCloseArmed && CountdownRingHost.Visibility == Visibility.Visible && !_isClosing)
             {
-                if (invite)
+                bool shouldPause = invite || _countdownPausedForMotion;
+                SetCountdownPausedVisual(shouldPause);
+                if (invite && !_countdownPausedForMotion)
+                    AnimateRingRefillAccelerated();
+                else if (!invite && !_countdownPausedForMotion && !shouldPause)
                 {
-                    FadeCountdownRing(0.0);
-                }
-                else if (!_isClosing)
-                {
-                    FadeCountdownRing(_countdownPausedForMotion ? 0.0 : 1.0);
+                    _countdownEpoch++;
+                    BeginAnimation(CountdownFractionProperty, null);
+                    SetCurrentValue(CountdownFractionProperty, 1.0);
+                    UpdateCountdownRingArc(1.0);
+                    ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
+                    StartCountdownAnimation(1.0);
                 }
             }
 
@@ -1429,18 +1448,31 @@ namespace CyberSnap.UI
 
         private void AnimateChevronInvite(bool invite)
         {
-            double target = invite ? ChevronInviteSlidePx : 0;
-            var anim = new DoubleAnimation(target, Motion.Ms(ChevronInviteMs))
+            if (CancelIconScale == null) return;
+            double target = invite ? EnterInviteZoomScale : 1.0;
+            var animX = new DoubleAnimation(target, Motion.Ms(EnterInviteMs))
             {
                 EasingFunction = Motion.Ease(invite ? Motion.SoftOut : Motion.SmoothInOut)
             };
-            CancelIconSlide.BeginAnimation(TranslateTransform.XProperty, anim);
+            var animY = new DoubleAnimation(target, Motion.Ms(EnterInviteMs))
+            {
+                EasingFunction = Motion.Ease(invite ? Motion.SoftOut : Motion.SmoothInOut)
+            };
+            CancelIconScale.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
+            CancelIconScale.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
         }
 
         private void ResetChevronInviteSlide()
         {
             CancelIconSlide.BeginAnimation(TranslateTransform.XProperty, null);
             CancelIconSlide.X = 0;
+            if (CancelIconScale != null)
+            {
+                CancelIconScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                CancelIconScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                CancelIconScale.ScaleX = 1.0;
+                CancelIconScale.ScaleY = 1.0;
+            }
         }
 
         private void ApplyPrimaryButtonProcessingState()
@@ -1480,7 +1512,8 @@ namespace CyberSnap.UI
             {
                 rotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
                 rotation.Angle = 0;
-                CancelIcon.RenderTransform = null;
+                CancelIcon.RenderTransform = CancelIconScale;
+                CancelIcon.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
             }
         }
 
@@ -1612,7 +1645,7 @@ namespace CyberSnap.UI
                     chip.Label.Text = chip.ActionLabel;
                     chip.ChipBorder.ToolTip = chip.PendingTooltip;
                     chip.StatusIcon.Opacity = 0.95;
-                    chip.StatusIcon.Source = RenderDoubleChevron(accent, 15);
+                    chip.StatusIcon.Source = FluentIcons.RenderWpf("enter", accent, 30, active: false);
                     chip.StatusIcon.ToolTip = LocalizationService.Translate("Runs when you continue");
                     break;
             }
@@ -2168,8 +2201,9 @@ namespace CyberSnap.UI
             bool viewerOn = state.SystemViewer;
             bool editorOn = state.Destination == AfterCaptureDestination.Editor;
             bool continuesToSurface = viewerOn || editorOn;
-            // Same pending marker as action pills: confirm runs the remaining deferred actions.
-            CancelIcon.Source = RenderDoubleChevron(PillPendingBlue, 15);
+            var cSec = Theme.TextSecondary;
+            var enterColor = System.Drawing.Color.FromArgb(cSec.A, cSec.R, cSec.G, cSec.B);
+            CancelIcon.Source = FluentIcons.RenderWpf("enter", enterColor, 32, active: false);
             CancelIcon.Visibility = Visibility.Visible;
 
             if (continuesToSurface)
