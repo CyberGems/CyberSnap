@@ -18,6 +18,8 @@ tool for Windows, built by **CyberGems**. It combines a floating capture widget,
 annotation editor, multilingual text recognition (OCR), local image search, video trimming
 and multi-destination upload in a single .NET 9 / WPF desktop application.
 
+*Free and open source (GPLv3) — no ads, no tracking, and no data collection. Just enjoy it.*
+
 > Official site: [cybergems.org](https://cybergems.org/) · Source: [github.com/CyberGems/CyberSnap](https://github.com/CyberGems/CyberSnap)
 
 ## Screenshots
