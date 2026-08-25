@@ -47,6 +47,7 @@ namespace CyberSnap.UI
         private SolidColorBrush? _ctaBorderBrush;
         private bool _ctaBorderPulseActive;
         private bool _primaryButtonHovered;
+        private long _suppressWindowMotionUntilTicks;
         private bool _didCenterOnOpen;
         private bool _isSideBySide = true;
         private bool _isClosing;
@@ -711,7 +712,11 @@ namespace CyberSnap.UI
                 CountdownRingHost.Visibility = Visibility.Visible;
             CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
             CountdownRingHost.Opacity = 1.0;
-            AutoClosePauseIcon.Visibility = paused ? Visibility.Visible : Visibility.Collapsed;
+            bool showCheck = _primaryButtonHovered && paused;
+            bool showPause = paused && !showCheck;
+            if (AutoCloseCheckIcon != null)
+                AutoCloseCheckIcon.Visibility = showCheck ? Visibility.Visible : Visibility.Collapsed;
+            AutoClosePauseIcon.Visibility = showPause ? Visibility.Visible : Visibility.Collapsed;
             AutoCloseCountdownText.Visibility = paused ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -719,7 +724,13 @@ namespace CyberSnap.UI
         {
             double current = Math.Clamp(CountdownFraction, 0, 1);
             if (current >= 0.999)
+            {
+                _countdownEpoch++;
+                BeginAnimation(CountdownFractionProperty, null);
+                SetCurrentValue(CountdownFractionProperty, 1.0);
+                UpdateCountdownRingArc(1.0);
                 return;
+            }
             _countdownEpoch++;
             BeginAnimation(CountdownFractionProperty, null);
             SetCurrentValue(CountdownFractionProperty, current);
@@ -776,7 +787,9 @@ namespace CyberSnap.UI
 
         private void OnWindowCursorMoved()
         {
-            if (!_autoCloseArmed || _isPinned || _isClosing || _pillSimRunning)
+            if (!_autoCloseArmed || _isPinned || _isClosing || _pillSimRunning || _primaryButtonHovered)
+                return;
+            if (Environment.TickCount64 < _suppressWindowMotionUntilTicks)
                 return;
 
             if (!_countdownPausedForMotion)
@@ -1425,12 +1438,21 @@ namespace CyberSnap.UI
 
             if (_autoCloseArmed && CountdownRingHost.Visibility == Visibility.Visible && !_isClosing)
             {
-                bool shouldPause = invite || _countdownPausedForMotion;
-                SetCountdownPausedVisual(shouldPause);
-                if (invite && !_countdownPausedForMotion)
-                    AnimateRingRefillAccelerated();
-                else if (!invite && !_countdownPausedForMotion && !shouldPause)
+                if (invite)
                 {
+                    SetCountdownPausedVisual(true);
+                    if (!_countdownPausedForMotion)
+                        AnimateRingRefillAccelerated();
+                }
+                else
+                {
+                    if (_countdownPausedForMotion)
+                    {
+                        CancelCursorIdleTimer();
+                        _countdownPausedForMotion = false;
+                    }
+                    _suppressWindowMotionUntilTicks = Environment.TickCount64 + CursorIdleResumeMs + 80;
+                    SetCountdownPausedVisual(false);
                     _countdownEpoch++;
                     BeginAnimation(CountdownFractionProperty, null);
                     SetCurrentValue(CountdownFractionProperty, 1.0);
@@ -2317,8 +2339,20 @@ namespace CyberSnap.UI
         {
             if (_isClosing)
                 return;
-            SelectedAction = RegionOverlayForm.ConfirmCommitAction.Copy;
-            CommitAndClose(true);
+            CancelAutoCloseOnInteraction();
+            try
+            {
+                Services.ClipboardService.CopyToClipboard(EffectiveBitmap, _savedFilePath);
+                ToastWindow.Show(
+                    LocalizationService.Translate("Copied to clipboard"),
+                    LocalizationService.Translate("Image copied to clipboard."));
+            }
+            catch (Exception ex)
+            {
+                ToastWindow.ShowError(
+                    LocalizationService.Translate("Copy failed"),
+                    ex.Message);
+            }
         }
 
         private void EditBtn_Click(object sender, RoutedEventArgs e)
@@ -2333,16 +2367,61 @@ namespace CyberSnap.UI
         {
             if (_isClosing)
                 return;
-            SelectedAction = RegionOverlayForm.ConfirmCommitAction.Viewer;
-            CommitAndClose(true);
+            CancelAutoCloseOnInteraction();
+            try
+            {
+                string? path = _savedFilePath;
+                string? tempPath = null;
+                if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                {
+                    tempPath = Helpers.CaptureSavePath.BuildTempCapturePath(".png");
+                    Services.CaptureOutputService.SavePng(EffectiveBitmap, tempPath);
+                    path = tempPath;
+                }
+                if (path != null && File.Exists(path))
+                {
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                    }
+                    catch
+                    {
+                        Process.Start(new ProcessStartInfo("cmd.exe", $"/c start \"\" \"{path}\"") { UseShellExecute = false, CreateNoWindow = true });
+                    }
+                    if (tempPath != null)
+                    {
+                        var cleanup = tempPath;
+                        _ = Task.Delay(TimeSpan.FromSeconds(90)).ContinueWith(_ => Helpers.CaptureSavePath.TryDeleteTempRecording(cleanup));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ToastWindow.ShowError(LocalizationService.Translate("Open failed"), ex.Message);
+            }
         }
 
-        private void ShareBtn_Click(object sender, RoutedEventArgs e)
+        private async void ShareBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isClosing)
                 return;
-            SelectedAction = RegionOverlayForm.ConfirmCommitAction.Share;
-            CommitAndClose(true);
+            CancelAutoCloseOnInteraction();
+            try
+            {
+                var settings = _settingsService.Settings;
+                var provider = Services.Upload.ImageUploadService.GetDefaultProvider(settings);
+                var owner = this;
+                IntPtr handle = new System.Windows.Interop.WindowInteropHelper(owner).Handle;
+                if (!UI.Share.ImageShareFlow.ConfirmThirdPartyUploadIfNeeded(owner, handle, provider, settings))
+                    return;
+                using var bmp = new Bitmap(EffectiveBitmap);
+                var result = await UI.Share.ImageShareFlow.ShareBitmapAsync(bmp).ConfigureAwait(true);
+                UI.Share.ImageShareFlow.PresentResult(result, settings);
+            }
+            catch (Exception ex)
+            {
+                ToastWindow.ShowError(LocalizationService.Translate("Upload failed"), ex.Message);
+            }
         }
 
         private void GalleryBtn_Click(object sender, RoutedEventArgs e)
