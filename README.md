@@ -13,6 +13,15 @@
   <img src="https://img.shields.io/badge/version-1.10.0-green.svg" alt="Version" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/CyberGems/CyberSnap/releases/latest">
+    <img src="https://img.shields.io/badge/⚡_Download_Latest_Release-(Windows_64--bit)-00F2FF?style=for-the-badge&logo=windows&logoColor=000000" alt="Download Latest Release" />
+  </a>
+  <a href="https://github.com/CyberGems/CyberSnap/releases">
+    <img src="https://img.shields.io/badge/All_Releases-Changelog-18181B?style=for-the-badge&logo=github&logoColor=white" alt="All Releases" />
+  </a>
+</p>
+
 **CyberSnap** is a screenshot, annotation, OCR, translation, screen-recording and sharing
 tool for Windows, built by **CyberGems**. It combines a floating capture widget, an
 annotation editor, multilingual text recognition (OCR), local image search, video trimming
