@@ -208,3 +208,13 @@ If you'd like to support this work, a donation would mean a lot. Thank you! 🙏
 ## License
 
 CyberSnap is distributed under the terms of the **GNU General Public License v3.0**. See [`LICENSE`](LICENSE) for the full license text.
+---
+
+<div align="center" style="background:#0D0F17; border:1px solid rgba(0,255,255,0.12); border-radius:12px; padding:28px 20px; margin-top:32px;">
+
+### Thanks for using CyberSnap! 🎉
+
+Made by [**CyberGems**](https://cybergems.org)
+
+</div>
+
