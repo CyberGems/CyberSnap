@@ -540,6 +540,8 @@ public sealed partial class RegionOverlayForm
         }
         EnabledToolsChanged?.Invoke(enabled);
         SetEnabledTools(enabled);
+        if (_isConfirmingSelection)
+            EnsureDefaultAnnotationTool();
         RefreshToolbar();
     }
 
@@ -581,6 +583,8 @@ public sealed partial class RegionOverlayForm
             enabled.Remove(toolId);
             EnabledToolsChanged?.Invoke(enabled);
             SetEnabledTools(enabled);
+            if (_isConfirmingSelection)
+                EnsureDefaultAnnotationTool();
             RefreshToolbar();
 
             var tool = ToolDef.AllTools.FirstOrDefault(t => t.Id == toolId);

@@ -78,7 +78,7 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            _visibleTools = ToolDef.AllTools.Where(t => enabledIds.Contains(t.Id) || IsPinnedAnnotationUtility(t.Id)).ToArray();
+            _visibleTools = ToolDef.AllTools.Where(t => enabledIds.Contains(t.Id)).ToArray();
         }
 
         _mainBarTools = _visibleTools.Where(t => !flyoutIds.Contains(t.Id)).ToArray();
@@ -1363,7 +1363,7 @@ public sealed partial class RegionOverlayForm
             _shineMain[i] = 1f;
             _shineDup[i] = 0f;
         }
-        _confirmWrapperShinePhase = 0f;
+        _dockShinePhase = 0f;
         _hoveredConfirmSizeReadout = false;
         ResetConfirmModesExpanded(collapsed: true);
         ResetAnnotationToolsExpanded(collapsed: true);
@@ -1401,8 +1401,8 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.
-        if (!UI.Motion.Disabled) _confirmShineTimer.Start();
+        // Traveling border shine on the confirm dock (and annotation bar, if present).
+        EnsureDockShineTimer();
         Invalidate();
         // One synchronous paint so destination pills + frame appear with the annotation dock.
         try { Update(); } catch { }
@@ -1438,21 +1438,30 @@ public sealed partial class RegionOverlayForm
 
     /// <summary>
     /// If confirm mode has no annotation tool selected yet, activate Arrow (or the first drawing tool)
-    /// so the sticky trigger slot is meaningful.
+    /// so the sticky trigger slot is meaningful. Also replaces the active tool when it was just hidden.
     /// </summary>
     private void EnsureDefaultAnnotationTool()
     {
         if (!_isConfirmingSelection || !ShowAnnotationChrome)
             return;
 
-        // Already have a drawing-tool trigger identity.
+        bool activeVisible = !string.IsNullOrEmpty(_activeToolId)
+            && _flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase));
+
         if (!string.IsNullOrEmpty(_annotationDrawingToolId)
             && _flyoutTools.Any(t => string.Equals(t.Id, _annotationDrawingToolId, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (!activeVisible)
+            {
+                var drawing = _flyoutTools.First(t =>
+                    string.Equals(t.Id, _annotationDrawingToolId, StringComparison.OrdinalIgnoreCase));
+                if (drawing.Mode is not null)
+                    SetTool(drawing, showHelpBanner: false);
+            }
             return;
+        }
 
-        if (!string.IsNullOrEmpty(_activeToolId)
-            && !IsPinnedAnnotationUtility(_activeToolId)
-            && _flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase)))
+        if (activeVisible && !IsPinnedAnnotationUtility(_activeToolId!))
         {
             RememberAnnotationDrawingToolId(_activeToolId);
             return;
@@ -1468,20 +1477,25 @@ public sealed partial class RegionOverlayForm
 
         if (preferred?.Mode is not null)
         {
-            // Don't steal focus from select/eraser — only seed the sticky drawing trigger.
-            if (string.IsNullOrEmpty(_activeToolId)
-                || (!_flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase))
-                    && !IsPinnedAnnotationUtility(_activeToolId!)))
-            {
+            if (!activeVisible)
                 SetTool(preferred, showHelpBanner: false);
-            }
             RememberAnnotationDrawingToolId(preferred.Id);
+            return;
+        }
+
+        if (!activeVisible)
+        {
+            var select = _flyoutTools.FirstOrDefault(t =>
+                string.Equals(t.Id, "select", StringComparison.OrdinalIgnoreCase));
+            if (select?.Mode is not null)
+                SetTool(select, showHelpBanner: false);
         }
     }
 
     private void UpdateHistoryUtilitiesVisibility(bool animate = true)
     {
-        bool shouldShow = HasConfirmAnnotations() || _editUndoStack.Count > 0;
+        bool shouldShow = (HasConfirmAnnotations() || _editUndoStack.Count > 0)
+            && (HasAnnotationFlyoutTool("undo") || HasAnnotationFlyoutTool("eraser"));
         float target = shouldShow ? 1f : 0f;
         if (Math.Abs(_historyUtilitiesTargetAmt - target) < 0.001f)
         {
@@ -2790,16 +2804,39 @@ public sealed partial class RegionOverlayForm
         _pressedConfirmButton = -1;
         _pendingConfirmAction = -1;
         _confirmPressAmt = 0f;
-        _confirmShineTimer.Stop();
+        EnsureDockShineTimer();
+    }
+
+    /// <summary>True when a capture/confirm/annotation dock is on screen and should keep its border shine moving.</summary>
+    private bool DockShineNeeded()
+    {
+        if (_confirmDocksHiddenForFrameManip)
+            return false;
+        if (_isConfirmingSelection)
+            return true;
+        return _toolbarForm is { IsDisposed: false, Visible: true };
+    }
+
+    /// <summary>Start or stop the dock shine timer to match the current chrome.</summary>
+    private void EnsureDockShineTimer()
+    {
+        if (IsDisposed || Disposing || UI.Motion.Disabled || !DockShineNeeded())
+        {
+            _confirmShineTimer.Stop();
+            return;
+        }
+
+        if (!_confirmShineTimer.Enabled)
+            _confirmShineTimer.Start();
     }
 
     /// <summary>
-    /// Confirm chrome animation: individual pills only shine while THAT pill is hovered —
-    /// never a group dim/shine. (Wrapper chrome matches the capture dock — no traveling shine.)
+    /// Capture/confirm dock animation: a traveling border beam on each visible wrapper.
+    /// Individual confirm pills only add a comet while THAT pill is hovered.
     /// </summary>
     private void ConfirmShineTick()
     {
-        if (UI.Motion.Disabled || !_isConfirmingSelection)
+        if (UI.Motion.Disabled || !DockShineNeeded())
         {
             _confirmShineTimer.Stop();
             return;
@@ -2811,8 +2848,18 @@ public sealed partial class RegionOverlayForm
         if (IsDraggingAnyAnnotation())
             return;
 
-        _confirmWrapperShinePhase += (float)(UiChrome.FrameIntervalMs / 4000.0);
-        if (_confirmWrapperShinePhase >= 1f) _confirmWrapperShinePhase -= 1f;
+        _dockShinePhase += (float)(UiChrome.FrameIntervalMs / 4000.0);
+        if (_dockShinePhase >= 1f) _dockShinePhase -= 1f;
+
+        bool toolbarVisible = _toolbarForm is { IsDisposed: false, Visible: true };
+        if (toolbarVisible)
+        {
+            MarkToolbarRenderDirty();
+            _toolbarForm!.UpdateSurface();
+        }
+
+        if (!_isConfirmingSelection)
+            return;
 
         int hov = _hoveredConfirmButton;
         float baseDelta = (float)(UiChrome.FrameIntervalMs / 2200.0);
@@ -2823,7 +2870,7 @@ public sealed partial class RegionOverlayForm
             _shineMain[i] = 1f;
             if (hov == i)
             {
-                _shinePhase[i] += baseDelta * 2f;
+                _shinePhase[i] += baseDelta * 0.85f;
                 if (_shinePhase[i] >= 1f) _shinePhase[i] -= 1f;
                 _shineDup[i] += (1f - _shineDup[i]) * 0.3f;
             }
@@ -3352,8 +3399,7 @@ public sealed partial class RegionOverlayForm
     {
         _ = previousHovered;
         InvalidateConfirmChromeHover();
-        if (!UI.Motion.Disabled && _isConfirmingSelection && !_confirmShineTimer.Enabled)
-            _confirmShineTimer.Start();
+        EnsureDockShineTimer();
     }
 
     private static bool IsRetractableConfirmMode(ConfirmChromeKind kind) => kind is

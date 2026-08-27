@@ -105,6 +105,8 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        DrawDockWrapperShine(g, r, cr, _dockShinePhase);
+
         // Draw question mark icon (Quick Start / help)
         int closeIdx = CloseButtonIndex;
 

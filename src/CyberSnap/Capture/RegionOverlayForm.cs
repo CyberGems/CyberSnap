@@ -134,8 +134,8 @@ public sealed partial class RegionOverlayForm : Form
     private DateTime _confirmModesAnimStart;
     private const int ConfirmModesExpandAnimMs = 100;
     private const int ConfirmModesCollapseDelayMs = 550;
-    /// <summary>Traveling glint phase around the confirm dock wrapper (0..1).</summary>
-    private float _confirmWrapperShinePhase;
+    /// <summary>Traveling glint phase around capture/confirm dock wrappers (0..1).</summary>
+    private float _dockShinePhase;
 
     /// <summary>Annotation column: secondary tools collapse above the sticky cluster.</summary>
     private bool _annotationToolsExpanded;
@@ -1067,7 +1067,11 @@ public sealed partial class RegionOverlayForm : Form
 
         float historyReveal = Math.Clamp(_historyUtilitiesRevealAmt, 0f, 1f);
         int historyUnit = buttonSize + buttonSpacing;
-        int fullHistoryContent = historyUnit * 2; // for undo and eraser
+        bool showUndo = HasAnnotationFlyoutTool("undo");
+        bool showEraser = HasAnnotationFlyoutTool("eraser");
+        bool showSelect = HasAnnotationFlyoutTool("select");
+        int historyCount = (showUndo ? 1 : 0) + (showEraser ? 1 : 0);
+        int fullHistoryContent = historyUnit * historyCount;
         int dynamicHistorySpan = (int)Math.Round(fullHistoryContent * historyReveal);
 
         // Measure sticky + retractable spans so the column can grow upward from the frame bottom.
@@ -1078,9 +1082,12 @@ public sealed partial class RegionOverlayForm : Form
         stickySpan += buttonSize; // color
         stickySpan += buttonSpacing;
         stickySpan += buttonSize; // stroke
-        stickySpan += buttonSpacing;
+        bool hasBelowStroke = historyCount > 0 || showSelect;
+        if (hasBelowStroke)
+            stickySpan += buttonSpacing;
         stickySpan += dynamicHistorySpan;
-        stickySpan += buttonSize; // select is always visible
+        if (showSelect)
+            stickySpan += buttonSize;
 
         // Full retractable content height (icons stay full-size; the column height lerps).
         int fullRetractContent = 0;
@@ -1208,7 +1215,10 @@ public sealed partial class RegionOverlayForm : Form
         _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
         cy += buttonSize + buttonSpacing;
         _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-        cy += buttonSize + buttonSpacing;
+        if (hasBelowStroke)
+            cy += buttonSize + buttonSpacing;
+        else
+            cy += buttonSize;
 
         int historyAreaTop = cy;
         _annotationHistoryRevealRect = dynamicHistorySpan > 0
@@ -1229,18 +1239,21 @@ public sealed partial class RegionOverlayForm : Form
                     return;
                 }
             }
-            PlaceHistoryUtility("undo");
-            PlaceHistoryUtility("eraser");
+            if (showUndo) PlaceHistoryUtility("undo");
+            if (showEraser) PlaceHistoryUtility("eraser");
         }
 
         cy = historyAreaTop + dynamicHistorySpan;
 
-        for (int i = 0; i < _flyoutTools.Length; i++)
+        if (showSelect)
         {
-            if (!string.Equals(_flyoutTools[i].Id, "select", StringComparison.OrdinalIgnoreCase))
-                continue;
-            _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            break;
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (!string.Equals(_flyoutTools[i].Id, "select", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
+                break;
+            }
         }
 
         // Overflow menu moved to the confirm-frame gear pill — keep activator empty here
@@ -1269,6 +1282,9 @@ public sealed partial class RegionOverlayForm : Form
         string.Equals(toolId, "undo", StringComparison.OrdinalIgnoreCase)
         || string.Equals(toolId, "select", StringComparison.OrdinalIgnoreCase)
         || string.Equals(toolId, "eraser", StringComparison.OrdinalIgnoreCase);
+
+    private bool HasAnnotationFlyoutTool(string toolId) =>
+        _flyoutTools.Any(t => string.Equals(t.Id, toolId, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Sticky trigger is always a drawing tool (Arrow by default). Select/Eraser stay fixed below.
@@ -1495,7 +1511,7 @@ public sealed partial class RegionOverlayForm : Form
 
         _confirmDocksHiddenForFrameManip = true;
         _hoveredConfirmButton = -1;
-        _confirmShineTimer.Stop();
+        EnsureDockShineTimer();
         ResetConfirmModesExpanded(collapsed: true);
         ResetAnnotationToolsExpanded(collapsed: true);
 
@@ -1575,8 +1591,7 @@ public sealed partial class RegionOverlayForm : Form
         // Force overlay paint now so destination pills don't lag a frame behind the annotation dock.
         try { Update(); } catch { }
 
-        if (_isConfirmingSelection && !UI.Motion.Disabled && !_confirmShineTimer.Enabled)
-            _confirmShineTimer.Start();
+        EnsureDockShineTimer();
     }
 
     /// <summary>
