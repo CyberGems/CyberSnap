@@ -1,16 +1,7 @@
-# CyberSnap
-
-<!-- Placeholder screenshots: add real images under docs/screenshots/ and update the paths below -->
+<h1 align="center">CyberSnap — Screenshot & Screen Recorder</h1>
 
 <p align="center">
-  <img src="src/CyberSnap/Assets/CyberSnap_square.png" width="160" alt="CyberSnap logo" />
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License" />
-  <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4.svg" alt="Platform" />
-  <img src="https://img.shields.io/badge/.NET-9.0-512BD4.svg" alt=".NET" />
-  <img src="https://img.shields.io/badge/version-1.10.0-green.svg" alt="Version" />
+  <strong>A full-featured screenshot, annotation, OCR, and screen-recording tool</strong> — capture anything, edit everything, and share anywhere. Built with .NET 9 and WPF.
 </p>
 
 <p align="center">
@@ -22,103 +13,142 @@
   </a>
 </p>
 
-**CyberSnap** is a screenshot, annotation, OCR, translation, screen-recording and sharing
-tool for Windows, built by **CyberGems**. It combines a floating capture widget, an
-annotation editor, multilingual text recognition (OCR), local image search, video trimming
-and multi-destination upload in a single .NET 9 / WPF desktop application.
+<p align="center">
+  <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License" />
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4.svg?logo=windows&logoColor=white" alt="Platform" />
+  <img src="https://img.shields.io/badge/version-1.10.0-00F0FF.svg" alt="Version" />
+  <img src="https://img.shields.io/badge/.NET-9-512BD4.svg?logo=dotnet&logoColor=white" alt=".NET" />
+</p>
+
+A full-featured **screenshot, annotation, OCR, translation, screen-recording and sharing tool** for Windows. CyberSnap combines a floating capture widget, an annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload — all in a single .NET 9 / WPF desktop application.
 
 *Free and open source (GPLv3) — no ads, no tracking, and no data collection. Just enjoy it.*
 
-> Official site: [cybergems.org](https://cybergems.org/) · Source: [github.com/CyberGems/CyberSnap](https://github.com/CyberGems/CyberSnap)
+---
 
-## Screenshots
+## 📸 Why CyberSnap?
 
-> Note: screenshots are placeholders. Add real images under `docs/screenshots/` and update
-> the paths below.
-| Capture widget | Annotation editor | Gallery / History |
-| --- | --- | --- |
-| ![Capture widget](docs/screenshots/capture-widget.png) | ![Editor](docs/screenshots/editor.png) | ![Gallery](docs/screenshots/gallery.png) |
+Most screenshot tools either do too little or bury features behind a paywall. CyberSnap gives you **professional-grade capture, editing, and sharing** — including OCR, translation, and 7 upload destinations — all in a free, open-source package with a polished cyberpunk aesthetic.
 
-| OCR & translation | Settings |
-| --- | --- |
-| ![OCR](docs/screenshots/ocr.png) | ![Settings](docs/screenshots/settings.png) |
+| Need | Solution |
+|---|---|
+| Capture anything | Area, window, full screen, scroll capture, MP4/GIF recording |
+| Edit and annotate | Full-featured editor with shapes, text, rulers, colors, frames |
+| Extract text from images | Multilingual OCR with Tesseract + integrated translation |
+| Find past captures | Local SQLite index with full-text search across OCR content |
+| Share anywhere | FTP, SFTP, S3, ImgBB, Imgur, Webhook, or CyberSnap Share |
+| Work efficiently | Configurable hotkeys, floating widget, auto-start, system tray |
 
-## Features
+---
 
-- **Floating Capture Widget** — an always-available on-screen widget to start any capture in
-  one click, with an optional "open in editor" toggle and always-on-top support.
-- **Flexible capture** — area, active window, full screen and *scroll capture* (long,
-  scrollable pages stitched into one image).
-- **Screen recording** — record to **MP4** or **GIF** and trim them afterwards with the
-  built-in *Video Trimmer*.
-- **Annotation editor** — canvases with shapes, text, image paste, rulers, custom colors and
-  frames; opens automatically after each capture if you want.
-- **Multilingual OCR** — extract text from images with Tesseract and search within it across
-  your captures. Language is auto-detected from your Windows display language.
-- **Translation** — translate OCR-extracted text via the integrated translation service.
-- **Barcode / QR** — scan codes with ZXing, standalone or on top of a capture.
-- **Color picker & ruler** — standalone tools for color sampling and on-screen measurement.
-- **Local image search** — a local (SQLite) index that lets you search the OCR text and
-  content of your captures.
-- **Gallery / History** — a persistent history of captures, OCR text, codes and colors, with
-  search.
-- **Configurable hotkeys** — capture, OCR, recording, ruler, color picker and repeat-last-area
-  actions are all reassignable.
-- **Upload & share** — send images to **FTP**, **SFTP**, **S3-compatible**, **ImgBB**,
-  **Imgur**, **Webhook** or **CyberSnap Share**.
-- **Localization** — UI translated into 29 languages (see `src/CyberSnap/Localization`).
-- **Themes & scaling** — light / dark / system-following theme and adjustable UI scale.
-- **Start with Windows** — optional launch at sign-in and run in the background from the
-  system tray.
+## ✨ Key Features
 
-## Requirements
+### 📷 Capture
+- **Floating Capture Widget** — Always-available on-screen widget for one-click capture
+- **Flexible Capture Modes** — Area, active window, full screen, and scroll capture (long pages stitched into one image)
+- **Screen Recording** — Record to MP4 or GIF with built-in video trimming
+- **Precision Tools** — Crosshair guides, capture magnifier, and smart window detection
+- **Scroll Capture** — Automatically stitches long scrollable pages into a single image
 
-- **OS:** Windows 10 (build 19041 / 20H2) or later.
-- **Runtime:** .NET 9 Desktop Runtime (for the framework-dependent installer) or none (for a
-  *self-contained* build).
-- **Architectures:** `x64`, `x86`, `ARM64`.
+### ✏️ Annotation Editor
+- **Rich Canvas** — Shapes, text, image paste, rulers, custom colors, and frames
+- **Auto-Open** — Opens automatically after each capture (configurable)
+- **Undo/Redo** — Configurable history limit (1–200 steps)
+- **Resize Handles** — Scale content or extend canvas
+- **Pan Mode** — With optional object lock
 
-## Installation
+### 🔤 OCR & Translation
+- **Multilingual OCR** — Extract text from images with Tesseract
+- **Language Auto-Detection** — Based on Windows display language
+- **Integrated Translation** — Translate OCR-extracted text with configurable source/target languages
+- **Local Search** — Full-text search across all OCR content in your capture history
 
-Download the Inno Setup installer (`CyberSnap-Setup-<version>.exe`) and follow the wizard. The
-installer:
+### 📊 Gallery & History
+- **Persistent History** — Captures, OCR text, barcodes, and colors with configurable retention
+- **Search** — Find past captures by content, OCR text, or metadata
+- **Click Actions** — Open in editor, copy to clipboard, or open in default viewer
+- **Auto-Indexing** — SQLite local index with configurable search sources
 
-- registers the `.csnp` project-file association,
-- creates Start Menu and (optionally) desktop shortcuts,
-- offers to launch CyberSnap when Windows starts.
+### 📤 Upload & Share
+- **7 Destinations** — FTP, SFTP, S3-compatible, ImgBB, Imgur, Webhook, or CyberSnap Share
+- **Encrypted Credentials** — AES-GCM encryption for upload provider credentials
+- **Configurable Format** — PNG or JPEG with quality control
+- **Post-Upload Actions** — Open URL in browser after successful upload
 
-> **Downloads:** [github.com/CyberGems/CyberSnap/releases](https://github.com/CyberGems/CyberSnap/releases)
+### 🛠️ Standalone Tools
+- **Color Picker** — Sample any color on screen
+- **Ruler** — On-screen measurement tool
+- **Barcode / QR Scanner** — Scan codes standalone or on top of a capture
 
-## Building from source
+### 🖥️ Desktop Integration
+- **System Tray** — Runs in background with custom context menu
+- **Configurable Hotkeys** — Capture, OCR, recording, ruler, color picker, repeat-last-area
+- **Auto-Start** — Launch at Windows sign-in
+- **Auto-Update** — Built-in updater with toast notifications
+- **Setup Wizard** — First-run configuration assistant
 
-### Prerequisites
+### 🎨 Customization
+- **29 Languages** — Full UI localization (including English and Spanish)
+- **3 Themes** — Light, dark, and system-following
+- **Adjustable UI Scale** — Adapt to any display
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- Windows 10 SDK (10.0.19041.0 or newer)
-- Visual Studio 2022 (".NET desktop development" workload) or just the `dotnet` CLI
+---
 
-### Repository layout
+## 🛠️ Tech Stack & Architecture
+
+- **Platform:** Windows 10 (build 19041) or later — x64, x86, ARM64
+- **Framework:** .NET 9 + WPF (PerMonitorV2 high DPI)
+- **Database:** SQLite (local history and search index)
+- **Capture:** DirectX via Vortice.Direct2D1 / Vortice.Direct3D11
+- **OCR:** Tesseract
+- **Barcode:** ZXing.Net
+- **Installer:** Inno Setup
 
 ```
 CyberSnap/
 ├── src/
-│   ├── CyberSnap/          # Main app (WPF, entry point)
-│   └── CyberSnap.AppModel/ # Shared models and settings schemas
-├── scripts/                # Utilities (e.g. upload API-key encryption)
-├── CyberSnap.iss           # Inno Setup installer script
-├── CyberSnap.sln           # Solution
-└── LICENSE
+│   ├── CyberSnap/              Main app (WPF, entry point)
+│   │   ├── App.xaml/.cs        Application definition & main entry
+│   │   ├── Capture/            Capture overlay, recording, scrolling capture
+│   │   ├── Services/           Business logic services
+│   │   │   ├── Upload/         Upload providers (FTP, SFTP, S3, ImgBB, Imgur, Webhook)
+│   │   │   ├── History/        History management
+│   │   │   ├── HotkeyService.cs
+│   │   │   ├── OcrService.cs
+│   │   │   ├── TranslationService.cs
+│   │   │   └── SettingsService.cs
+│   │   ├── UI/                 Windows and controls
+│   │   │   ├── Editor/         Annotation editor
+│   │   │   ├── Settings/       Settings window
+│   │   │   ├── History/        Gallery/history window
+│   │   │   └── Share/          Share dialogs
+│   │   ├── Localization/       29 language JSON files
+│   │   ├── Models/             Data models
+│   │   ├── Helpers/            Utility helpers
+│   │   └── Native/             Native interop
+│   └── CyberSnap.AppModel/     Shared models and settings schemas
+├── scripts/                    Utilities (upload API-key encryption)
+├── CyberSnap.iss               Inno Setup installer script
+└── CyberSnap.sln               Solution
 ```
 
-### Build and publish
+---
 
-From the repository root:
+## 🚀 Getting Started
+
+### Install
+
+Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/releases/latest) and follow the wizard. The installer registers `.csnp` file associations, creates shortcuts, and offers to start with Windows.
+
+### Build from Source
+
+**Prerequisites:** .NET 9 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2022 or `dotnet` CLI
 
 ```powershell
-# Restore and build (Debug)
+# Build (Debug)
 dotnet build src/CyberSnap/CyberSnap.csproj
 
-# Publish a self-contained build for x64
+# Publish self-contained for x64
 dotnet publish src/CyberSnap/CyberSnap.csproj `
   -c Release -r win-x64 `
   --self-contained true `
@@ -126,62 +156,73 @@ dotnet publish src/CyberSnap/CyberSnap.csproj `
   -o ./publish-win64
 ```
 
-Repeat the command with `-r win-x86` or `-r win-arm64` for the other architectures.
+Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) from `CyberSnap.iss`.
 
-### Building the installer
+---
 
-The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) from
-`CyberSnap.iss`, which packages the contents of `./publish-win64`.
+## ⌨️ Keyboard Shortcuts
 
-## Quick start
+All capture actions are bound to **configurable hotkeys** in Settings:
 
-- The app lives in the **system tray**; use the **floating Capture Widget** to start quick
-  captures.
-- Open the **Annotation editor** with `CyberSnap.exe --editor` (or the "CyberSnap Editor"
-  shortcut created by the installer).
-- **Capture actions** (area, repeat area, active window, full screen, scroll capture, MP4/GIF recording,
-  OCR, color picker, code scan, ruler) are bound to **configurable hotkeys** in *Settings*.
-- The **history** of captures, OCR text, codes and colors is browsable from the *Gallery*.
+| Action | Default Hotkey |
+|---|---|
+| Capture area | Configurable |
+| Repeat last area | Configurable |
+| Active window | Configurable |
+| Full screen | Configurable |
+| Scroll capture | Configurable |
+| Record MP4 | Configurable |
+| Record GIF | Configurable |
+| OCR | Configurable |
+| Color picker | Configurable |
+| Barcode scan | Configurable |
+| Ruler | Configurable |
 
-## Configuration and data
+Open the annotation editor directly: `CyberSnap.exe --editor`
 
-CyberSnap stores its settings and history data under the app's user storage paths
-(`AppStoragePaths`). Upload provider credentials are kept in an encrypted *vault*
-(AES-GCM, `DefaultCredentialVault`); out-of-the-box embedded keys are obfuscated with the
-`scripts/Protect-UploadVaultKey.ps1` script.
+---
 
-## Localization
+## ❓ Frequently Asked Questions
 
-UI strings live in `src/CyberSnap/Localization/*.json` (29 languages, including `en.json` and
-`es.json`). To add or fix a language, edit the corresponding JSON file; changes load without
-recompiling.
+### What capture modes does CyberSnap support?
 
-## Privacy and security
+Area selection, active window, full screen, scroll capture (long pages stitched into one image), MP4 recording, and GIF recording.
 
-- **Upload credentials** are encrypted locally and are not sent to third parties except the
-  providers you configure.
-- The **search index** and history are **local** (SQLite on the user's machine).
-- OCR uses Tesseract data (`tessdata`) that may reside on the machine or in Windows.
+### How does OCR work?
 
-## Troubleshooting
+CyberSnap uses Tesseract to extract text from captured images. The language is auto-detected from your Windows display language, and you can search across all OCR text in your capture history. Extracted text can also be translated via the integrated translation service.
 
-- **Hotkey conflict:** if a hotkey does not respond, another program may be using it; reassign
-  it in *Settings* (CyberSnap includes conflict detection).
-- **App won't start:** make sure the .NET 9 runtime is installed, or use a *self-contained* build.
+### Where can I upload captures?
 
-## Contributing
+CyberSnap supports FTP, SFTP, S3-compatible storage, ImgBB, Imgur, Webhook, and CyberSnap Share. Upload credentials are encrypted locally with AES-GCM.
 
-Contributions are welcome. Please open an issue describing the change before starting large
-work, and submit pull requests against the main branch.
+### Where is my data stored?
 
+All captures, history, and settings are stored locally on your machine. Upload provider credentials are kept in an encrypted vault. No data is sent to third parties except the upload providers you explicitly configure.
 
-## Acknowledgments
+### How do I change hotkeys?
+
+Go to **Settings** and navigate to the hotkeys section. CyberSnap includes conflict detection to warn you if a hotkey is already in use by another application.
+
+### Can I use CyberSnap in my language?
+
+Yes. CyberSnap supports 29 languages including English, Spanish, German, French, Japanese, Korean, Chinese (Simplified and Traditional), and many more. UI strings are in JSON files under `src/CyberSnap/Localization/` and can be edited without recompiling.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome. Please open an issue describing the change before starting large work, and submit pull requests against the main branch.
+
+## 🙏 Acknowledgments
 
 Originally forked from [OddSnap](https://github.com/jasperdevs/odd-snap) by [jasperdevs](https://github.com/jasperdevs). CyberSnap has since been extensively rewritten and expanded by [CyberGems](https://cybergems.org/).
 
-This project also builds on open-source components including Tesseract OCR, ZXing, SQLite and Inno Setup — thanks to their authors and maintainers.
+This project also builds on open-source components including Tesseract OCR, ZXing, SQLite, and Inno Setup — thanks to their authors and maintainers.
 
-## Donate
+---
+
+## ❤️ Donate
 
 **CyberSnap** is a personal open-source project within the **CyberGems** suite. I've spent thousands of hours building and refining it — both for my own use and to share premium-quality software with the world for free.
 
@@ -205,9 +246,12 @@ If you'd like to support this work, a donation would mean a lot. Thank you! 🙏
 
 </details>
 
-## License
+---
 
-CyberSnap is distributed under the terms of the **GNU General Public License v3.0**. See [`LICENSE`](LICENSE) for the full license text.
+## 📄 License
+
+CyberSnap is distributed under the terms of the GNU General Public License v3.0. See [`LICENSE`](LICENSE) for the full license text.
+
 ---
 
 <div align="center" style="background:#0D0F17; border:1px solid rgba(0,255,255,0.12); border-radius:12px; padding:28px 20px; margin-top:32px;">
@@ -217,4 +261,3 @@ CyberSnap is distributed under the terms of the **GNU General Public License v3.
 Made by [**CyberGems**](https://cybergems.org)
 
 </div>
-
