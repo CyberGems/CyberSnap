@@ -540,6 +540,8 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        DrawDockWrapperShine(g, face, corner, _dockShinePhase);
+
         if (!_confirmGripRect.IsEmpty)
         {
             DrawToolbarGripDots(g, _confirmGripRect, UiChrome.AccentColor);
@@ -570,6 +572,16 @@ public sealed partial class RegionOverlayForm
         // Idle paints nothing.
         bool isSelectedMode = kind == SelectedConfirmModeKind();
         WindowsDockRenderer.PaintButton(g, face, active: isSelectedMode, hovered: hover, radius: hoverCorner, accent: accentColor);
+
+        if (hasShine && shinePhase >= 0f && !UI.Motion.Disabled)
+        {
+            var shineCore = Color.FromArgb(
+                Math.Min(255, accentColor.R + 80),
+                Math.Min(255, accentColor.G + 80),
+                Math.Min(255, accentColor.B + 80));
+            DrawBorderShine(g, face, hoverCorner, shinePhase, accentColor, shineCore,
+                intensity: shineMain * 0.45f, thicknessScale: 0.32f);
+        }
 
         // ── Label + icon laid out as a single centered group ──
         bool useFluent = !string.IsNullOrEmpty(fluentIconId);
@@ -764,111 +776,30 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Draws a soft glowing "border beam" (shine) that travels along a rounded-rectangle border. The border
-    /// is flattened to a polyline, and a neon blue gradient is painted with multiple passes. The shine
-    /// has a symmetric gradient that fades smoothly at both ends.
+    /// Traveling neon beam along a dock wrapper border: a short luminous segment
+    /// that loops the rounded perimeter.
+    /// </summary>
+    private static void DrawDockWrapperShine(Graphics g, RectangleF face, float corner, float phase)
+    {
+        if (UI.Motion.Disabled)
+            return;
+
+        var accent = UiChrome.AccentColor;
+        var core = Color.FromArgb(
+            Math.Min(255, accent.R + 80),
+            Math.Min(255, accent.G + 80),
+            Math.Min(255, accent.B + 80));
+        DrawBorderShine(g, face, corner, phase, accent, core, intensity: 1f);
+    }
+
+    /// <summary>
+    /// Draws a soft glowing "border beam" (shine) that travels along a rounded-rectangle border.
+    /// Delegates to <see cref="WindowsDockRenderer.PaintBorderShine"/> so capture, confirm, and
+    /// scrolling-capture chrome share one perimeter sampler (no GDI+ flatten seams).
     /// </summary>
     private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f)
     {
-        using var path = WindowsDockRenderer.RoundedRect(face, corner);
-        path.Flatten();
-        var pts = path.PathPoints;
-        int n = pts.Length;
-        if (n < 2) return;
-
-        var seg = new float[n];
-        float total = 0f;
-        for (int i = 0; i < n; i++)
-        {
-            var a = pts[i];
-            var b = pts[(i + 1) % n];
-            float d = (float)Math.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
-            seg[i] = d;
-            total += d;
-        }
-        if (total <= 0f) return;
-
-        PointF PointAt(float dist)
-        {
-            dist = ((dist % total) + total) % total;
-            for (int i = 0; i < n; i++)
-            {
-                if (dist <= seg[i] || i == n - 1)
-                {
-                    float t = seg[i] > 0 ? dist / seg[i] : 0f;
-                    var a = pts[i];
-                    var b = pts[(i + 1) % n];
-                    return new PointF(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t);
-                }
-                dist -= seg[i];
-            }
-            return pts[0];
-        }
-
-        float head = phase * total;
-        float tailLen = total * 0.32f;   // shine length along the perimeter
-        const int segments = 64;         // high segment count for ultra-smooth rendering without gaps
-        
-        // Pass 1: Wide, soft neon glow stroke (width is scaled by factor to taper at ends)
-        using (var glowPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
-        {
-            var prev = PointAt(head);
-            for (int k = 1; k <= segments; k++)
-            {
-                float p01 = k / (float)segments;
-                var cur = PointAt(head - tailLen * p01);
-                // Symmetric bell curve gradient (fades to 0 at both tail and head, peak in middle)
-                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
-                int a = (int)(95 * intensity * factor * factor);
-                if (a > 0)
-                {
-                    glowPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(3.5f * thicknessScale) * factor);
-                    glowPen.Color = Color.FromArgb(a, glowColor);
-                    g.DrawLine(glowPen, prev, cur);
-                }
-                prev = cur;
-            }
-        }
-
-        // Pass 2: Medium, bright core stroke (width is scaled by factor to taper at ends)
-        using (var corePen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
-        {
-            var prev = PointAt(head);
-            for (int k = 1; k <= segments; k++)
-            {
-                float p01 = k / (float)segments;
-                var cur = PointAt(head - tailLen * p01);
-                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
-                int a = (int)(200 * intensity * factor * factor);
-                if (a > 0)
-                {
-                    corePen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(1.8f * thicknessScale) * factor);
-                    corePen.Color = Color.FromArgb(a, coreColor);
-                    g.DrawLine(corePen, prev, cur);
-                }
-                prev = cur;
-            }
-        }
-
-        // Pass 3: Thin, hot white center (width is scaled by factor to taper at ends)
-        using (var centerPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
-        {
-            var prev = PointAt(head);
-            for (int k = 1; k <= segments; k++)
-            {
-                float p01 = k / (float)segments;
-                var cur = PointAt(head - tailLen * p01);
-                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
-                int a = (int)(255 * intensity * factor * factor * factor);
-                if (a > 0)
-                {
-                    centerPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(0.8f * thicknessScale) * factor);
-                    centerPen.Color = Color.FromArgb(a, Color.White);
-                    g.DrawLine(centerPen, prev, cur);
-                }
-                prev = cur;
-            }
-        }
+        WindowsDockRenderer.PaintBorderShine(g, face, corner, phase, glowColor, coreColor, intensity, thicknessScale);
     }
 
     /// <summary>Clamp a rectangle so it stays 2px inside the client area (prevents dashes from being cut off at screen edges).</summary>

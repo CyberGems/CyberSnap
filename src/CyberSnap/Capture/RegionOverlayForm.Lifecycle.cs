@@ -81,59 +81,66 @@ public sealed partial class RegionOverlayForm
         if (IsDisposed || Disposing || !Visible)
             return;
 
-        // Frame move/resize hides both docks — do not resurrect the annotation bar mid-gesture.
-        if (_confirmDocksHiddenForFrameManip)
-            return;
-
-        // Ruler hides the capture bar so it does not cover the measurement. Stay hidden if
-        // a later RefreshToolbar/EnsureToolbarReady runs while still in ruler mode.
-        if (_mode == CaptureMode.Ruler)
+        try
         {
-            if (_toolbarForm != null && !_toolbarForm.IsDisposed && _toolbarForm.Visible)
-                _toolbarForm.Hide();
-            return;
-        }
+            // Frame move/resize hides both docks — do not resurrect the annotation bar mid-gesture.
+            if (_confirmDocksHiddenForFrameManip)
+                return;
 
-        // Confirming without annotation chrome (e.g. OCR text-extraction) never shows a toolbar:
-        // the only chrome is the confirm dock. Keep any leftover toolbar hidden.
-        if (_isConfirmingSelection && !ShowAnnotationChrome)
-        {
-            if (_toolbarForm != null && _toolbarForm.Visible)
-                _toolbarForm.Hide();
-            return;
-        }
-
-        if (ShowAnnotationChrome)
-        {
-            bool hasAnnotations = _visibleTools.Any(t => t.Group == 1);
-            if (!hasAnnotations)
+            // Ruler hides the capture bar so it does not cover the measurement. Stay hidden if
+            // a later RefreshToolbar/EnsureToolbarReady runs while still in ruler mode.
+            if (_mode == CaptureMode.Ruler)
             {
-                if (_toolbarForm != null && _toolbarForm.Visible)
-                {
+                if (_toolbarForm != null && !_toolbarForm.IsDisposed && _toolbarForm.Visible)
                     _toolbarForm.Hide();
-                }
                 return;
             }
-        }
 
-        if (_toolbarForm == null || _toolbarForm.IsDisposed)
-        {
-            _toolbarForm = new ToolbarForm(this);
-            PositionToolbarForm();
-            var _ = _toolbarForm.Handle;
-            WindowDetector.RegisterIgnoredWindow(_toolbarForm.Handle);
-            _toolbarForm.Show(this);
-        }
-        else if (!_toolbarForm.Visible)
-        {
-            PositionToolbarForm();
-            _toolbarForm.Show(this);
-        }
+            // Confirming without annotation chrome (e.g. OCR text-extraction) never shows a toolbar:
+            // the only chrome is the confirm dock. Keep any leftover toolbar hidden.
+            if (_isConfirmingSelection && !ShowAnnotationChrome)
+            {
+                if (_toolbarForm != null && _toolbarForm.Visible)
+                    _toolbarForm.Hide();
+                return;
+            }
 
-        MarkToolbarRenderDirty();
-        _toolbarForm.UpdateSurface();
-        Invalidate(new Rectangle(_toolbarRect.X - 12, _toolbarRect.Y - 48,
-            _toolbarRect.Width + 24, _toolbarRect.Height + 96));
+            if (ShowAnnotationChrome)
+            {
+                bool hasAnnotations = _visibleTools.Any(t => t.Group == 1);
+                if (!hasAnnotations)
+                {
+                    if (_toolbarForm != null && _toolbarForm.Visible)
+                    {
+                        _toolbarForm.Hide();
+                    }
+                    return;
+                }
+            }
+
+            if (_toolbarForm == null || _toolbarForm.IsDisposed)
+            {
+                _toolbarForm = new ToolbarForm(this);
+                PositionToolbarForm();
+                var _ = _toolbarForm.Handle;
+                WindowDetector.RegisterIgnoredWindow(_toolbarForm.Handle);
+                _toolbarForm.Show(this);
+            }
+            else if (!_toolbarForm.Visible)
+            {
+                PositionToolbarForm();
+                _toolbarForm.Show(this);
+            }
+
+            MarkToolbarRenderDirty();
+            _toolbarForm.UpdateSurface();
+            Invalidate(new Rectangle(_toolbarRect.X - 12, _toolbarRect.Y - 48,
+                _toolbarRect.Width + 24, _toolbarRect.Height + 96));
+        }
+        finally
+        {
+            EnsureDockShineTimer();
+        }
     }
 
     protected override void OnDeactivate(EventArgs e)
@@ -478,12 +485,14 @@ public sealed partial class RegionOverlayForm
         HideEmojiSearchBox();
         _hoveredButton = -1;
 
-        if (_toolbarForm is null || _toolbarForm.IsDisposed)
-            return;
+        if (_toolbarForm is { IsDisposed: false })
+        {
+            _animTimer.Stop();
+            _toolbarAnim = 1f;
+            _toolbarForm.Hide();
+        }
 
-        _animTimer.Stop();
-        _toolbarAnim = 1f;
-        _toolbarForm.Hide();
+        EnsureDockShineTimer();
     }
 
     private void HideToolbarForCaptureTool()
