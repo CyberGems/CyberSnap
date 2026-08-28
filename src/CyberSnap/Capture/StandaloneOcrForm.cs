@@ -271,6 +271,7 @@ public sealed class StandaloneOcrForm : Form
             // Run OCR on background thread
             var langTag = GetOcrLanguageTag();
             string text = await Task.Run(() => OcrService.RecognizeAsync(cropped, langTag));
+            var previewSource = BitmapPerf.ToBitmapSource(cropped);
 
             // Close the overlay first so screenshot is released
             Close();
@@ -306,13 +307,13 @@ public sealed class StandaloneOcrForm : Form
                             catch (Exception clipEx)
                             {
                                 AppDiagnostics.LogWarning("standalone-ocr.clipboard", clipEx.Message);
-                                var window = new OcrResultWindow(text, GetSettingsService());
+                                var window = new OcrResultWindow(text, GetSettingsService(), previewSource);
                                 window.Show();
                             }
                         }
                         else
                         {
-                            var window = new OcrResultWindow(text, GetSettingsService());
+                            var window = new OcrResultWindow(text, GetSettingsService(), previewSource);
                             window.Show();
                         }
                     }

@@ -21,7 +21,7 @@
              ThemeCardBrush fill the tile had at rest before the restyle, WITHOUT the accent
              ring. Matches the Salir hover treatment the user asked us to mimic. -->
 
-        <!-- Large primary tile (Area / Grabar) -->
+        <!-- Large primary capture tile (Area). -->
         <Style x:Key="GridButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -31,7 +31,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="6"/>
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="Height" Value="96"/>
+            <Setter Property="Height" Value="160"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -255,42 +255,76 @@
 
             <!-- Grid Tools -->
             <StackPanel Grid.Row="1">
-                <!-- Primary row: Area remains the large default capture tile. -->
+                <!-- Primary capture block: large Area action beside the four image modes. -->
                 <UniformGrid Columns="2">
                     <!-- Area Capture -->
                     <Button x:Name="AreaCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="AreaCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <Grid Width="100" Height="100" Margin="0,0,0,8">
+                                <!-- Reuse the widget's vector capture mark instead of scaling a bitmap. -->
+                                <Path x:Name="AreaCaptureRing"
+                                      Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2"
+                                      Fill="{DynamicResource ThemeAccentBrush}"
+                                      Stretch="Uniform"
+                                      Width="100"
+                                      Height="100"/>
+                                <Ellipse x:Name="AreaCaptureCenter"
+                                         Width="12"
+                                         Height="12"
+                                         Fill="{DynamicResource ThemeAccentBrush}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect x:Name="AreaCaptureCenterGlow"
+                                                          BlurRadius="10"
+                                                          ShadowDepth="0"
+                                                          Opacity="0.8"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                            </Grid>
                             <TextBlock x:Name="AreaCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
-                    <!-- Four capture shortcuts replacing the former large Record tile.
-                         This is only a layout host so each button owns its hover state. -->
-                    <Grid Margin="2">
-                        <UniformGrid Columns="2" Rows="2"
-                                     Width="82"
-                                     Height="76"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Center">
-                            <Button x:Name="ScrollQuickBtn" Style="{StaticResource BottomButtonStyle}" Click="ScrollCapture_Click"
-                                    ToolTip="Scrolling capture" Height="34" Margin="1">
-                                <Image x:Name="ScrollQuickIcon" Width="22" Height="22" Stretch="Uniform"/>
-                            </Button>
-                            <Button x:Name="FullscreenBtn" Style="{StaticResource BottomButtonStyle}" Click="Fullscreen_Click"
-                                    ToolTip="Fullscreen capture" Height="34" Margin="1">
-                                <Image x:Name="FullscreenIcon" Width="22" Height="22" Stretch="Uniform"/>
-                            </Button>
-                            <Button x:Name="ActiveWindowBtn" Style="{StaticResource BottomButtonStyle}" Click="ActiveWindow_Click"
-                                    ToolTip="Active window" Height="34" Margin="1">
-                                <Image x:Name="ActiveWindowIcon" Width="22" Height="22" Stretch="Uniform"/>
-                            </Button>
-                            <Button x:Name="RepeatLastAreaBtn" Style="{StaticResource BottomButtonStyle}" Click="RepeatLastArea_Click"
-                                    ToolTip="Repeat last area" Height="34" Margin="1">
-                                <Image x:Name="RepeatLastAreaIcon" Width="22" Height="22" Stretch="Uniform"/>
-                            </Button>
-                        </UniformGrid>
-                    </Grid>
+                    <!-- Image capture modes, arranged vertically like the reference mockup. -->
+                    <StackPanel Width="132" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Button x:Name="FullscreenBtn" Style="{StaticResource BottomButtonStyle}" Click="Fullscreen_Click"
+                                ToolTip="Fullscreen capture" Height="34" Padding="4,2" Margin="0,0,0,1">
+                            <StackPanel Width="120" Orientation="Horizontal">
+                                <Grid Width="28">
+                                    <Image x:Name="FullscreenIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock x:Name="FullscreenText" Margin="8,0,0,0" FontSize="13" VerticalAlignment="Center" Text="Fullscreen"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ActiveWindowBtn" Style="{StaticResource BottomButtonStyle}" Click="ActiveWindow_Click"
+                                ToolTip="Active window" Height="34" Padding="4,2" Margin="0,0,0,1">
+                            <StackPanel Width="120" Orientation="Horizontal">
+                                <Grid Width="28">
+                                    <Image x:Name="ActiveWindowIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock x:Name="ActiveWindowText" Margin="8,0,0,0" FontSize="13" VerticalAlignment="Center" Text="Window"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RepeatLastAreaBtn" Style="{StaticResource BottomButtonStyle}" Click="RepeatLastArea_Click"
+                                ToolTip="Repeat last area" Height="34" Padding="4,2" Margin="0,0,0,1">
+                            <StackPanel Width="120" Orientation="Horizontal">
+                                <Grid Width="28">
+                                    <Image x:Name="RepeatLastAreaIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock x:Name="RepeatLastAreaText" Margin="8,0,0,0" FontSize="13" VerticalAlignment="Center" Text="Repeat"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ScrollQuickBtn" Style="{StaticResource BottomButtonStyle}" Click="ScrollCapture_Click"
+                                ToolTip="Scrolling capture" Height="34" Padding="4,2" Margin="0">
+                            <StackPanel Width="120" Orientation="Horizontal">
+                                <Grid Width="28">
+                                    <Image x:Name="ScrollQuickIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock x:Name="ScrollQuickText" Margin="8,0,0,0" FontSize="13" VerticalAlignment="Center" Text="Scrolling"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </UniformGrid>
 
                 <!-- Separate image-capture shortcuts from video recording controls. -->

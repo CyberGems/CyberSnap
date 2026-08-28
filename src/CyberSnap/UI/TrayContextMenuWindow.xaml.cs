@@ -193,6 +193,10 @@ public partial class TrayContextMenuWindow : Window
 
         // Shorter labels for buttons
         AreaCaptureText.Text = T("Area");
+        FullscreenText.Text = T("Fullscreen short");
+        ActiveWindowText.Text = T("Active window short");
+        RepeatLastAreaText.Text = T("Repeat short");
+        ScrollQuickText.Text = T("Scrolling");
         OcrText.Text = T("OCR");
         QrText.Text = T("QR");
         ColorPickerText.Text = T("Color");
@@ -250,7 +254,9 @@ public partial class TrayContextMenuWindow : Window
 
         AppLogoImage.Source = ThemedLogo.SquareGrayscale(20);
 
-        AreaCaptureIcon.Source = GetIcon("captureRect", accentColor, 32);
+        AreaCaptureRing.Fill = new SolidColorBrush(accentColor);
+        AreaCaptureCenter.Fill = new SolidColorBrush(accentColor);
+        AreaCaptureCenterGlow.Color = accentColor;
         ScrollQuickIcon.Source = GetIcon("scrollCapture", fgColor, 22);
         FullscreenIcon.Source = GetIcon("fullscreen", fgColor, 22);
         ActiveWindowIcon.Source = GetIcon("activeWindow", fgColor, 22);
@@ -485,7 +491,7 @@ public partial class TrayContextMenuWindow : Window
         try
         {
             System.Windows.Controls.ToolTipService.SetIsEnabled(AboutHeaderBtn, true);
-            AboutHeaderBtn.Background = Theme.Brush(Theme.TabHoverBg);
+            AboutHeaderBtn.Background = System.Windows.Media.Brushes.Transparent;
             TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
             AppLogoImage.Source = ThemedLogo.Square(20);
             AppLogoImage.Opacity = 1;

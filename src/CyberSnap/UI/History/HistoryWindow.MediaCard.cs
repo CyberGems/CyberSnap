@@ -310,7 +310,18 @@ public partial class HistoryWindow
 
                     if (!string.IsNullOrWhiteSpace(text))
                     {
-                        var window = new OcrResultWindow(text, _settingsService)
+                        ImageSource? previewSource = null;
+                        try
+                        {
+                            using var previewBitmap = BitmapPerf.LoadDetached(vm.Entry.FilePath);
+                            previewSource = BitmapPerf.ToBitmapSource(previewBitmap);
+                        }
+                        catch (Exception previewEx)
+                        {
+                            AppDiagnostics.LogWarning("history.ocr-preview", previewEx.Message);
+                        }
+
+                        var window = new OcrResultWindow(text, _settingsService, previewSource)
                         {
                             Owner = this
                         };

@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using CyberSnap.Capture;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI;
@@ -949,13 +950,13 @@ public partial class App
                             : ToastSpec.Standard(LocalizationService.Translate("OCR ready"), LocalizationService.Translate("Clipboard copy failed.")));
                         if (!copied)
                         {
-                            var window = new OcrResultWindow(text, _settingsService);
+                            var window = new OcrResultWindow(text, _settingsService, BitmapPerf.ToBitmapSource(result));
                             window.Show();
                         }
                     }
                     else
                     {
-                        var window = new OcrResultWindow(text, _settingsService);
+                        var window = new OcrResultWindow(text, _settingsService, BitmapPerf.ToBitmapSource(result));
                         window.Show();
                     }
                 }

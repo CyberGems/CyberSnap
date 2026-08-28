@@ -209,7 +209,7 @@ public partial class App
         _trayIcon.OnSettings += () => ShowSettings();
         _trayIcon.OnAchievements += () => ShowAchievements();
         _trayIcon.OnFullscreen += OnFullscreenHotkeyPressed;
-        _trayIcon.OnActiveWindow += OnActiveWindowHotkeyPressed;
+        _trayIcon.OnActiveWindow += hwnd => OnActiveWindowHotkeyPressed(hwnd);
         _trayIcon.OnRepeatLastArea += OnRepeatLastAreaHotkeyPressed;
         _trayIcon.OnAbout += () => ShowAbout();
         _trayIcon.OnHistory += () => ShowHistory();

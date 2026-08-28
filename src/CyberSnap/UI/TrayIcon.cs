@@ -20,6 +20,7 @@ public sealed class TrayIcon : IDisposable
     private ToolStripMenuItem? _recordItem;
     private bool _isShowingRecording;
     private TrayContextMenuWindow? _activeWpfMenu;
+    private IntPtr _foregroundWindowBeforeMenu;
 
     public event Action? OnCapture;
     public event Action? OnScrollCapture;
@@ -31,7 +32,7 @@ public sealed class TrayIcon : IDisposable
     public event Action? OnSettings;
     public event Action? OnAchievements;
     public event Action? OnFullscreen;
-    public event Action? OnActiveWindow;
+    public event Action<IntPtr>? OnActiveWindow;
     public event Action? OnRepeatLastArea;
     public event Action? OnAbout;
     public event Action? OnHistory;
@@ -249,6 +250,7 @@ public sealed class TrayIcon : IDisposable
             catch { }
 
             // Capture physical cursor position immediately upon tray click
+            _foregroundWindowBeforeMenu = Native.User32.GetForegroundWindow();
             var clickPoint = System.Windows.Forms.Cursor.Position;
 
             _activeWpfMenu = new TrayContextMenuWindow(this, clickPoint);
@@ -270,7 +272,7 @@ public sealed class TrayIcon : IDisposable
     public void TriggerSettings() => OnSettings?.Invoke();
     public void TriggerAchievements() => OnAchievements?.Invoke();
     public void TriggerFullscreen() => OnFullscreen?.Invoke();
-    public void TriggerActiveWindow() => OnActiveWindow?.Invoke();
+    public void TriggerActiveWindow() => OnActiveWindow?.Invoke(_foregroundWindowBeforeMenu);
     public void TriggerRepeatLastArea() => OnRepeatLastArea?.Invoke();
     public void TriggerAbout() => OnAbout?.Invoke();
     public void TriggerHistory() => OnHistory?.Invoke();

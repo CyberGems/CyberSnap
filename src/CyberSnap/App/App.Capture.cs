@@ -481,13 +481,17 @@ public partial class App
         }
     }
 
-    private void CaptureActiveWindowNow()
+    private void CaptureActiveWindowNow(IntPtr preferredWindow = default)
     {
         Bitmap? bmp = null;
         try
         {
             (bmp, var bounds) = ScreenCapture.CaptureAllScreens(_settingsService!.Settings.ShowCursor);
-            var hwnd = Native.User32.GetForegroundWindow();
+            // The tray menu takes focus while it is open, so use the window that was
+            // foreground before the menu appeared instead of capturing the taskbar/menu.
+            var hwnd = preferredWindow != IntPtr.Zero && Native.User32.IsWindow(preferredWindow)
+                ? preferredWindow
+                : Native.User32.GetForegroundWindow();
             if (hwnd == IntPtr.Zero)
             {
                 bmp.Dispose();
