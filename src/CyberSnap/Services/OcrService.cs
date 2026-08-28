@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using CyberSnap.Helpers;
@@ -73,6 +74,14 @@ public static class OcrService
                 var engine = CreateEngine(languageTag);
                 if (engine == null)
                     return "";
+
+                // PowerToys' Text Extractor keeps the source pixels intact, pads tiny
+                // selections, and scales them by 1.5x before sending them to Windows OCR.
+                // That lossless path is especially effective for small anti-aliased UI text,
+                // where our filtered pipelines can erase thin glyph strokes.
+                string powerToysText = await RecognizePowerToysStyleAsync(bitmap, engine, languageTag);
+                if (!string.IsNullOrWhiteSpace(powerToysText) && powerToysText.Length >= 3)
+                    return powerToysText;
 
                 // 1. Try Simple Pipeline first (no heavy filters, upscale only if very small < 200, crop threshold 180.0)
                 string simpleText = "";
@@ -177,6 +186,138 @@ public static class OcrService
         {
             RecognizeGate.Release();
         }
+    }
+
+    private static async Task<string> RecognizePowerToysStyleAsync(
+        Bitmap source,
+        OcrEngine engine,
+        string? languageTag)
+    {
+        using var prepared = PreparePowerToysBitmap(source);
+        SoftwareBitmap softwareBitmap;
+        try
+        {
+            softwareBitmap = ConvertBitmapToSoftwareBitmapDirect(prepared);
+        }
+        catch
+        {
+            softwareBitmap = await ConvertBitmapToSoftwareBitmapFallbackAsync(prepared);
+        }
+
+        using (softwareBitmap)
+        {
+            var result = await engine.RecognizeAsync(softwareBitmap);
+            return result is null ? "" : FormatPowerToysText(result, languageTag);
+        }
+    }
+
+    /// <summary>
+    /// Mirrors the useful image-preparation part of PowerToys Text Extractor:
+    /// preserve the original pixels, add a small border for tiny selections, and
+    /// use a conservative 1.5x upscale unless Windows OCR's dimension limit would
+    /// be exceeded.
+    /// </summary>
+    private static Bitmap PreparePowerToysBitmap(Bitmap source)
+    {
+        using var padded = PadSmallImage(source);
+        if ((double)padded.Width * 1.5 > OcrEngine.MaxImageDimension ||
+            (double)padded.Height * 1.5 > OcrEngine.MaxImageDimension)
+        {
+            return (Bitmap)padded.Clone();
+        }
+
+        int width = Math.Max(1, (int)Math.Round(padded.Width * 1.5));
+        int height = Math.Max(1, (int)Math.Round(padded.Height * 1.5));
+        var scaled = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        scaled.SetResolution(padded.HorizontalResolution, padded.VerticalResolution);
+        using var graphics = Graphics.FromImage(scaled);
+        graphics.CompositingMode = CompositingMode.SourceCopy;
+        graphics.CompositingQuality = CompositingQuality.HighQuality;
+        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        graphics.SmoothingMode = SmoothingMode.HighQuality;
+        graphics.DrawImage(padded, new Rectangle(0, 0, width, height));
+        return scaled;
+    }
+
+    private static Bitmap PadSmallImage(Bitmap source)
+    {
+        const int minimumWidth = 64;
+        const int minimumHeight = 64;
+        if (source.Width >= minimumWidth && source.Height >= minimumHeight)
+            return (Bitmap)source.Clone();
+
+        int width = Math.Max(source.Width + 16, minimumWidth + 16);
+        int height = Math.Max(source.Height + 16, minimumHeight + 16);
+        var padded = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        using var graphics = Graphics.FromImage(padded);
+        graphics.Clear(source.GetPixel(0, 0));
+        graphics.DrawImageUnscaled(source, 8, 8);
+        return padded;
+    }
+
+    private static string FormatPowerToysText(Windows.Media.Ocr.OcrResult result, string? languageTag)
+    {
+        bool isSpaceJoiningLanguage = languageTag?.StartsWith("zh", StringComparison.OrdinalIgnoreCase) == true ||
+                                      languageTag?.StartsWith("ja", StringComparison.OrdinalIgnoreCase) == true;
+        var builder = new StringBuilder();
+
+        foreach (var line in result.Lines)
+        {
+            if (isSpaceJoiningLanguage)
+            {
+                if (!string.IsNullOrWhiteSpace(line.Text))
+                    builder.AppendLine(line.Text.Trim());
+                continue;
+            }
+
+            bool firstWord = true;
+            bool previousWordJoins = false;
+            foreach (var word in line.Words)
+            {
+                var wordText = word.Text?.Trim();
+                if (string.IsNullOrEmpty(wordText))
+                    continue;
+
+                bool currentWordJoins = IsSpaceJoiningWord(wordText);
+                if (firstWord || (!currentWordJoins && !previousWordJoins))
+                    builder.Append(wordText);
+                else
+                    builder.Append(' ').Append(wordText);
+
+                firstWord = false;
+                previousWordJoins = currentWordJoins;
+            }
+
+            if (firstWord && !string.IsNullOrWhiteSpace(line.Text))
+                builder.Append(line.Text.Trim());
+            if (!firstWord)
+                builder.AppendLine();
+        }
+
+        return builder.Length > 0
+            ? builder.ToString().Trim()
+            : (result.Text ?? "").Trim();
+    }
+
+    private static bool IsSpaceJoiningWord(string word)
+    {
+        if (word.Length > 1)
+            return true;
+
+        foreach (var character in word)
+        {
+            if (char.IsDigit(character))
+                return true;
+
+            if (char.IsLetter(character) &&
+                CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.OtherLetter)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
