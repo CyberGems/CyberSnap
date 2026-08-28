@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI;
@@ -138,9 +139,11 @@ public partial class CyberSnapTitleBar : UserControl
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         MinimizeBtn.ToolTip = Services.LocalizationService.Translate("Minimize");
         MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
+        DonateBtn.ToolTip = Services.LocalizationService.Translate("Donate");
         CloseBtn.ToolTip = ResolveCloseToolTip(this);
         ApplyTooltipPlacement(MinimizeBtn);
         ApplyTooltipPlacement(MaximizeBtn);
+        ApplyTooltipPlacement(DonateBtn);
         ApplyTooltipPlacement(CloseBtn);
     }
 
@@ -163,6 +166,7 @@ public partial class CyberSnapTitleBar : UserControl
     {
         TitleLogo.Source = OwnerWindow?.Icon ?? ThemedLogo.Square(18);
         var titleIcon = TitleBarIconColor;
+        DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", titleIcon, 18, active: DonateBtn.IsMouseOver);
         MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18);
 
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
@@ -583,6 +587,12 @@ public partial class CyberSnapTitleBar : UserControl
             window.WindowState = WindowState.Minimized;
     }
 
+    private void DonateBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        DonationLinks.Open();
+    }
+
     private void MaximizeBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
@@ -623,6 +633,8 @@ public partial class CyberSnapTitleBar : UserControl
         // Red hover wash washes out the muted gray X — switch to white for contrast.
         if (isClose)
             CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", TitleBarCloseHoverIconColor, 18);
+        else if (ReferenceEquals(border, DonateBtn))
+            DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", TitleBarIconColor, 18, active: true);
     }
 
     private void TitleBtn_MouseLeave(object sender, MouseEventArgs e)
@@ -638,6 +650,8 @@ public partial class CyberSnapTitleBar : UserControl
         border.Background = System.Windows.Media.Brushes.Transparent;
         if (ReferenceEquals(border, CloseBtn))
             CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", TitleBarIconColor, 18);
+        else if (ReferenceEquals(border, DonateBtn))
+            DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", TitleBarIconColor, 18);
     }
 
     private static System.Drawing.Color TitleBarIconColor =>
