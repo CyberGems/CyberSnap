@@ -1702,6 +1702,7 @@
   "Resize canvas": "Redimensionar lienzo",
   "The canvas will be resized to {0} × {1} px. Continue?": "El lienzo se redimensionará a {0} × {1} px. ¿Continuar?",
   "Resize canvas...": "Redimensionar lienzo...",
+  "Object": "Objeto",
   "Transform": "Transformar",
   "Transform canvas": "Transformar lienzo",
   "This will flatten all annotations into the image. They will no longer be editable separately. Continue?": "Esto aplanará todas las anotaciones en la imagen. Dejarán de ser editables por separado. ¿Continuar?",
