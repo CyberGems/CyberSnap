@@ -1419,6 +1419,7 @@
   "Resize canvas": "Resize canvas",
   "The canvas will be resized to {0} × {1} px. Continue?": "The canvas will be resized to {0} × {1} px. Continue?",
   "Resize canvas...": "Resize canvas...",
+  "Object": "Object",
   "Transform": "Transform",
   "Transform canvas": "Transform canvas",
   "This will flatten all annotations into the image. They will no longer be editable separately. Continue?": "This will flatten all annotations into the image. They will no longer be editable separately. Continue?",

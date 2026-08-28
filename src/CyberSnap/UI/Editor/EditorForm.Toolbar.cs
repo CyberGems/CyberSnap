@@ -1831,6 +1831,14 @@ public sealed partial class EditorForm
             }
         };
 
+        var objectSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Object"), showImages: true);
+        objectSubmenu.Image = FluentIcons.RenderBitmap("select",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
+        objectSubmenu.DropDownItems.Add(deleteItem);
+        objectSubmenu.DropDownItems.Add(new ToolStripSeparator());
+        objectSubmenu.DropDownItems.Add(duplicateItem);
+
         // ── "View" submenu: all toggles ──
         var viewItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("View"), showImages: true);
 
@@ -2000,7 +2008,8 @@ public sealed partial class EditorForm
         viewItem.DropDownItems.Add(new ToolStripSeparator());
         viewItem.DropDownItems.Add(resizeScaleItem);
 
-        // Main menu layout — View sits after file operations (New / Open / Save) and before export.
+        // Main menu layout — object actions stay together, with View immediately above
+        // the separator that leads into the application-level commands.
         menu.Items.Add(newSubmenu);
         menu.Items.Add(openItem);
         menu.Items.Add(openRecentItem);
@@ -2008,18 +2017,17 @@ public sealed partial class EditorForm
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(closeDocumentItem);
-        menu.Items.Add(viewItem);
-        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exportAsItem);
         menu.Items.Add(shareToItem);
         menu.Items.Add(sendToItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(copyItem);
         menu.Items.Add(pasteItem);
-        menu.Items.Add(duplicateItem);
-        menu.Items.Add(deleteItem);
         menu.Items.Add(resizeCanvasItem);
         menu.Items.Add(transformSubmenu);
+        menu.Items.Add(objectSubmenu);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
         menu.Items.Add(achievementsItem);
@@ -2070,6 +2078,7 @@ public sealed partial class EditorForm
             closeDocumentItem.Enabled = !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
 
             WindowsMenuRenderer.NormalizeDropDownWidths(transformSubmenu);
+            WindowsMenuRenderer.NormalizeDropDownWidths(objectSubmenu);
             WindowsMenuRenderer.NormalizeDropDownWidths(exportAsItem);
 
             // Keep the submenus on the same monitor as the burger menu: when the burger button

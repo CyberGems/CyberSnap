@@ -1888,7 +1888,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private ToolStripMenuItem BuildTransformSubmenu()
     {
         var transformSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Transform"), showImages: true);
-        transformSubmenu.Image = FluentIcons.RenderBitmap("redo",
+        transformSubmenu.Image = FluentIcons.RenderBitmap("flipHorizontal",
             Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
             20, false);
 
