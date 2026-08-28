@@ -8,7 +8,7 @@
         Topmost="True"
         ResizeMode="NoResize"
         Background="Transparent"
-        Width="290"
+        Width="310"
         SizeToContent="Height"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
@@ -299,8 +299,8 @@
                 <!-- Secondary capture tools — compact tiles matching the bottom rows -->
                 <UniformGrid Columns="2">
                     <!-- Screen Recorder (MP4) -->
-                    <Button x:Name="VideoRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="VideoRecord_Click" Padding="8,8" Margin="4,2,2,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="VideoRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="VideoRecord_Click" Padding="4,8" Margin="4,2,2,2">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="VideoRecordIcon" Width="20" Height="20" Margin="0,2,0,0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -310,12 +310,12 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="GifRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="GifRecord_Click" Padding="8,8" Margin="2,2,4,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="GifRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="GifRecord_Click" Padding="4,8" Margin="2,2,4,2">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="GifRecordIcon" Width="20" Height="20" Margin="0,2,0,0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -325,7 +325,7 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
@@ -335,8 +335,8 @@
 
                 <UniformGrid Columns="2">
                     <!-- OCR -->
-                    <Button x:Name="OcrBtn" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="8,8" Margin="4,2,2,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="OcrBtn" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="4,8" Margin="4,2,2,2">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="OcrIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -346,13 +346,13 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
 
                     <!-- QR & Barcodes -->
-                    <Button x:Name="QrBtn" Style="{StaticResource BottomButtonStyle}" Click="QrScan_Click" Padding="8,8" Margin="2,2,4,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="QrBtn" Style="{StaticResource BottomButtonStyle}" Click="QrScan_Click" Padding="4,8" Margin="2,2,4,2">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="QrIcon" Width="20" Height="20" Margin="0,2,0,0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -362,13 +362,13 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Color Picker -->
-                    <Button x:Name="ColorPickerBtn" Style="{StaticResource BottomButtonStyle}" Click="ColorPicker_Click" Padding="8,8" Margin="4,2,2,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="ColorPickerBtn" Style="{StaticResource BottomButtonStyle}" Click="ColorPicker_Click" Padding="4,8" Margin="4,2,2,2">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="ColorPickerIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -378,13 +378,13 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Ruler -->
-                    <Button x:Name="RulerBtn" Style="{StaticResource BottomButtonStyle}" Click="Ruler_Click" Padding="8,8" Margin="2,2,4,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="RulerBtn" Style="{StaticResource BottomButtonStyle}" Click="Ruler_Click" Padding="4,8" Margin="2,2,4,2">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="RulerIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -394,7 +394,7 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
@@ -411,9 +411,9 @@
                     <Button x:Name="GalleryBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Gallery_Click"
-                            Padding="8,8"
+                            Padding="4,8"
                             Margin="4,2,2,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="GalleryIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -423,7 +423,7 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
 
@@ -431,9 +431,9 @@
                     <Button x:Name="AnnotationsBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Annotations_Click"
-                            Padding="8,8"
+                            Padding="4,8"
                             Margin="2,2,4,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="AnnotationsIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -443,7 +443,7 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
@@ -454,9 +454,9 @@
                     <Button x:Name="ExitBtn"
                             Style="{StaticResource BottomDangerButtonStyle}"
                             Click="Exit_Click"
-                            Padding="8,8"
+                            Padding="4,8"
                             Margin="4,2,2,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="ExitIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -466,7 +466,7 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
 
@@ -474,9 +474,9 @@
                     <Button x:Name="AchievementsBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Achievements_Click"
-                            Padding="8,8"
+                            Padding="4,8"
                             Margin="2,2,4,2">
-                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="AchievementsIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
@@ -486,7 +486,7 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="84"/>
+                                       MaxWidth="76"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
