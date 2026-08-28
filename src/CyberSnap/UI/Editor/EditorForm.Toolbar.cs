@@ -2905,7 +2905,13 @@ internal sealed class EditorChromeButton : EditorButtonBase
             rect.Top + (rect.Height - iconSize) / 2f,
             iconSize,
             iconSize);
-        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active);
+        // The filled maximize glyph grows into the viewBox edges and is clipped at
+        // title-bar scale. Keep maximize/restore at the stable regular geometry while
+        // still using the hover color and background.
+        bool useFilledGeometry = active
+            && !string.Equals(IconId, "maximize", StringComparison.Ordinal)
+            && !string.Equals(IconId, "restore", StringComparison.Ordinal);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, useFilledGeometry);
     }
 }
 

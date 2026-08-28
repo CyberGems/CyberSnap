@@ -171,7 +171,9 @@ public partial class CyberSnapTitleBar : UserControl
 
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         string maxIconId = isMaximized ? "restore" : "maximize";
-        MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18, active: MaximizeBtn.IsMouseOver);
+        // Keep the maximize glyph at its regular geometry on hover. Its filled variant
+        // expands toward the viewBox edges and gets clipped at title-bar scale.
+        MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18);
         RefreshTooltips();
 
         // If the pointer is still over Close, keep the high-contrast hover glyph.
@@ -685,7 +687,7 @@ public partial class CyberSnapTitleBar : UserControl
         else if (ReferenceEquals(border, MaximizeBtn))
         {
             string maxIconId = OwnerWindow?.WindowState == WindowState.Maximized ? "restore" : "maximize";
-            MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, iconColor, 18, active);
+            MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, iconColor, 18);
         }
         else if (ReferenceEquals(border, CloseBtn))
             CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", iconColor, 18, active);
