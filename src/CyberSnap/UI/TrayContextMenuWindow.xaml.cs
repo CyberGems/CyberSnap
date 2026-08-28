@@ -1,11 +1,16 @@
 using System;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
+using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
+using WpfToolTip = System.Windows.Controls.ToolTip;
 
 namespace CyberSnap.UI;
 
@@ -14,13 +19,16 @@ public partial class TrayContextMenuWindow : Window
     private readonly TrayIcon _trayIcon;
     private readonly System.Drawing.Point _clickPoint;
     private bool _isClosing = false;
+    private WpfToolTip? _activeTooltip;
+    private FrameworkElement? _activeTooltipOwner;
 
     public TrayContextMenuWindow(TrayIcon trayIcon, System.Drawing.Point clickPoint)
     {
         _trayIcon = trayIcon;
         _clickPoint = clickPoint;
         InitializeComponent();
-        
+        AddHandler(UIElement.PreviewMouseMoveEvent, new System.Windows.Input.MouseEventHandler(Window_PreviewMouseMove), true);
+
         // Refresh local theme resources to guarantee proper look on creation
         Theme.Refresh();
         Theme.ApplyTo(Resources);
@@ -173,19 +181,18 @@ public partial class TrayContextMenuWindow : Window
         if (updateAvailable)
         {
             UpdateLed.Visibility = Visibility.Visible;
-            UpdateLed.ToolTip = T("Update available");
-            AboutHeaderBtn.ToolTip = $"{T("Open About CyberSnap")} ({T("Update available")})";
+            SetTooltip(UpdateLed, T("Update available"));
+            SetTooltip(AboutHeaderBtn, $"{T("Open About CyberSnap")} ({T("Update available")})");
         }
         else
         {
             UpdateLed.Visibility = Visibility.Collapsed;
             UpdateLed.ToolTip = null;
-            AboutHeaderBtn.ToolTip = T("Open About CyberSnap");
+            SetTooltip(AboutHeaderBtn, T("Open About CyberSnap"));
         }
 
         // Shorter labels for buttons
         AreaCaptureText.Text = T("Area");
-        ScrollCaptureText.Text = "Scrolling";
         OcrText.Text = T("OCR");
         QrText.Text = T("QR");
         ColorPickerText.Text = T("Color");
@@ -194,35 +201,41 @@ public partial class TrayContextMenuWindow : Window
         GalleryText.Text = T("Gallery");
         
         // Tooltips — short action descriptions (labels stay compact on the tiles).
-        AreaCaptureBtn.ToolTip = T("Capture a rectangular region of the screen");
-        ScrollCaptureBtn.ToolTip = T("Capture a long scrolling page or window");
-        OcrBtn.ToolTip = T("Extract text from a region of the screen");
-        QrBtn.ToolTip = T("Scan QR codes and barcodes on screen");
-        ColorPickerBtn.ToolTip = T("Capture a color sample from the screen");
-        RulerBtn.ToolTip = T("Measure distances on the screen");
-        AnnotationsBtn.ToolTip = T("Open the annotations editor");
-        GalleryBtn.ToolTip = T("Browse and manage your captures");
-        GifRecordBtn.ToolTip = T("Record the screen as an animated GIF");
-        
-        // Compact labels for the half-width row; full names live in tooltips.
-        SettingsText.Text = T("Settings");
-        SettingsBtn.ToolTip = T("Open CyberSnap settings");
-        ExitText.Text = T("Exit");
-        ExitBtn.ToolTip = T("Quit CyberSnap");
+        SetTooltip(AreaCaptureBtn, T("Capture a rectangular region of the screen"));
+        SetTooltip(ScrollQuickBtn, T("Capture a long scrolling page or window"));
+        SetTooltip(FullscreenBtn, T("Fullscreen capture"));
+        SetTooltip(ActiveWindowBtn, T("Active window"));
+        SetTooltip(RepeatLastAreaBtn, T("Repeat last area"));
+        SetTooltip(OcrBtn, T("Extract text from a region of the screen"));
+        SetTooltip(QrBtn, T("Scan QR codes and barcodes on screen"));
+        SetTooltip(ColorPickerBtn, T("Capture a color sample from the screen"));
+        SetTooltip(RulerBtn, T("Measure distances on the screen"));
+        SetTooltip(AnnotationsBtn, T("Open the annotations editor"));
+        SetTooltip(GalleryBtn, T("Browse and manage your captures"));
+        SetTooltip(GifRecordBtn, T("Record the screen as an animated GIF"));
+        SetTooltip(VideoRecordBtn, T("Record the screen as an MP4 video"));
 
-        // Determine recording state and localize record button
+        // Compact labels for the half-width row; full names live in tooltips.
+
+        SetTooltip(SettingsBtn, T("Open CyberSnap settings"));
+        AchievementsText.Text = T("Achievements");
+        SetTooltip(AchievementsBtn, T("Open Achievements"));
+        ExitText.Text = T("Exit");
+        SetTooltip(ExitBtn, T("Quit CyberSnap"));
+
+        // Determine recording state and localize the compact record button.
         bool isRecording = Capture.RecordingForm.Current != null;
         if (isRecording)
         {
             VideoRecordText.Text = T("Stop recording");
-            VideoRecordBtn.ToolTip = T("Stop the current screen recording");
+            SetTooltip(VideoRecordBtn, T("Stop the current screen recording"));
             VideoRecordBtn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
             GifRecordBtn.IsEnabled = false;
         }
         else
         {
             VideoRecordText.Text = T("Record");
-            VideoRecordBtn.ToolTip = T("Record the screen as an MP4 video");
+            SetTooltip(VideoRecordBtn, T("Record the screen as an MP4 video"));
             VideoRecordBtn.ClearValue(ForegroundProperty);
             GifRecordBtn.IsEnabled = true;
             GifRecordText.Text = T("Record") + " GIF";
@@ -235,10 +248,13 @@ public partial class TrayContextMenuWindow : Window
         // Primary capture matches the widget: accent cyan so it reads as the default action.
         var accentColor = Theme.Accent;
 
-        AppLogoImage.Source = ThemedLogo.Square(16);
+        AppLogoImage.Source = ThemedLogo.Square(20);
 
         AreaCaptureIcon.Source = GetIcon("captureRect", accentColor, 32);
-        ScrollCaptureIcon.Source = GetIcon("scrollCapture", fgColor, 20);
+        ScrollQuickIcon.Source = GetIcon("scrollCapture", fgColor, 22);
+        FullscreenIcon.Source = GetIcon("fullscreen", fgColor, 22);
+        ActiveWindowIcon.Source = GetIcon("activeWindow", fgColor, 22);
+        RepeatLastAreaIcon.Source = GetIcon("captureBack", fgColor, 22);
         OcrIcon.Source = GetIcon("ocr", fgColor, 20);
         QrIcon.Source = GetIcon("scan", fgColor, 20);
         ColorPickerIcon.Source = GetIcon("picker", fgColor, 20);
@@ -247,17 +263,18 @@ public partial class TrayContextMenuWindow : Window
         AnnotationsIcon.Source = GetIcon("compose", fgColor, 20);
         GalleryIcon.Source = GetIcon("history", fgColor, 20);
 
-        SettingsIcon.Source = GetIcon("gear", fgColor, 20);
+        SettingsIcon.Source = GetIcon("gear", fgColor, 17);
+        AchievementsIcon.Source = GetIcon("trophy", fgColor, 20);
         ExitIcon.Source = GetDangerIcon("signOut", 20);
 
         bool isRecording = Capture.RecordingForm.Current != null;
         if (isRecording)
         {
-            VideoRecordIcon.Source = GetDangerIcon("play", 32);
+            VideoRecordIcon.Source = GetDangerIcon("play", 20);
         }
         else
         {
-            VideoRecordIcon.Source = GetIcon("record", fgColor, 32);
+            VideoRecordIcon.Source = GetIcon("record", fgColor, 20);
             GifRecordIcon.Source = GetIcon("recordGif", fgColor, 20);
         }
     }
@@ -275,6 +292,74 @@ public partial class TrayContextMenuWindow : Window
 
     private static string T(string text) => LocalizationService.Translate(text);
 
+    private void SetTooltip(FrameworkElement element, string text)
+    {
+        var tooltip = new WpfToolTip
+        {
+            Content = text,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Mouse
+        };
+
+        tooltip.Opened += (_, _) =>
+        {
+            if (!ReferenceEquals(_activeTooltip, tooltip))
+                DismissActiveTooltip();
+
+            _activeTooltip = tooltip;
+            _activeTooltipOwner = element;
+        };
+        tooltip.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_activeTooltip, tooltip))
+            {
+                _activeTooltip = null;
+                _activeTooltipOwner = null;
+            }
+        };
+
+        element.ToolTip = tooltip;
+        ToolTipService.SetInitialShowDelay(element, 400);
+        ToolTipService.SetBetweenShowDelay(element, 0);
+        ToolTipService.SetShowDuration(element, 5000);
+    }
+
+    private void Window_PreviewMouseMove(object sender, WpfMouseEventArgs e)
+    {
+        if (_activeTooltip is null || _activeTooltipOwner is null)
+            return;
+
+        if (e.OriginalSource is DependencyObject source &&
+            !IsWithinElement(source, _activeTooltipOwner))
+        {
+            DismissActiveTooltip();
+        }
+    }
+
+    private void DismissActiveTooltip()
+    {
+        if (_activeTooltip is not null)
+            _activeTooltip.IsOpen = false;
+    }
+
+    private static bool IsWithinElement(DependencyObject source, DependencyObject ancestor)
+    {
+        for (var current = source; current is not null; current = GetParent(current))
+        {
+            if (ReferenceEquals(current, ancestor))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static DependencyObject? GetParent(DependencyObject element)
+    {
+        if (element is Visual || element is Visual3D)
+            return VisualTreeHelper.GetParent(element);
+
+        return LogicalTreeHelper.GetParent(element);
+    }
+
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         try { CloseMenu(); }
@@ -291,6 +376,24 @@ public partial class TrayContextMenuWindow : Window
     {
         try { CloseMenu(); _trayIcon.TriggerScrollCapture(); }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.scroll-capture", ex); }
+    }
+
+    private void Fullscreen_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); _trayIcon.TriggerFullscreen(); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.fullscreen", ex); }
+    }
+
+    private void ActiveWindow_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); _trayIcon.TriggerActiveWindow(); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.active-window", ex); }
+    }
+
+    private void RepeatLastArea_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); _trayIcon.TriggerRepeatLastArea(); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.repeat-last-area", ex); }
     }
 
     private void Ocr_Click(object sender, RoutedEventArgs e)
@@ -360,6 +463,12 @@ public partial class TrayContextMenuWindow : Window
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.settings", ex); }
     }
 
+    private void Achievements_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); _trayIcon.TriggerAchievements(); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.achievements", ex); }
+    }
+
     private void AboutHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         try
@@ -404,12 +513,8 @@ public partial class TrayContextMenuWindow : Window
     {
         try
         {
-            // Force-hide sticky WPF tooltips when moving onto the adjacent close button.
-            if (AboutHeaderBtn.ToolTip is System.Windows.Controls.ToolTip tip)
-                tip.IsOpen = false;
-
-            System.Windows.Controls.ToolTipService.SetIsEnabled(AboutHeaderBtn, false);
-            System.Windows.Controls.ToolTipService.SetIsEnabled(AboutHeaderBtn, true);
+            // Force-hide the currently visible tooltip when moving to another control.
+            DismissActiveTooltip();
         }
         catch { }
     }
