@@ -1871,7 +1871,7 @@ public sealed partial class EditorForm
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
         var achievementsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Achievements..."), iconId: "trophy");
         var aboutItem = WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap..."), iconId: "info");
-        var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "close", danger: true, dangerIconOnly: true);
+        var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Close window"), iconId: "close", danger: true, dangerIconOnly: true);
         settingsItem.Click += (_, _) =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)

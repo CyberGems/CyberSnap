@@ -167,20 +167,20 @@ public partial class CyberSnapTitleBar : UserControl
         TitleLogo.Source = OwnerWindow?.Icon ?? ThemedLogo.Square(18);
         var titleIcon = TitleBarIconColor;
         DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", titleIcon, 18, active: DonateBtn.IsMouseOver);
-        MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18);
+        MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18, active: MinimizeBtn.IsMouseOver);
 
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         string maxIconId = isMaximized ? "restore" : "maximize";
-        MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18);
+        MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18, active: MaximizeBtn.IsMouseOver);
         RefreshTooltips();
 
         // If the pointer is still over Close, keep the high-contrast hover glyph.
         var closeIconColor = CloseBtn.IsMouseOver ? TitleBarCloseHoverIconColor : titleIcon;
-        CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", closeIconColor, 18);
+        CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", closeIconColor, 18, active: CloseBtn.IsMouseOver);
         // Hamburger burger menu icon (crisp Fluent vector)
-        BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18);
+        BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18, active: BurgerBtn.IsMouseOver);
         // "Open editor" shortcut \u2014 the Fluent "Compose" icon (shared with the tray/widget menus)
-        AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18);
+        AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18, active: AnnotationBtn.IsMouseOver);
         AnnotationIcon.Opacity = 1.0;
 
         // About is a compact info window — no maximize (same idea as Toast / widget chrome).
@@ -191,6 +191,15 @@ public partial class CyberSnapTitleBar : UserControl
         RefreshPinIcon();
 
         InitializeActionBtn(titleIcon);
+
+        if (DonateBtn.IsMouseOver) ApplyButtonHoverVisual(DonateBtn, true);
+        if (BurgerBtn.IsMouseOver) ApplyButtonHoverVisual(BurgerBtn, true);
+        if (AnnotationBtn.IsMouseOver) ApplyButtonHoverVisual(AnnotationBtn, true);
+        if (ActionBtn.IsMouseOver) ApplyButtonHoverVisual(ActionBtn, true);
+        if (PinBtn.IsMouseOver) ApplyButtonHoverVisual(PinBtn, true);
+        if (MinimizeBtn.IsMouseOver) ApplyButtonHoverVisual(MinimizeBtn, true);
+        if (MaximizeBtn.IsMouseOver) ApplyButtonHoverVisual(MaximizeBtn, true);
+        if (CloseBtn.IsMouseOver) ApplyButtonHoverVisual(CloseBtn, true);
     }
 
     private void RefreshPinIcon()
@@ -318,7 +327,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
-                BurgerBtn.Background = Theme.Brush(Theme.AccentHover);
+                ApplyButtonHoverVisual(BurgerBtn, true);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
 
@@ -326,7 +335,7 @@ public partial class CyberSnapTitleBar : UserControl
             {
                 RecordContextMenuClosed();
                 if (!BurgerBtn.IsMouseOver)
-                    BurgerBtn.Background = System.Windows.Media.Brushes.Transparent;
+                    ApplyButtonHoverVisual(BurgerBtn, false);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
@@ -366,7 +375,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
-                ActionBtn.Background = Theme.Brush(Theme.AccentHover);
+                ApplyButtonHoverVisual(ActionBtn, true);
                 var settings = ((App)Application.Current).GetSettings();
                 searchToggle.IsChecked = settings.ShowImageSearchBar;
                 pruneToggle.IsChecked = settings.ShowAutoPrune;
@@ -512,14 +521,14 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
-                BurgerBtn.Background = Theme.Brush(Theme.AccentHover);
+                ApplyButtonHoverVisual(BurgerBtn, true);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
             menu.Closed += (_, _) =>
             {
                 RecordContextMenuClosed();
                 if (!BurgerBtn.IsMouseOver)
-                    BurgerBtn.Background = System.Windows.Media.Brushes.Transparent;
+                    ApplyButtonHoverVisual(BurgerBtn, false);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
@@ -628,13 +637,7 @@ public partial class CyberSnapTitleBar : UserControl
         if (sender is not Border border)
             return;
 
-        var isClose = ReferenceEquals(border, CloseBtn);
-        border.Background = Theme.Brush(isClose ? Theme.DangerHover : Theme.AccentHover);
-        // Red hover wash washes out the muted gray X — switch to white for contrast.
-        if (isClose)
-            CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", TitleBarCloseHoverIconColor, 18);
-        else if (ReferenceEquals(border, DonateBtn))
-            DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", TitleBarIconColor, 18, active: true);
+        ApplyButtonHoverVisual(border, true);
     }
 
     private void TitleBtn_MouseLeave(object sender, MouseEventArgs e)
@@ -647,15 +650,52 @@ public partial class CyberSnapTitleBar : UserControl
         if (ReferenceEquals(border, ActionBtn) && ActionBtn.ContextMenu?.IsOpen == true)
             return;
 
-        border.Background = System.Windows.Media.Brushes.Transparent;
-        if (ReferenceEquals(border, CloseBtn))
-            CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", TitleBarIconColor, 18);
-        else if (ReferenceEquals(border, DonateBtn))
-            DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", TitleBarIconColor, 18);
+        ApplyButtonHoverVisual(border, false);
+    }
+
+    private void ApplyButtonHoverVisual(Border border, bool hovered)
+    {
+        bool isClose = ReferenceEquals(border, CloseBtn);
+        border.Background = hovered
+            ? Theme.Brush(isClose ? Theme.DangerHover : Theme.BgHover)
+            : System.Windows.Media.Brushes.Transparent;
+
+        var iconColor = hovered
+            ? (isClose ? TitleBarCloseHoverIconColor : TitleBarHoverIconColor)
+            : TitleBarIconColor;
+        bool active = hovered;
+
+        if (ReferenceEquals(border, DonateBtn))
+            DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", iconColor, 18, active);
+        else if (ReferenceEquals(border, BurgerBtn))
+            BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("menu", iconColor, 18, active);
+        else if (ReferenceEquals(border, AnnotationBtn))
+            AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", iconColor, 18, active);
+        else if (ReferenceEquals(border, ActionBtn))
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("menu", iconColor, 18, active);
+        else if (ReferenceEquals(border, PinBtn))
+        {
+            if (hovered)
+                PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", iconColor, 18, active: true);
+            else
+                RefreshPinIcon();
+        }
+        else if (ReferenceEquals(border, MinimizeBtn))
+            MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", iconColor, 18, active);
+        else if (ReferenceEquals(border, MaximizeBtn))
+        {
+            string maxIconId = OwnerWindow?.WindowState == WindowState.Maximized ? "restore" : "maximize";
+            MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, iconColor, 18, active);
+        }
+        else if (ReferenceEquals(border, CloseBtn))
+            CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", iconColor, 18, active);
     }
 
     private static System.Drawing.Color TitleBarIconColor =>
         System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+
+    private static System.Drawing.Color TitleBarHoverIconColor =>
+        System.Drawing.Color.FromArgb(255, Theme.Accent.R, Theme.Accent.G, Theme.Accent.B);
 
     private static System.Drawing.Color TitleBarCloseHoverIconColor =>
         System.Drawing.Color.FromArgb(255, 255, 255, 255);
