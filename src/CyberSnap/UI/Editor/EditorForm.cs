@@ -506,6 +506,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         BuildToolbar();
         BuildStatusBar();
+        // Build the burger menu during initialization so opening it does not incur
+        // the cost of constructing and rendering every menu item on the first click.
+        _burgerMenu = BuildBurgerMenu();
 
         var canvasContainer = new EditorCanvasFrame
         {

@@ -10,7 +10,7 @@ public static class WindowTitles
     public const string Trimmer = "Video & GIF Trimmer ᐧ CyberSnap";
     public const string Ocr = "Text extraction (OCR) ᐧ CyberSnap";
     public const string Settings = "Configuration ᐧ CyberSnap";
-    public const string About = "About ᐧ CyberSnap";
+    public const string About = "About CyberSnap";
     public const string Achievements = "Achievements ᐧ CyberSnap";
     public const string Preview = "Capture Preview ᐧ CyberSnap";
 

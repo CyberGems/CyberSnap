@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using MediaBrush = System.Windows.Media.Brush;
@@ -19,6 +21,7 @@ public partial class AboutWindow : Window
 
     private readonly SettingsService _settingsService;
     private bool _suppressAutoCheckUpdateChange;
+    private DropShadowEffect? _aboutLogoGlow;
 
     public AboutWindow(SettingsService settingsService)
     {
@@ -34,6 +37,7 @@ public partial class AboutWindow : Window
         {
             ApplyMicaBackdrop();
             PopupWindowHelper.CenterOnCurrentScreen(this);
+            StartAboutLogoGlow();
         };
     }
 
@@ -54,7 +58,9 @@ public partial class AboutWindow : Window
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         OuterBorder.Background = Theme.Brush(Theme.BgPrimary);
         OuterBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
-        Icon = WindowIcons.Wpf(WindowIconKind.Main);
+        Icon = WindowIcons.Wpf(WindowIconKind.About);
+        if (_aboutLogoGlow != null)
+            _aboutLogoGlow.Color = Theme.Accent;
         Foreground = Theme.Brush(Theme.TextPrimary);
         UiScale.ApplyToWindow(this, OuterBorder, scaleWindowBounds: false);
         ApplyThemeToVisualTree(OuterBorder);
@@ -158,7 +164,7 @@ public partial class AboutWindow : Window
             UpdateBtn.Content = LocalizationService.Translate("Check Now");
             UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
             UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
-            AboutTitleBar.Title = LocalizationService.Translate("About ᐧ CyberSnap");
+            AboutTitleBar.Title = LocalizationService.Translate("About CyberSnap");
             AboutFooterCopyright.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterWebsiteBtn.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterGithubBtn.ToolTip = LocalizationService.Translate("View project on GitHub");
@@ -173,9 +179,36 @@ public partial class AboutWindow : Window
 
     private void UpdateWindowTitle()
     {
-        var aboutLabel = LocalizationService.Translate("About ᐧ CyberSnap");
+        var aboutLabel = LocalizationService.Translate("About CyberSnap");
         AboutTitleBar.Title = aboutLabel;
         WindowTitles.ApplyTaskbar(this, WindowTitles.About, _settingsService.Settings.InterfaceLanguage);
+    }
+
+    private void StartAboutLogoGlow()
+    {
+        var glow = new DropShadowEffect
+        {
+            Color = Theme.Accent,
+            Direction = 0,
+            ShadowDepth = 0,
+            BlurRadius = 18,
+            Opacity = 0.36,
+            RenderingBias = RenderingBias.Performance
+        };
+        AboutLogoImage.Effect = glow;
+        _aboutLogoGlow = glow;
+
+        glow.BeginAnimation(
+            DropShadowEffect.OpacityProperty,
+            new DoubleAnimation
+            {
+                From = 0.28,
+                To = 0.54,
+                Duration = TimeSpan.FromSeconds(2.4),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            });
     }
 
     private void ApplyThemeToVisualTree(DependencyObject root)

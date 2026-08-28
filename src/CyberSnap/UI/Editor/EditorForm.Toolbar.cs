@@ -42,6 +42,7 @@ public sealed partial class EditorForm
     private readonly List<(EditorCommandButton Button, string LabelKey)> _localizedCommandButtons = new();
     private EditorChromeButton? _closeButton;
     private EditorChromeButton? _minimizeButton;
+    private EditorChromeButton? _donateButton;
     private EditorChromeButton? _menuButton;
     private Panel? _brandPanel;
     private EditorCommandButton _galleryButton = null!;
@@ -573,6 +574,7 @@ public sealed partial class EditorForm
         };
         windowActions.Controls.Add(_minimizeButton);
 
+        windowActions.Controls.Add(MakeSeparator());
         _menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
         _menuButton.Click += (s, _) =>
         {
@@ -592,6 +594,11 @@ public sealed partial class EditorForm
                 : ToolStripDropDownDirection.BelowRight);
         };
         windowActions.Controls.Add(_menuButton);
+
+        windowActions.Controls.Add(MakeSeparator());
+        _donateButton = MakeChromeButton("heart", LocalizationService.Translate("Donate"));
+        _donateButton.Click += (_, _) => DonationLinks.Open();
+        windowActions.Controls.Add(_donateButton);
 
         // Filename Label in the middle
         _titleFileNameText = LocalizationService.Translate("Untitled");
@@ -1708,6 +1715,11 @@ public sealed partial class EditorForm
         menu.Closed += (s, e) =>
         {
             _burgerMenuLastClosed = DateTime.UtcNow;
+            if (_menuButton is not null)
+            {
+                _menuButton.HoverOverride = false;
+                _menuButton.PressedOverride = false;
+            }
         };
 
         // ── "New" submenu ──
@@ -1793,7 +1805,7 @@ public sealed partial class EditorForm
         var transformSubmenu = BuildTransformSubmenu();
 
         var closeDocumentItem = WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Close document"), shortcut: "Ctrl+W", iconId: "signOutLeave", danger: true, dangerIconOnly: true);
+            LocalizationService.Translate("Close document"), shortcut: "Ctrl+W", iconId: "documentClose");
         closeDocumentItem.Click += (_, _) => DoCloseDocument();
 
         // ── Standard edit actions ──
@@ -1849,9 +1861,9 @@ public sealed partial class EditorForm
         var scrollbarsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Always show scrollbars"), iconId: null);
         scrollbarsItem.ToolTipText = LocalizationService.Translate("Keep the scroll position indicators visible at all times.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
-        var achievementsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Achievements"), iconId: "trophy");
-        var aboutItem = WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap"), iconId: "info");
-        var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "signOut");
+        var achievementsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Achievements..."), iconId: "trophy");
+        var aboutItem = WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap..."), iconId: "info");
+        var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "close", danger: true, dangerIconOnly: true);
         settingsItem.Click += (_, _) =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)
@@ -1990,15 +2002,12 @@ public sealed partial class EditorForm
 
         // Main menu layout — View sits after file operations (New / Open / Save) and before export.
         menu.Items.Add(newSubmenu);
-        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(openItem);
         menu.Items.Add(openRecentItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
-        menu.Items.Add(closeDocumentItem);
-        menu.Items.Add(resizeCanvasItem);
-        menu.Items.Add(transformSubmenu);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(closeDocumentItem);
         menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exportAsItem);
@@ -2009,6 +2018,8 @@ public sealed partial class EditorForm
         menu.Items.Add(pasteItem);
         menu.Items.Add(duplicateItem);
         menu.Items.Add(deleteItem);
+        menu.Items.Add(resizeCanvasItem);
+        menu.Items.Add(transformSubmenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
         menu.Items.Add(achievementsItem);
@@ -2017,6 +2028,12 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
+            if (_menuButton is not null)
+            {
+                _menuButton.HoverOverride = true;
+                _menuButton.PressedOverride = true;
+            }
+
             RebuildExportAsSubmenu(exportAsItem);
             RebuildShareToSubmenu(shareToItem);
             RebuildSendToSubmenu(sendToItem);
@@ -2846,10 +2863,10 @@ internal sealed class EditorChromeButton : EditorButtonBase
     protected override Color ResolveFill(bool active)
     {
         // Match WPF CyberSnapTitleBar close hover (Theme.DangerHover).
-        if (Enabled && IsClose && (_hover || _pressed))
+        if (Enabled && IsClose && (IsHoverActive || IsPressedActive))
         {
             var danger = Theme.DangerHover;
-            var a = _pressed ? (byte)Math.Min(255, danger.A + 30) : danger.A;
+            var a = IsPressedActive ? (byte)Math.Min(255, danger.A + 30) : danger.A;
             return Color.FromArgb(a, danger.R, danger.G, danger.B);
         }
 
@@ -2858,17 +2875,15 @@ internal sealed class EditorChromeButton : EditorButtonBase
 
     protected override Color ResolveBorder(bool active)
     {
-        if (Enabled && IsClose && (_hover || _pressed))
-            return Color.Transparent;
-        if (active || _hover)
-            return base.ResolveBorder(active);
+        // Keep title-bar hover consistent with the WPF chrome: the fill and icon
+        // provide the feedback, without an extra outline around the button.
         return Color.Transparent;
     }
 
     protected override Color ResolveContent(bool active)
     {
         // White X on the red wash — same contrast fix as the WPF title bar.
-        if (Enabled && IsClose && (_hover || _pressed))
+        if (Enabled && IsClose && (IsHoverActive || IsPressedActive))
             return Color.White;
         return base.ResolveContent(active);
     }
@@ -2891,6 +2906,8 @@ internal abstract class EditorButtonBase : Button
     protected bool _pressed;
     private bool _selected;
     private string _iconId = "";
+    private bool _hoverOverride;
+    private bool _pressedOverride;
 
     protected EditorButtonBase()
     {
@@ -2932,6 +2949,33 @@ internal abstract class EditorButtonBase : Button
         }
     }
 
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool HoverOverride
+    {
+        get => _hoverOverride;
+        set
+        {
+            if (_hoverOverride == value) return;
+            _hoverOverride = value;
+            Invalidate();
+        }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool PressedOverride
+    {
+        get => _pressedOverride;
+        set
+        {
+            if (_pressedOverride == value) return;
+            _pressedOverride = value;
+            Invalidate();
+        }
+    }
+
+    protected bool IsHoverActive => _hover || _hoverOverride;
+    protected bool IsPressedActive => _pressed || _pressedOverride;
+
     protected virtual bool UsePrimaryFill => false;
 
     protected virtual Color DefaultTransparentBackColor => EditorColors.BgSecondary;
@@ -2946,7 +2990,7 @@ internal abstract class EditorButtonBase : Button
         var rect = new Rectangle(0, 0, Width - 1, Height - 1);
         if (rect.Width <= 0 || rect.Height <= 0) return;
 
-        bool active = Enabled && (IsSelected || UsePrimaryFill);
+        bool active = Enabled && (IsSelected || UsePrimaryFill || IsHoverActive || IsPressedActive);
         var fill = ResolveFill(active);
         var border = ResolveBorder(active);
         var content = ResolveContent(active);
@@ -3011,14 +3055,14 @@ internal abstract class EditorButtonBase : Button
         if (!Enabled)
             return EditorColors.IsDark ? Color.FromArgb(16, 18, 28) : Color.FromArgb(235, 237, 244);
         if (UsePrimaryFill)
-            return _pressed ? EditorColors.AccentPressed : EditorColors.Accent;
+            return IsPressedActive ? EditorColors.AccentPressed : EditorColors.Accent;
         if (IsSelected)
-            return _pressed
+            return IsPressedActive
                 ? Color.FromArgb(42, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B)
                 : Color.FromArgb(30, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B);
-        if (_pressed)
+        if (IsPressedActive)
             return EditorColors.IsDark ? Color.FromArgb(44, 50, 74) : Color.FromArgb(200, 206, 218);
-        if (_hover)
+        if (IsHoverActive)
             return EditorColors.BgHover;
         return IdleFill;
     }
@@ -3040,7 +3084,7 @@ internal abstract class EditorButtonBase : Button
     {
         if (!Enabled)
             return EditorColors.IsDark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(20, 0, 0, 0);
-        if (active || _hover)
+        if (active || IsHoverActive)
             return Color.FromArgb(150, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B);
         return EditorColors.IsDark ? EditorColors.BorderSubtle : Color.FromArgb(180, 204, 214, 226);
     }
@@ -3051,7 +3095,7 @@ internal abstract class EditorButtonBase : Button
             return EditorColors.IsDark ? Color.FromArgb(88, 105, 128) : Color.FromArgb(160, 168, 180);
         if (UsePrimaryFill)
             return EditorColors.IsDark ? Color.FromArgb(4, 20, 26) : Color.FromArgb(250, 250, 250);
-        if (active || _hover)
+        if (active || IsHoverActive)
             return EditorColors.Accent;
         return EditorColors.TextPrimary;
     }

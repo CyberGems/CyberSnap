@@ -38,6 +38,8 @@ public sealed partial class EditorForm
             _closeButton.AccessibleName = LocalizationService.Translate("Close");
         if (_minimizeButton is not null)
             _minimizeButton.AccessibleName = LocalizationService.Translate("Minimize");
+        if (_donateButton is not null)
+            _donateButton.AccessibleName = LocalizationService.Translate("Donate");
         if (_menuButton is not null)
             _menuButton.AccessibleName = LocalizationService.Translate("Menu");
         UpdateWindowStateButton();
@@ -50,6 +52,11 @@ public sealed partial class EditorForm
         UpdateCaptureCaption();
         UpdateLiveStatusText();
 
+        if (_menuButton is not null)
+        {
+            _menuButton.HoverOverride = false;
+            _menuButton.PressedOverride = false;
+        }
         _burgerMenu?.Dispose();
         _burgerMenu = null;
         _canvasMenu?.Dispose();

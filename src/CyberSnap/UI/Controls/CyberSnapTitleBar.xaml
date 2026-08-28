@@ -1,6 +1,7 @@
 <UserControl x:Class="CyberSnap.UI.Controls.CyberSnapTitleBar"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:Services="clr-namespace:CyberSnap.Services"
              Height="40">
     <UserControl.Resources>
         <Style x:Key="HistoryActionsMenuStyle" TargetType="ContextMenu">
@@ -53,6 +54,22 @@
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top">
+                <Border x:Name="DonateBtn"
+                        Style="{StaticResource CyberSnapTitleButton}"
+                        MouseLeftButtonDown="DonateBtn_MouseLeftButtonDown"
+                        MouseEnter="TitleBtn_MouseEnter"
+                        MouseLeave="TitleBtn_MouseLeave"
+                        ToolTip="Donate"
+                        Services:LocalizationService.SourceToolTip="Donate">
+                    <Image x:Name="DonateIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
+                </Border>
+                <Border x:Name="DonateSeparator"
+                        Width="1"
+                        Height="20"
+                        Margin="4,0,4,0"
+                        Background="{DynamicResource ThemeInputBorderBrush}"
+                        Opacity="0.7"
+                        VerticalAlignment="Center"/>
                 <Border x:Name="BurgerBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
                         ContextMenuService.IsEnabled="False"
@@ -90,6 +107,13 @@
                         Visibility="Collapsed">
                     <Image x:Name="PinIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
                 </Border>
+                <Border x:Name="WindowControlsSeparator"
+                        Width="1"
+                        Height="20"
+                        Margin="4,0,4,0"
+                        Background="{DynamicResource ThemeInputBorderBrush}"
+                        Opacity="0.7"
+                        VerticalAlignment="Center"/>
                 <Border x:Name="MinimizeBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
                         MouseLeftButtonDown="MinimizeBtn_MouseLeftButtonDown"

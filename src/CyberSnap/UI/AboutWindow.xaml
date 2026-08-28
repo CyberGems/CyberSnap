@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:Services="clr-namespace:CyberSnap.Services"
-        Title="About ᐧ CyberSnap"
+        Title="About CyberSnap"
         Height="590" Width="740"
         MinHeight="480" MinWidth="600"
         ResizeMode="CanResize"
@@ -12,7 +12,7 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
-        Icon="pack://application:,,,/Assets/Icons/CyberSnap.ico">
+        Icon="pack://application:,,,/Assets/Icons/About.ico">
 
     <Window.Resources>
         <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="#FFF0F0F0"/>
@@ -243,7 +243,7 @@
         </Grid.RowDefinitions>
 
         <controls:CyberSnapTitleBar x:Name="AboutTitleBar" Grid.Row="0"
-                                  Title="About ⋅ CyberSnap"
+                                  Title="About CyberSnap"
                                   CloseRequested="TitleBar_CloseRequested"/>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
@@ -257,12 +257,9 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="80" Height="80" CornerRadius="20" Background="{DynamicResource ThemeCardBrush}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1.5">
-                            <Image Width="52" Height="52" Stretch="Uniform"
-                                   Source="pack://application:,,,/Assets/CyberSnap_square.png"
-                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                        </Border>
+                        <Image x:Name="AboutLogoImage" Width="80" Height="80" Margin="8,0,0,0" Stretch="Uniform"
+                               Source="pack://application:,,,/Assets/CyberSnap_square.png"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
                         <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
                             <TextBlock FontSize="32" FontWeight="Bold" FontFamily="Segoe UI Variable Display">
                                 <Run Text="Cyber" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/><Run Text="Snap" Foreground="#6ACBDC"/>
