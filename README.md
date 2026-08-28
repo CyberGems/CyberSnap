@@ -228,10 +228,18 @@ This project also builds on open-source components including Tesseract OCR, ZXin
 
 If you'd like to support this work, a donation would mean a lot. Thank you! 🙏
 
-[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-0070BA?style=for-the-badge&logo=paypal)](https://www.paypal.com/donate/?hosted_button_id=M4PY3UPJA5Y6Q) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/cybergems)
+<p align="center">
+  <a href="https://www.paypal.com/donate/?hosted_button_id=M4PY3UPJA5Y6Q"><img src="https://img.shields.io/badge/Donate-PayPal-0070BA?style=for-the-badge&logo=paypal" alt="Donate via PayPal" /></a>
+  <a href="https://ko-fi.com/cybergems"><img src="https://img.shields.io/badge/Support_me_on_Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support me on Ko-fi" /></a>
+  <a href="https://buymeacoffee.com/cybergems"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" /></a>
+</p>
+
+<div align="center">
 
 <details>
-<summary><b>Crypto donations (BTC, ETH, USDT, LTC) — choose the correct network</b></summary>
+<summary><b>Crypto donations (BTC, ETH, USDT, LTC) — click to view addresses</b></summary>
+
+<div align="left">
 
 | Asset | Network | Address | QR |
 |---|---|---|---|
@@ -244,7 +252,11 @@ If you'd like to support this work, a donation would mean a lot. Thank you! 🙏
 
 > ⚠️ Send only the selected asset on the indicated network. Using the wrong network will result in permanent loss of funds.
 
+</div>
+
 </details>
+
+</div>
 
 ---
 
