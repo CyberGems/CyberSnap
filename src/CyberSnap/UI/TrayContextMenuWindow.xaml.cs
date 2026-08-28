@@ -248,7 +248,7 @@ public partial class TrayContextMenuWindow : Window
         // Primary capture matches the widget: accent cyan so it reads as the default action.
         var accentColor = Theme.Accent;
 
-        AppLogoImage.Source = ThemedLogo.Square(20);
+        AppLogoImage.Source = ThemedLogo.SquareGrayscale(20);
 
         AreaCaptureIcon.Source = GetIcon("captureRect", accentColor, 32);
         ScrollQuickIcon.Source = GetIcon("scrollCapture", fgColor, 22);
@@ -487,6 +487,7 @@ public partial class TrayContextMenuWindow : Window
             System.Windows.Controls.ToolTipService.SetIsEnabled(AboutHeaderBtn, true);
             AboutHeaderBtn.Background = Theme.Brush(Theme.TabHoverBg);
             TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
+            AppLogoImage.Source = ThemedLogo.Square(20);
             AppLogoImage.Opacity = 1;
         }
         catch { }
@@ -498,6 +499,7 @@ public partial class TrayContextMenuWindow : Window
         {
             AboutHeaderBtn.Background = System.Windows.Media.Brushes.Transparent;
             TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
+            AppLogoImage.Source = ThemedLogo.SquareGrayscale(20);
             AppLogoImage.Opacity = 0.75;
             DismissAboutHeaderToolTip();
         }
