@@ -149,10 +149,13 @@ public partial class App
     }
 
     private void OnActiveWindowHotkeyPressed()
+        => OnActiveWindowHotkeyPressed(IntPtr.Zero);
+
+    private void OnActiveWindowHotkeyPressed(IntPtr preferredWindow)
     {
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
-        LaunchWithDelay(CaptureActiveWindowNow);
+        LaunchWithDelay(() => CaptureActiveWindowNow(preferredWindow));
     }
 
     private void OnRepeatLastAreaHotkeyPressed()

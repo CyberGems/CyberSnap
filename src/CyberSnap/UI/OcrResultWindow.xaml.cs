@@ -21,6 +21,7 @@ public partial class OcrResultWindow : Window
     private const double WindowCascadeOffset = 28;
 
     private readonly SettingsService _settingsService;
+    private readonly ImageSource? _previewSource;
     private readonly OcrResultWindowLifecycle _lifecycle = new();
     private CancellationTokenSource? _translateCts;
 
@@ -36,9 +37,13 @@ public partial class OcrResultWindow : Window
     private readonly SolidColorBrush _searchHighlightBrush = new(System.Windows.Media.Color.FromArgb(86, 255, 224, 0));
     private readonly SolidColorBrush _activeSearchHighlightBrush = new(System.Windows.Media.Color.FromArgb(145, 255, 224, 0));
 
-    public OcrResultWindow(string ocrText, SettingsService settingsService)
+    public OcrResultWindow(
+        string ocrText,
+        SettingsService settingsService,
+        ImageSource? previewSource = null)
     {
         _settingsService = settingsService;
+        _previewSource = previewSource;
         InitializeComponent();
         CyberSnapWindowChrome.Apply(this);
         UiScale.Set(settingsService.Settings.UiScale);
@@ -49,6 +54,9 @@ public partial class OcrResultWindow : Window
         LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
 
         OcrTextBox.Text = ocrText;
+        OcrPreviewImage.Source = _previewSource;
+        OcrPreviewImage.Visibility = _previewSource is null ? Visibility.Collapsed : Visibility.Visible;
+        OcrPreviewEmptyText.Visibility = _previewSource is null ? Visibility.Visible : Visibility.Collapsed;
         OcrTextBox.TextChanged += OcrTextBox_TextChanged;
         UpdateCharCount();
 
@@ -71,6 +79,7 @@ public partial class OcrResultWindow : Window
         var lang = settingsService.Settings.InterfaceLanguage;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Ocr, lang);
         OcrTitleBar.Title = LocalizationService.Translate(lang, WindowTitles.Ocr);
+        OcrPreviewEmptyText.Text = LocalizationService.Translate("Source preview unavailable");
 
         Loaded += (_, _) =>
         {
@@ -142,6 +151,8 @@ public partial class OcrResultWindow : Window
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         Resources["TranslationTintBrush"] = Theme.Brush(Theme.AccentSubtle);
         Resources["TranslationTintBorderBrush"] = Theme.Brush(Theme.AccentHover);
+        OcrCheckerboardHost.Background = Theme.CreateCheckerboardBrush();
+        OcrPreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
         Icon = WindowIcons.Wpf(WindowIconKind.Ocr);
     }
 
