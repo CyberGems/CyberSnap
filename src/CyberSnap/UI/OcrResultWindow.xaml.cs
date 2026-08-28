@@ -80,6 +80,10 @@ public partial class OcrResultWindow : Window
         WindowTitles.ApplyTaskbar(this, WindowTitles.Ocr, lang);
         OcrTitleBar.Title = LocalizationService.Translate(lang, WindowTitles.Ocr);
         OcrPreviewEmptyText.Text = LocalizationService.Translate("Source preview unavailable");
+        SearchBoxShell.ToolTip = LocalizationService.Translate(
+            "Search OCR text. Press Enter to cycle through matches; Shift+Enter goes back.");
+        SearchPlaceholder.Text = LocalizationService.Translate("Search...");
+        SearchClearBtn.ToolTip = LocalizationService.Translate("Clear search");
 
         Loaded += (_, _) =>
         {
@@ -238,6 +242,7 @@ public partial class OcrResultWindow : Window
     {
         TranslationPanel.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
         TranslatedSection.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
+        MoveCopyButton(expand);
 
         var targetAngle = expand ? 90.0 : 0.0;
         if (animate)
@@ -253,6 +258,20 @@ public partial class OcrResultWindow : Window
             // Clear any running animation before setting the value directly.
             TranslationChevronRotation.BeginAnimation(RotateTransform.AngleProperty, null);
             TranslationChevronRotation.Angle = targetAngle;
+        }
+    }
+
+    private void MoveCopyButton(bool translationExpanded)
+    {
+        if (translationExpanded)
+        {
+            CopyHeaderHost.Content = null;
+            CopyTranslationHost.Content = CopyBtn;
+        }
+        else
+        {
+            CopyTranslationHost.Content = null;
+            CopyHeaderHost.Content = CopyBtn;
         }
     }
 
@@ -335,7 +354,7 @@ public partial class OcrResultWindow : Window
         }
     }
 
-    private void CopyTranslationBtn_Click(object sender, RoutedEventArgs e)
+    private async void CopyTranslationBtn_Click(object sender, RoutedEventArgs e)
     {
         var text = TranslatedTextBox.Text;
         if (string.IsNullOrWhiteSpace(text))
@@ -349,9 +368,13 @@ public partial class OcrResultWindow : Window
             ClipboardService.CopyTextToClipboard(text);
             SoundService.PlayTextSound();
             ToastWindow.Show(ToastSpec.Standard("Copied translation", FormatCopyToastPreview(text)) with { SuppressSound = true });
+            CopyTranslationBtn.IsHitTestVisible = false;
+            await Task.Delay(120);
+            CloseWindow();
         }
         catch (Exception ex)
         {
+            CopyTranslationBtn.IsHitTestVisible = true;
             ToastWindow.ShowError(
                 "Copy failed",
                 $"CyberSnap could not copy the translated text. Keep the result window open and try again.\n{ex.Message}");
@@ -961,9 +984,27 @@ public partial class OcrResultWindow : Window
     private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         var query = SearchTextBox.Text ?? "";
-        SearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(query) ? Visibility.Visible : Visibility.Collapsed;
+        UpdateSearchPlaceholderVisibility();
         SearchClearBtn.Visibility = string.IsNullOrEmpty(query) ? Visibility.Collapsed : Visibility.Visible;
         RefreshSearchMatches(keepCurrentMatch: false);
+    }
+
+    private void SearchTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        UpdateSearchPlaceholderVisibility();
+    }
+
+    private void SearchTextBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        UpdateSearchPlaceholderVisibility();
+    }
+
+    private void UpdateSearchPlaceholderVisibility()
+    {
+        SearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(SearchTextBox.Text) &&
+                                       !SearchTextBox.IsKeyboardFocusWithin
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void SearchClearBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

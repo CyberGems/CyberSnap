@@ -80,6 +80,14 @@
                         Visibility="Collapsed">
                     <Image x:Name="BurgerIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
                 </Border>
+                <Border x:Name="BurgerSeparator"
+                        Width="1"
+                        Height="20"
+                        Margin="4,0,4,0"
+                        Background="{DynamicResource ThemeInputBorderBrush}"
+                        Opacity="0.7"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed"/>
                 <Border x:Name="AnnotationBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
                         MouseLeftButtonDown="AnnotationBtn_MouseLeftButtonDown"
@@ -100,7 +108,7 @@
                 </Border>
                 <Border x:Name="PinBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
-                        Margin="8,0,4,0"
+                        Margin="0"
                         MouseLeftButtonDown="PinBtn_MouseLeftButtonDown"
                         MouseEnter="TitleBtn_MouseEnter"
                         MouseLeave="TitleBtn_MouseLeave"

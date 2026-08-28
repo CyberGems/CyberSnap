@@ -261,7 +261,11 @@ public sealed class AppSettings
     /// </summary>
     public int AutoCopySettingsSchemaVersion { get; set; }
 
-    public bool OcrResultWindowPinnedByDefault { get; set; } = true;
+    /// <summary>
+    /// Whether newly opened OCR result windows start pinned. The user's choice is
+    /// updated when the Pin button is toggled and persisted with the other settings.
+    /// </summary>
+    public bool OcrResultWindowPinnedByDefault { get; set; }
     public bool OcrTranslationPanelExpanded { get; set; }
     public string? GoogleTranslateApiKey { get; set; }
     public bool TranslationRuntimeInstalled { get; set; }
