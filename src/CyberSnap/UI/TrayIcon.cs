@@ -29,6 +29,10 @@ public sealed class TrayIcon : IDisposable
     public event Action? OnStandaloneScan;
     public event Action? OnAnnotationEditor;
     public event Action? OnSettings;
+    public event Action? OnAchievements;
+    public event Action? OnFullscreen;
+    public event Action? OnActiveWindow;
+    public event Action? OnRepeatLastArea;
     public event Action? OnAbout;
     public event Action? OnHistory;
     public event Action? OnQuit;
@@ -264,6 +268,10 @@ public sealed class TrayIcon : IDisposable
     public void TriggerScan() => OnStandaloneScan?.Invoke();
     public void TriggerAnnotationEditor() => OnAnnotationEditor?.Invoke();
     public void TriggerSettings() => OnSettings?.Invoke();
+    public void TriggerAchievements() => OnAchievements?.Invoke();
+    public void TriggerFullscreen() => OnFullscreen?.Invoke();
+    public void TriggerActiveWindow() => OnActiveWindow?.Invoke();
+    public void TriggerRepeatLastArea() => OnRepeatLastArea?.Invoke();
     public void TriggerAbout() => OnAbout?.Invoke();
     public void TriggerHistory() => OnHistory?.Invoke();
     public void TriggerQuit() => OnQuit?.Invoke();

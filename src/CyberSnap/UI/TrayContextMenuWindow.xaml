@@ -91,6 +91,37 @@
             </Setter>
         </Style>
 
+        <!-- Compact header action (Settings beside the close button). -->
+        <Style x:Key="HeaderActionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Exit button style — chromeless at rest (icon is the only red element); hover/press
              reclaim the original soft red wash (#15EF4444 / #25EF4444) the user already likes,
              without any accent/danger border. -->
@@ -142,6 +173,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Border x:Name="AboutHeaderBtn"
                         Grid.Column="0"
@@ -159,7 +191,7 @@
                         MouseEnter="AboutHeader_MouseEnter"
                         MouseLeave="AboutHeader_MouseLeave">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Image x:Name="AppLogoImage" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center" Opacity="0.75" Stretch="Uniform"/>
+                        <Image x:Name="AppLogoImage" Width="20" Height="20" Margin="0,0,7,0" VerticalAlignment="Center" Opacity="0.82" Stretch="Uniform"/>
                         <TextBlock x:Name="TitleTextBlock"
                                    VerticalAlignment="Center"
                                    FontSize="13"
@@ -178,8 +210,16 @@
                         </Ellipse>
                     </StackPanel>
                 </Border>
-                <Button x:Name="TrayCloseBtn"
+                <Button x:Name="SettingsBtn"
                         Grid.Column="1"
+                        Style="{StaticResource HeaderActionButtonStyle}"
+                        Click="Settings_Click"
+                        ToolTip="Configuration"
+                        Services:LocalizationService.SourceToolTip="Configuration">
+                    <Image x:Name="SettingsIcon" Width="17" Height="17"/>
+                </Button>
+                <Button x:Name="TrayCloseBtn"
+                        Grid.Column="2"
                         Width="24"
                         Height="24"
                         Background="Transparent"
@@ -215,7 +255,7 @@
 
             <!-- Grid Tools -->
             <StackPanel Grid.Row="1">
-                <!-- Primary row: Area + Video stay as large tiles (default actions) -->
+                <!-- Primary row: Area remains the large default capture tile. -->
                 <UniformGrid Columns="2">
                     <!-- Area Capture -->
                     <Button x:Name="AreaCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
@@ -225,40 +265,67 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- Screen Recorder (MP4) — paired with Area as the primary capture/record row -->
-                    <Button x:Name="VideoRecordBtn" Style="{StaticResource GridButtonStyle}" Click="VideoRecord_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="VideoRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="VideoRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <!-- Four capture shortcuts replacing the former large Record tile.
+                         This is only a layout host so each button owns its hover state. -->
+                    <Grid Margin="2">
+                        <UniformGrid Columns="2" Rows="2"
+                                     Width="82"
+                                     Height="76"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center">
+                            <Button x:Name="ScrollQuickBtn" Style="{StaticResource BottomButtonStyle}" Click="ScrollCapture_Click"
+                                    ToolTip="Scrolling capture" Height="34" Margin="1">
+                                <Image x:Name="ScrollQuickIcon" Width="22" Height="22" Stretch="Uniform"/>
+                            </Button>
+                            <Button x:Name="FullscreenBtn" Style="{StaticResource BottomButtonStyle}" Click="Fullscreen_Click"
+                                    ToolTip="Fullscreen capture" Height="34" Margin="1">
+                                <Image x:Name="FullscreenIcon" Width="22" Height="22" Stretch="Uniform"/>
+                            </Button>
+                            <Button x:Name="ActiveWindowBtn" Style="{StaticResource BottomButtonStyle}" Click="ActiveWindow_Click"
+                                    ToolTip="Active window" Height="34" Margin="1">
+                                <Image x:Name="ActiveWindowIcon" Width="22" Height="22" Stretch="Uniform"/>
+                            </Button>
+                            <Button x:Name="RepeatLastAreaBtn" Style="{StaticResource BottomButtonStyle}" Click="RepeatLastArea_Click"
+                                    ToolTip="Repeat last area" Height="34" Margin="1">
+                                <Image x:Name="RepeatLastAreaIcon" Width="22" Height="22" Stretch="Uniform"/>
+                            </Button>
+                        </UniformGrid>
+                    </Grid>
                 </UniformGrid>
+
+                <!-- Separate image-capture shortcuts from video recording controls. -->
+                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="8,4,8,4"/>
 
                 <!-- Secondary capture tools — compact tiles matching the bottom rows -->
                 <UniformGrid Columns="2">
-                    <!-- Scroll Capture -->
-                    <Button x:Name="ScrollCaptureBtn" Style="{StaticResource BottomButtonStyle}" Click="ScrollCapture_Click" Padding="8,8" Margin="4,2,2,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="ScrollCaptureIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="ScrollCaptureText"
+                    <!-- Screen Recorder (MP4) -->
+                    <Button x:Name="VideoRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="VideoRecord_Click" Padding="8,8" Margin="4,2,2,2">
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="VideoRecordIcon" Width="20" Height="20" Margin="0,2,0,0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                            <TextBlock x:Name="VideoRecordText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
 
-                    <!-- Screen Recorder (GIF) -->
                     <Button x:Name="GifRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="GifRecord_Click" Padding="8,8" Margin="2,2,4,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="GifRecordIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="GifRecordIcon" Width="20" Height="20" Margin="0,2,0,0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                             <TextBlock x:Name="GifRecordText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
@@ -269,53 +336,65 @@
                 <UniformGrid Columns="2">
                     <!-- OCR -->
                     <Button x:Name="OcrBtn" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="8,8" Margin="4,2,2,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="OcrIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="OcrIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                             <TextBlock x:Name="OcrText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
 
                     <!-- QR & Barcodes -->
                     <Button x:Name="QrBtn" Style="{StaticResource BottomButtonStyle}" Click="QrScan_Click" Padding="8,8" Margin="2,2,4,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="QrIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="QrIcon" Width="20" Height="20" Margin="0,2,0,0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                             <TextBlock x:Name="QrText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Color Picker -->
                     <Button x:Name="ColorPickerBtn" Style="{StaticResource BottomButtonStyle}" Click="ColorPicker_Click" Padding="8,8" Margin="4,2,2,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="ColorPickerIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="ColorPickerIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                             <TextBlock x:Name="ColorPickerText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Ruler -->
                     <Button x:Name="RulerBtn" Style="{StaticResource BottomButtonStyle}" Click="Ruler_Click" Padding="8,8" Margin="2,2,4,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="RulerIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="RulerIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                             <TextBlock x:Name="RulerText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
@@ -326,44 +405,50 @@
 
             <!-- Bottom Actions — compact tiles; larger icons/labels for accessibility. -->
             <StackPanel Grid.Row="3">
-                <!-- Editor & Gallery in the same row -->
+                <!-- Gallery & Editor in the same row -->
                 <UniformGrid Columns="2">
-                    <!-- Editor (left) -->
-                    <Button x:Name="AnnotationsBtn"
-                            Style="{StaticResource BottomButtonStyle}"
-                            Click="Annotations_Click"
-                            Padding="8,8"
-                            Margin="4,2,2,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="AnnotationsIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="AnnotationsText"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Gallery (right) -->
+                    <!-- Gallery (left) -->
                     <Button x:Name="GalleryBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Gallery_Click"
                             Padding="8,8"
-                            Margin="2,2,4,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="GalleryIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            Margin="4,2,2,2">
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="GalleryIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                             <TextBlock x:Name="GalleryText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Editor (right) -->
+                    <Button x:Name="AnnotationsBtn"
+                            Style="{StaticResource BottomButtonStyle}"
+                            Click="Annotations_Click"
+                            Padding="8,8"
+                            Margin="2,2,4,2">
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="AnnotationsIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                            <TextBlock x:Name="AnnotationsText"
+                                       Margin="8,0,0,0"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
 
-                <!-- Exit & Settings in the same row (compact: short labels + full tooltips) -->
+                <!-- Exit & Achievements in the same row -->
                 <UniformGrid Columns="2">
                     <!-- Exit (left) -->
                     <Button x:Name="ExitBtn"
@@ -371,31 +456,37 @@
                             Click="Exit_Click"
                             Padding="8,8"
                             Margin="4,2,2,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="ExitIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="ExitIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                             <TextBlock x:Name="ExitText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
 
-                    <!-- Settings (right) -->
-                    <Button x:Name="SettingsBtn"
+                    <!-- Achievements (right) -->
+                    <Button x:Name="AchievementsBtn"
                             Style="{StaticResource BottomButtonStyle}"
-                            Click="Settings_Click"
+                            Click="Achievements_Click"
                             Padding="8,8"
                             Margin="2,2,4,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="SettingsIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="SettingsText"
+                        <StackPanel Width="120" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Grid Width="28" HorizontalAlignment="Center">
+                                <Image x:Name="AchievementsIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                            <TextBlock x:Name="AchievementsText"
+                                       Margin="8,0,0,0"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="92"/>
+                                       MaxWidth="84"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
