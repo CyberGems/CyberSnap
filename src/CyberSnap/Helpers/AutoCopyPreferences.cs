@@ -9,7 +9,8 @@ public enum AutoCopyKind
     /// <summary>Legacy alias for <see cref="Video"/> (MP4).</summary>
     Recording,
     Video,
-    Gif
+    Gif,
+    Scan
 }
 
 /// <summary>
@@ -31,6 +32,7 @@ public static class AutoCopyPreferences
             AutoCopyKind.Ocr => !settings.AutoCopyExcludeOcr,
             AutoCopyKind.Recording or AutoCopyKind.Video => !settings.AutoCopyExcludeRecording,
             AutoCopyKind.Gif => !settings.AutoCopyExcludeGif,
+            AutoCopyKind.Scan => !settings.AutoCopyExcludeScan,
             _ => false
         };
     }
@@ -42,6 +44,7 @@ public static class AutoCopyPreferences
             AutoCopyKind.Ocr => settings.AutoCopyExcludeOcr,
             AutoCopyKind.Recording or AutoCopyKind.Video => settings.AutoCopyExcludeRecording,
             AutoCopyKind.Gif => settings.AutoCopyExcludeGif,
+            AutoCopyKind.Scan => settings.AutoCopyExcludeScan,
             _ => false
         };
 
@@ -67,6 +70,9 @@ public static class AutoCopyPreferences
                 break;
             case AutoCopyKind.Gif:
                 settings.AutoCopyExcludeGif = excluded;
+                break;
+            case AutoCopyKind.Scan:
+                settings.AutoCopyExcludeScan = excluded;
                 break;
         }
 

@@ -890,14 +890,26 @@ public partial class App
                             var decoded = BarcodeService.DecodeDetailed(scanned);
                             if (decoded is not null)
                             {
-                                var copySucceeded = TryCopyCaptureTextToClipboard(decoded.Text);
+                                var autoCopy = AutoCopyPreferences.ShouldCopy(
+                                    _settingsService!.Settings, AutoCopyKind.Scan);
+                                var copySucceeded = autoCopy && TryCopyCaptureTextToClipboard(decoded.Text);
                                 _historyService?.SaveCodeEntry(decoded.Text, decoded.Format.ToString());
                                 var prev = decoded.Text.Length > 100 ? decoded.Text[..100] + "..." : decoded.Text;
-                                var preview = BarcodeService.RenderPreview(decoded.Text, decoded.Format);
-                                var title = decoded.Format == ZXing.BarcodeFormat.QR_CODE
-                                    ? copySucceeded ? "QR Code copied" : "QR Code found"
-                                    : copySucceeded ? "Barcode copied" : "Barcode found";
-                                ToastWindow.ShowInlinePreview(preview, title, prev, suppressSound: true);
+                                if (autoCopy && copySucceeded)
+                                {
+                                    var preview = BarcodeService.RenderPreview(decoded.Text, decoded.Format);
+                                    var title = decoded.Format == ZXing.BarcodeFormat.QR_CODE
+                                        ? "QR Code copied"
+                                        : "Barcode copied";
+                                    ToastWindow.ShowInlinePreview(preview, title, prev, suppressSound: true);
+                                }
+                                else
+                                {
+                                    var previewSource = BitmapPerf.ToBitmapSource(scanned);
+                                    var window = new QrResultWindow(
+                                        decoded.Text, decoded.Format, _settingsService, previewSource);
+                                    window.Show();
+                                }
                                 MarkFirstTime(_settingsService!.Settings.HasFirstScan,
                                     () => _settingsService!.Settings.HasFirstScan = true, "First scan", "scan");
                             }
@@ -905,7 +917,7 @@ public partial class App
                             {
                                 ToastWindow.Show(
                                     LocalizationService.Translate("Scan"),
-                                    LocalizationService.Translate("No QR/barcode found"));
+                                    LocalizationService.Translate("No QR or Barcode found: Try again"));
                             }
                         }
                         catch (Exception ex)
@@ -937,6 +949,7 @@ public partial class App
 
                 bool handoffStandalonePicker = false;
                 bool handoffStandaloneOcr = false;
+                bool handoffStandaloneScan = false;
                 bool handoffStandaloneRuler = false;
 
                 overlay.StandaloneColorPickerRequested += () =>
@@ -954,6 +967,15 @@ public partial class App
                     // Close the frozen overlay first so standalone OCR captures the
                     // live desktop and uses the same flow as its dedicated hotkey/tray action.
                     handoffStandaloneOcr = true;
+                    overlay.Hide();
+                    overlay.Close();
+                };
+
+                overlay.StandaloneScanRequested += () =>
+                {
+                    // Close the frozen overlay first so standalone scanning captures the
+                    // live desktop and uses the same flow as its dedicated hotkey/tray action.
+                    handoffStandaloneScan = true;
                     overlay.Hide();
                     overlay.Close();
                 };
@@ -1014,6 +1036,8 @@ public partial class App
                             OnStandaloneColorPickerHotkeyPressed();
                         else if (handoffStandaloneOcr)
                             OnStandaloneOcrHotkeyPressed();
+                        else if (handoffStandaloneScan)
+                            OnStandaloneScanHotkeyPressed();
                         else if (handoffStandaloneRuler)
                             OnStandaloneRulerHotkeyPressed();
                     });

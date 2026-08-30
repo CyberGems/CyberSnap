@@ -1118,6 +1118,26 @@ public partial class SettingsWindow
             });
     }
 
+    private void AutoCopyExcludeScanCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange || _suppressAutoCopyPreferenceChange) return;
+
+        var previous = _settingsService.Settings.AutoCopyExcludeScan;
+        var selected = AutoCopyExcludeScanCheck.IsChecked == true;
+        UpdateCaptureSavePreference(
+            "settings.auto-copy-exclude-scan",
+            "Don't auto-copy QR/barcode results",
+            previous,
+            selected,
+            value => AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Scan, value),
+            value => AutoCopyExcludeScanCheck.IsChecked = value,
+            () =>
+            {
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+            });
+    }
+
     public void RefreshAutoCopyChecks()
     {
         if (!Dispatcher.CheckAccess())
@@ -1137,6 +1157,7 @@ public partial class SettingsWindow
                 _settingsService.Settings.AutoCopyExcludeOcr = fresh.AutoCopyExcludeOcr;
                 _settingsService.Settings.AutoCopyExcludeRecording = fresh.AutoCopyExcludeRecording;
                 _settingsService.Settings.AutoCopyExcludeGif = fresh.AutoCopyExcludeGif;
+                _settingsService.Settings.AutoCopyExcludeScan = fresh.AutoCopyExcludeScan;
                 _settingsService.Settings.OcrAutoCopyToClipboard = fresh.OcrAutoCopyToClipboard;
                 _settingsService.Settings.AfterCapture = fresh.AfterCapture;
             }
@@ -1174,6 +1195,8 @@ public partial class SettingsWindow
                 AutoCopyExcludeImagesCheck.IsChecked = s.AutoCopyExcludeImages;
             if (AutoCopyExcludeOcrCheck != null)
                 AutoCopyExcludeOcrCheck.IsChecked = s.AutoCopyExcludeOcr;
+            if (AutoCopyExcludeScanCheck != null)
+                AutoCopyExcludeScanCheck.IsChecked = s.AutoCopyExcludeScan;
             UpdateAutoCopyExcludeEnabledState();
             AfterCaptureOutcomeEditor?.LoadFromSettings(s);
             VideoOutcomeEditor?.LoadFromSettings(s);
@@ -1207,6 +1230,7 @@ public partial class SettingsWindow
 
         Apply(AutoCopyExcludeImagesRow, AutoCopyExcludeImagesCheck);
         Apply(AutoCopyExcludeOcrRow, AutoCopyExcludeOcrCheck);
+        Apply(AutoCopyExcludeScanRow, AutoCopyExcludeScanCheck);
     }
 
     private void WidgetCaptureCursorCheck_Changed(object sender, RoutedEventArgs e)

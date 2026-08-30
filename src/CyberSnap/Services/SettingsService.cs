@@ -124,6 +124,7 @@ public sealed class SettingsService : IDisposable
                 s_cachedSettings.AutoCopyExcludeOcr = settings.AutoCopyExcludeOcr;
                 s_cachedSettings.AutoCopyExcludeRecording = settings.AutoCopyExcludeRecording;
                 s_cachedSettings.AutoCopyExcludeGif = settings.AutoCopyExcludeGif;
+                s_cachedSettings.AutoCopyExcludeScan = settings.AutoCopyExcludeScan;
                 s_cachedSettings.OcrAutoCopyToClipboard = settings.OcrAutoCopyToClipboard;
                 s_cachedSettings.AfterCapture = settings.AfterCapture;
                 s_cachedSettings.OpenEditorAfterCapture = settings.OpenEditorAfterCapture;

@@ -319,6 +319,13 @@ public sealed partial class RegionOverlayForm
                         HideToolbarTooltip();
                         StandaloneOcrRequested.Invoke();
                     }
+                    else if (!_isConfirmingSelection &&
+                        tool.Mode == CaptureMode.Scan &&
+                        StandaloneScanRequested is not null)
+                    {
+                        HideToolbarTooltip();
+                        StandaloneScanRequested.Invoke();
+                    }
                     else if (tool.Mode.HasValue)
                     {
                         SetTool(tool);

@@ -227,6 +227,7 @@ public sealed class StandaloneScanForm : Form
         {
             using var cropped = _screenshot.Clone(_selectionRect, _screenshot.PixelFormat);
             var decoded = BarcodeService.DecodeDetailed(cropped);
+            var previewSource = decoded is null ? null : BitmapPerf.ToBitmapSource(cropped);
 
             // Close overlay first so screenshot is released
             Close();
@@ -245,13 +246,25 @@ public sealed class StandaloneScanForm : Form
                 {
                     try
                     {
-                        var copySucceeded = TryCopyToClipboard(decoded.Text);
+                        var settingsService = GetSettingsService();
+                        var autoCopy = AutoCopyPreferences.ShouldCopy(
+                            settingsService.Settings, AutoCopyKind.Scan);
+                        var copySucceeded = autoCopy && TryCopyToClipboard(decoded.Text);
                         var preview = decoded.Text.Length > 100 ? decoded.Text[..100] + "..." : decoded.Text;
-                        var bmp = BarcodeService.RenderPreview(decoded.Text, decoded.Format);
-                        var title = decoded.Format == ZXing.BarcodeFormat.QR_CODE
-                            ? copySucceeded ? "QR Code copied" : "QR Code found"
-                            : copySucceeded ? "Barcode copied" : "Barcode found";
-                        ToastWindow.ShowInlinePreview(bmp, title, preview, suppressSound: true);
+                        if (autoCopy && copySucceeded)
+                        {
+                            var bmp = BarcodeService.RenderPreview(decoded.Text, decoded.Format);
+                            var title = decoded.Format == ZXing.BarcodeFormat.QR_CODE
+                                ? "QR Code copied"
+                                : "Barcode copied";
+                            ToastWindow.ShowInlinePreview(bmp, title, preview, suppressSound: true);
+                        }
+                        else
+                        {
+                            var window = new QrResultWindow(
+                                decoded.Text, decoded.Format, settingsService, previewSource);
+                            window.Show();
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -265,7 +278,7 @@ public sealed class StandaloneScanForm : Form
                 {
                     ToastWindow.Show(
                         LocalizationService.Translate("Scan"),
-                        LocalizationService.Translate("No QR & Barcode found"));
+                        LocalizationService.Translate("No QR or Barcode found: Try again"));
                 });
             }
         }
@@ -328,5 +341,12 @@ public sealed class StandaloneScanForm : Form
         {
             return false;
         }
+    }
+
+    private static SettingsService GetSettingsService()
+    {
+        var service = new SettingsService();
+        service.Load();
+        return service;
     }
 }
