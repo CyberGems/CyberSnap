@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Linq;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
@@ -54,6 +55,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private readonly List<Annotation> _annotations = new();
     private readonly List<IEditCommand> _undoStack = new();
     private readonly List<IEditCommand> _redoStack = new();
+    private readonly List<CommandViewSnapshot> _undoViews = new();
+    private readonly List<CommandViewSnapshot> _redoViews = new();
+    private System.Windows.Forms.Timer? _historyRevealTimer;
+    private Action? _pendingHistoryCommit;
+    private IEditCommand? _pendingHistoryCommand;
+    private const int HistoryRevealDelayMs = 120;
 
     private double _zoom = 1.0;
     private PointF _pan; // pixel offset of image-space origin relative to control client
@@ -1012,19 +1019,15 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             }
         }
 
+        CommitPendingHistory();
         if (IsDefaultBlank)
         {
             IsDefaultBlank = false;
         }
+        var beforeView = CaptureView();
+        var beforeSel = CaptureSelection();
         command.Apply(this);
-        _undoStack.Add(command);
-        if (_undoStack.Count > _undoStackLimit)
-        {
-            var dropped = _undoStack[0];
-            _undoStack.RemoveAt(0);
-            dropped.Dispose();
-        }
-        ClearRedo();
+        RecordUndo(command, beforeView, beforeSel);
         _isDirty = true;
         OnStateChanged();
     }
@@ -1035,52 +1038,276 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// won't prompt to save on close (the IsDefaultBlank guard short-circuits both).</summary>
     private void PushClean(IEditCommand command)
     {
+        CommitPendingHistory();
+        var beforeView = CaptureView();
+        var beforeSel = CaptureSelection();
         command.Apply(this);
-        _undoStack.Add(command);
-        if (_undoStack.Count > _undoStackLimit)
-        {
-            var dropped = _undoStack[0];
-            _undoStack.RemoveAt(0);
-            dropped.Dispose();
-        }
-        ClearRedo();
+        RecordUndo(command, beforeView, beforeSel);
         OnStateChanged();
     }
 
     public void Undo()
     {
+        CommitPendingHistory();
         if (_undoStack.Count == 0) return;
         var cmd = _undoStack[^1];
+        var views = _undoViews[^1];
         _undoStack.RemoveAt(_undoStack.Count - 1);
-        cmd.Revert(this);
-        _redoStack.Add(cmd);
-        _isDirty = true;
-        OnStateChanged();
+        _undoViews.RemoveAt(_undoViews.Count - 1);
+        PlayHistoryStep(cmd, views, undo: true);
     }
 
     public void Redo()
     {
+        CommitPendingHistory();
         if (_redoStack.Count == 0) return;
         var cmd = _redoStack[^1];
+        var views = _redoViews[^1];
         _redoStack.RemoveAt(_redoStack.Count - 1);
-        cmd.Apply(this);
-        _undoStack.Add(cmd);
-        _isDirty = true;
-        OnStateChanged();
+        _redoViews.RemoveAt(_redoViews.Count - 1);
+        PlayHistoryStep(cmd, views, undo: false);
+    }
+
+    private void PlayHistoryStep(IEditCommand cmd, CommandViewSnapshot views, bool undo)
+    {
+        var targetView = undo ? views.Before : views.After;
+        bool moved = ShouldRestoreView(views.AffectedBounds) && RestoreView(targetView);
+        void ApplyEdit()
+        {
+            if (undo) cmd.Revert(this); else cmd.Apply(this);
+            RestoreSelection(undo ? views.BeforeSelection : views.AfterSelection);
+            if (undo)
+            {
+                _redoStack.Add(cmd);
+                _redoViews.Add(views);
+            }
+            else
+            {
+                _undoStack.Add(cmd);
+                _undoViews.Add(views);
+            }
+            _isDirty = true;
+            OnStateChanged();
+        }
+
+        if (moved)
+        {
+            OnStateChanged();
+            ScheduleHistoryCommit(cmd, ApplyEdit);
+        }
+        else
+        {
+            ApplyEdit();
+        }
+    }
+
+    private void ScheduleHistoryCommit(IEditCommand cmd, Action commit)
+    {
+        _pendingHistoryCommand = cmd;
+        _pendingHistoryCommit = commit;
+        if (_historyRevealTimer is null)
+        {
+            _historyRevealTimer = new System.Windows.Forms.Timer { Interval = HistoryRevealDelayMs };
+            _historyRevealTimer.Tick += (_, _) =>
+            {
+                _historyRevealTimer!.Stop();
+                CommitPendingHistory();
+            };
+        }
+        _historyRevealTimer.Stop();
+        _historyRevealTimer.Start();
+    }
+
+    private void CommitPendingHistory()
+    {
+        _historyRevealTimer?.Stop();
+        var action = _pendingHistoryCommit;
+        _pendingHistoryCommit = null;
+        _pendingHistoryCommand = null;
+        action?.Invoke();
+    }
+
+    private void DiscardPendingHistory()
+    {
+        _historyRevealTimer?.Stop();
+        _pendingHistoryCommit = null;
+        _pendingHistoryCommand?.Dispose();
+        _pendingHistoryCommand = null;
+    }
+
+    private void RecordUndo(IEditCommand command, CanvasViewSnapshot beforeView, SelectionSnapshot beforeSel)
+    {
+        _undoStack.Add(command);
+        _undoViews.Add(new CommandViewSnapshot(
+            beforeView,
+            CaptureView(),
+            beforeSel,
+            CaptureSelection(),
+            GetCommandAffectedBounds(command)));
+        if (_undoStack.Count > _undoStackLimit)
+        {
+            _undoStack[0].Dispose();
+            _undoStack.RemoveAt(0);
+            _undoViews.RemoveAt(0);
+        }
+        ClearRedo();
+    }
+
+    /// <summary>Call after Push when the caller then changes selection (e.g. duplicate).</summary>
+    private void RefreshLastUndoAfterSelection()
+    {
+        if (_undoViews.Count == 0) return;
+        var snap = _undoViews[^1];
+        _undoViews[^1] = snap with { AfterSelection = CaptureSelection() };
+    }
+
+    private readonly record struct CanvasViewSnapshot(
+        double Zoom, float PanX, float PanY, bool ViewFitsWindow, bool UserPanned);
+
+    private readonly record struct SelectionSnapshot(int Primary, int[] Multi);
+
+    private readonly record struct CommandViewSnapshot(
+        CanvasViewSnapshot Before,
+        CanvasViewSnapshot After,
+        SelectionSnapshot BeforeSelection,
+        SelectionSnapshot AfterSelection,
+        Rectangle AffectedBounds);
+
+    private CanvasViewSnapshot CaptureView()
+        => new(_zoom, _pan.X, _pan.Y, _viewFitsWindow, _userPanned);
+
+    private SelectionSnapshot CaptureSelection()
+    {
+        int[] multi = _multiSelectedIndices.Count > 0
+            ? _multiSelectedIndices.ToArray()
+            : [];
+        return new SelectionSnapshot(_selectedAnnotationIndex, multi);
+    }
+
+    private void RestoreSelection(in SelectionSnapshot sel)
+    {
+        _selectOriginalAnnotation = null;
+        _selectResizeOriginalAnnotation = null;
+        _isSelectResizing = false;
+        _selectResizeHandle = -1;
+        _multiDragOriginals = null;
+        _multiSelectedIndices.Clear();
+
+        int count = _annotations.Count;
+        foreach (int i in sel.Multi)
+        {
+            if (i >= 0 && i < count)
+                _multiSelectedIndices.Add(i);
+        }
+
+        int primary = sel.Primary;
+        if (primary < 0 || primary >= count)
+            primary = -1;
+        _selectedAnnotationIndex = primary;
+
+        if (_multiSelectedIndices.Count == 1 && _selectedAnnotationIndex < 0)
+            _selectedAnnotationIndex = _multiSelectedIndices.First();
+
+        Invalidate();
+    }
+
+    private static Rectangle GetCommandAffectedBounds(IEditCommand command) => command switch
+    {
+        AddAnnotationCommand c => AnnotationTransforms.GetBounds(c.Annotation),
+        DeleteAnnotationCommand c => AnnotationTransforms.GetBounds(c.Annotation),
+        ReplaceAnnotationCommand c => UnionBounds(
+            AnnotationTransforms.GetBounds(c.Original),
+            AnnotationTransforms.GetBounds(c.Replacement)),
+        TransformAnnotationCommand c => UnionBounds(
+            AnnotationTransforms.GetBounds(c.Original),
+            AnnotationTransforms.GetBounds(AnnotationTransforms.Translate(c.Original, c.Dx, c.Dy))),
+        AddMultipleAnnotationsCommand c => UnionAnnotationBounds(c.Items),
+        DeleteMultipleAnnotationsCommand c => UnionAnnotationBounds(c.Items.Select(x => x.Annotation)),
+        TransformMultipleAnnotationsCommand c => UnionBounds(
+            UnionAnnotationBounds(c.Items.Select(x => x.Original)),
+            UnionAnnotationBounds(c.Items.Select(x => AnnotationTransforms.Translate(x.Original, c.Dx, c.Dy)))),
+        EraseCommand c => c.EraseRect,
+        _ => Rectangle.Empty,
+    };
+
+    private static Rectangle UnionAnnotationBounds(IEnumerable<Annotation> items)
+    {
+        var union = Rectangle.Empty;
+        foreach (var a in items)
+            union = UnionBounds(union, AnnotationTransforms.GetBounds(a));
+        return union;
+    }
+
+    private static Rectangle UnionBounds(Rectangle a, Rectangle b)
+    {
+        if (a.IsEmpty) return b;
+        if (b.IsEmpty) return a;
+        return Rectangle.Union(a, b);
+    }
+
+    /// <summary>
+    /// True when the edit is off-screen, so the camera should jump to the stored view.
+    /// Empty bounds mean a canvas-wide change (crop, rotate, resize) — always restore the stored view.
+    /// </summary>
+    private bool ShouldRestoreView(Rectangle affectedBounds)
+    {
+        if (affectedBounds.IsEmpty) return true;
+        if (ClientSize.Width <= 0 || ClientSize.Height <= 0) return true;
+
+        var visible = GetVisibleImageRect();
+        visible.Inflate(16, 16);
+        var padded = affectedBounds;
+        padded.Inflate(16, 16);
+        return !visible.IntersectsWith(padded);
+    }
+
+    private Rectangle GetVisibleImageRect()
+    {
+        var topLeft = ScreenToImage(Point.Empty);
+        var bottomRight = ScreenToImage(new Point(ClientSize.Width, ClientSize.Height));
+        int x = Math.Min(topLeft.X, bottomRight.X);
+        int y = Math.Min(topLeft.Y, bottomRight.Y);
+        return Rectangle.FromLTRB(x, y, Math.Max(topLeft.X, bottomRight.X), Math.Max(topLeft.Y, bottomRight.Y));
+    }
+
+    /// <returns>True if zoom/pan actually changed.</returns>
+    private bool RestoreView(in CanvasViewSnapshot view)
+    {
+        bool zoomChanged = Math.Abs(_zoom - view.Zoom) > 1e-6;
+        if (!zoomChanged
+            && _pan.X == view.PanX
+            && _pan.Y == view.PanY
+            && _viewFitsWindow == view.ViewFitsWindow
+            && _userPanned == view.UserPanned)
+            return false;
+
+        _zoom = view.Zoom;
+        _pan = new PointF(view.PanX, view.PanY);
+        _viewFitsWindow = view.ViewFitsWindow;
+        _userPanned = view.UserPanned;
+        if (zoomChanged)
+            InvalidateScaledCache();
+        NotifyScrollbarActivity();
+        Invalidate();
+        return true;
     }
 
     private void ClearRedo()
     {
         foreach (var c in _redoStack) c.Dispose();
         _redoStack.Clear();
+        _redoViews.Clear();
     }
 
     private void ClearEditHistory()
     {
+        DiscardPendingHistory();
         foreach (var c in _undoStack) c.Dispose();
         foreach (var c in _redoStack) c.Dispose();
         _undoStack.Clear();
         _redoStack.Clear();
+        _undoViews.Clear();
+        _redoViews.Clear();
     }
 
     // ── Zoom / Pan ─────────────────────────────────────────────────────────
@@ -1475,6 +1702,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _bannerTimer?.Dispose();
             _zoomSettleTimer?.Stop();
             _zoomSettleTimer?.Dispose();
+            DiscardPendingHistory();
+            _historyRevealTimer?.Dispose();
+            _historyRevealTimer = null;
             _resizeHandlesTimer?.Stop();
             _resizeHandlesTimer?.Dispose();
             DisposeScrollbarTimers();

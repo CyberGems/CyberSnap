@@ -2776,6 +2776,9 @@ internal sealed class EditorCommandButton : Button
                  ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw |
                  ControlStyles.Selectable, true);
+        // Rapid undo/redo clicks must not synthesize DoubleClick; when the last step
+        // disables the button, a leftover DBLCLK on the parent bar would maximize the window.
+        SetStyle(ControlStyles.StandardDoubleClick, false);
         FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;

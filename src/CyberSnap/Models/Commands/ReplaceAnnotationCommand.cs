@@ -14,6 +14,9 @@ public sealed class ReplaceAnnotationCommand : IEditCommand
         _replacement = replacement;
     }
 
+    internal Annotation Original => _original;
+    internal Annotation Replacement => _replacement;
+
     public string Description => $"Replace {_original.GetType().Name}";
 
     public void Apply(IEditorContext ctx)

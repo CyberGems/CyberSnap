@@ -15,6 +15,8 @@ public sealed class EraseCommand : IEditCommand
         _eraseRect = eraseRect;
     }
 
+    internal Rectangle EraseRect => _eraseRect;
+
     public string Description => "Erase";
 
     public void Apply(IEditorContext ctx)

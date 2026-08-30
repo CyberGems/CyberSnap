@@ -18,6 +18,10 @@ public sealed class TransformAnnotationCommand : IEditCommand
         _dy = dy;
     }
 
+    internal Annotation Original => _original;
+    internal int Dx => _dx;
+    internal int Dy => _dy;
+
     public string Description => "Move annotation";
 
     public void Apply(IEditorContext ctx)

@@ -2403,6 +2403,16 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (e.Button != MouseButtons.Left)
             return;
 
+        // Disabled toolbar buttons (e.g. Undo after the last step) do not receive mouse
+        // messages; the click lands on the title/command bar. Ignore those hits so a
+        // rapid double-click does not maximize/restore the window.
+        if (sender is Control host)
+        {
+            var hit = host.GetChildAtPoint(e.Location, GetChildAtPointSkip.Invisible);
+            if (hit != null)
+                return;
+        }
+
         if (e.Clicks > 1)
         {
             ToggleWindowState();

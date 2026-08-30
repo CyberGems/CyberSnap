@@ -14,6 +14,8 @@ public sealed class AddMultipleAnnotationsCommand : IEditCommand
         _annotations = annotations.ToArray();
     }
 
+    internal IReadOnlyList<Annotation> Items => _annotations;
+
     public string Description => $"Add {_annotations.Length} annotations";
 
     public void Apply(IEditorContext ctx)
