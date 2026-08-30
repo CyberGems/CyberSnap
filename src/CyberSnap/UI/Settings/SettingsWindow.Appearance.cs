@@ -593,6 +593,38 @@ public partial class SettingsWindow
         GifOutcomeEditor?.RefreshLocalization();
         UpdateWindowTitle();
         RefreshSettingsFooterVersion();
+
+        foreach (Window w in Application.Current.Windows)
+        {
+            if (w == this || !w.IsLoaded) continue;
+            try
+            {
+                if (w is QrResultWindow qrWin)
+                    qrWin.RefreshLocalization();
+                if (w is OcrResultWindow ocrWin)
+                    ocrWin.RefreshLocalization();
+                if (w is AchievementsWindow achWin)
+                    achWin.RefreshLocalization();
+                if (w is AboutWindow aw)
+                    aw.RefreshLocalization();
+            }
+            catch (Exception ex)
+            {
+                Services.AppDiagnostics.LogWarning("settings.lang-refresh-window", $"Failed to refresh {w.GetType().Name}", ex);
+            }
+        }
+
+        if (CyberSnap.UI.Editor.EditorForm.ActiveInstance is { } editor)
+        {
+            try
+            {
+                editor.RefreshLocalization();
+            }
+            catch (Exception ex)
+            {
+                Services.AppDiagnostics.LogWarning("settings.lang-refresh-editor", "Failed to refresh EditorForm localization", ex);
+            }
+        }
     }
 
     private void RefreshSettingsFooterVersion()
@@ -681,6 +713,18 @@ public partial class SettingsWindow
 
                         if (w is VideoTrimmerWindow vtw && vtw.IsLoaded)
                             vtw.ApplyTheme();
+
+                        if (w is AchievementsWindow achWin && achWin.IsLoaded)
+                        {
+                            achWin.ApplyThemeColors();
+                            achWin.RefreshAchievementContent(revealRail: false);
+                        }
+
+                        if (w is QrResultWindow qrWin && qrWin.IsLoaded)
+                            qrWin.ApplyTheme();
+
+                        if (w is OcrResultWindow ocrWin && ocrWin.IsLoaded)
+                            ocrWin.ApplyTheme();
                     }
                     catch (Exception ex)
                     {

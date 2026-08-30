@@ -16,7 +16,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License" />
   <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4.svg?logo=windows&logoColor=white" alt="Platform" />
-  <img src="https://img.shields.io/badge/version-1.10.0-00F0FF.svg" alt="Version" />
+  <img src="https://img.shields.io/badge/version-1.11.0-00F0FF.svg" alt="Version" />
   <img src="https://img.shields.io/badge/.NET-9-512BD4.svg?logo=dotnet&logoColor=white" alt=".NET" />
 </p>
 

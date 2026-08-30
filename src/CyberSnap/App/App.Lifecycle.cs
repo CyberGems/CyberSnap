@@ -344,6 +344,14 @@ public partial class App
             _aboutWindow?.RefreshLocalization();
             _achievementsWindow?.RefreshLocalization();
             UI.Editor.EditorForm.ActiveInstance?.RefreshLocalization();
+
+            foreach (Window w in Application.Current.Windows)
+            {
+                if (w is UI.QrResultWindow qrWin && qrWin.IsLoaded)
+                    qrWin.RefreshLocalization();
+                if (w is UI.OcrResultWindow ocrWin && ocrWin.IsLoaded)
+                    ocrWin.RefreshLocalization();
+            }
         };
         win.HotkeyChanged += hotkeyHandler;
         win.LocalizationChanged += localizationHandler;

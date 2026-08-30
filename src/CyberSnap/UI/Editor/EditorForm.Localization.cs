@@ -29,7 +29,11 @@ public sealed partial class EditorForm
         }
 
         foreach (var (button, labelKey) in _localizedCommandButtons)
+        {
             button.Text = LocalizationService.Translate(labelKey);
+            button.RecalculateWidth();
+            button.Invalidate();
+        }
 
         if (_toggleFrameSwitch is not null)
             _toggleFrameSwitch.LabelText = LocalizationService.Translate("Border");

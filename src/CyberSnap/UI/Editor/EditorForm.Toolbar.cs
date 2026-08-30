@@ -2707,6 +2707,25 @@ internal sealed class EditorCommandButton : Button
         TabStop = true;
     }
 
+    public void RecalculateWidth()
+    {
+        if (string.IsNullOrEmpty(Text)) return;
+        try
+        {
+            using var g = CreateGraphics();
+            using var font = Font ?? UiChrome.ChromeFont(8.5f, FontStyle.Bold);
+            var size = TextRenderer.MeasureText(g, Text, font);
+            Width = Math.Max(74, size.Width + 18);
+        }
+        catch { }
+    }
+
+    protected override void OnTextChanged(EventArgs e)
+    {
+        base.OnTextChanged(e);
+        RecalculateWidth();
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;

@@ -24,14 +24,11 @@ namespace CyberSnap.UI;
 // celebration toast (see ApplyCelebrationVisual in ToastWindow.xaml.cs), then settles back to calm.
 public partial class AchievementsWindow
 {
-    // Neon palette shared with the celebration toast sweep.
-    private static MediaColor RailCyan => Theme.IsGray
-        ? MediaColor.FromRgb(0xB8, 0xBE, 0xC6)
-        : Theme.IsDark
-            ? MediaColor.FromRgb(0x00, 0xF2, 0xFF)
-            : MediaColor.FromRgb(0x00, 0x80, 0xFF);
-    private static readonly MediaColor RailPurple = MediaColor.FromRgb(0x7A, 0x00, 0xFF);
-    private static readonly MediaColor RailMagenta = MediaColor.FromRgb(0xFF, 0x00, 0xD0);
+    private static MediaColor RailCyan => Theme.IsDark
+        ? MediaColor.FromRgb(0x00, 0xF2, 0xFF)
+        : MediaColor.FromRgb(0x00, 0x80, 0xFF);
+    private static MediaColor RailPurple => MediaColor.FromRgb(0x8B, 0x5C, 0xF6);
+    private static MediaColor RailMagenta => MediaColor.FromRgb(0xEC, 0x48, 0x99);
 
     private const double RailYCenter = 11;   // vertical center of the track within the canvas
     private const double RailPad = 9;         // horizontal inset so the end nodes aren't clipped

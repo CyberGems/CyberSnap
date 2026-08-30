@@ -222,7 +222,7 @@ public partial class App
                         // Count toward milestones; any earned celebration shows as a separate
                         // delayed follow-up toast, so the recording toast keeps its own text.
                         CelebrateCaptureIfEarned(s, CaptureKind.Recording);
-                        MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true, "First recording", "record");
+                        MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true, "First recording", "record", d => s.FirstRecordingAt = d);
 
                         if (openTrimmer)
                         {
@@ -377,7 +377,7 @@ public partial class App
                     {
                         HandleCaptureResult(result);
                         MarkFirstTime(_settingsService!.Settings.HasFirstScrollingCapture,
-                            () => _settingsService!.Settings.HasFirstScrollingCapture = true, "First scrolling capture", "scrollCapture");
+                            () => _settingsService!.Settings.HasFirstScrollingCapture = true, "First scrolling capture", "scrollCapture", d => _settingsService!.Settings.FirstScrollCaptureAt = d);
                         ScheduleIdleMemoryTrim();
                     });
                 };
@@ -911,7 +911,7 @@ public partial class App
                                     window.Show();
                                 }
                                 MarkFirstTime(_settingsService!.Settings.HasFirstScan,
-                                    () => _settingsService!.Settings.HasFirstScan = true, "First scan", "scan");
+                                    () => _settingsService!.Settings.HasFirstScan = true, "First scan", "scan", d => _settingsService!.Settings.FirstScanAt = d);
                             }
                             else
                             {
@@ -1005,7 +1005,7 @@ public partial class App
                             EnsureHistoryService().SaveColorEntry(bare);
 
                         MarkFirstTime(_settingsService.Settings.HasFirstColorPicker,
-                            () => _settingsService.Settings.HasFirstColorPicker = true, "First color pick", "picker");
+                            () => _settingsService.Settings.HasFirstColorPicker = true, "First color pick", "picker", d => _settingsService.Settings.FirstColorPickerAt = d);
                     });
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
