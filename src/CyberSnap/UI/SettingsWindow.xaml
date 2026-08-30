@@ -1794,6 +1794,28 @@
                                           Services:LocalizationService.SourceToolTip="When global Auto-copy is on, still don't copy image captures."
                                           Checked="AutoCopyExcludeImagesCheck_Changed" Unchecked="AutoCopyExcludeImagesCheck_Changed"/>
                             </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="AutoCopyExcludeScanRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE1DE;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Don't auto-copy QR/barcode results" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Don't auto-copy QR/barcode results"/>
+                                    <TextBlock Text="When global Auto-copy is on, still don't copy scanned codes." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="When global Auto-copy is on, still don't copy scanned codes."/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoCopyExcludeScanCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Don't auto-copy QR/barcode results"
+                                          ToolTip="When global Auto-copy is on, still don't copy scanned codes."
+                                          Services:LocalizationService.SourceToolTip="When global Auto-copy is on, still don't copy scanned codes."
+                                          Checked="AutoCopyExcludeScanCheck_Changed" Unchecked="AutoCopyExcludeScanCheck_Changed"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
 

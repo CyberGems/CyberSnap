@@ -47,6 +47,7 @@
     <Resource Include="Assets\Icons\Editor.ico" />
     <Resource Include="Assets\Icons\Gallery.ico" />
     <Resource Include="Assets\Icons\OCR.ico" />
+    <Resource Include="Assets\Icons\QR.ico" />
     <Resource Include="Assets\Icons\Preview.ico" />
     <Resource Include="Assets\Icons\Trimmer.ico" />
     <None Include="Assets\Icons\*.ico">

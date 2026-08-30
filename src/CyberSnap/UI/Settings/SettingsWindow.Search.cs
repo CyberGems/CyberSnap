@@ -900,6 +900,7 @@ public partial class SettingsWindow
             "autocopy"                  => AfterCaptureOutcomeEditor,
             "autocopyexcludeimages"     => AutoCopyExcludeImagesCheck,
             "autocopyexcludeocr"        => AutoCopyExcludeOcrCheck,
+            "autocopyexcludescan"       => AutoCopyExcludeScanCheck,
             "autocopyexcluderecording"  => VideoOutcomeEditor,
             "autocopyexcludegif"        => GifOutcomeEditor,
             // General / Saving (SaveToFile is toggled via Capture after-capture pill)

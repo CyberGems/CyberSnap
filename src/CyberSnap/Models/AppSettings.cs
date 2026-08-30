@@ -255,6 +255,9 @@ public sealed class AppSettings
     /// <summary>When true, GIF files are not auto-copied even if the global master is on.</summary>
     public bool AutoCopyExcludeGif { get; set; } = true;
 
+    /// <summary>When true, QR/barcode results are not auto-copied even if the global master is on.</summary>
+    public bool AutoCopyExcludeScan { get; set; } = true;
+
     /// <summary>
     /// 0 = not yet migrated from AfterCapture.Copy / OcrAutoCopyToClipboard.
     /// 1 = global auto-copy schema.
