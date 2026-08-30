@@ -301,48 +301,48 @@ public sealed partial class AnnotationCanvas
             g.DrawRectangle(dashPen, rect.X, rect.Y, rect.Width, rect.Height);
         }
 
-        if (moveOnly) return;
-
-        // Figma-style handles: crisp white squares with 1.5px accent border and subtle drop shadow
         float screenW = bounds.Width * z;
         float screenH = bounds.Height * z;
-        float hSize = ((screenW < 28 || screenH < 28) ? 6f : 8f) / z;
-        float hHalf = hSize / 2f;
-
-        using var shadowBrush = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
-        using var whiteBrush  = new SolidBrush(Color.White);
-        using var handlePen   = new Pen(accentColor, 1.5f / z);
-
-        void DrawHandle(float cx, float cy)
-        {
-            var hr = new RectangleF(cx - hHalf, cy - hHalf, hSize, hSize);
-            g.FillRectangle(shadowBrush, hr.X + 0.8f / z, hr.Y + 1.2f / z, hr.Width, hr.Height);
-            g.FillRectangle(whiteBrush, hr);
-            g.DrawRectangle(handlePen, hr.X, hr.Y, hr.Width, hr.Height);
-        }
-
-        // 4 Corner handles
-        DrawHandle(rect.Left,  rect.Top);
-        DrawHandle(rect.Right, rect.Top);
-        DrawHandle(rect.Left,  rect.Bottom);
-        DrawHandle(rect.Right, rect.Bottom);
-
-        // Mid-edge handles only on larger objects (>= 56px in screen space)
-        bool showEdgeX = screenW >= 56;
-        bool showEdgeY = screenH >= 56;
         float midX = rect.Left + rect.Width / 2f;
         float midY = rect.Top + rect.Height / 2f;
 
-        if (showEdgeX)
+        if (!moveOnly)
         {
-            DrawHandle(midX, rect.Top);
-            DrawHandle(midX, rect.Bottom);
+            // Figma-style handles: crisp white squares with 1.5px accent border and subtle drop shadow
+            float hSize = ((screenW < 28 || screenH < 28) ? 6f : 8f) / z;
+            float hHalf = hSize / 2f;
+
+            using var shadowBrush = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
+            using var whiteBrush  = new SolidBrush(Color.White);
+            using var handlePen   = new Pen(accentColor, 1.5f / z);
+
+            void DrawHandle(float cx, float cy)
+            {
+                var hr = new RectangleF(cx - hHalf, cy - hHalf, hSize, hSize);
+                g.FillRectangle(shadowBrush, hr.X + 0.8f / z, hr.Y + 1.2f / z, hr.Width, hr.Height);
+                g.FillRectangle(whiteBrush, hr);
+                g.DrawRectangle(handlePen, hr.X, hr.Y, hr.Width, hr.Height);
+            }
+
+            DrawHandle(rect.Left,  rect.Top);
+            DrawHandle(rect.Right, rect.Top);
+            DrawHandle(rect.Left,  rect.Bottom);
+            DrawHandle(rect.Right, rect.Bottom);
+
+            if (screenW >= 56)
+            {
+                DrawHandle(midX, rect.Top);
+                DrawHandle(midX, rect.Bottom);
+            }
+            if (screenH >= 56)
+            {
+                DrawHandle(rect.Left,  midY);
+                DrawHandle(rect.Right, midY);
+            }
         }
-        if (showEdgeY)
-        {
-            DrawHandle(rect.Left,  midY);
-            DrawHandle(rect.Right, midY);
-        }
+
+        if (isSelected && WindowsHandleRenderer.FitsCenterPlus((int)screenW, (int)screenH))
+            WindowsHandleRenderer.PaintCenterPlus(g, new PointF(midX, midY), accentColor, 1f / z);
     }
 
     private void RenderAnnotation(Graphics g, Annotation a)

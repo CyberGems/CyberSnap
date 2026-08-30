@@ -3293,6 +3293,14 @@ public sealed partial class AnnotationCanvas
             }
         }
 
+        if ((annotationIndex == _selectedAnnotationIndex || _multiSelectedIndices.Contains(annotationIndex))
+            && WindowsHandleRenderer.FitsCenterPlus(selRect.Width, selRect.Height))
+        {
+            var center = new Point(selRect.X + selRect.Width / 2, selRect.Y + selRect.Height / 2);
+            if (WindowsHandleRenderer.CenterPlusHitRect(center).Contains(screenPt))
+                return 8;
+        }
+
         return -1;
     }
 }
