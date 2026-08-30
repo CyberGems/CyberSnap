@@ -2246,7 +2246,7 @@ namespace CyberSnap.UI
             }
             else
             {
-                CancelText.Text = LocalizationService.Translate("Done");
+                CancelText.Text = LocalizationService.Translate("Close");
                 ViewerHintBadge.Visibility = Visibility.Collapsed;
                 CancelBtn.ToolTip = WithHotkeyHint(
                     LocalizationService.Translate("Close this preview and continue with pending actions."),
