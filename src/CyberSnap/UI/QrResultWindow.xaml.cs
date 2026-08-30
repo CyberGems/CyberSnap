@@ -14,6 +14,7 @@ namespace CyberSnap.UI;
 public partial class QrResultWindow : Window
 {
     private readonly SettingsService _settingsService;
+    private readonly BarcodeFormat _format;
 
     public QrResultWindow(
         string codeText,
@@ -22,6 +23,7 @@ public partial class QrResultWindow : Window
         ImageSource? previewSource = null)
     {
         _settingsService = settingsService;
+        _format = format;
         InitializeComponent();
         CyberSnapWindowChrome.Apply(this);
         UiScale.Set(settingsService.Settings.UiScale);
@@ -34,18 +36,9 @@ public partial class QrResultWindow : Window
 
         Theme.Refresh();
         ApplyTheme();
-        LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
-        FormatText.Text = GetFormatLabel(format);
+        RefreshLocalization();
 
-        var language = settingsService.Settings.InterfaceLanguage;
-        WindowTitles.ApplyTaskbar(this, WindowTitles.Qr, language);
-        QrTitleBar.Title = LocalizationService.Translate(language, WindowTitles.Qr);
-        DetectedTypeLabel.Text = LocalizationService.Translate("Detected type");
-        ContentLabel.Text = LocalizationService.Translate("Code content");
-        PreviewUnavailableText.Text = LocalizationService.Translate("Source preview unavailable");
-        CopyButtonText.Text = LocalizationService.Translate("Copy and close");
-        CopyButton.ToolTip = LocalizationService.Translate("Copy this QR & Barcode text");
-        QrTitleBar.CloseToolTip = LocalizationService.Translate("Close");
+        Activated += (_, _) => ApplyTheme();
 
         Loaded += (_, _) =>
         {
@@ -100,8 +93,9 @@ public partial class QrResultWindow : Window
         Marshal.StructureToPtr(mmi, lParam, true);
     }
 
-    private void ApplyTheme()
+    public void ApplyTheme()
     {
+        Theme.Refresh();
         RootBorder.Background = Theme.Brush(Theme.BgPrimary);
         RootBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
         RootBorder.BorderThickness = new Thickness(1);
@@ -117,10 +111,29 @@ public partial class QrResultWindow : Window
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
         Icon = WindowIcons.Wpf(WindowIconKind.Qr);
+        QrTitleBar.RefreshIcons();
+    }
+
+    public void RefreshLocalization()
+    {
+        var language = _settingsService.Settings.InterfaceLanguage;
+        LocalizationService.ApplyCurrentCulture(language);
+        LocalizationService.ApplyTo(this, language);
+        WindowTitles.ApplyTaskbar(this, WindowTitles.Qr, language);
+        QrTitleBar.Title = LocalizationService.Translate(language, WindowTitles.Qr);
+        FormatText.Text = GetFormatLabel(_format);
+        DetectedTypeLabel.Text = LocalizationService.Translate(language, "Detected type");
+        ContentLabel.Text = LocalizationService.Translate(language, "Code content");
+        PreviewUnavailableText.Text = LocalizationService.Translate(language, "Source preview unavailable");
+        CopyButtonText.Text = LocalizationService.Translate(language, "Copy and close");
+        CopyButton.ToolTip = LocalizationService.Translate(language, "Copy this QR & Barcode text");
+        QrTitleBar.CloseToolTip = LocalizationService.Translate(language, "Close");
+        QrTitleBar.RefreshTooltips();
     }
 
     private string GetFormatLabel(BarcodeFormat format)
     {
+        var language = _settingsService.Settings.InterfaceLanguage;
         var key = format switch
         {
             BarcodeFormat.QR_CODE => "QR Code",
@@ -138,7 +151,7 @@ public partial class QrResultWindow : Window
             BarcodeFormat.UPC_E => "UPC-E",
             _ => "Barcode"
         };
-        return LocalizationService.Translate(key);
+        return LocalizationService.Translate(language, key);
     }
 
     private async void CopyButton_Click(object sender, RoutedEventArgs e)

@@ -93,9 +93,10 @@ public partial class AchievementsWindow : Window
         RefreshAchievementContent(revealRail: false);
     }
 
-    /// <summary>Called when Celebrations are toggled in Settings while this window is open.</summary>
+    /// <summary>Called when Celebrations or Theme are changed in Settings while this window is open.</summary>
     public void RefreshFromSettings()
     {
+        ApplyThemeColors();
         RefreshAchievementContent(revealRail: true);
     }
 

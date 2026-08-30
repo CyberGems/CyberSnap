@@ -2247,5 +2247,11 @@
   "Scaling to {0}× would exceed {1}px limit": "Escalar a {0}× superaría el límite de {1}px",
   "Scaling to {0}× would exceed pixel limit": "Escalar a {0}× superaría el límite de píxeles",
   "Scaling to 2× would exceed limit ({0}px / {1} MP)": "Escalar a 2× superaría el límite ({0}px / {1} MP)",
-  "Scaling to 4× would exceed limit ({0}px / {1} MP)": "Escalar a 4× superaría el límite ({0}px / {1} MP)"
+  "Scaling to 4× would exceed limit ({0}px / {1} MP)": "Escalar a 4× superaría el límite ({0}px / {1} MP)",
+  "CyberGem": "CyberGem",
+  "Unlock every achievement": "Desbloquea todos los logros",
+  "Ultimate": "Definitivo",
+  "Unlocked on {0}": "Desbloqueado el {0}",
+  "New!": "¡Nuevo!",
+  "Symbolic recognition for 100% completion. No real, monetary, or physical prize awarded.": "Reconocimiento simbólico por completar el 100% de los logros. No representa un premio real, monetario ni físico."
 }

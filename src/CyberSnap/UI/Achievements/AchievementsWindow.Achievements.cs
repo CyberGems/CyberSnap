@@ -35,7 +35,7 @@ public partial class AchievementsWindow
 
     private static Brush ThemeAlphaBrush(byte alpha) => new SolidColorBrush(ThemeAlpha(alpha));
 
-    private static readonly Brush FallbackTextBrush = Theme.IsDark ? Brushes.White : Brushes.Black;
+    private static Brush FallbackTextBrush => Theme.IsDark ? Brushes.White : Brushes.Black;
 
     // (Re)builds the statistics cards and medal grid from the live settings.
     private void RefreshAchievements()
@@ -282,10 +282,38 @@ public partial class AchievementsWindow
             ("Capture milestones", AchievementKind.CaptureMilestone),
             ("Day streaks", AchievementKind.Streak),
             ("First time", AchievementKind.FirstTime),
+            ("Ultimate", AchievementKind.Ultimate),
         };
         for (int i = 0; i < groups.Length; i++)
-            AddMedalSection(host, groups[i].Key,
-                achievements.Where(a => a.Kind == groups[i].Kind), first: i == 0);
+        {
+            if (groups[i].Kind == AchievementKind.Ultimate)
+            {
+                AddUltimateSection(host, groups[i].Key, achievements.FirstOrDefault(a => a.Kind == AchievementKind.Ultimate));
+            }
+            else
+            {
+                AddMedalSection(host, groups[i].Key,
+                    achievements.Where(a => a.Kind == groups[i].Kind), first: i == 0);
+            }
+        }
+
+        // Mark unlocked achievements as seen so they are no longer flagged "NEW" next time.
+        MarkAchievementsSeen(s, achievements);
+    }
+
+    private void MarkAchievementsSeen(AppSettings s, IReadOnlyList<Achievement> achievements)
+    {
+        bool changed = false;
+        foreach (var a in achievements)
+        {
+            if (a.Unlocked && s.SeenAchievementIds.Add(a.Id))
+                changed = true;
+        }
+
+        if (changed)
+        {
+            try { _settingsService?.Save(); } catch { /* non-critical */ }
+        }
     }
 
     private void AddMedalSection(StackPanel host, string categoryKey, IEnumerable<Achievement> medals, bool first)
@@ -323,6 +351,252 @@ public partial class AchievementsWindow
         host.Children.Add(panel);
     }
 
+    private void AddUltimateSection(StackPanel host, string categoryKey, Achievement? ultimateMedal)
+    {
+        if (ultimateMedal is null) return;
+
+        host.Children.Add(new Border
+        {
+            Height = 1,
+            Background = (Brush?)TryFindResource("ThemeSeparatorBrush") ?? Brushes.Transparent,
+            Margin = new Thickness(0, 16, 0, 0)
+        });
+
+        var headerPanel = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            HorizontalAlignment = HAlign.Center,
+            Margin = new Thickness(0, 16, 0, 12)
+        };
+
+        var label = new TextBlock
+        {
+            Text = LocalizationService.Translate(categoryKey),
+            FontSize = 14,
+            FontWeight = FontWeights.SemiBold,
+            Opacity = 0.85,
+            FontFamily = new FontFamily("Segoe UI Variable Text"),
+            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        headerPanel.Children.Add(label);
+
+        var infoIcon = new TextBlock
+        {
+            Text = "\uE946",
+            FontFamily = IconFont,
+            FontSize = 12,
+            Opacity = 0.5,
+            Cursor = System.Windows.Input.Cursors.Help,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(6, 1, 0, 0),
+            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+            ToolTip = LocalizationService.Translate("Symbolic recognition for 100% completion. No real, monetary, or physical prize awarded.")
+        };
+        ToolTipService.SetInitialShowDelay(infoIcon, 100);
+        headerPanel.Children.Add(infoIcon);
+
+        host.Children.Add(headerPanel);
+        host.Children.Add(MakeUltimateShowcaseTile(ultimateMedal));
+    }
+
+    private static Border MakeUltimateShowcaseTile(Achievement a)
+    {
+        var color = TierColor(a.Kind, a.Tier);
+        const double badgeSize = 84;
+        const int iconDip = 42;
+
+        var iconColor = a.Unlocked
+            ? (Theme.IsDark ? color : MediaColor.FromArgb(255, (byte)Math.Max(color.R - 30, 0), (byte)Math.Max(color.G - 30, 0), (byte)Math.Max(color.B - 30, 0)))
+            : ThemeAlpha(0x55);
+
+        UIElement iconElement;
+        if (a.IconId is { Length: > 0 } iconId && Helpers.FluentIcons.HasIcon(iconId))
+        {
+            var drawingColor = System.Drawing.Color.FromArgb(iconColor.A, iconColor.R, iconColor.G, iconColor.B);
+            var img = new System.Windows.Controls.Image
+            {
+                Source = Helpers.FluentIcons.RenderWpf(iconId, drawingColor, iconDip * 2),
+                Width = iconDip,
+                Height = iconDip,
+                HorizontalAlignment = HAlign.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+            iconElement = img;
+        }
+        else
+        {
+            bool isEmoji = a.Glyph.Length > 1 && char.IsSurrogatePair(a.Glyph, 0);
+            iconElement = new TextBlock
+            {
+                Text = a.Glyph,
+                FontSize = isEmoji ? 32 : 36,
+                FontFamily = isEmoji ? new FontFamily("Segoe UI Emoji") : IconFont,
+                Foreground = new SolidColorBrush(iconColor),
+                HorizontalAlignment = HAlign.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+        }
+
+        var badge = new Border
+        {
+            Width = badgeSize,
+            Height = badgeSize,
+            CornerRadius = new CornerRadius(badgeSize / 2),
+            Background = a.Unlocked
+                ? new SolidColorBrush(MediaColor.FromArgb(Theme.IsDark ? (byte)0x35 : (byte)0x48, color.R, color.G, color.B))
+                : ThemeAlphaBrush(0x0C),
+            BorderBrush = a.Unlocked
+                ? new SolidColorBrush(color)
+                : ThemeAlphaBrush(0x1F),
+            BorderThickness = new Thickness(a.Unlocked ? 2.5 : 1.5),
+            Child = iconElement
+        };
+
+        if (a.Unlocked)
+        {
+            badge.Effect = new DropShadowEffect
+            {
+                Color = color,
+                BlurRadius = 24,
+                ShadowDepth = 0,
+                Opacity = Theme.IsDark ? 0.9 : 0.4
+            };
+        }
+
+        var badgeGrid = new Grid { Width = badgeSize, Height = badgeSize, HorizontalAlignment = HAlign.Center };
+        badgeGrid.Children.Add(badge);
+
+        if (!a.Unlocked)
+        {
+            var lockBacking = new Border
+            {
+                Width = 24,
+                Height = 24,
+                CornerRadius = new CornerRadius(12),
+                Background = new SolidColorBrush(Theme.IsDark ? MediaColor.FromRgb(0x1B, 0x1F, 0x27) : MediaColor.FromRgb(0xEC, 0xEE, 0xF2)),
+                HorizontalAlignment = HAlign.Right,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Child = new TextBlock
+                {
+                    Text = GlyphLock,
+                    FontSize = 12,
+                    FontFamily = IconFont,
+                    Foreground = ThemeAlphaBrush(0xB0),
+                    HorizontalAlignment = HAlign.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            badgeGrid.Children.Add(lockBacking);
+        }
+
+        if (a.IsNew)
+        {
+            var newBadge = new Border
+            {
+                Padding = new Thickness(5, 2, 5, 2),
+                CornerRadius = new CornerRadius(4),
+                Background = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0x8C, 0x00)),
+                BorderBrush = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0xD7, 0x00)),
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HAlign.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, -4, -4, 0),
+                Effect = new DropShadowEffect
+                {
+                    Color = MediaColor.FromRgb(0xFF, 0x8C, 0x00),
+                    BlurRadius = 10,
+                    ShadowDepth = 0,
+                    Opacity = Theme.IsDark ? 0.9 : 0.5
+                },
+                Child = new TextBlock
+                {
+                    Text = LocalizationService.Translate("New!"),
+                    FontSize = 8.5,
+                    FontWeight = FontWeights.Bold,
+                    FontFamily = new FontFamily("Segoe UI Variable Text"),
+                    Foreground = Brushes.White,
+                    HorizontalAlignment = HAlign.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            badgeGrid.Children.Add(newBadge);
+        }
+
+        var titleBlock = new TextBlock
+        {
+            Text = a.Title,
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            FontFamily = new FontFamily("Segoe UI Variable Text"),
+            Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+            Opacity = a.Unlocked ? 1.0 : (Theme.IsDark ? 0.6 : 0.75),
+            HorizontalAlignment = HAlign.Center,
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+
+        var panel = new StackPanel { HorizontalAlignment = HAlign.Center, Margin = new Thickness(0, 0, 0, 8) };
+        panel.Children.Add(badgeGrid);
+        panel.Children.Add(titleBlock);
+
+        if (!a.Unlocked && a.Progress is (int cur, int target))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{cur.ToString("N0")}/{target.ToString("N0")}",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Opacity = Theme.IsDark ? 0.7 : 0.8,
+                FontFamily = new FontFamily("Segoe UI Variable Text"),
+                Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+                HorizontalAlignment = HAlign.Center,
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Text = a.Description,
+                FontSize = 10.5,
+                Opacity = Theme.IsDark ? 0.45 : 0.6,
+                FontFamily = new FontFamily("Segoe UI Variable Text"),
+                Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+                HorizontalAlignment = HAlign.Center,
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+        }
+        else if (a.Unlocked)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = a.Description,
+                FontSize = 11,
+                Opacity = Theme.IsDark ? 0.75 : 0.85,
+                FontFamily = new FontFamily("Segoe UI Variable Text"),
+                Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+                HorizontalAlignment = HAlign.Center,
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+        }
+
+        var tile = new Border
+        {
+            Child = panel,
+            ToolTip = BuildMedalTooltip(a),
+            HorizontalAlignment = HAlign.Center,
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        ToolTipService.SetInitialShowDelay(tile, 200);
+
+        string state = a.Unlocked
+            ? "Unlocked"
+            : (a.Progress is (int c, int t) ? $"Locked, {c:N0} of {t:N0}" : "Locked");
+        System.Windows.Automation.AutomationProperties.SetName(tile, $"{a.Title}. {state}. {a.Description}");
+
+        return tile;
+    }
+
     // A single medal tile: circular badge with glyph + glow (unlocked) or dim + lock (locked),
     // title underneath, optional "cur/target" progress on locked tiles.
     private static Border MakeMedalTile(Achievement a)
@@ -358,11 +632,12 @@ public partial class AchievementsWindow
         }
         else
         {
+            bool isEmoji = a.Glyph.Length > 1 && char.IsSurrogatePair(a.Glyph, 0);
             iconElement = new TextBlock
             {
                 Text = a.Glyph,
-                FontSize = 22,
-                FontFamily = IconFont,
+                FontSize = isEmoji ? 20 : 22,
+                FontFamily = isEmoji ? new FontFamily("Segoe UI Emoji") : IconFont,
                 Foreground = new SolidColorBrush(iconColor),
                 HorizontalAlignment = HAlign.Center,
                 VerticalAlignment = VerticalAlignment.Center
@@ -385,7 +660,15 @@ public partial class AchievementsWindow
         };
 
         if (a.Unlocked)
-            badge.Effect = new DropShadowEffect { Color = color, BlurRadius = 12, ShadowDepth = 0, Opacity = Theme.IsDark ? 0.6 : 0.0 };
+        {
+            badge.Effect = new DropShadowEffect
+            {
+                Color = color,
+                BlurRadius = a.Kind == AchievementKind.Ultimate ? 18 : 12,
+                ShadowDepth = 0,
+                Opacity = Theme.IsDark ? 0.75 : 0.25
+            };
+        }
 
         // Lock overlay for locked medals, anchored to the bottom-right of the badge. A small solid
         // disc backs the padlock so it stays legible over the badge edge and the icon behind it.
@@ -412,6 +695,40 @@ public partial class AchievementsWindow
                 }
             };
             badgeGrid.Children.Add(lockBacking);
+        }
+
+        // "NEW!" badge overlay for freshly unlocked achievements
+        if (a.IsNew)
+        {
+            var newBadge = new Border
+            {
+                Padding = new Thickness(4, 1, 4, 1),
+                CornerRadius = new CornerRadius(4),
+                Background = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0x8C, 0x00)),
+                BorderBrush = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0xD7, 0x00)),
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HAlign.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, -3, -3, 0),
+                Effect = new DropShadowEffect
+                {
+                    Color = MediaColor.FromRgb(0xFF, 0x8C, 0x00),
+                    BlurRadius = 8,
+                    ShadowDepth = 0,
+                    Opacity = Theme.IsDark ? 0.9 : 0.5
+                },
+                Child = new TextBlock
+                {
+                    Text = LocalizationService.Translate("New!"),
+                    FontSize = 7.5,
+                    FontWeight = FontWeights.Bold,
+                    FontFamily = new FontFamily("Segoe UI Variable Text"),
+                    Foreground = Brushes.White,
+                    HorizontalAlignment = HAlign.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            badgeGrid.Children.Add(newBadge);
         }
 
         var titleBlock = new TextBlock
@@ -495,13 +812,36 @@ public partial class AchievementsWindow
                 FontFamily = new FontFamily("Segoe UI Variable Text")
             });
         }
+        if (!string.IsNullOrEmpty(a.UnlockedAt))
+        {
+            string dateStr = a.UnlockedAt;
+            if (DateTime.TryParse(a.UnlockedAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt) ||
+                DateTime.TryParse(a.UnlockedAt, out dt))
+            {
+                dateStr = dt.ToString("d", System.Globalization.CultureInfo.CurrentCulture);
+            }
+
+            content.Children.Add(new TextBlock
+            {
+                Text = string.Format(LocalizationService.Translate("Unlocked on {0}"), dateStr),
+                FontSize = 10,
+                Opacity = 0.65,
+                Margin = new Thickness(0, 4, 0, 0),
+                FontFamily = new FontFamily("Segoe UI Variable Text")
+            });
+        }
         return content;
     }
 
     // Neon color ramp by tier: capture milestones go cyan→blue→purple→magenta→gold;
-    // streaks use warm flame tones; first-time achievements use cyan (tier 0).
+    // streaks use warm flame tones; first-time achievements use cyan (tier 0);
+    // ultimate achievement uses diamond turquoise/ice.
     private static MediaColor TierColor(AchievementKind kind, int tier)
     {
+        if (kind == AchievementKind.Ultimate)
+        {
+            return MediaColor.FromRgb(0x40, 0xE0, 0xD0);
+        }
         if (kind == AchievementKind.Streak)
         {
             return tier switch

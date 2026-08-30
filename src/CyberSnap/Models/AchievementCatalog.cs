@@ -44,15 +44,19 @@ public static class AchievementCatalog
         for (int i = 0; i < values.Length; i++)
         {
             int v = values[i];
+            string id = $"captures-{v}";
+            bool unlocked = count >= v;
             list.Add(new Achievement
             {
-                Id = $"captures-{v}",
+                Id = id,
                 Kind = AchievementKind.CaptureMilestone,
                 Title = string.Format(t("{0} captures"), v.ToString("N0")),
                 Description = string.Format(t("Reach {0} captures"), v.ToString("N0")),
                 Glyph = GlyphStar,
                 Tier = CaptureTier(i),
-                Unlocked = count >= v,
+                Unlocked = unlocked,
+                UnlockedAt = null,
+                IsNew = unlocked && !s.SeenAchievementIds.Contains(id),
                 Progress = (Math.Min(count, v), v)
             });
         }
@@ -64,37 +68,61 @@ public static class AchievementCatalog
         for (int i = 0; i < streaks.Length; i++)
         {
             int d = streaks[i];
+            string id = $"streak-{d}";
+            bool unlocked = s.LongestStreak >= d;
             list.Add(new Achievement
             {
-                Id = $"streak-{d}",
+                Id = id,
                 Kind = AchievementKind.Streak,
                 Title = string.Format(t("{0}-day streak"), d),
                 Description = string.Format(t("Reach a {0}-day streak"), d),
                 Glyph = GlyphStar,
                 Tier = Math.Min(4, i / 2),
-                Unlocked = s.LongestStreak >= d,
+                Unlocked = unlocked,
+                UnlockedAt = null,
+                IsNew = unlocked && !s.SeenAchievementIds.Contains(id),
                 // Unlocked medals use LongestStreak (historical record); locked ones show
                 // CurrentStreak so the bar moves as the user builds today's streak.
-                Progress = s.LongestStreak >= d
+                Progress = unlocked
                     ? (d, d)
                     : (Math.Min(s.CurrentStreak, d), d)
             });
         }
 
         // First-time feature unlocks — one medal per tool/action, using each tool's own icon.
-        list.Add(FirstTime("first-capture",   t("First capture"),           t("Take your first capture"),          GlyphCapture, IconCapture, count > 0));
-        list.Add(FirstTime("first-ocr",       t("First OCR"),               t("Extract text from a capture"),      GlyphOcr,     IconOcr,     s.HasFirstOcr));
-        list.Add(FirstTime("first-recording", t("First recording"),         t("Record a video or GIF"),            GlyphVideo,   IconVideo,   s.HasFirstRecording));
-        list.Add(FirstTime("first-scroll",    t("First scrolling capture"), t("Capture a scrolling page"),         GlyphScroll,  IconScroll,  s.HasFirstScrollingCapture));
-        list.Add(FirstTime("first-color",     t("First color pick"),        t("Pick a color from the screen"),     GlyphPicker,  IconPicker,  s.HasFirstColorPicker));
-        list.Add(FirstTime("first-scan",      t("First scan"),              t("Scan a QR code or barcode"),        GlyphScan,    IconScan,    s.HasFirstScan));
-        list.Add(FirstTime("first-ruler",     t("First ruler"),             t("Measure something on screen"),      GlyphRuler,   IconRuler,   s.HasFirstRuler));
-        list.Add(FirstTime("first-editor",    t("First editor"),            t("Open a capture in the editor"),     GlyphEditor,  IconEditor,  s.HasFirstEditor));
+        list.Add(FirstTime("first-capture",   t("First capture"),           t("Take your first capture"),          GlyphCapture, IconCapture, count > 0, null, s));
+        list.Add(FirstTime("first-ocr",       t("First OCR"),               t("Extract text from a capture"),      GlyphOcr,     IconOcr,     s.HasFirstOcr, s.FirstOcrAt, s));
+        list.Add(FirstTime("first-recording", t("First recording"),         t("Record a video or GIF"),            GlyphVideo,   IconVideo,   s.HasFirstRecording, s.FirstRecordingAt, s));
+        list.Add(FirstTime("first-scroll",    t("First scrolling capture"), t("Capture a scrolling page"),         GlyphScroll,  IconScroll,  s.HasFirstScrollingCapture, s.FirstScrollCaptureAt, s));
+        list.Add(FirstTime("first-color",     t("First color pick"),        t("Pick a color from the screen"),     GlyphPicker,  IconPicker,  s.HasFirstColorPicker, s.FirstColorPickerAt, s));
+        list.Add(FirstTime("first-scan",      t("First scan"),              t("Scan a QR code or barcode"),        GlyphScan,    IconScan,    s.HasFirstScan, s.FirstScanAt, s));
+        list.Add(FirstTime("first-ruler",     t("First ruler"),             t("Measure something on screen"),      GlyphRuler,   IconRuler,   s.HasFirstRuler, s.FirstRulerAt, s));
+        list.Add(FirstTime("first-editor",    t("First editor"),            t("Open a capture in the editor"),     GlyphEditor,  IconEditor,  s.HasFirstEditor, s.FirstEditorAt, s));
+
+        // The ultimate "CyberGem" achievement — unlocked when every other achievement is complete.
+        int totalOther = list.Count;
+        int unlockedOther = list.Count(a => a.Unlocked);
+        bool allUnlocked = unlockedOther == totalOther;
+
+        list.Add(new Achievement
+        {
+            Id = "ultimate-cybergem",
+            Kind = AchievementKind.Ultimate,
+            Title = t("CyberGem"),
+            Description = t("Unlock every achievement"),
+            Glyph = "💎",
+            IconId = "gem",
+            Tier = 4,
+            Unlocked = allUnlocked,
+            UnlockedAt = null,
+            IsNew = allUnlocked && !s.SeenAchievementIds.Contains("ultimate-cybergem"),
+            Progress = (unlockedOther, totalOther)
+        });
 
         return list;
     }
 
-    private static Achievement FirstTime(string id, string title, string desc, string glyph, string iconId, bool unlocked) =>
+    private static Achievement FirstTime(string id, string title, string desc, string glyph, string iconId, bool unlocked, string? unlockedAt, AppSettings s) =>
         new()
         {
             Id = id,
@@ -105,6 +133,8 @@ public static class AchievementCatalog
             IconId = iconId,
             Tier = 0,
             Unlocked = unlocked,
+            UnlockedAt = unlockedAt,
+            IsNew = unlocked && !s.SeenAchievementIds.Contains(id),
             Progress = null
         };
 

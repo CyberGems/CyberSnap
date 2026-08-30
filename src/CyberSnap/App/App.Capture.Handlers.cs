@@ -617,10 +617,11 @@ public partial class App
     // debounced). No-op once already unlocked. Independent of CelebrationsEnabled — the medal
     // grid records what happened even with celebration toasts turned off.
     private void MarkFirstTime(bool alreadyUnlocked, Action setUnlocked,
-        string? achievementTitleKey = null, string? iconId = null)
+        string? achievementTitleKey = null, string? iconId = null, Action<string>? setUnlockedDate = null)
     {
         if (alreadyUnlocked) return;
         setUnlocked();
+        setUnlockedDate?.Invoke(DateTime.Now.ToString("yyyy-MM-dd"));
         try { _settingsService!.Save(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.first-time-save", ex.Message, ex); }
 
@@ -808,13 +809,13 @@ public partial class App
 
             // First-time achievement flags.
             if (isOcr)
-                app.MarkFirstTime(settings.HasFirstOcr, () => settings.HasFirstOcr = true, "First OCR", "ocr");
+                app.MarkFirstTime(settings.HasFirstOcr, () => settings.HasFirstOcr = true, "First OCR", "ocr", d => settings.FirstOcrAt = d);
             if (isScan)
-                app.MarkFirstTime(settings.HasFirstScan, () => settings.HasFirstScan = true, "First scan", "scan");
+                app.MarkFirstTime(settings.HasFirstScan, () => settings.HasFirstScan = true, "First scan", "scan", d => settings.FirstScanAt = d);
             if (isEditor)
-                app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true, "First editor", "compose");
+                app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true, "First editor", "compose", d => settings.FirstEditorAt = d);
             if (isColor)
-                app.MarkFirstTime(settings.HasFirstColorPicker, () => settings.HasFirstColorPicker = true, "First color pick", "picker");
+                app.MarkFirstTime(settings.HasFirstColorPicker, () => settings.HasFirstColorPicker = true, "First color pick", "picker", d => settings.FirstColorPickerAt = d);
         });
     }
 
@@ -832,10 +833,10 @@ public partial class App
             switch (action)
             {
                 case "ruler":
-                    app.MarkFirstTime(settings.HasFirstRuler, () => settings.HasFirstRuler = true, "First ruler", "ruler");
+                    app.MarkFirstTime(settings.HasFirstRuler, () => settings.HasFirstRuler = true, "First ruler", "ruler", d => settings.FirstRulerAt = d);
                     break;
                 case "editor":
-                    app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true, "First editor", "compose");
+                    app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true, "First editor", "compose", d => settings.FirstEditorAt = d);
                     break;
             }
         });
@@ -940,7 +941,7 @@ public partial class App
                     // follow-up toast; the "OCR copied" toast keeps its own functional text.
                     CelebrateCaptureIfEarned(_settingsService.Settings, CaptureKind.Ocr);
                     MarkFirstTime(_settingsService.Settings.HasFirstOcr,
-                        () => _settingsService.Settings.HasFirstOcr = true, "First OCR", "ocr");
+                        () => _settingsService.Settings.HasFirstOcr = true, "First OCR", "ocr", d => _settingsService.Settings.FirstOcrAt = d);
 
                     if (Helpers.AutoCopyPreferences.ShouldCopy(_settingsService.Settings, Helpers.AutoCopyKind.Ocr))
                     {

@@ -77,15 +77,9 @@ public partial class OcrResultWindow : Window
         SelectTranslationModelCombo(settingsService.Settings.TranslationModel);
         SetTranslationPanelExpanded(settingsService.Settings.OcrTranslationPanelExpanded, animate: false);
         SetPinned(settingsService.Settings.OcrResultWindowPinnedByDefault);
-        LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
-        var lang = settingsService.Settings.InterfaceLanguage;
-        WindowTitles.ApplyTaskbar(this, WindowTitles.Ocr, lang);
-        OcrTitleBar.Title = LocalizationService.Translate(lang, WindowTitles.Ocr);
-        OcrPreviewEmptyText.Text = LocalizationService.Translate("Source preview unavailable");
-        SearchBoxShell.ToolTip = LocalizationService.Translate(
-            "Search OCR text. Press Enter to cycle through matches; Shift+Enter goes back.");
-        SearchPlaceholder.Text = LocalizationService.Translate("Search...");
-        SearchClearBtn.ToolTip = LocalizationService.Translate("Clear search");
+        RefreshLocalization();
+
+        Activated += (_, _) => ApplyTheme();
 
         Loaded += (_, _) =>
         {
@@ -189,8 +183,9 @@ public partial class OcrResultWindow : Window
         Top = Math.Min(Top + offset, Math.Max(workArea.Top, workArea.Bottom - ActualHeight));
     }
 
-    private void ApplyTheme()
+    public void ApplyTheme()
     {
+        Theme.Refresh();
         RootBorder.Background = Theme.Brush(Theme.BgPrimary);
         RootBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
         RootBorder.BorderThickness = new Thickness(1);
@@ -209,6 +204,25 @@ public partial class OcrResultWindow : Window
         OcrCheckerboardHost.Background = Theme.CreateCheckerboardBrush();
         OcrPreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
         Icon = WindowIcons.Wpf(WindowIconKind.Ocr);
+        OcrTitleBar?.RefreshIcons();
+    }
+
+    public void RefreshLocalization()
+    {
+        var lang = _settingsService.Settings.InterfaceLanguage;
+        LocalizationService.ApplyCurrentCulture(lang);
+        LocalizationService.ApplyTo(this, lang);
+        WindowTitles.ApplyTaskbar(this, WindowTitles.Ocr, lang);
+        OcrTitleBar.Title = LocalizationService.Translate(lang, WindowTitles.Ocr);
+        OcrPreviewEmptyText.Text = LocalizationService.Translate(lang, "Source preview unavailable");
+        SearchBoxShell.ToolTip = LocalizationService.Translate(lang,
+            "Search OCR text. Press Enter to cycle through matches; Shift+Enter goes back.");
+        SearchPlaceholder.Text = LocalizationService.Translate(lang, "Search...");
+        SearchClearBtn.ToolTip = LocalizationService.Translate(lang, "Clear search");
+        OcrTitleBar.CloseToolTip = LocalizationService.Translate(lang, "Close");
+        OcrTitleBar.RefreshTooltips();
+        UpdateCharCount();
+        PopulateLanguageCombos();
     }
 
     private void ApplyMicaBackdrop()
@@ -226,14 +240,19 @@ public partial class OcrResultWindow : Window
 
     private void PopulateLanguageCombos()
     {
+        var currentFrom = (FromLanguageCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? _settingsService.Settings.OcrDefaultTranslateFrom;
+        var currentTo = (ToLanguageCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? _settingsService.Settings.OcrDefaultTranslateTo;
+
         _fromLanguageItems.Clear();
         _toLanguageItems.Clear();
         FromLanguageCombo.Items.Clear();
         ToLanguageCombo.Items.Clear();
 
+        var lang = _settingsService.Settings.InterfaceLanguage;
+
         // Order: Auto-detect first, then English & Spanish, then rest alphabetically
         var ordered = TranslationService.SupportedLanguages
-            .Select(lang => (lang.Code, Name: LocalizeLanguageName(lang.Code, lang.Name)))
+            .Select(l => (l.Code, Name: LocalizationService.Translate(lang, l.Name)))
             .ToList();
 
         // Extract and sort: auto, en, es first, then rest by name
@@ -255,16 +274,15 @@ public partial class OcrResultWindow : Window
             FromLanguageCombo.Items.Add(fromItem);
 
             var toName = code == "auto"
-                ? LocalizationService.Translate("Auto (interface/system language)")
+                ? LocalizationService.Translate(lang, "Auto (interface/system language)")
                 : name;
             var toItem = new ComboBoxItem { Content = toName, Tag = code };
             _toLanguageItems.Add(toItem);
             ToLanguageCombo.Items.Add(toItem);
         }
 
-        var settings = _settingsService.Settings;
-        SelectComboByTag(FromLanguageCombo, settings.OcrDefaultTranslateFrom);
-        SelectComboByTag(ToLanguageCombo, settings.OcrDefaultTranslateTo);
+        SelectComboByTag(FromLanguageCombo, currentFrom);
+        SelectComboByTag(ToLanguageCombo, currentTo);
     }
 
     /// <summary>Returns the localized name for a language code, falling back to the English name.</summary>

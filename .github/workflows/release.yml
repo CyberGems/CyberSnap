@@ -45,14 +45,69 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion="${{ github.ref_name }}" CyberSnap.iss
 
+      - name: Prepare Release Notes & Scan with VirusTotal
+        id: virustotal
+        shell: pwsh
+        env:
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          $installerPath = "./CyberSnap-Setup-${{ github.ref_name }}.exe"
+          $portablePath = "./CyberSnap-${{ github.ref_name }}-Portable-win-x64.zip"
+
+          $installerHash = (Get-FileHash $installerPath -Algorithm SHA256).Hash.ToLower()
+          $portableHash = (Get-FileHash $portablePath -Algorithm SHA256).Hash.ToLower()
+
+          Write-Host "Installer SHA256: $installerHash"
+          Write-Host "Portable SHA256: $portableHash"
+
+          if ($env:VIRUSTOTAL_API_KEY) {
+            function Upload-VirusTotal($filePath, $apiKey) {
+              $item = Get-Item $filePath
+              $sizeMb = [Math]::Round($item.Length / 1MB, 2)
+              Write-Host "Uploading $filePath ($sizeMb MB) to VirusTotal..."
+              $headers = @{ "x-apikey" = $apiKey }
+              $url = "https://www.virustotal.com/api/v3/files"
+
+              if ($item.Length -gt 30MB) {
+                Write-Host "File exceeds 30MB ($sizeMb MB), requesting dedicated large-file upload endpoint from VirusTotal..."
+                $urlResp = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" -Method Get -Headers $headers -TimeoutSec 60
+                $url = $urlResp.data
+                Write-Host "Using dedicated endpoint: $url"
+              }
+
+              $resp = & curl.exe -s -S --fail -X POST -H "x-apikey: $apiKey" -F "file=@$filePath" "$url"
+              Write-Host "Upload successful. Response: $resp"
+            }
+
+            try {
+              Upload-VirusTotal $installerPath $env:VIRUSTOTAL_API_KEY
+            } catch {
+              Write-Warning "VirusTotal installer upload warning: $_"
+            }
+
+            try {
+              Upload-VirusTotal $portablePath $env:VIRUSTOTAL_API_KEY
+            } catch {
+              Write-Warning "VirusTotal portable upload warning: $_"
+            }
+          } else {
+            Write-Host "VIRUSTOTAL_API_KEY secret not found; skipping direct upload and using computed SHA256 hashes for reports."
+          }
+
+          $template = [System.IO.File]::ReadAllText(".github/release-template.md", [System.Text.Encoding]::UTF8)
+          $notes = $template.Replace("{{VERSION}}", "${{ github.ref_name }}").Replace("{{INSTALLER_HASH}}", $installerHash).Replace("{{PORTABLE_HASH}}", $portableHash)
+          [System.IO.File]::WriteAllText("release_notes.md", $notes, [System.Text.Encoding]::UTF8)
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         with:
+          name: "CyberSnap ${{ github.ref_name }}"
           files: |
             ./CyberSnap-${{ github.ref_name }}-Portable-win-x64.zip
             ./CyberSnap-Setup-${{ github.ref_name }}.exe
-          draft: false
+          draft: true
           prerelease: false
+          body_path: ./release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

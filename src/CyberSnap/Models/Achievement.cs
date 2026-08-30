@@ -6,7 +6,8 @@ public enum AchievementKind
 {
     CaptureMilestone,
     Streak,
-    FirstTime
+    FirstTime,
+    Ultimate
 }
 
 // A single medal in the Achievements grid. Definitions are assembled on demand by
@@ -33,6 +34,12 @@ public sealed class Achievement
     public int Tier { get; init; }
 
     public bool Unlocked { get; init; }
+
+    // Date when the achievement was unlocked (yyyy-MM-dd), or null if not recorded.
+    public string? UnlockedAt { get; init; }
+
+    // True when unlocked but not yet viewed in the Achievements window (shows a "NEW" badge).
+    public bool IsNew { get; init; }
 
     // Optional progress toward unlocking (current, target) for a "N / target" hint on
     // locked tiles. Null when not applicable.

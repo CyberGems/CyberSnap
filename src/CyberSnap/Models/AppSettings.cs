@@ -591,6 +591,18 @@ public sealed class AppSettings
     public bool HasFirstScan { get; set; }
     public bool HasFirstRuler { get; set; }
     public bool HasFirstEditor { get; set; }
+
+    // Dates (yyyy-MM-dd) when each first-time achievement was unlocked.
+    public string? FirstOcrAt { get; set; }
+    public string? FirstRecordingAt { get; set; }
+    public string? FirstScrollCaptureAt { get; set; }
+    public string? FirstColorPickerAt { get; set; }
+    public string? FirstScanAt { get; set; }
+    public string? FirstRulerAt { get; set; }
+    public string? FirstEditorAt { get; set; }
+
+    // Set of achievement IDs already seen by the user in the Achievements window (clears "NEW" badges).
+    public HashSet<string> SeenAchievementIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;
