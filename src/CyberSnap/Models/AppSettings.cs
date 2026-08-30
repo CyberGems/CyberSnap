@@ -625,6 +625,15 @@ public sealed class AppSettings
     // Sub-toggle (only meaningful when NotificationsEnabled): controls brief text-only system
     // messages such as "Sent to the editor". Capture previews and error alerts are unaffected.
     public bool SystemNotificationsEnabled { get; set; } = true;
+    /// <summary>
+    /// When true, non-error toasts are suppressed between <see cref="QuietHoursStart"/> and
+    /// <see cref="QuietHoursEnd"/> (local time). Error alerts still appear.
+    /// </summary>
+    public bool QuietHoursEnabled { get; set; }
+    /// <summary>Local start time <c>HH:mm</c>. Overnight ranges (e.g. 22:00–07:00) are allowed.</summary>
+    public string QuietHoursStart { get; set; } = "22:00";
+    /// <summary>Local end time <c>HH:mm</c>. The window is half-open: quiet until this instant.</summary>
+    public string QuietHoursEnd { get; set; } = "07:00";
     // Toasts always dismiss with a fade-out; this only controls how long that fade takes.
     public double ToastFadeOutSeconds { get; set; } = 1.0;
     public bool AutoPinPreviews { get; set; }

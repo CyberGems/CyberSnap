@@ -80,6 +80,11 @@ public partial class ToastWindow
         if (spec.IsSystemMessage && !_systemNotificationsEnabled)
             return;
 
+        // Quiet hours: mute everything except critical error alerts (and settings test previews).
+        if (!spec.IsError && !spec.BypassQuietHours
+            && QuietHours.IsActive(SettingsService.LoadStatic()))
+            return;
+
         // Guard: skip completely empty toasts (no text, no image, no color, no status rows)
         if (string.IsNullOrWhiteSpace(spec.Title)
             && string.IsNullOrWhiteSpace(spec.Body)

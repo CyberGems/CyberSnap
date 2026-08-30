@@ -5,6 +5,7 @@ using System.Windows.Media;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
+using ComboBox = System.Windows.Controls.ComboBox;
 
 namespace CyberSnap.UI;
 
@@ -655,6 +656,127 @@ public partial class SettingsWindow
             app.RefreshAchievementsWindowIfOpen();
     }
 
+    private void QuietHoursEnabledCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.QuietHoursEnabled;
+        var enabled = QuietHoursEnabledCheck.IsChecked == true;
+        UpdateToastPreference(
+            "settings.quiet-hours-enabled",
+            "Quiet hours",
+            previous,
+            enabled,
+            value => _settingsService.Settings.QuietHoursEnabled = value,
+            value => QuietHoursEnabledCheck.IsChecked = value,
+            applySuccessUi: _ =>
+            {
+                RefreshQuietHoursStatus();
+                UpdateQuietHoursScheduleRowState(_settingsService.Settings.NotificationsEnabled);
+            });
+    }
+
+    private void QuietHoursStartCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        PersistQuietHoursTime(
+            QuietHoursStartCombo,
+            previous: _settingsService.Settings.QuietHoursStart,
+            setValue: value => _settingsService.Settings.QuietHoursStart = value,
+            diagnosticKey: "settings.quiet-hours-start",
+            label: "Quiet hours start");
+    }
+
+    private void QuietHoursEndCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        PersistQuietHoursTime(
+            QuietHoursEndCombo,
+            previous: _settingsService.Settings.QuietHoursEnd,
+            setValue: value => _settingsService.Settings.QuietHoursEnd = value,
+            diagnosticKey: "settings.quiet-hours-end",
+            label: "Quiet hours end");
+    }
+
+    private void PersistQuietHoursTime(
+        ComboBox combo,
+        string previous,
+        Action<string> setValue,
+        string diagnosticKey,
+        string label)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange || _suppressGeneralPreferenceChange) return;
+        if (combo.SelectedItem is not ComboBoxItem item || item.Tag is not string selected)
+            return;
+        if (string.Equals(previous, selected, StringComparison.Ordinal))
+            return;
+
+        UpdateToastPreference(
+            diagnosticKey,
+            label,
+            previous,
+            selected,
+            setValue,
+            value => SelectQuietHoursTime(combo, value),
+            applySuccessUi: _ => RefreshQuietHoursStatus());
+    }
+
+    private void EnsureQuietHoursTimeOptions()
+    {
+        if (QuietHoursStartCombo.Items.Count > 0)
+            return;
+
+        foreach (var slot in QuietHours.HalfHourSlots())
+        {
+            QuietHoursStartCombo.Items.Add(CreateQuietHoursTimeItem(slot));
+            QuietHoursEndCombo.Items.Add(CreateQuietHoursTimeItem(slot));
+        }
+    }
+
+    private static ComboBoxItem CreateQuietHoursTimeItem(string hhmm)
+        => new()
+        {
+            Content = hhmm,
+            Tag = hhmm,
+            ToolTip = hhmm
+        };
+
+    private void SelectQuietHoursTime(ComboBox combo, string hhmm)
+    {
+        var normalized = QuietHours.Normalize(hhmm, QuietHours.DefaultStart);
+        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), normalized, StringComparison.Ordinal))
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+
+        var extra = CreateQuietHoursTimeItem(normalized);
+        combo.Items.Add(extra);
+        combo.SelectedItem = extra;
+    }
+
+    private void RefreshQuietHoursStatus()
+    {
+        if (QuietHoursStatusText is null || QuietHoursEnabledCheck is null)
+            return;
+
+        var settings = _settingsService.Settings;
+        if (!settings.QuietHoursEnabled)
+        {
+            QuietHoursStatusText.Text = string.Empty;
+            QuietHoursStatusText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var start = QuietHours.Normalize(settings.QuietHoursStart, QuietHours.DefaultStart);
+        var end = QuietHours.Normalize(settings.QuietHoursEnd, QuietHours.DefaultEnd);
+        QuietHoursStatusText.Text = QuietHours.IsActive(settings)
+            ? string.Format(LocalizationService.Translate("Active now — only critical alerts until {0}"), end)
+            : string.Format(LocalizationService.Translate("Starts at {0}"), start);
+        QuietHoursStatusText.Visibility = Visibility.Visible;
+    }
+
     /// <summary>
     /// When the master "Show notifications" switch is off, dim and disable the rest of the
     /// Notifications tab (sub-types, placement, timing, and design) so those controls are not
@@ -664,8 +786,18 @@ public partial class SettingsWindow
     {
         UpdateSystemNotificationsRowState(notificationsEnabled);
         ApplyNotificationsDependentVisual(CelebrationsNotificationsRow, notificationsEnabled);
+        ApplyNotificationsDependentVisual(QuietHoursRow, notificationsEnabled);
+        ApplyNotificationsDependentVisual(QuietHoursSeparator, notificationsEnabled);
+        UpdateQuietHoursScheduleRowState(notificationsEnabled);
         ApplyNotificationsDependentVisual(NotificationsPlacementSection, notificationsEnabled);
         ApplyNotificationsDependentVisual(NotificationsTimingSection, notificationsEnabled);
+    }
+
+    private void UpdateQuietHoursScheduleRowState(bool notificationsEnabled)
+    {
+        bool scheduleOn = notificationsEnabled && QuietHoursEnabledCheck.IsChecked == true;
+        ApplyNotificationsDependentVisual(QuietHoursScheduleRow, scheduleOn);
+        ApplyNotificationsDependentVisual(QuietHoursScheduleSeparator, scheduleOn);
     }
 
     // The "System messages" sub-toggle only applies while the master switch is on.
@@ -1477,7 +1609,8 @@ public partial class SettingsWindow
                 Celebrate = true,
                 SuppressSound = false,
                 IsSystemMessage = false,
-                CelebrationBodyIconId = iconId
+                CelebrationBodyIconId = iconId,
+                BypassQuietHours = true
             });
         }
         catch (Exception ex)
@@ -1497,7 +1630,10 @@ public partial class SettingsWindow
             // Plays SoundEvent.System (customizable in Sounds) unless muted.
             ToastWindow.Show(ToastSpec.Standard(
                 LocalizationService.Translate("Capture processed"),
-                LocalizationService.Translate("Copied to clipboard")));
+                LocalizationService.Translate("Copied to clipboard")) with
+            {
+                BypassQuietHours = true
+            });
         }
         catch (Exception ex)
         {

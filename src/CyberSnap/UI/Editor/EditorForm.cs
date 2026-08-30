@@ -514,7 +514,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             Dock = DockStyle.Fill,
             BackColor = EditorColors.BgPrimary,
-            Padding = new Padding(18),
+            Padding = new Padding(EditorCanvasFrame.ContentPadding),
         };
 
         bool showRulers = settings?.EditorShowRulers ?? true;
@@ -565,7 +565,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             BackColor = EditorColors.BgPrimary,
         };
         workArea.Controls.Add(canvasContainer);
-        workArea.Controls.Add(_toolbarPanel);
+        workArea.Controls.Add(_toolbarHost);
 
         var root = new Panel
         {
@@ -835,6 +835,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (ctrl == _toolbarPanel)
         {
             ctrl.BackColor = EditorColors.BgSecondary;
+            return;
+        }
+
+        if (ctrl == _toolbarHost)
+        {
+            ctrl.BackColor = EditorColors.BgPrimary;
             return;
         }
 
