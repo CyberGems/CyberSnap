@@ -311,8 +311,18 @@ public sealed partial class RegionOverlayForm
                 }
                 else
                 {
-                    if (_mainBarTools[btn].Mode.HasValue)
-                        SetTool(_mainBarTools[btn]);
+                    var tool = _mainBarTools[btn];
+                    if (!_isConfirmingSelection &&
+                        tool.Mode == CaptureMode.Ocr &&
+                        StandaloneOcrRequested is not null)
+                    {
+                        HideToolbarTooltip();
+                        StandaloneOcrRequested.Invoke();
+                    }
+                    else if (tool.Mode.HasValue)
+                    {
+                        SetTool(tool);
+                    }
                 }
             }
             else if (btn >= CloseButtonIndex + 1 && btn < BtnCount)

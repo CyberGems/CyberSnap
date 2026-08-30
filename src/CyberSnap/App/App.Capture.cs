@@ -936,6 +936,7 @@ public partial class App
                 };
 
                 bool handoffStandalonePicker = false;
+                bool handoffStandaloneOcr = false;
                 bool handoffStandaloneRuler = false;
 
                 overlay.StandaloneColorPickerRequested += () =>
@@ -944,6 +945,15 @@ public partial class App
                     // live desktop. Do not ExitThread here — Close() ends Application.Run,
                     // and FormClosed launches the tool after this window is actually gone.
                     handoffStandalonePicker = true;
+                    overlay.Hide();
+                    overlay.Close();
+                };
+
+                overlay.StandaloneOcrRequested += () =>
+                {
+                    // Close the frozen overlay first so standalone OCR captures the
+                    // live desktop and uses the same flow as its dedicated hotkey/tray action.
+                    handoffStandaloneOcr = true;
                     overlay.Hide();
                     overlay.Close();
                 };
@@ -1002,6 +1012,8 @@ public partial class App
                         ResetCapturing();
                         if (handoffStandalonePicker)
                             OnStandaloneColorPickerHotkeyPressed();
+                        else if (handoffStandaloneOcr)
+                            OnStandaloneOcrHotkeyPressed();
                         else if (handoffStandaloneRuler)
                             OnStandaloneRulerHotkeyPressed();
                     });
