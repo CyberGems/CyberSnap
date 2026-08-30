@@ -287,6 +287,11 @@ public partial class SettingsWindow
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             CelebrationsCheck.IsChecked = s.CelebrationsEnabled;
+            QuietHoursEnabledCheck.IsChecked = s.QuietHoursEnabled;
+            EnsureQuietHoursTimeOptions();
+            SelectQuietHoursTime(QuietHoursStartCombo, QuietHours.Normalize(s.QuietHoursStart, QuietHours.DefaultStart));
+            SelectQuietHoursTime(QuietHoursEndCombo, QuietHours.Normalize(s.QuietHoursEnd, QuietHours.DefaultEnd));
+            RefreshQuietHoursStatus();
             UpdateNotificationsDependentState(s.NotificationsEnabled);
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
@@ -593,6 +598,7 @@ public partial class SettingsWindow
         GifOutcomeEditor?.RefreshLocalization();
         UpdateWindowTitle();
         RefreshSettingsFooterVersion();
+        RefreshQuietHoursStatus();
 
         foreach (Window w in Application.Current.Windows)
         {

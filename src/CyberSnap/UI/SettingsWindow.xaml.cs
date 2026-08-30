@@ -104,7 +104,11 @@ public partial class SettingsWindow : Window
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
         SettingsService.AutoCopyToClipboardChanged += OnAutoCopyToClipboardChanged;
-        Activated += (_, _) => ApplyThemeColors();
+        Activated += (_, _) =>
+        {
+            ApplyThemeColors();
+            RefreshQuietHoursStatus();
+        };
         Closed += (_, _) =>
         {
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;

@@ -15,6 +15,7 @@ public sealed partial class EditorForm
     private Panel _titleBarPanel = null!;
     private Panel _statusBarPanel = null!;
     private Panel _toolbarPanel = null!;
+    private Panel _toolbarHost = null!;
     private Bitmap? _brandBitmap;
     private Label _coordsLabel = null!;
     private Control _coordsPanel = null!;
@@ -173,8 +174,7 @@ public sealed partial class EditorForm
 
         _toolbarPanel = new DoubleBufferedPanel
         {
-            Dock = DockStyle.Left,
-            Width = 332,
+            Dock = DockStyle.Fill,
             BackColor = EditorColors.BgSecondary,
             Padding = new Padding(20, 18, 20, 18),
         };
@@ -183,6 +183,16 @@ public sealed partial class EditorForm
             using var pen = new Pen(EditorColors.BorderSubtle);
             e.Graphics.DrawLine(pen, _toolbarPanel.Width - 1, 0, _toolbarPanel.Width - 1, _toolbarPanel.Height);
         };
+
+        // Same vertical chrome as EditorCanvasFrame so the palette top/bottom line up with the canvas card.
+        _toolbarHost = new DoubleBufferedPanel
+        {
+            Dock = DockStyle.Left,
+            Width = 332,
+            BackColor = EditorColors.BgPrimary,
+            Padding = new Padding(0, EditorCanvasFrame.ChromeInset, 0, EditorCanvasFrame.ChromeInset),
+        };
+        _toolbarHost.Controls.Add(_toolbarPanel);
 
         var layout = new TableLayoutPanel
         {
@@ -2434,6 +2444,10 @@ internal sealed class EditorWindowFrame : DoubleBufferedPanel
 
 internal sealed class EditorCanvasFrame : Panel
 {
+    public const int ContentPadding = 18;
+    /// <summary>Y inset of the painted rounded chrome (padding minus the 8px overhang).</summary>
+    public static int ChromeInset => Math.Max(6, ContentPadding - 8);
+
     public EditorCanvasFrame()
     {
         DoubleBuffered = true;

@@ -3254,6 +3254,56 @@
                                           Services:LocalizationService.SourceToolTip="Show celebratory notifications for milestones, streaks, and your first capture of the day."
                                           Checked="CelebrationsCheck_Changed" Unchecked="CelebrationsCheck_Changed"/>
                             </Grid>
+                            <Border x:Name="QuietHoursSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="QuietHoursRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE708;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Services:LocalizationService.SourceText="Quiet hours" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Only critical alerts during this window. Status messages, celebrations, and color or scan results stay silent." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock x:Name="QuietHoursStatusText" Style="{StaticResource SettingDescription}" Visibility="Collapsed"/>
+                                </StackPanel>
+                                <CheckBox x:Name="QuietHoursEnabledCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          Width="150" HorizontalAlignment="Left"
+                                          AutomationProperties.Name="Quiet hours"
+                                          Services:LocalizationService.SourceToolTip="Only critical alerts during this window. Status messages, celebrations, and color or scan results stay silent."
+                                          Checked="QuietHoursEnabledCheck_Changed" Unchecked="QuietHoursEnabledCheck_Changed"/>
+                            </Grid>
+                            <Border x:Name="QuietHoursScheduleSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="QuietHoursScheduleRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Services:LocalizationService.SourceText="Schedule" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Local time. Overnight ranges such as 22:00–07:00 are supported." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Services:LocalizationService.SourceText="From" FontSize="12" Opacity="0.72"
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox x:Name="QuietHoursStartCombo" MinWidth="88" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Quiet hours start"
+                                              Services:LocalizationService.SourceToolTip="Quiet hours start time"
+                                              SelectionChanged="QuietHoursStartCombo_SelectionChanged"/>
+                                    <TextBlock Services:LocalizationService.SourceText="To" FontSize="12" Opacity="0.72"
+                                               VerticalAlignment="Center" Margin="12,0,8,0"/>
+                                    <ComboBox x:Name="QuietHoursEndCombo" MinWidth="88" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Quiet hours end"
+                                              Services:LocalizationService.SourceToolTip="Quiet hours end time"
+                                              SelectionChanged="QuietHoursEndCombo_SelectionChanged"/>
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
                     </Border>
 

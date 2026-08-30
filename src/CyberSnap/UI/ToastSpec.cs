@@ -59,6 +59,10 @@ internal sealed record ToastSpec
     /// are visible but do not run real actions.
     /// </summary>
     public bool DisableInteractiveActions { get; init; }
+    /// <summary>
+    /// Settings → Test notification: still show the preview while Quiet Hours would otherwise mute it.
+    /// </summary>
+    public bool BypassQuietHours { get; init; }
     public double? DurationSeconds { get; init; }
     // When true, the toast plays a celebratory flourish (animated sweep timeline).
     // Only honored for non-error toasts.
