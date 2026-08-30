@@ -196,9 +196,10 @@ public partial class CyberSnapTitleBar : UserControl
         BurgerSeparator.Visibility = BurgerBtn.Visibility == Visibility.Visible
             ? Visibility.Visible
             : Visibility.Collapsed;
-        WindowControlsSeparator.Visibility = BurgerBtn.Visibility == Visibility.Visible
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        WindowControlsSeparator.Visibility =
+            BurgerBtn.Visibility == Visibility.Visible || DonateBtn.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
 
         if (DonateBtn.IsMouseOver) ApplyButtonHoverVisual(DonateBtn, true);
         if (BurgerBtn.IsMouseOver) ApplyButtonHoverVisual(BurgerBtn, true);

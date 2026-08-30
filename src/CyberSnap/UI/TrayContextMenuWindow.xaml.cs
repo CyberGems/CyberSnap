@@ -219,12 +219,9 @@ public partial class TrayContextMenuWindow : Window
         SetTooltip(GifRecordBtn, T("Record the screen as an animated GIF"));
         SetTooltip(VideoRecordBtn, T("Record the screen as an MP4 video"));
 
-        // Compact labels for the half-width row; full names live in tooltips.
-
         SetTooltip(SettingsBtn, T("Open CyberSnap settings"));
-        AchievementsText.Text = T("Achievements");
         SetTooltip(AchievementsBtn, T("Open Achievements"));
-        ExitText.Text = T("Exit");
+        SetTooltip(AboutBtn, T("Open About CyberSnap"));
         SetTooltip(ExitBtn, T("Quit CyberSnap"));
 
         // Determine recording state and localize the compact record button.
@@ -269,8 +266,9 @@ public partial class TrayContextMenuWindow : Window
         AnnotationsIcon.Source = GetIcon("compose", fgColor, 20);
         GalleryIcon.Source = GetIcon("history", fgColor, 20);
 
-        SettingsIcon.Source = GetIcon("gear", fgColor, 17);
+        SettingsIcon.Source = GetIcon("gear", fgColor, 20);
         AchievementsIcon.Source = GetIcon("trophy", fgColor, 20);
+        AboutIcon.Source = GetIcon("info", fgColor, 20);
         ExitIcon.Source = GetDangerIcon("signOut", 20);
 
         bool isRecording = Capture.RecordingForm.Current != null;
@@ -473,6 +471,12 @@ public partial class TrayContextMenuWindow : Window
     {
         try { CloseMenu(); _trayIcon.TriggerAchievements(); }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.achievements", ex); }
+    }
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); _trayIcon.TriggerAbout(); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.about", ex); }
     }
 
     private void AboutHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)

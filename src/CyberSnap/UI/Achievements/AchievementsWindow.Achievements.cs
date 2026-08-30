@@ -152,12 +152,14 @@ public partial class AchievementsWindow
         var sepLabel = new TextBlock
         {
             Text = LocalizationService.Translate("By type"),
-            FontSize = 11,
+            FontSize = 14,
             FontWeight = FontWeights.SemiBold,
-            Opacity = 0.55,
+            Opacity = 0.8,
             FontFamily = new FontFamily("Segoe UI Variable Text"),
             Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
-            Margin = new Thickness(5, 14, 5, 4),
+            HorizontalAlignment = HAlign.Center,
+            TextAlignment = TextAlignment.Center,
+            Margin = new Thickness(5, 16, 5, 8),
         };
         Grid.SetColumn(sepLabel, 0);
         Grid.SetColumnSpan(sepLabel, 2);
@@ -302,12 +304,14 @@ public partial class AchievementsWindow
         var label = new TextBlock
         {
             Text = LocalizationService.Translate(categoryKey),
-            FontSize = 12,
+            FontSize = 14,
             FontWeight = FontWeights.SemiBold,
-            Opacity = 0.7,
+            Opacity = 0.85,
             FontFamily = new FontFamily("Segoe UI Variable Text"),
             Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
-            Margin = new Thickness(0, first ? 4 : 14, 0, 10)
+            HorizontalAlignment = HAlign.Center,
+            TextAlignment = TextAlignment.Center,
+            Margin = new Thickness(0, first ? 8 : 16, 0, 12)
         };
         host.Children.Add(label);
 
