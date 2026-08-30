@@ -1,8 +1,10 @@
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -111,6 +113,55 @@ public partial class OcrResultWindow : Window
         };
 
         TranslationService.SetGoogleApiKey(settingsService.Settings.GoogleTranslateApiKey);
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        // WindowChrome + WindowStyle=None bypasses WPF's normal non-client maximize
+        // calculation on some Windows 10 multi-monitor/DPI combinations. Supply the
+        // monitor work area explicitly so the taskbar is never covered.
+        var source = PresentationSource.FromVisual(this) as HwndSource;
+        source?.AddHook(WndProc);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == 0x0024) // WM_GETMINMAXINFO
+        {
+            WmGetMinMaxInfo(hwnd, lParam);
+            handled = true;
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+    {
+        var mmi = Marshal.PtrToStructure<Native.User32.MINMAXINFO>(lParam);
+        var monitor = Native.User32.MonitorFromWindow(hwnd, Native.User32.MONITOR_DEFAULTTONEAREST);
+        if (monitor != IntPtr.Zero)
+        {
+            var monitorInfo = new Native.User32.MONITORINFO
+            {
+                cbSize = Marshal.SizeOf<Native.User32.MONITORINFO>()
+            };
+            if (Native.User32.GetMonitorInfo(monitor, ref monitorInfo))
+            {
+                var work = monitorInfo.rcWork;
+                var monitorBounds = monitorInfo.rcMonitor;
+                mmi.ptMaxPosition.X = work.Left - monitorBounds.Left;
+                mmi.ptMaxPosition.Y = work.Top - monitorBounds.Top;
+                mmi.ptMaxSize.X = work.Width;
+                mmi.ptMaxSize.Y = work.Height;
+            }
+        }
+
+        var dpi = VisualTreeHelper.GetDpi(this);
+        mmi.ptMinTrackSize.X = (int)Math.Ceiling(MinWidth * dpi.DpiScaleX);
+        mmi.ptMinTrackSize.Y = (int)Math.Ceiling(MinHeight * dpi.DpiScaleY);
+        Marshal.StructureToPtr(mmi, lParam, true);
     }
 
     private void CloseWindow()

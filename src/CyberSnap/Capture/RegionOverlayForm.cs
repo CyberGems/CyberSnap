@@ -629,6 +629,11 @@ public sealed partial class RegionOverlayForm : Form
     /// </summary>
     public event Action? StandaloneColorPickerRequested;
     /// <summary>
+    /// Raised when the capture-bar OCR button is chosen. The overlay must close first so the
+    /// standalone OCR form can capture the live desktop instead of the frozen overlay image.
+    /// </summary>
+    public event Action? StandaloneOcrRequested;
+    /// <summary>
     /// Raised when the capture-bar Ruler is chosen. The overlay must close first so the
     /// standalone ruler (one measurement, its own context menu) can take over.
     /// </summary>
