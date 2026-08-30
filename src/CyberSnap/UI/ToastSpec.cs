@@ -67,6 +67,15 @@ internal sealed record ToastSpec
     // When true, the toast plays a celebratory flourish (animated sweep timeline).
     // Only honored for non-error toasts.
     public bool Celebrate { get; init; }
+    /// <summary>
+    /// Lower shows first when several celebrations are queued. First-time unlocks beat
+    /// milestones, which beat streaks, which beat the daily greeting.
+    /// </summary>
+    public int CelebrationRank { get; init; } = RankDaily;
+    public const int RankFirstTime = 0;
+    public const int RankMilestone = 1;
+    public const int RankStreak = 2;
+    public const int RankDaily = 3;
 
     // Trailing icon appended after the body text on a celebration toast. Defaults to the cyan
     // "captureRect" capture motif (suits capture-milestone/streak toasts). Achievement toasts

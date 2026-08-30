@@ -910,7 +910,8 @@ public partial class App
                                         decoded.Text, decoded.Format, _settingsService, previewSource);
                                     window.Show();
                                 }
-                                MarkFirstTime(_settingsService!.Settings.HasFirstScan,
+                                CelebrateCaptureIfEarned(_settingsService!.Settings, CaptureKind.Scan);
+                                MarkFirstTime(_settingsService.Settings.HasFirstScan,
                                     () => _settingsService!.Settings.HasFirstScan = true, "First scan", "scan", d => _settingsService!.Settings.FirstScanAt = d);
                             }
                             else
@@ -1004,6 +1005,7 @@ public partial class App
                         if (_settingsService!.Settings.SaveHistory)
                             EnsureHistoryService().SaveColorEntry(bare);
 
+                        CelebrateCaptureIfEarned(_settingsService.Settings, CaptureKind.ColorPick);
                         MarkFirstTime(_settingsService.Settings.HasFirstColorPicker,
                             () => _settingsService.Settings.HasFirstColorPicker = true, "First color pick", "picker", d => _settingsService.Settings.FirstColorPickerAt = d);
                     });
