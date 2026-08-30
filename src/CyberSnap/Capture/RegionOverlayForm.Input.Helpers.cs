@@ -210,12 +210,13 @@ public sealed partial class RegionOverlayForm
         _isRulerDragging = false;
         _isCurvedArrowDragging = false;
         _isPlacingMagnifier = false;
-        if (_isSelectDragging || _isSelectResizing || _renderSkipIndex >= 0)
+        if (_isSelectDragging || _isSelectResizing || _isRotating || _renderSkipIndex >= 0)
         {
             _isSelectDragging = false;
             _isSelectResizing = false;
             _selectPreviewAnnotation = null;
             _selectResizeOriginalAnnotation = null;
+            ExitRotateMode(invalidate: false);
             _renderSkipIndex = -1;
             MarkCommittedAnnotationsDirty();
         }

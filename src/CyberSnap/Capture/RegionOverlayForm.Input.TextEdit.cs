@@ -236,6 +236,7 @@ public sealed partial class RegionOverlayForm
 
         _textEditStackIndex = stackIndex;
         _textEditOriginal = ta;
+        ExitRotateMode(invalidate: false);
         _renderSkipIndex = stackIndex; // hide original while editing (no Delete command)
         _mode = CaptureMode.Text;
         _isTyping = true;

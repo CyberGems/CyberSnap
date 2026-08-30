@@ -10,6 +10,7 @@ internal static class CursorFactory
     private static Cursor? _eraserCursor;
     private static Cursor? _eyedropperCursor;
     private static Cursor? _precisionCursor;
+    private static Cursor? _rotateCursor;
     private static Cursor? _hiddenCursor;
 
     /// <summary>A fully transparent 1×1 cursor — hides the pointer over a control while keeping
@@ -294,6 +295,112 @@ internal static class CursorFactory
         }
 
         return Cursors.Cross;
+    }
+
+    /// <summary>
+    /// Circular double-headed rotate cursor (open at the top), white with a black
+    /// outline so it reads on light and dark backgrounds.
+    /// </summary>
+    public static Cursor RotateCursor
+    {
+        get
+        {
+            if (_rotateCursor is null)
+                _rotateCursor = CreateRotateCursor();
+            return _rotateCursor;
+        }
+    }
+
+    private static Cursor CreateRotateCursor()
+    {
+        const int size = 32;
+        const int c = size / 2;
+        const float r = 9.2f;
+
+        using var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+        // GDI+ 0° = east, clockwise. Gap at the top (270°): draw from 310° through the
+        // bottom to 230° so both tips sit at the upper-left / upper-right.
+        const float startDeg = 310f;
+        const float sweepDeg = 280f;
+        var box = new RectangleF(c - r, c - r, r * 2f, r * 2f);
+
+        using (var halo = new Pen(Color.FromArgb(240, 0, 0, 0), 3.4f)
+               { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            g.DrawArc(halo, box, startDeg, sweepDeg);
+        using (var pen = new Pen(Color.White, 1.85f)
+               { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            g.DrawArc(pen, box, startDeg, sweepDeg);
+
+        PointF On(float deg)
+        {
+            float a = deg * MathF.PI / 180f;
+            return new PointF(c + MathF.Cos(a) * r, c + MathF.Sin(a) * r);
+        }
+
+        PointF From(float deg, float delta) => On(deg + delta);
+        using var outline = new SolidBrush(Color.FromArgb(240, 0, 0, 0));
+        using var fill = new SolidBrush(Color.White);
+        PaintCursorArrowHead(g, outline, From(startDeg, 18f), On(startDeg), 6.4f);
+        PaintCursorArrowHead(g, fill, From(startDeg, 18f), On(startDeg), 5.3f);
+        float endDeg = startDeg + sweepDeg;
+        PaintCursorArrowHead(g, outline, From(endDeg, -18f), On(endDeg), 6.4f);
+        PaintCursorArrowHead(g, fill, From(endDeg, -18f), On(endDeg), 5.3f);
+
+        return CursorFromBitmap(bmp, c, c, Cursors.Hand);
+    }
+
+    private static void PaintCursorArrowHead(Graphics g, Brush brush, PointF from, PointF tip, float size)
+    {
+        float dx = tip.X - from.X, dy = tip.Y - from.Y;
+        float len = MathF.Sqrt(dx * dx + dy * dy);
+        if (len < 0.01f) return;
+        dx /= len; dy /= len;
+        float px = -dy, py = dx;
+        g.FillPolygon(brush,
+        [
+            tip,
+            new PointF(tip.X - dx * size + px * size * 0.48f, tip.Y - dy * size + py * size * 0.48f),
+            new PointF(tip.X - dx * size - px * size * 0.48f, tip.Y - dy * size - py * size * 0.48f),
+        ]);
+    }
+
+    private static Cursor CursorFromBitmap(Bitmap bmp, int hotspotX, int hotspotY, Cursor fallback)
+    {
+        IntPtr hIcon = bmp.GetHicon();
+        try
+        {
+            var iconInfo = new IconInfo();
+            if (GetIconInfo(hIcon, ref iconInfo))
+            {
+                iconInfo.fIcon = false;
+                iconInfo.xHotspot = hotspotX;
+                iconInfo.yHotspot = hotspotY;
+
+                IntPtr hCursor = CreateIconIndirect(ref iconInfo);
+
+                if (iconInfo.hbmMask != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmMask);
+                if (iconInfo.hbmColor != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmColor);
+
+                if (hCursor != IntPtr.Zero)
+                {
+                    DestroyIcon(hIcon);
+                    return new Cursor(hCursor);
+                }
+            }
+        }
+        catch
+        {
+            DestroyIcon(hIcon);
+        }
+
+        return fallback;
     }
 
     [DllImport("gdi32.dll")]

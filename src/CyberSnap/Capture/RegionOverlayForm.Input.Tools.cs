@@ -23,6 +23,11 @@ public sealed partial class RegionOverlayForm
             _isSelectDragging = false;
             _isSelectResizing = false;
             _selectPreviewAnnotation = null;
+            CancelRotateToggleTimer();
+            _pendingRotateToggle = false;
+            _isRotating = false;
+            _rotateOriginal = null;
+            _selectResizeOriginalAnnotation = null;
             if (_renderSkipIndex >= 0 && _textEditStackIndex < 0)
             {
                 _renderSkipIndex = -1;
@@ -755,7 +760,26 @@ public sealed partial class RegionOverlayForm
 
 
 
-        // Select tool resize
+        // Select tool resize / rotate / move
+        if (_isRotating && _selectedAnnotationIndex >= 0 && _rotateOriginal is not null)
+        {
+            Cursor = CursorFactory.RotateCursor;
+            ClearCrosshairGuides();
+            SetSnapGuides(false, false);
+            var oldBounds = GetAnnotationBounds(_selectPreviewAnnotation ?? _rotateOriginal);
+            float cur = MathF.Atan2(e.Location.Y - _rotatePivot.Y, e.Location.X - _rotatePivot.X) * 180f / MathF.PI;
+            float delta = AnnotationTransforms.SignedDeltaDegrees(_rotateStartDegrees, cur);
+            if ((ModifierKeys & Keys.Shift) != 0)
+                delta = MathF.Round(delta / 15f) * 15f;
+            var rotated = AnnotationTransforms.Rotate(_rotateOriginal, _rotatePivot, delta);
+            _selectPreviewAnnotation = rotated;
+            var extra = 24;
+            var oldDirty = Rectangle.Inflate(oldBounds, extra, extra);
+            var newDirty = Rectangle.Inflate(GetAnnotationBounds(rotated), extra, extra);
+            InvalidateLiveTransform(oldDirty, newDirty);
+            return;
+        }
+
         if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count && _selectResizeOriginalAnnotation is not null)
         {
             ClearCrosshairGuides();
@@ -809,6 +833,13 @@ public sealed partial class RegionOverlayForm
 
         if (_isSelectDragging && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
+            if (_pendingRotateToggle)
+            {
+                int pdx = e.Location.X - _selectDragStart.X;
+                int pdy = e.Location.Y - _selectDragStart.Y;
+                if (pdx * pdx + pdy * pdy > 16)
+                    _pendingRotateToggle = false;
+            }
             ClearCrosshairGuides();
             var current = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var currentBounds = GetAnnotationBounds(current);
@@ -897,11 +928,12 @@ public sealed partial class RegionOverlayForm
                 {
                     target = sh switch
                     {
+                        >= 0 and <= 3 when _isRotateMode => CursorFactory.RotateCursor,
                         0 or 3 => Cursors.SizeNWSE,
                         1 or 2 => Cursors.SizeNESW,
                         4 or 7 => Cursors.SizeNS,
                         5 or 6 => Cursors.SizeWE,
-                        8      => Cursors.SizeAll,  // center move knob
+                        8      => Cursors.SizeAll,
                         _      => Cursors.Default
                     };
                     handled = true;
@@ -1189,12 +1221,12 @@ public sealed partial class RegionOverlayForm
             if (newHover != _emojiHovered) { _emojiHovered = newHover; toolbarDirty = true; }
         }
 
-        if (_textSelecting || _textDragging || _textResizing || _isSelectDragging || _isSelectResizing)
+        if (_textSelecting || _textDragging || _textResizing || _isSelectDragging || _isSelectResizing || _isRotating)
             ClearCrosshairGuides();
         else
             UpdateCrosshairGuides(_lastCursorPos);
 
-        if (!_isSelecting && !_isMarqueeSelecting && !_isConfirmDragging && !_textResizing && !_textDragging && !_isSelectDragging && !_isSelectResizing && ToolShowsCursorChip(_mode))
+        if (!_isSelecting && !_isMarqueeSelecting && !_isConfirmDragging && !_textResizing && !_textDragging && !_isSelectDragging && !_isSelectResizing && !_isRotating && ToolShowsCursorChip(_mode))
         {
             bool chipOk = _moveHoverIndex < 0 && _selectedAnnotationIndex < 0 && _eraserHoverIndex < 0
                 && !IsPointInOverlayUi(e.Location);
@@ -1417,7 +1449,16 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // End select drag/resize
+        // End select drag/resize/rotate
+        if (_isRotating)
+        {
+            CommitSelectTransform();
+            _isRotating = false;
+            _rotateOriginal = null;
+            UpdateCrosshairGuides(_lastCursorPos);
+            Invalidate();
+            return;
+        }
         if (_isSelectResizing) { CommitSelectTransform(); _isSelectResizing = false; _selectResizeHandle = -1; _selectResizeOriginalAnnotation = null; UpdateCrosshairGuides(_lastCursorPos); Invalidate(); return; }
         if (_isSelectDragging && _multiDragOriginals is not null && _multiSelectedIndices.Count > 1)
         {
@@ -1433,7 +1474,22 @@ public sealed partial class RegionOverlayForm
             Invalidate();
             return;
         }
-        if (_isSelectDragging) { CommitSelectTransform(); _isSelectDragging = false; UpdateCrosshairGuides(_lastCursorPos); Invalidate(); return; }
+        if (_isSelectDragging)
+        {
+            bool pending = _pendingRotateToggle;
+            bool changed = _selectPreviewAnnotation is not null
+                && _selectedAnnotationIndex >= 0
+                && _selectedAnnotationIndex < _undoStack.Count
+                && !Equals(_undoStack[_selectedAnnotationIndex], _selectPreviewAnnotation);
+            _pendingRotateToggle = false;
+            CommitSelectTransform();
+            _isSelectDragging = false;
+            if (pending && !changed)
+                ArmRotateToggle();
+            UpdateCrosshairGuides(_lastCursorPos);
+            Invalidate();
+            return;
+        }
         // End text move/resize
         if (_textSelecting)
         {

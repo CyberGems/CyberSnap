@@ -466,6 +466,13 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _selectHandleBounds; // cached bounds for handle hit-testing
     private Annotation? _selectResizeOriginalAnnotation;
     private Annotation? _selectPreviewAnnotation;
+    private bool _isRotateMode;
+    private bool _pendingRotateToggle;
+    private bool _isRotating;
+    private PointF _rotatePivot;
+    private float _rotateStartDegrees;
+    private Annotation? _rotateOriginal;
+    private System.Windows.Forms.Timer? _rotateToggleTimer;
     // Index in _undoStack to skip when rebuilding the committed bitmap.
     // While a select drag/resize is active, the live preview is the only
     // rendering of that annotation â€” without skipping, you see a ghost at

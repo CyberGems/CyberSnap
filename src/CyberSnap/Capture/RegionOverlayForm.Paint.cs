@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using System.Linq;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Models.Commands;
 using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
@@ -144,7 +145,7 @@ public sealed partial class RegionOverlayForm
         {
             var hovered = _undoStack[_moveHoverIndex];
             var hoverBounds = GetAnnotationBounds(hovered);
-            DrawMoveHandles(g, hoverBounds, isSelected: false, moveOnly: !IsResizable(hovered));
+            DrawMoveHandles(g, hoverBounds, isSelected: false, moveOnly: !IsResizable(hovered), hovered);
         }
 
         // Move or drawing tool: draw selection highlight and handles.
@@ -158,7 +159,7 @@ public sealed partial class RegionOverlayForm
                 {
                     var ann = _undoStack[idx];
                     var bounds = GetAnnotationBounds(ann);
-                    DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann));
+                    DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann), ann);
                 }
             }
         }
@@ -169,7 +170,7 @@ public sealed partial class RegionOverlayForm
         {
             var selected = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);
-            DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected));
+            DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected), selected);
         }
 
         // Marquee selection box
@@ -1001,9 +1002,19 @@ public sealed partial class RegionOverlayForm
     /// Draws premium crop-style L-corner handles and mid-edge bars for the Move tool.
     /// Mirrors <c>AnnotationCanvas.DrawMoveHandles</c> but operates in screen-space (no zoom).
     /// </summary>
-    private static void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected, bool moveOnly = false)
+    private void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected, bool moveOnly = false, Annotation? source = null)
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
+
+        var accentColor = Color.FromArgb(isSelected ? 255 : 120, 0, 255, 255);
+
+        if (isSelected && _isRotateMode && source is not null && AnnotationTransforms.CanRotate(source)
+            && _multiSelectedIndices.Count <= 1)
+        {
+            var corners = AnnotationTransforms.GetRotateHandleCorners(source, 0f);
+            WindowsHandleRenderer.PaintRotateMode(g, corners, accentColor, 1f);
+            return;
+        }
 
         const float offset = 4f; // offset outside bounds
         var rect = new RectangleF(
@@ -1013,11 +1024,8 @@ public sealed partial class RegionOverlayForm
             bounds.Height + 2 * offset
         );
 
-        int accentAlpha = isSelected ? 255 : 120;
         int fillAlpha   = isSelected ? 0   : 12;
         int dashAlpha   = isSelected ? 200 : 90;
-
-        var accentColor = Color.FromArgb(accentAlpha, 0, 255, 255);
 
         // Subtle cyan fill (hover only)
         if (fillAlpha > 0)
@@ -1142,7 +1150,7 @@ public sealed partial class RegionOverlayForm
 
     private bool ShouldPaintCursorToolChip(Point cursor)
     {
-        if (_isSelecting || IsDraggingAnyAnnotation() || _isSelectDragging || _isSelectResizing) return false;
+        if (_isSelecting || IsDraggingAnyAnnotation() || _isSelectDragging || _isSelectResizing || _isRotating) return false;
         if (_isTyping) return false;
         if (!ToolShowsCursorChip(_mode)) return false;
         if (cursor.IsEmpty || IsPointInOverlayUi(cursor)) return false;

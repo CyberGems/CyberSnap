@@ -104,6 +104,13 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private int _selectResizeHandle = -1;
     private Rectangle _selectHandleBounds;
     private Annotation? _selectResizeOriginalAnnotation;
+    private bool _isRotateMode;
+    private bool _pendingRotateToggle;
+    private bool _isRotating;
+    private PointF _rotatePivot;
+    private float _rotateStartDegrees;
+    private Annotation? _rotateOriginal;
+    private System.Windows.Forms.Timer? _rotateToggleTimer;
 
     // Guide Lines hover and active drag state
     private int _hoveredHorizontalGuideIndex = -1;
@@ -768,6 +775,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     {
         if (_annotations.Count == 0) return;
         ActiveTool = CanvasTool.Move;
+        ExitRotateMode(invalidate: false);
         _multiSelectedIndices.Clear();
         for (int i = 0; i < _annotations.Count; i++)
             _multiSelectedIndices.Add(i);
@@ -1190,6 +1198,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _selectResizeOriginalAnnotation = null;
         _isSelectResizing = false;
         _selectResizeHandle = -1;
+        ExitRotateMode(invalidate: false);
         _multiDragOriginals = null;
         _multiSelectedIndices.Clear();
 
@@ -1705,6 +1714,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             DiscardPendingHistory();
             _historyRevealTimer?.Dispose();
             _historyRevealTimer = null;
+            _rotateToggleTimer?.Stop();
+            _rotateToggleTimer?.Dispose();
+            _rotateToggleTimer = null;
             _resizeHandlesTimer?.Stop();
             _resizeHandlesTimer?.Dispose();
             DisposeScrollbarTimers();

@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Models.Commands;
 
 namespace CyberSnap.Capture;
 
@@ -616,14 +617,18 @@ public sealed partial class RegionOverlayForm
             {
                 _selectedAnnotationIndex = -1;
                 _multiSelectedIndices.Clear();
+                ExitRotateMode(invalidate: false);
                 Invalidate();
                 if (_mode == CaptureMode.Text) return;
             }
 
             if (clickedIdx >= 0)
             {
+                bool alreadySelected = clickedIdx == _selectedAnnotationIndex;
+                if (!alreadySelected)
+                    ExitRotateMode(invalidate: false);
                 _selectedAnnotationIndex = clickedIdx;
-                if (handle >= 0 && handle != 8)
+                if (handle >= 0 && handle != 8 && !_isRotateMode)
                 {
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
@@ -636,8 +641,16 @@ public sealed partial class RegionOverlayForm
                     ClearCrosshairGuides();
                     Invalidate();
                 }
+                else if (handle >= 0 && handle != 8 && _isRotateMode)
+                {
+                    BeginRotateDrag(clickedIdx, e.Location);
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
                 else
                 {
+                    _pendingRotateToggle = alreadySelected && handle < 0
+                        && AnnotationTransforms.CanRotate(_undoStack[clickedIdx]);
                     _isSelectDragging = true;
                     var bounds = GetAnnotationBounds(_undoStack[clickedIdx]);
                     _selectPreviewAnnotation = _undoStack[clickedIdx];
@@ -669,6 +682,10 @@ public sealed partial class RegionOverlayForm
                     _isSelectResizing = false;
                     _selectPreviewAnnotation = null;
                     _selectResizeOriginalAnnotation = null;
+                    CancelRotateToggleTimer();
+                    _pendingRotateToggle = false;
+                    _isRotating = false;
+                    _rotateOriginal = null;
                     if (_renderSkipIndex >= 0)
                     {
                         _renderSkipIndex = -1;
@@ -705,8 +722,11 @@ public sealed partial class RegionOverlayForm
             {
                 // Move/resize of an existing annotation — clear selection-count / help banners.
                 HideToolBanner();
+                bool alreadySelected = clickedIdx == _selectedAnnotationIndex;
+                if (!alreadySelected)
+                    ExitRotateMode(invalidate: false);
                 _selectedAnnotationIndex = clickedIdx;
-                if (handle != 8)
+                if (handle != 8 && !_isRotateMode)
                 {
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
@@ -716,6 +736,12 @@ public sealed partial class RegionOverlayForm
                     _selectPreviewAnnotation = _selectResizeOriginalAnnotation;
                     _renderSkipIndex = clickedIdx;
                     MarkCommittedAnnotationsDirty();
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
+                else if (handle != 8 && _isRotateMode)
+                {
+                    BeginRotateDrag(clickedIdx, e.Location);
                     ClearCrosshairGuides();
                     Invalidate();
                 }
@@ -752,9 +778,14 @@ public sealed partial class RegionOverlayForm
                 }
                 else
                 {
+                    bool alreadySelected = hit == _selectedAnnotationIndex;
                     _multiSelectedIndices.Clear();
                     _multiDragOriginals = null;
+                    if (!alreadySelected)
+                        ExitRotateMode(invalidate: false);
                     _selectedAnnotationIndex = hit;
+                    _pendingRotateToggle = alreadySelected
+                        && AnnotationTransforms.CanRotate(_undoStack[hit]);
                     _isSelectDragging = true;
                     var bounds = GetAnnotationBounds(_undoStack[hit]);
                     _selectPreviewAnnotation = _undoStack[hit];
@@ -768,6 +799,7 @@ public sealed partial class RegionOverlayForm
             }
             else
             {
+                ExitRotateMode(invalidate: false);
                 _selectedAnnotationIndex = -1;
                 _multiSelectedIndices.Clear();
                 _isMarqueeSelecting = true;

@@ -5,6 +5,7 @@ using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.Capture;
 using CyberSnap.Models;
+using CyberSnap.Models.Commands;
 using CyberSnap.Services;
 using CyberSnap.UI.Editor;
 using CyberSnap.Helpers;
@@ -232,7 +233,7 @@ public sealed partial class AnnotationCanvas
         {
             var hovered = _annotations[_moveHoverIndex];
             var bounds = GetAnnotationBounds(hovered);
-            DrawMoveHandles(g, bounds, isSelected: false, moveOnly: !IsResizable(hovered));
+            DrawMoveHandles(g, bounds, isSelected: false, moveOnly: !IsResizable(hovered), hovered);
         }
 
         // Multi-selection highlights
@@ -245,7 +246,7 @@ public sealed partial class AnnotationCanvas
                 {
                     var ann = _annotations[idx];
                     var bounds = GetAnnotationBounds(ann);
-                    DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann));
+                    DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann), ann);
                 }
             }
         }
@@ -257,19 +258,54 @@ public sealed partial class AnnotationCanvas
         {
             var selected = _annotations[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);
-            DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected));
+            DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected), selected);
+        }
+
+        // Multi-selection highlights
+        if (_preSpaceTool == null && _multiSelectedIndices.Count > 1)
+        {
+            foreach (int idx in _multiSelectedIndices)
+            {
+                if (idx == _renderSkipAnnotationIndex) continue;
+                if (idx >= 0 && idx < _annotations.Count)
+                {
+                    var ann = _annotations[idx];
+                    var bounds = GetAnnotationBounds(ann);
+                    DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann), ann);
+                }
+            }
+        }
+        // Single selection highlight (only when NOT part of an active multi-selection)
+        else if (_preSpaceTool == null
+            && _selectedAnnotationIndex >= 0
+            && _selectedAnnotationIndex < _annotations.Count
+            && _selectedAnnotationIndex != _renderSkipAnnotationIndex)
+        {
+            var selected = _annotations[_selectedAnnotationIndex];
+            var bounds = GetAnnotationBounds(selected);
+            DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected), selected);
         }
     }
 
-    private void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected, bool moveOnly = false)
+    private void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected, bool moveOnly = false, Annotation? source = null)
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
         float z = (float)_zoom;
         if (z <= 0.01f) z = 1.0f;
 
-        float offset = 4f / z; // offset outside bounds
+        var accent = Theme.Accent;
+        var accentColor = Color.FromArgb(isSelected ? 255 : 120, accent.R, accent.G, accent.B);
 
+        if (isSelected && _isRotateMode && source is not null && AnnotationTransforms.CanRotate(source)
+            && _multiSelectedIndices.Count <= 1)
+        {
+            var corners = GetRotateModeCorners(source, 0f);
+            WindowsHandleRenderer.PaintRotateMode(g, corners, accentColor, 1f / z);
+            return;
+        }
+
+        float offset = 4f / z;
         var rect = new RectangleF(
             bounds.X - offset,
             bounds.Y - offset,
@@ -277,15 +313,9 @@ public sealed partial class AnnotationCanvas
             bounds.Height + 2 * offset
         );
 
-        // Theme-aware accent: cyan on dark, accent on light
-        var accent = Theme.Accent;
-        byte aR = accent.R, aG = accent.G, aB = accent.B;
-
-        int accentAlpha = isSelected ? 255 : 120;
         int fillAlpha = isSelected ? 0 : 10;
         int dashAlpha = isSelected ? 200 : 75;
-
-        var accentColor = Color.FromArgb(accentAlpha, aR, aG, aB);
+        byte aR = accent.R, aG = accent.G, aB = accent.B;
 
         // Fill and dash
         if (fillAlpha > 0)
@@ -363,10 +393,12 @@ public sealed partial class AnnotationCanvas
                 SketchRenderer.DrawLine(g, ln.From, ln.To, ln.Color, ln.From.GetHashCode(), AnnotationStrokeShadow, GetScaledStrokeWidth(ln.StrokeWidth));
                 break;
             case RectShapeAnnotation rs:
-                SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow, GetScaledStrokeWidth(rs.StrokeWidth));
+                AnnotationTransforms.DrawWithRectRotation(g, rs.Rect, rs.Rotation,
+                    () => SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow, GetScaledStrokeWidth(rs.StrokeWidth)));
                 break;
             case CircleShapeAnnotation cs:
-                SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow, GetScaledStrokeWidth(cs.StrokeWidth));
+                AnnotationTransforms.DrawWithRectRotation(g, cs.Rect, cs.Rotation,
+                    () => SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow, GetScaledStrokeWidth(cs.StrokeWidth)));
                 break;
             case HighlightAnnotation hl:
                 using (var path = SketchRenderer.RoundedRect(hl.Rect, 5))
@@ -530,6 +562,9 @@ public sealed partial class AnnotationCanvas
             (float)(r.Width * _zoom),
             (float)(r.Height * _zoom));
 
+    private PointF ImageToScreenF(PointF p) =>
+        new(_pan.X + (float)(p.X * _zoom), _pan.Y + (float)(p.Y * _zoom));
+
     private Point ScreenToImage(Point p)
     {
         if (_zoom <= 0) return Point.Empty;
@@ -555,8 +590,8 @@ public sealed partial class AnnotationCanvas
         {
             BlurRect br => br.Rect,
             HighlightAnnotation hl => hl.Rect,
-            RectShapeAnnotation rs => rs.Rect,
-            CircleShapeAnnotation cs => cs.Rect,
+            RectShapeAnnotation rs => AnnotationTransforms.GetAxisAlignedBounds(rs.Rect, rs.Rotation),
+            CircleShapeAnnotation cs => AnnotationTransforms.GetAxisAlignedBounds(cs.Rect, cs.Rotation),
             EraserFill ef => ef.Rect,
             ArrowAnnotation ar => RectangleFromPoints(ar.From, ar.To),
             LineAnnotation ln => RectangleFromPoints(ln.From, ln.To),
