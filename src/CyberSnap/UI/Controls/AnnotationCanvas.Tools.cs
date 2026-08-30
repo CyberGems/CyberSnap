@@ -206,6 +206,7 @@ public sealed partial class AnnotationCanvas
             CanvasTool.Pan => CursorFactory.PanCursor,
             CanvasTool.Move => Cursors.Default,
             CanvasTool.Crop => CursorFactory.PrecisionCursor,
+            CanvasTool.CutOut => CursorFactory.PrecisionCursor,
             CanvasTool.Text => Cursors.IBeam,
             CanvasTool.Eraser => CursorFactory.EraserCursor,
             // The step badge ghost is centered on the cursor and acts as the pointer itself,
@@ -402,7 +403,7 @@ public sealed partial class AnnotationCanvas
         // Square resize handles float outside the image; they take priority over the crop
         // handles (which sit on the image edge) and over starting a stroke in the margin.
         if (e.Button == MouseButtons.Left && EditorShowResizeHandles && _baseBitmap != null &&
-            _activeTool != CanvasTool.Crop && _preSpaceTool == null)
+            !HideCanvasResizeHandles)
         {
             int hit = HitTestResizeHandle(e.Location);
             if (hit >= 0)
@@ -420,7 +421,8 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        if (e.Button == MouseButtons.Left && EditorAutoCropControls && _cropHasRect && _activeTool != CanvasTool.Crop)
+        if (e.Button == MouseButtons.Left && EditorAutoCropControls && _cropHasRect
+            && _activeTool != CanvasTool.Crop && _activeTool != CanvasTool.CutOut)
         {
             var screenPt = e.Location;
             var cropScreen = ImageToScreenRect(_cropRect);
@@ -730,15 +732,18 @@ public sealed partial class AnnotationCanvas
                         _cropDragStartImg = img;
                         _cropDragStartRect = _cropRect;
                     }
-                    else if (cropScreen.Contains(screenPt))
+                    else if (HasAdjustedPendingCrop && cropScreen.Contains(screenPt))
                     {
-                        _activeCropHandle = 8; // Move
+                        _activeCropHandle = 8; // Move an already-shrunk crop
                         _cropDragging = true;
                         _cropDragStartImg = img;
                         _cropDragStartRect = _cropRect;
                     }
                     else
                     {
+                        // Full-image crop (the default on enter) or click outside a shrunk
+                        // rect: drag a new selection from this point. Avoids having to
+                        // pinch the eight edge handles inward on a large screenshot.
                         _activeCropHandle = -1;
                         _cropRect = new Rectangle(img.X, img.Y, 0, 0);
                         _dragStartImg = img;
@@ -757,6 +762,9 @@ public sealed partial class AnnotationCanvas
                 }
                 Invalidate();
                 OnStateChanged();
+                break;
+            case CanvasTool.CutOut:
+                BeginCutOutPointer(img, e.Location);
                 break;
             case CanvasTool.Text:
             {
@@ -808,7 +816,7 @@ public sealed partial class AnnotationCanvas
 
         UpdateResizeHandlesHover();
 
-        if (!_isDragging && !_isPanning && !_cropDragging && !_resizeDragging && _preSpaceTool == null
+        if (!_isDragging && !_isPanning && !_cropDragging && !_cutOutDragging && !_resizeDragging && _preSpaceTool == null
             && ToolShowsCursorChip(_activeTool))
         {
             var oldChip = GetCursorChipRect(oldCursorClient);
@@ -937,7 +945,7 @@ public sealed partial class AnnotationCanvas
         if (_inlineTextBox is not null && UpdateTextToolbarHover(e.Location))
             return;
 
-        if (!_isDragging && !_cropDragging && (_activeTool == CanvasTool.Pan || _activeTool == CanvasTool.Move))
+        if (!_isDragging && !_cropDragging && !_cutOutDragging && (_activeTool == CanvasTool.Pan || _activeTool == CanvasTool.Move))
         {
             int hHover = HitTestHorizontalGuide(e.Location);
             int vHover = HitTestVerticalGuide(e.Location);
@@ -1032,7 +1040,11 @@ public sealed partial class AnnotationCanvas
                 Cursor = GetCropCursor(e.Location);
             }
         }
-        else if (!_isDragging && !_cropDragging && !_resizeDragging)
+        else if (_activeTool == CanvasTool.CutOut)
+        {
+            Cursor = GetCutOutCursor(e.Location);
+        }
+        else if (!_isDragging && !_cropDragging && !_cutOutDragging && !_resizeDragging)
         {
             if (EditorShowResizeHandles && _baseBitmap != null && _preSpaceTool == null)
             {
@@ -1050,7 +1062,8 @@ public sealed partial class AnnotationCanvas
                     return;
                 }
             }
-            if (EditorAutoCropControls && _cropHasRect && _preSpaceTool == null)
+            if (EditorAutoCropControls && _cropHasRect && _preSpaceTool == null
+                && _activeTool != CanvasTool.CutOut)
             {
                 var screenPt = e.Location;
                 var cropScreen = ImageToScreenRect(_cropRect);
@@ -1117,7 +1130,7 @@ public sealed partial class AnnotationCanvas
             UpdateCursor();
         }
 
-        if (!_isDragging && !_cropDragging) return;
+        if (!_isDragging && !_cropDragging && !_cutOutDragging) return;
 
         var img = ScreenToImage(e.Location);
 
@@ -1194,6 +1207,12 @@ public sealed partial class AnnotationCanvas
                 _cropRect = new Rectangle(left, top, right - left, bottom - top);
             }
             Invalidate();
+            return;
+        }
+
+        if (_cutOutDragging)
+        {
+            UpdateCutOutDrag(img);
             return;
         }
 
@@ -1474,6 +1493,12 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
+        if (_cutOutDragging)
+        {
+            EndCutOutPointer();
+            return;
+        }
+
         if (!_isDragging) return;
         _isDragging = false;
 
@@ -1710,6 +1735,8 @@ public sealed partial class AnnotationCanvas
             _preSpaceTool = null;
             if (sourceTool == CanvasTool.Crop)
                 FinalizeLeavingCrop();
+            if (sourceTool == CanvasTool.CutOut)
+                FinalizeLeavingCutOut();
             ShowToolBanner(GetToolName(CanvasTool.Pan));
             UpdateCursor();
             OnStateChanged();
@@ -1740,6 +1767,11 @@ public sealed partial class AnnotationCanvas
             {
                 _cropDragging = false;
                 _activeCropHandle = -1;
+            }
+            if (_cutOutDragging)
+            {
+                _cutOutDragging = false;
+                _activeCutOutHandle = -1;
             }
             _isSelectResizing = false;
             _selectResizeHandle = -1;
@@ -1827,6 +1859,12 @@ public sealed partial class AnnotationCanvas
         if (e.KeyCode == Keys.Enter && _activeTool == CanvasTool.Crop && _cropHasRect)
         {
             TryConfirmCrop();
+            e.Handled = true;
+            return;
+        }
+        if (e.KeyCode == Keys.Enter && _activeTool == CanvasTool.CutOut && IsValidPendingCutOut)
+        {
+            TryConfirmCutOut();
             e.Handled = true;
             return;
         }
@@ -2158,7 +2196,7 @@ public sealed partial class AnnotationCanvas
     private void RenderCropOverlay(Graphics g)
     {
         bool cropToolMode = IsCropOverlayActive;
-        bool showDefaultControls = EditorAutoCropControls && _cropHasRect && !cropToolMode;
+        bool showDefaultControls = EditorAutoCropControls && _cropHasRect && !cropToolMode && !IsCutOutOverlayActive;
         if (!cropToolMode && !showDefaultControls) return;
         if (!_cropDragging && !_cropHasRect) return;
         if (_cropRect.Width <= 0 || _cropRect.Height <= 0) return;
@@ -2355,7 +2393,7 @@ public sealed partial class AnnotationCanvas
     private void RenderResizeHandles(Graphics g)
     {
         if (!EditorShowResizeHandles || _baseBitmap == null) return;
-        if (_activeTool == CanvasTool.Crop || _preSpaceTool != null) return;
+        if (HideCanvasResizeHandles) return;
         if (_resizeHandlesOpacity <= 0f && !_resizeDragging) return;
 
         // While dragging, draw the pending-size outline plus a size badge.
@@ -2579,6 +2617,7 @@ public sealed partial class AnnotationCanvas
         {
             CancelInProgressTool();
             CancelCropPending();
+            CancelCutOutPending();
         }
     }
 
@@ -3079,6 +3118,12 @@ public sealed partial class AnnotationCanvas
             if (_cropRect.Contains(imgPt))
                 TryConfirmCrop();
         }
+
+        if (_activeTool == CanvasTool.CutOut && _cutOutHasRect)
+        {
+            if (_cutOutRect.Contains(imgPt))
+                TryConfirmCutOut();
+        }
     }
 
     private PointF[] GetCropHandlePositionsScreen(RectangleF rect)
@@ -3120,7 +3165,7 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        if (cropScreen.Contains(screenPt))
+        if (HasAdjustedPendingCrop && cropScreen.Contains(screenPt))
             return Cursors.SizeAll;
 
         return CursorFactory.PrecisionCursor;
@@ -3128,7 +3173,7 @@ public sealed partial class AnnotationCanvas
 
     private bool IsDrawingOrMoveTool(CanvasTool tool)
     {
-        return tool != CanvasTool.Crop && tool != CanvasTool.Eraser && (tool != CanvasTool.Pan || !PanModeLockObjects);
+        return tool != CanvasTool.Crop && tool != CanvasTool.CutOut && tool != CanvasTool.Eraser && (tool != CanvasTool.Pan || !PanModeLockObjects);
     }
 
     private int GetSelectHandle(Point screenPt)

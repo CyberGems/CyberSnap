@@ -21,5 +21,6 @@ public static class EditorToolHotkeyDef
         ("editorBlur",        "Blur",             '\uE5A0'),
         ("editorEmoji",       "Emoji",            '\uE167'),
         ("editorCrop",        "Crop",             '\uE7C8'),
+        ("editorCutOut",      "Cut Out",          '\uE8C6'),
     };
 }
