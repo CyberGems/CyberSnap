@@ -2192,7 +2192,7 @@ public sealed partial class RegionOverlayForm
     {
         ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel"),
         ConfirmChromeKind.Retry => LocalizationService.Translate("Retry"),
-        ConfirmChromeKind.Done => LocalizationService.Translate("Close"),
+        ConfirmChromeKind.Done => LocalizationService.Translate("Done"),
         ConfirmChromeKind.TogglePreview => LocalizationService.Translate("Preview"),
         ConfirmChromeKind.ModeImage => LocalizationService.Translate("Image"),
         ConfirmChromeKind.ModeOcr => "OCR",
