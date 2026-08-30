@@ -50,5 +50,5 @@ public sealed record MagnifierAnnotation(Point Pos, Rectangle SrcRect) : Annotat
 public sealed record EmojiAnnotation(Point Pos, string Emoji, float Size) : Annotation;
 public sealed record LineAnnotation(Point From, Point To, Color Color, float StrokeWidth = 4f) : Annotation;
 public sealed record RulerAnnotation(Point From, Point To) : Annotation;
-public sealed record RectShapeAnnotation(Rectangle Rect, Color Color, float StrokeWidth = 4f) : Annotation;
-public sealed record CircleShapeAnnotation(Rectangle Rect, Color Color, float StrokeWidth = 4f) : Annotation;
+public sealed record RectShapeAnnotation(Rectangle Rect, Color Color, float StrokeWidth = 4f, float Rotation = 0f) : Annotation;
+public sealed record CircleShapeAnnotation(Rectangle Rect, Color Color, float StrokeWidth = 4f, float Rotation = 0f) : Annotation;

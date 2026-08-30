@@ -177,6 +177,7 @@ public sealed partial class AnnotationCanvas
         _selectResizeHandle = -1;
         _selectResizeOriginalAnnotation = null;
         _isMarqueeSelecting = false;
+        ExitRotateMode(invalidate: false);
         ClearMultiSelection(); // may fire OnStateChanged if multi-selection was active
         _multiDragOriginals = null;
         if (selectionCleared)
@@ -229,10 +230,31 @@ public sealed partial class AnnotationCanvas
     private bool IsManipulatingExistingAnnotation =>
         _selectOriginalAnnotation is not null
         || _isSelectResizing
+        || _isRotating
         || _multiDragOriginals is not null;
 
     private bool ProcessSelectionDragMove(Point img)
     {
+        if (_pendingRotateToggle && _selectOriginalAnnotation is not null)
+        {
+            int pdx = img.X - _selectDragStartImg.X;
+            int pdy = img.Y - _selectDragStartImg.Y;
+            if (pdx * pdx + pdy * pdy > 16)
+                _pendingRotateToggle = false;
+        }
+
+        if (_isRotating && _selectedAnnotationIndex >= 0 && _rotateOriginal is not null)
+        {
+            Cursor = CursorFactory.RotateCursor;
+            float cur = MathF.Atan2(img.Y - _rotatePivot.Y, img.X - _rotatePivot.X) * 180f / MathF.PI;
+            float delta = AnnotationTransforms.SignedDeltaDegrees(_rotateStartDegrees, cur);
+            if ((ModifierKeys & Keys.Shift) != 0)
+                delta = MathF.Round(delta / 15f) * 15f;
+            _annotations[_selectedAnnotationIndex] = AnnotationTransforms.Rotate(_rotateOriginal, _rotatePivot, delta);
+            Invalidate();
+            return true;
+        }
+
         if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null)
         {
             int rdx = img.X - _selectDragStartImg.X;
@@ -283,6 +305,17 @@ public sealed partial class AnnotationCanvas
 
     private bool CommitSelectionDrag()
     {
+        if (_isRotating && _selectedAnnotationIndex >= 0 && _rotateOriginal is not null)
+        {
+            var rotated = _annotations[_selectedAnnotationIndex];
+            if (!Equals(_rotateOriginal, rotated))
+                Push(new ReplaceAnnotationCommand(_selectedAnnotationIndex, _rotateOriginal, rotated));
+            _isRotating = false;
+            _rotateOriginal = null;
+            Invalidate();
+            return true;
+        }
+
         if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null)
         {
             var scaled = _annotations[_selectedAnnotationIndex];
@@ -315,7 +348,15 @@ public sealed partial class AnnotationCanvas
             var moved = _annotations[_selectedAnnotationIndex];
             var (tdx, tdy) = ComputeTranslationDelta(_selectOriginalAnnotation, moved);
             if (tdx != 0 || tdy != 0)
+            {
+                _pendingRotateToggle = false;
                 Push(new TransformAnnotationCommand(_selectOriginalAnnotation, _selectedAnnotationIndex, tdx, tdy));
+            }
+            else if (_pendingRotateToggle)
+            {
+                _pendingRotateToggle = false;
+                ArmRotateToggle();
+            }
             _selectOriginalAnnotation = null;
             return true;
         }
@@ -538,6 +579,7 @@ public sealed partial class AnnotationCanvas
             {
                 _selectedAnnotationIndex = -1;
                 ClearMultiSelection();
+                ExitRotateMode(invalidate: false);
                 Invalidate();
             }
 
@@ -553,9 +595,12 @@ public sealed partial class AnnotationCanvas
                     Invalidate();
                     return;
                 }
+                bool alreadySelected = clickedIdx == _selectedAnnotationIndex;
                 ClearMultiSelection();
+                if (!alreadySelected)
+                    ExitRotateMode(invalidate: false);
                 _selectedAnnotationIndex = clickedIdx;
-                if (handle >= 0 && handle != 8)
+                if (handle >= 0 && handle != 8 && !_isRotateMode)
                 {
                     // A resize handle (corners/edges) → resize.
                     _isSelectResizing = true;
@@ -565,9 +610,16 @@ public sealed partial class AnnotationCanvas
                     _selectResizeOriginalAnnotation = _annotations[clickedIdx];
                     _isDragging = true;
                 }
+                else if (handle >= 0 && handle != 8 && _isRotateMode)
+                {
+                    BeginRotateDrag(clickedIdx, img);
+                    _isDragging = true;
+                }
                 else
                 {
                     // Center move knob or plain body click → select and immediately start moving it from its surface!
+                    _pendingRotateToggle = alreadySelected && handle < 0
+                        && AnnotationTransforms.CanRotate(_annotations[clickedIdx]);
                     _selectOriginalAnnotation = _annotations[clickedIdx];
                     _selectDragStartImg = img;
                     _isDragging = true;
@@ -657,15 +709,26 @@ public sealed partial class AnnotationCanvas
 
                 // A real resize handle (anything but the center knob, handle 8) → resize.
                 // Resize always operates on a single annotation, so clear multi-selection.
-                if (handle >= 0 && handle != 8 && targetIdx >= 0)
+                if (handle >= 0 && handle != 8 && targetIdx >= 0 && !_isRotateMode)
                 {
                     ClearMultiSelection();
+                    if (targetIdx != _selectedAnnotationIndex)
+                        ExitRotateMode(invalidate: false);
                     _selectedAnnotationIndex = targetIdx;
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
                     _selectDragStartImg = img;
                     _selectHandleBounds = Rectangle.Round(GetAnnotationVisualBounds(_annotations[targetIdx]));
                     _selectResizeOriginalAnnotation = _annotations[targetIdx];
+                    _isDragging = true;
+                }
+                else if (handle >= 0 && handle != 8 && targetIdx >= 0 && _isRotateMode)
+                {
+                    ClearMultiSelection();
+                    if (targetIdx != _selectedAnnotationIndex)
+                        ExitRotateMode(invalidate: false);
+                    _selectedAnnotationIndex = targetIdx;
+                    BeginRotateDrag(targetIdx, img);
                     _isDragging = true;
                 }
                 else if (targetIdx >= 0)
@@ -685,8 +748,13 @@ public sealed partial class AnnotationCanvas
                     else
                     {
                         // Center move knob or plain body click — select and immediately start moving it from its surface!
+                        bool alreadySelected = targetIdx == _selectedAnnotationIndex;
                         ClearMultiSelection();
+                        if (!alreadySelected)
+                            ExitRotateMode(invalidate: false);
                         _selectedAnnotationIndex = targetIdx;
+                        _pendingRotateToggle = alreadySelected && handle < 0
+                            && AnnotationTransforms.CanRotate(_annotations[targetIdx]);
                         _selectOriginalAnnotation = _annotations[targetIdx];
                         _selectDragStartImg = img;
                         _isDragging = true;
@@ -698,6 +766,7 @@ public sealed partial class AnnotationCanvas
                     ClearMultiSelection();
                     _selectedAnnotationIndex = -1;
                     _selectOriginalAnnotation = null;
+                    ExitRotateMode(invalidate: false);
 
                     _isMarqueeSelecting = true;
                     _marqueeStartImg = img;
@@ -1109,11 +1178,12 @@ public sealed partial class AnnotationCanvas
                 {
                     Cursor = sh switch
                     {
+                        >= 0 and <= 3 when _isRotateMode => CursorFactory.RotateCursor,
                         0 or 3 => Cursors.SizeNWSE,
                         1 or 2 => Cursors.SizeNESW,
                         4 or 7 => Cursors.SizeNS,
                         5 or 6 => Cursors.SizeWE,
-                        8       => Cursors.SizeAll,  // center move knob
+                        8       => Cursors.SizeAll,
                         _       => Cursors.Default
                     };
                     return;
@@ -2569,6 +2639,7 @@ public sealed partial class AnnotationCanvas
         // while the dashed inline frame grows with the text.
         _selectedAnnotationIndex = -1;
         ClearMultiSelection();
+        ExitRotateMode(invalidate: false);
         _moveHoverIndex = -1;
 
         _textEditIndex = index;
@@ -2888,6 +2959,7 @@ public sealed partial class AnnotationCanvas
     /// If only a single item was selected before, it's promoted into the multi-set first.</summary>
     private void ToggleMultiSelect(int index)
     {
+        ExitRotateMode(invalidate: false);
         // Promote the existing single selection into the multi-set so it's not lost.
         if (_multiSelectedIndices.Count == 0 && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex != index)
         {
@@ -2964,8 +3036,8 @@ public sealed partial class AnnotationCanvas
     {
         return a switch
         {
-            CircleShapeAnnotation cs => IsOnEllipseOutline(cs.Rect, GetScaledStrokeWidth(cs.StrokeWidth), pt),
-            RectShapeAnnotation rs   => IsOnRectOutline(rs.Rect, GetScaledStrokeWidth(rs.StrokeWidth), pt),
+            CircleShapeAnnotation cs => IsOnEllipseOutlineRotated(cs.Rect, cs.Rotation, GetScaledStrokeWidth(cs.StrokeWidth), pt),
+            RectShapeAnnotation rs   => IsOnRectOutlineRotated(rs.Rect, rs.Rotation, GetScaledStrokeWidth(rs.StrokeWidth), pt),
             _                        => HitTestSingle(a, pt, 10),
         };
     }
@@ -3001,6 +3073,22 @@ public sealed partial class AnnotationCanvas
         var inner = InflateRect(rect, -band, -band);
         // On the border = inside the outer rect but outside the inner (hollow) rect.
         return inner.Width <= 0 || inner.Height <= 0 || !inner.Contains(pt);
+    }
+
+    private static bool IsOnRectOutlineRotated(Rectangle rect, float rotation, float strokeWidth, Point pt)
+    {
+        if (Math.Abs(rotation % 360f) < 0.05f)
+            return IsOnRectOutline(rect, strokeWidth, pt);
+        var local = AnnotationTransforms.InverseRotatePoint(pt, AnnotationTransforms.CenterOf(rect), rotation);
+        return IsOnRectOutline(rect, strokeWidth, Point.Round(local));
+    }
+
+    private static bool IsOnEllipseOutlineRotated(Rectangle rect, float rotation, float strokeWidth, Point pt)
+    {
+        if (Math.Abs(rotation % 360f) < 0.05f)
+            return IsOnEllipseOutline(rect, strokeWidth, pt);
+        var local = AnnotationTransforms.InverseRotatePoint(pt, AnnotationTransforms.CenterOf(rect), rotation);
+        return IsOnEllipseOutline(rect, strokeWidth, Point.Round(local));
     }
 
     private static Rectangle NormalizeRect(Rectangle r)
@@ -3057,6 +3145,8 @@ public sealed partial class AnnotationCanvas
         _selectResizeHandle = -1;
         _selectOriginalAnnotation = null;
         _multiDragOriginals = null;
+        CancelRotateToggleTimer();
+        _pendingRotateToggle = false;
         Capture = false;
     }
 
@@ -3080,6 +3170,9 @@ public sealed partial class AnnotationCanvas
         _lastClickLocation = e.Location;
 
         if (!isDoubleClick || !IsPickToolActiveForSelectAll()) return false;
+
+        CancelRotateToggleTimer();
+        _pendingRotateToggle = false;
 
         // Centralized: text re-edit wins over select-all (also used by WndProc DBLCLK).
         SelectAllFromDoubleClick();
@@ -3215,8 +3308,8 @@ public sealed partial class AnnotationCanvas
         {
             BlurRect br => br.Rect,
             HighlightAnnotation hl => hl.Rect,
-            RectShapeAnnotation rs => rs.Rect,
-            CircleShapeAnnotation cs => cs.Rect,
+            RectShapeAnnotation rs => AnnotationTransforms.GetAxisAlignedBounds(rs.Rect, rs.Rotation),
+            CircleShapeAnnotation cs => AnnotationTransforms.GetAxisAlignedBounds(cs.Rect, cs.Rotation),
             EraserFill ef => ef.Rect,
             ArrowAnnotation arr => GetSegmentBounds(arr.From, arr.To, GetScaledStrokeWidth(arr.StrokeWidth)),
             LineAnnotation ln => GetSegmentBounds(ln.From, ln.To, GetScaledStrokeWidth(ln.StrokeWidth)),
@@ -3257,6 +3350,28 @@ public sealed partial class AnnotationCanvas
         if (annotationIndex < 0 || annotationIndex >= _annotations.Count)
             return -1;
         var selected = _annotations[annotationIndex];
+
+        if (_isRotateMode
+            && (annotationIndex == _selectedAnnotationIndex || _multiSelectedIndices.Contains(annotationIndex))
+            && AnnotationTransforms.CanRotate(selected))
+        {
+            var corners = GetRotateModeCorners(selected, 0f);
+            var pivot = new PointF(
+                (corners[0].X + corners[1].X + corners[2].X + corners[3].X) / 4f,
+                (corners[0].Y + corners[1].Y + corners[2].Y + corners[3].Y) / 4f);
+            var screenPivot = ImageToScreenF(pivot);
+            for (int i = 0; i < 4; i++)
+            {
+                var sc = ImageToScreenF(corners[i]);
+                var arrow = WindowsHandleRenderer.RotateArrowCenter(sc, screenPivot, 1f);
+                if (WindowsHandleRenderer.RotateArrowHitRect(arrow, 1f).Contains(screenPt))
+                    return i;
+            }
+            var spivot = Point.Round(screenPivot);
+            if (WindowsHandleRenderer.CenterPlusHitRect(spivot).Contains(screenPt))
+                return 8;
+            return -1;
+        }
         var bounds = GetAnnotationVisualBounds(selected);
         var screenRect = Rectangle.Round(ImageToScreenRect(bounds));
         var selRect = Rectangle.Inflate(screenRect, 4, 4);
@@ -3302,5 +3417,50 @@ public sealed partial class AnnotationCanvas
         }
 
         return -1;
+    }
+
+    private PointF[] GetRotateModeCorners(Annotation a, float pad) =>
+        AnnotationTransforms.GetRotateHandleCorners(a, pad);
+
+    private void BeginRotateDrag(int idx, Point img)
+    {
+        var a = _annotations[idx];
+        _rotatePivot = AnnotationTransforms.PivotOf(a);
+        _rotateOriginal = a;
+        _rotateStartDegrees = MathF.Atan2(img.Y - _rotatePivot.Y, img.X - _rotatePivot.X) * 180f / MathF.PI;
+        _isRotating = true;
+        _pendingRotateToggle = false;
+        CancelRotateToggleTimer();
+    }
+
+    private void ExitRotateMode(bool invalidate = true)
+    {
+        CancelRotateToggleTimer();
+        _pendingRotateToggle = false;
+        bool was = _isRotateMode || _isRotating;
+        _isRotateMode = false;
+        _isRotating = false;
+        _rotateOriginal = null;
+        if (invalidate && was)
+            Invalidate();
+    }
+
+    private void ArmRotateToggle()
+    {
+        CancelRotateToggleTimer();
+        if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count)
+            return;
+        if (!AnnotationTransforms.CanRotate(_annotations[_selectedAnnotationIndex]))
+            return;
+        _isRotateMode = !_isRotateMode;
+        Invalidate();
+    }
+
+    private void CancelRotateToggleTimer()
+    {
+        if (_rotateToggleTimer is null) return;
+        _rotateToggleTimer.Stop();
+        _rotateToggleTimer.Dispose();
+        _rotateToggleTimer = null;
     }
 }

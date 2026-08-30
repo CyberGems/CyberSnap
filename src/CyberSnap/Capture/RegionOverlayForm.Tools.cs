@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Models.Commands;
 
 namespace CyberSnap.Capture;
 
@@ -87,10 +88,12 @@ public sealed partial class RegionOverlayForm
                     PaintHighlightRegion(g, region, h.Color);
                 break;
             case RectShapeAnnotation rs:
-                SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow, rs.StrokeWidth);
+                AnnotationTransforms.DrawWithRectRotation(g, rs.Rect, rs.Rotation,
+                    () => SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow, rs.StrokeWidth));
                 break;
             case CircleShapeAnnotation cs:
-                SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow, cs.StrokeWidth);
+                AnnotationTransforms.DrawWithRectRotation(g, cs.Rect, cs.Rotation,
+                    () => SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow, cs.StrokeWidth));
                 break;
             case LineAnnotation ln:
                 SketchRenderer.DrawLine(g, ln.From, ln.To, ln.Color, ln.From.GetHashCode(), AnnotationStrokeShadow, ln.StrokeWidth);

@@ -58,12 +58,167 @@ internal static class AnnotationTransforms
         };
     }
 
+    public static bool CanRotate(Annotation a) => a is
+        RectShapeAnnotation or CircleShapeAnnotation or
+        ArrowAnnotation or LineAnnotation or CurvedArrowAnnotation or
+        DrawStroke or RulerAnnotation;
+
+    public static float GetRotation(Annotation a) => a switch
+    {
+        RectShapeAnnotation rs => rs.Rotation,
+        CircleShapeAnnotation cs => cs.Rotation,
+        _ => 0f
+    };
+
+    /// <summary>Rotates <paramref name="a"/> by <paramref name="degrees"/> around
+    /// <paramref name="pivot"/>. Rect/circle store an angle; point-based types move vertices.</summary>
+    public static Annotation Rotate(Annotation a, PointF pivot, float degrees)
+    {
+        if (Math.Abs(degrees) < 0.001f) return a;
+        double rad = degrees * Math.PI / 180.0;
+        Point Rot(Point p) => RotatePoint(p, pivot, rad);
+
+        return a switch
+        {
+            RectShapeAnnotation rs => rs with { Rotation = rs.Rotation + degrees },
+            CircleShapeAnnotation cs => cs with { Rotation = cs.Rotation + degrees },
+            ArrowAnnotation arr => arr with { From = Rot(arr.From), To = Rot(arr.To) },
+            LineAnnotation ln => ln with { From = Rot(ln.From), To = Rot(ln.To) },
+            RulerAnnotation ru => ru with { From = Rot(ru.From), To = Rot(ru.To) },
+            DrawStroke ds => ds with { Points = ds.Points.Select(Rot).ToList() },
+            CurvedArrowAnnotation ca => ca with { Points = ca.Points.Select(Rot).ToList() },
+            _ => a
+        };
+    }
+
+    public static PointF CenterOf(Rectangle r) =>
+        new(r.X + r.Width / 2f, r.Y + r.Height / 2f);
+
+    public static PointF[] GetRotatedCorners(Rectangle rect, float degrees)
+    {
+        var c = CenterOf(rect);
+        double rad = degrees * Math.PI / 180.0;
+        return
+        [
+            RotatePointF(new PointF(rect.Left, rect.Top), c, rad),
+            RotatePointF(new PointF(rect.Right, rect.Top), c, rad),
+            RotatePointF(new PointF(rect.Right, rect.Bottom), c, rad),
+            RotatePointF(new PointF(rect.Left, rect.Bottom), c, rad),
+        ];
+    }
+
+    /// <summary>OBB corners (TL, TR, BR, BL) for rotate-mode chrome, padded outward from center.</summary>
+    public static PointF[] GetRotateHandleCorners(Annotation a, float pad)
+    {
+        PointF[] corners = a switch
+        {
+            RectShapeAnnotation rs => GetRotatedCorners(rs.Rect, rs.Rotation),
+            CircleShapeAnnotation cs => GetRotatedCorners(cs.Rect, cs.Rotation),
+            _ => AxisAlignedCorners(GetBounds(a))
+        };
+        return pad == 0f ? corners : PadCornersOutward(corners, pad);
+    }
+
+    public static PointF PivotOf(Annotation a)
+    {
+        var c = GetRotateHandleCorners(a, 0f);
+        return new PointF(
+            (c[0].X + c[1].X + c[2].X + c[3].X) / 4f,
+            (c[0].Y + c[1].Y + c[2].Y + c[3].Y) / 4f);
+    }
+
+    /// <summary>Smallest signed turn from <paramref name="fromDegrees"/> to <paramref name="toDegrees"/>.</summary>
+    public static float SignedDeltaDegrees(float fromDegrees, float toDegrees)
+    {
+        float d = toDegrees - fromDegrees;
+        while (d > 180f) d -= 360f;
+        while (d < -180f) d += 360f;
+        return d;
+    }
+
+    private static PointF[] AxisAlignedCorners(Rectangle r) =>
+    [
+        new PointF(r.Left, r.Top),
+        new PointF(r.Right, r.Top),
+        new PointF(r.Right, r.Bottom),
+        new PointF(r.Left, r.Bottom),
+    ];
+
+    public static PointF[] PadCornersOutward(PointF[] corners, float pad)
+    {
+        if (corners is not { Length: 4 } || Math.Abs(pad) < 0.001f) return corners;
+        var c = new PointF(
+            (corners[0].X + corners[1].X + corners[2].X + corners[3].X) / 4f,
+            (corners[0].Y + corners[1].Y + corners[2].Y + corners[3].Y) / 4f);
+        var padded = new PointF[4];
+        for (int i = 0; i < 4; i++)
+        {
+            float dx = corners[i].X - c.X, dy = corners[i].Y - c.Y;
+            float len = MathF.Sqrt(dx * dx + dy * dy);
+            padded[i] = len < 0.1f
+                ? corners[i]
+                : new PointF(corners[i].X + dx / len * pad, corners[i].Y + dy / len * pad);
+        }
+        return padded;
+    }
+
+    public static Rectangle GetAxisAlignedBounds(Rectangle rect, float degrees)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0) return rect;
+        if (Math.Abs(degrees % 360f) < 0.05f) return rect;
+        var pts = GetRotatedCorners(rect, degrees);
+        float minX = pts.Min(p => p.X), minY = pts.Min(p => p.Y);
+        float maxX = pts.Max(p => p.X), maxY = pts.Max(p => p.Y);
+        int x = (int)Math.Floor(minX), y = (int)Math.Floor(minY);
+        return new Rectangle(x, y, Math.Max(1, (int)Math.Ceiling(maxX) - x), Math.Max(1, (int)Math.Ceiling(maxY) - y));
+    }
+
+    public static PointF InverseRotatePoint(PointF p, PointF pivot, float degrees)
+    {
+        if (Math.Abs(degrees) < 0.001f) return p;
+        return RotatePointF(p, pivot, -degrees * Math.PI / 180.0);
+    }
+
+    public static void DrawWithRectRotation(Graphics g, Rectangle rect, float degrees, Action draw)
+    {
+        if (Math.Abs(degrees % 360f) < 0.05f)
+        {
+            draw();
+            return;
+        }
+        var c = CenterOf(rect);
+        var state = g.Save();
+        try
+        {
+            g.TranslateTransform(c.X, c.Y);
+            g.RotateTransform(degrees);
+            g.TranslateTransform(-c.X, -c.Y);
+            draw();
+        }
+        finally
+        {
+            g.Restore(state);
+        }
+    }
+
+    private static Point RotatePoint(Point p, PointF pivot, double rad) =>
+        Point.Round(RotatePointF(new PointF(p.X, p.Y), pivot, rad));
+
+    private static PointF RotatePointF(PointF p, PointF pivot, double rad)
+    {
+        double dx = p.X - pivot.X, dy = p.Y - pivot.Y;
+        double c = Math.Cos(rad), s = Math.Sin(rad);
+        return new PointF(
+            (float)(pivot.X + dx * c - dy * s),
+            (float)(pivot.Y + dx * s + dy * c));
+    }
+
     public static Rectangle GetBounds(Annotation a) => a switch
     {
         BlurRect br => br.Rect,
         HighlightAnnotation hl => hl.Rect,
-        RectShapeAnnotation rs => rs.Rect,
-        CircleShapeAnnotation cs => cs.Rect,
+        RectShapeAnnotation rs => GetAxisAlignedBounds(rs.Rect, rs.Rotation),
+        CircleShapeAnnotation cs => GetAxisAlignedBounds(cs.Rect, cs.Rotation),
         EraserFill ef => ef.Rect,
         ArrowAnnotation ar => RectangleFromPoints(ar.From, ar.To),
         LineAnnotation ln => RectangleFromPoints(ln.From, ln.To),

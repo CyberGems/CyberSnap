@@ -659,6 +659,9 @@ public sealed partial class RegionOverlayForm
             _historyUtilitiesAnimTimer?.Dispose();
             _hoverHoldTimer?.Stop();
             _hoverHoldTimer?.Dispose();
+            _rotateToggleTimer?.Stop();
+            _rotateToggleTimer?.Dispose();
+            _rotateToggleTimer = null;
             _magGfx.Dispose();
             _magBitmap.Dispose();
             ClearEditHistory();

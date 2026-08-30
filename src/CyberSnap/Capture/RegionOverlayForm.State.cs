@@ -791,8 +791,8 @@ public sealed partial class RegionOverlayForm
         DrawStroke ds => BoundsOfPoints(ds.Points, 4),
         BlurRect br => br.Rect,
         HighlightAnnotation hl => hl.Rect,
-        RectShapeAnnotation rs => rs.Rect,
-        CircleShapeAnnotation cs => cs.Rect,
+        RectShapeAnnotation rs => AnnotationTransforms.GetAxisAlignedBounds(rs.Rect, rs.Rotation),
+        CircleShapeAnnotation cs => AnnotationTransforms.GetAxisAlignedBounds(cs.Rect, cs.Rotation),
         EraserFill ef => ef.Rect,
         StepNumberAnnotation sn => new Rectangle(sn.Pos.X - 14, sn.Pos.Y - 14, 28, 28),
         EmojiAnnotation em => new Rectangle(em.Pos.X, em.Pos.Y, (int)(em.Size * 1.4f) + 4, (int)(em.Size * 1.4f) + 4),
@@ -892,8 +892,8 @@ public sealed partial class RegionOverlayForm
     {
         return a switch
         {
-            CircleShapeAnnotation cs => IsOnEllipseOutline(cs.Rect, cs.StrokeWidth, pt),
-            RectShapeAnnotation rs   => IsOnRectOutline(rs.Rect, rs.StrokeWidth, pt),
+            CircleShapeAnnotation cs => IsOnEllipseOutlineRotated(cs.Rect, cs.Rotation, cs.StrokeWidth, pt),
+            RectShapeAnnotation rs   => IsOnRectOutlineRotated(rs.Rect, rs.Rotation, rs.StrokeWidth, pt),
             _                        => HitTestSingle(a, pt, 10),
         };
     }
@@ -927,6 +927,22 @@ public sealed partial class RegionOverlayForm
         if (!InflateRect(rect, band, band).Contains(pt)) return false;
         var inner = InflateRect(rect, -band, -band);
         return inner.Width <= 0 || inner.Height <= 0 || !inner.Contains(pt);
+    }
+
+    private static bool IsOnRectOutlineRotated(Rectangle rect, float rotation, float strokeWidth, Point pt)
+    {
+        if (Math.Abs(rotation % 360f) < 0.05f)
+            return IsOnRectOutline(rect, strokeWidth, pt);
+        var local = AnnotationTransforms.InverseRotatePoint(pt, AnnotationTransforms.CenterOf(rect), rotation);
+        return IsOnRectOutline(rect, strokeWidth, Point.Round(local));
+    }
+
+    private static bool IsOnEllipseOutlineRotated(Rectangle rect, float rotation, float strokeWidth, Point pt)
+    {
+        if (Math.Abs(rotation % 360f) < 0.05f)
+            return IsOnEllipseOutline(rect, strokeWidth, pt);
+        var local = AnnotationTransforms.InverseRotatePoint(pt, AnnotationTransforms.CenterOf(rect), rotation);
+        return IsOnEllipseOutline(rect, strokeWidth, Point.Round(local));
     }
 
     private static Rectangle NormalizeRect(Rectangle r)
@@ -1049,7 +1065,28 @@ public sealed partial class RegionOverlayForm
     {
         if (annotationIndex < 0 || annotationIndex >= _undoStack.Count)
             return -1;
-        var bounds = GetAnnotationBounds(_undoStack[annotationIndex]);
+        var selected = _undoStack[annotationIndex];
+
+        if (_isRotateMode
+            && (annotationIndex == _selectedAnnotationIndex || _multiSelectedIndices.Contains(annotationIndex))
+            && AnnotationTransforms.CanRotate(selected))
+        {
+            var corners = AnnotationTransforms.GetRotateHandleCorners(selected, 0f);
+            var pivot = new PointF(
+                (corners[0].X + corners[1].X + corners[2].X + corners[3].X) / 4f,
+                (corners[0].Y + corners[1].Y + corners[2].Y + corners[3].Y) / 4f);
+            for (int i = 0; i < 4; i++)
+            {
+                var arrow = WindowsHandleRenderer.RotateArrowCenter(corners[i], pivot, 1f);
+                if (WindowsHandleRenderer.RotateArrowHitRect(arrow, 1f).Contains(p))
+                    return i;
+            }
+            if (WindowsHandleRenderer.CenterPlusHitRect(Point.Round(pivot)).Contains(p))
+                return 8;
+            return -1;
+        }
+
+        var bounds = GetAnnotationBounds(selected);
         var selRect = Rectangle.Inflate(bounds, 4, 4);
 
         if (IsResizable(_undoStack[annotationIndex]))
@@ -1093,6 +1130,51 @@ public sealed partial class RegionOverlayForm
         }
 
         return -1;
+    }
+
+    private void BeginRotateDrag(int idx, Point screen)
+    {
+        var a = _undoStack[idx];
+        _rotatePivot = AnnotationTransforms.PivotOf(a);
+        _rotateOriginal = a;
+        _rotateStartDegrees = MathF.Atan2(screen.Y - _rotatePivot.Y, screen.X - _rotatePivot.X) * 180f / MathF.PI;
+        _isRotating = true;
+        _pendingRotateToggle = false;
+        CancelRotateToggleTimer();
+        _selectPreviewAnnotation = a;
+        _renderSkipIndex = idx;
+        MarkCommittedAnnotationsDirty();
+    }
+
+    private void ExitRotateMode(bool invalidate = true)
+    {
+        CancelRotateToggleTimer();
+        _pendingRotateToggle = false;
+        bool was = _isRotateMode || _isRotating;
+        _isRotateMode = false;
+        _isRotating = false;
+        _rotateOriginal = null;
+        if (invalidate && was)
+            Invalidate();
+    }
+
+    private void ArmRotateToggle()
+    {
+        CancelRotateToggleTimer();
+        if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _undoStack.Count)
+            return;
+        if (!AnnotationTransforms.CanRotate(_undoStack[_selectedAnnotationIndex]))
+            return;
+        _isRotateMode = !_isRotateMode;
+        Invalidate();
+    }
+
+    private void CancelRotateToggleTimer()
+    {
+        if (_rotateToggleTimer is null) return;
+        _rotateToggleTimer.Stop();
+        _rotateToggleTimer.Dispose();
+        _rotateToggleTimer = null;
     }
 
     private static Annotation ScaleAnnotation(Annotation a, Rectangle oldBounds, Rectangle newBounds)
@@ -1205,6 +1287,7 @@ public sealed partial class RegionOverlayForm
 
     private void ResetSelectedAnnotationState()
     {
+        ExitRotateMode(invalidate: false);
         _selectedAnnotationIndex = -1;
         _multiSelectedIndices.Clear();
         _selectPreviewAnnotation = null;
@@ -1218,6 +1301,7 @@ public sealed partial class RegionOverlayForm
     private void SelectAll()
     {
         if (_undoStack.Count == 0) return;
+        ExitRotateMode(invalidate: false);
         _multiSelectedIndices.Clear();
         for (int i = 0; i < _undoStack.Count; i++)
             _multiSelectedIndices.Add(i);
