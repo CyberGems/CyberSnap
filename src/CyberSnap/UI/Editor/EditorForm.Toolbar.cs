@@ -39,6 +39,7 @@ public sealed partial class EditorForm
     private EditorToggleSwitch _togglePanLockSwitch = null!;
     private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
     private readonly Dictionary<AnnotationCanvas.CanvasTool, (string labelKey, string? displayKey)> _toolButtonLabels = new();
+    private readonly List<(EditorToolButton Button, string LabelKey, string DisplayKey)> _transformButtons = new();
     private readonly List<(EditorCommandButton Button, string LabelKey)> _localizedCommandButtons = new();
     private EditorChromeButton? _closeButton;
     private EditorChromeButton? _minimizeButton;
@@ -877,40 +878,38 @@ public sealed partial class EditorForm
     {
         var section = MakeSectionPanel(null, 530);
 
-        // The Tools section keeps two visually distinct groups at the SAME total height
-        // (so the editor window layout stays pixel-identical after a capture):
-        //   • Navigation/utility tools — 2 columns, wider buttons (2 of 6 rows worth)
-        //   • Drawing/annotation tools — 3 columns, denser palette (4 of 6 rows worth)
-        // The density change reinforces the group boundary the divider already draws.
+        // Three groups, 7 rows total, same 3-column grid:
+        //   • Nav — 1 row (1/7)
+        //   • Drawing — 4 rows (4/7)
+        //   • Cut / crop / transform — 2 rows (2/7), below a separator after the last draw row
         var host = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 3,
             Padding = new Padding(0, 2, 0, 0),
         };
         EnableDoubleBuffering(host);
         host.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        host.RowStyles.Add(new RowStyle(SizeType.Percent, 33.34f)); // 2/6
-        host.RowStyles.Add(new RowStyle(SizeType.Percent, 66.66f)); // 4/6
+        host.RowStyles.Add(new RowStyle(SizeType.Percent, 14.29f)); // 1/7
+        host.RowStyles.Add(new RowStyle(SizeType.Percent, 57.14f)); // 4/7
+        host.RowStyles.Add(new RowStyle(SizeType.Percent, 28.57f)); // 2/7
 
         var nav = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            ColumnCount = 2,
-            RowCount = 2,
+            ColumnCount = 3,
+            RowCount = 1,
         };
-        nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-        nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        for (int c = 0; c < 3; c++)
+            nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        nav.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
-        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Pick");
-        AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop", bottomMargin: 7);
-        AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser", bottomMargin: 7);
+        AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan", bottomMargin: 5);
+        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Pick", displayKey: "Sel", bottomMargin: 5);
+        AddToolButton(nav, 2, 0, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser", bottomMargin: 5);
 
         var draw = new TableLayoutPanel
         {
@@ -924,22 +923,44 @@ public sealed partial class EditorForm
         for (int r = 0; r < 4; r++)
             draw.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
 
-        AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw", topMargin: 7);
-        AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", topMargin: 7);
-        AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle", topMargin: 7);
-        AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line", bottomMargin: 7);
-        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow", bottomMargin: 7);
-        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", "Curved", bottomMargin: 7);
-        AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool", topMargin: 7);
-        AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight", topMargin: 7);
-        AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur", topMargin: 7);
-        AddToolButton(draw, 0, 3, AnnotationCanvas.CanvasTool.StepNumber, "step", "Step");
-        AddToolButton(draw, 1, 3, AnnotationCanvas.CanvasTool.Magnifier, "magnifier", "Magnify");
-        AddToolButton(draw, 2, 3, AnnotationCanvas.CanvasTool.Emoji, "emoji", "Emoji");
+        AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw", topMargin: 5);
+        AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", topMargin: 5);
+        AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle", topMargin: 5);
+        AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line", bottomMargin: 5);
+        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow", bottomMargin: 5);
+        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", "Curved", bottomMargin: 5);
+        AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool", topMargin: 5);
+        AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight", topMargin: 5);
+        AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur", displayKey: "Desenf.", topMargin: 5);
+        AddToolButton(draw, 0, 3, AnnotationCanvas.CanvasTool.StepNumber, "step", "Step", bottomMargin: 5);
+        AddToolButton(draw, 1, 3, AnnotationCanvas.CanvasTool.Magnifier, "magnifier", "Magnify", bottomMargin: 5);
+        AddToolButton(draw, 2, 3, AnnotationCanvas.CanvasTool.Emoji, "emoji", "Emoji", bottomMargin: 5);
 
-        // Second divider inside the drawing group: between the line/shape row (1) and the
-        // text/highlight/blur row (2). Painted in the existing button-margin gap, so it
-        // costs no vertical layout space — same technique as the group divider.
+        var transform = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            ColumnCount = 3,
+            RowCount = 2,
+        };
+        for (int c = 0; c < 3; c++)
+            transform.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        transform.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+        transform.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+
+        AddToolButton(transform, 0, 0, AnnotationCanvas.CanvasTool.CutOut, "cutOut", "Cut Out", displayKey: "Cut", topMargin: 5);
+        AddToolButton(transform, 1, 0, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop", topMargin: 5);
+        AddTransformButton(transform, 2, 0, "rotateCw", "Rotate 90° clockwise", "90° →",
+            Models.Commands.CanvasTransformKind.Rotate90Clockwise, topMargin: 5);
+        AddTransformButton(transform, 0, 1, "flipVertical", "Flip vertical", "Flip V",
+            Models.Commands.CanvasTransformKind.FlipVertical);
+        AddTransformButton(transform, 1, 1, "flipHorizontal", "Flip horizontal", "Flip H",
+            Models.Commands.CanvasTransformKind.FlipHorizontal);
+        AddTransformButton(transform, 2, 1, "rotateCcw", "Rotate 90° counter-clockwise", "90° ←",
+            Models.Commands.CanvasTransformKind.Rotate90CounterClockwise);
+
+        // Divider inside the drawing group: between the line/shape row (1) and the
+        // text/highlight/blur row (2). Painted in the existing button-margin gap.
         draw.Paint += (_, e) =>
         {
             var heights = draw.GetRowHeights();
@@ -948,18 +969,20 @@ public sealed partial class EditorForm
             DrawToolGroupDivider(e.Graphics, draw.ClientRectangle.Width, y);
         };
 
-        // Divider painted in the gap between the two groups (between host rows 0 and 1),
-        // so it costs no vertical layout space — same technique as before.
+        // Group dividers: nav | draw, and draw | transform (after the last draw row).
         host.Paint += (_, e) =>
         {
             var heights = host.GetRowHeights();
-            if (heights.Length < 1) return;
-            int y = host.Padding.Top + heights[0];
-            DrawToolGroupDivider(e.Graphics, host.ClientRectangle.Width, y);
+            if (heights.Length < 2) return;
+            int y0 = host.Padding.Top + heights[0];
+            DrawToolGroupDivider(e.Graphics, host.ClientRectangle.Width, y0);
+            int y1 = y0 + heights[1];
+            DrawToolGroupDivider(e.Graphics, host.ClientRectangle.Width, y1);
         };
 
         host.Controls.Add(nav, 0, 0);
         host.Controls.Add(draw, 0, 1);
+        host.Controls.Add(transform, 0, 2);
 
         section.Controls.Add(host, 0, 1);
         return section;
@@ -1184,8 +1207,8 @@ public sealed partial class EditorForm
         string iconId,
         string labelKey,
         string? displayKey = null,
-        int topMargin = 4,
-        int bottomMargin = 4)
+        int topMargin = 3,
+        int bottomMargin = 3)
     {
         // The visible button text can be a shorter label (displayKey) to avoid truncation in the
         // narrow grid; the hover tooltip below still uses the full labelKey.
@@ -1222,6 +1245,37 @@ public sealed partial class EditorForm
 
         RegisterHoverTooltip(button, () => FormatToolTooltip(tool, labelKey));
 
+        parent.Controls.Add(button, column, row);
+    }
+
+    private void AddTransformButton(
+        TableLayoutPanel parent,
+        int column,
+        int row,
+        string iconId,
+        string labelKey,
+        string displayKey,
+        Models.Commands.CanvasTransformKind kind,
+        int topMargin = 3,
+        int bottomMargin = 3)
+    {
+        int cols = parent.ColumnCount;
+        int left = column == 0 ? 0 : 4;
+        int right = column == cols - 1 ? 0 : 4;
+        var button = new EditorToolButton
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(left, topMargin, right, bottomMargin),
+            IconId = iconId,
+            Text = LocalizationService.Translate(displayKey),
+        };
+        button.Click += (_, _) =>
+        {
+            DoTransformCanvas(kind);
+            _canvas.Focus();
+        };
+        _transformButtons.Add((button, labelKey, displayKey));
+        RegisterHoverTooltip(button, () => LocalizationService.Translate(labelKey));
         parent.Controls.Add(button, column, row);
     }
 
@@ -1636,6 +1690,9 @@ public sealed partial class EditorForm
             AnnotationCanvas.CanvasTool.Crop =>
                 LocalizationService.Translate("Drag to select or adjust crop · Enter to apply · Esc to cancel"),
 
+            AnnotationCanvas.CanvasTool.CutOut =>
+                LocalizationService.Translate("Drag a strip to remove · Shift locks axis · Enter to apply · Esc to cancel"),
+
             AnnotationCanvas.CanvasTool.Draw =>
                 LocalizationService.Translate("Drag freehand to draw · Hold Space to pan"),
 
@@ -1683,6 +1740,7 @@ public sealed partial class EditorForm
         AnnotationCanvas.CanvasTool.Pan => "Pan",
         AnnotationCanvas.CanvasTool.Move => "Pick",
         AnnotationCanvas.CanvasTool.Crop => "Crop",
+        AnnotationCanvas.CanvasTool.CutOut => "Cut Out",
         AnnotationCanvas.CanvasTool.Text => "Text Tool",
         AnnotationCanvas.CanvasTool.Draw => "Draw",
         AnnotationCanvas.CanvasTool.Arrow => "Arrow",
@@ -2552,6 +2610,11 @@ internal sealed class EditorToolButton : EditorButtonBase
     private int _lastClickTick;
     private Point _lastClickLocation;
 
+    public EditorToolButton()
+    {
+        Font = UiChrome.ChromeFont(7.5f, FontStyle.Bold);
+    }
+
     /// <summary>Invoked on double-click (WinForms DoubleClick is unreliable on UserPaint buttons).</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? DoubleClickAction { get; set; }
@@ -2602,10 +2665,10 @@ internal sealed class EditorToolButton : EditorButtonBase
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
-        var iconSize = 40f;
-        var iconTop = 6f;
-        var textHeight = 24;
-        var textTop = rect.Bottom - 26;
+        var iconSize = 34f;
+        var iconTop = 4f;
+        var textHeight = 18;
+        var textTop = rect.Bottom - 20;
 
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,

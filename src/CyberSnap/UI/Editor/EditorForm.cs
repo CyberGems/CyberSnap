@@ -1892,13 +1892,13 @@ public sealed partial class EditorForm : Form, IMessageFilter
             Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
             20, false);
 
-        var rotate90CwItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 90° clockwise"), iconId: "redo");
+        var rotate90CwItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 90° clockwise"), iconId: "rotateCw");
         rotate90CwItem.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.Rotate90Clockwise);
 
-        var rotate90CcwItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 90° counter-clockwise"), iconId: "undo");
+        var rotate90CcwItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 90° counter-clockwise"), iconId: "rotateCcw");
         rotate90CcwItem.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.Rotate90CounterClockwise);
 
-        var rotate180Item = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 180°"), iconId: "redo");
+        var rotate180Item = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 180°"), iconId: "rotateCw");
         rotate180Item.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.Rotate180);
 
         var flipHItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Flip horizontal"), iconId: "flipHorizontal");

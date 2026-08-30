@@ -28,6 +28,9 @@ public sealed partial class EditorForm
             button.Text = LocalizationService.Translate(keys.displayKey ?? keys.labelKey);
         }
 
+        foreach (var (button, _, displayKey) in _transformButtons)
+            button.Text = LocalizationService.Translate(displayKey);
+
         foreach (var (button, labelKey) in _localizedCommandButtons)
         {
             button.Text = LocalizationService.Translate(labelKey);

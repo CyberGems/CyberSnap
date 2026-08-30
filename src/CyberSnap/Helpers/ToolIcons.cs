@@ -34,6 +34,7 @@ public static class ToolIcons
         ["editorCircle"] = "circleShape",
         ["editorText"] = "text",
         ["editorCrop"] = "crop",
+        ["editorCutOut"] = "cutOut",
         ["editorEraser"] = "eraser",
         ["editorHighlight"] = "highlight",
         ["editorBlur"] = "blur",

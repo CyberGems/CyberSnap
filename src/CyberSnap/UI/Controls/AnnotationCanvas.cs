@@ -35,6 +35,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         StepNumber,
         Magnifier,
         Emoji,
+        CutOut,
     }
 
     private int _undoStackLimit = 100;
@@ -171,6 +172,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             {
                 ClearCropPending();
             }
+            ClearCutOutPending();
 
             Invalidate();
             OnStateChanged();
@@ -367,7 +369,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private void UpdateResizeHandlesHover()
     {
         if (!EditorShowResizeHandles || _baseBitmap == null) return;
-        if (_activeTool == CanvasTool.Crop || _preSpaceTool != null) return;
+        if (HideCanvasResizeHandles) return;
 
         if (_resizeHandlesTimer == null)
         {
@@ -469,6 +471,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             CanvasTool.Pan => "Pan",
             CanvasTool.Move => "Pick",
             CanvasTool.Crop => "Crop",
+            CanvasTool.CutOut => "Cut Out",
             CanvasTool.Text => "Text",
             CanvasTool.Draw => "Draw",
             CanvasTool.Arrow => "Arrow",
@@ -505,10 +508,14 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             // so it's just discarded. The active tool is switched first so TryConfirmCrop won't
             // re-arm a fresh full-image crop whose handles would then linger under the new tool.
             bool leavingCrop = _activeTool == CanvasTool.Crop && value != CanvasTool.Crop && _preSpaceTool == null;
+            bool leavingCutOut = _activeTool == CanvasTool.CutOut && value != CanvasTool.CutOut && _preSpaceTool == null;
             _activeTool = value;
             bool cropApplied = false;
+            bool cutOutApplied = false;
             if (leavingCrop)
                 cropApplied = FinalizeLeavingCrop();
+            if (leavingCutOut)
+                cutOutApplied = FinalizeLeavingCutOut();
 
             if (value == CanvasTool.Crop)
             {
@@ -522,7 +529,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             UpdateResizeHandlesHover();
             ShowToolBanner(cropApplied
                 ? LocalizationService.Translate("Crop applied")
-                : GetToolName(value));
+                : cutOutApplied
+                    ? LocalizationService.Translate("Cut Out applied")
+                    : GetToolName(value));
             if (IsDefaultBlank)
                 DismissWelcomeOverlay();
             Invalidate();
@@ -654,15 +663,17 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         // Deselecting the Text tool keeps what was typed (use the Esc key inside the
         // text box to discard instead). Commit first so the discard below no-ops.
         bool hadPendingCrop = HasPendingCrop;
+        bool hadPendingCutOut = HasPendingCutOut;
         CommitOrCancelInlineText(commit: true);
         CancelInProgressTool();
         CancelCropPending();
+        CancelCutOutPending();
         _activeTool = CanvasTool.Move;
         _selectedEmoji = null;
         UpdateCursor();
-        // CancelCropPending already announced "Crop canceled" when a crop was pending; only
-        // fall back to the generic deselect banner when there was no crop to cancel.
-        if (!hadPendingCrop)
+        // CancelCropPending / CancelCutOutPending already announced when a pending
+        // strip existed; only fall back to the generic deselect banner otherwise.
+        if (!hadPendingCrop && !hadPendingCutOut)
             ShowToolBanner(LocalizationService.Translate("Tool deselected"));
         Invalidate();
         OnStateChanged();
@@ -852,6 +863,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         {
             ClearCropPending();
         }
+        ClearCutOutPending();
 
         ApplyInitialView();
         Invalidate();
@@ -911,6 +923,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         {
             ClearCropPending();
         }
+        ClearCutOutPending();
 
         ApplyInitialView();
         Invalidate();
@@ -946,6 +959,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         {
             ClearCropPending();
         }
+        ClearCutOutPending();
 
         Invalidate();
         _isDirty = false;
@@ -1167,6 +1181,24 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             (ClientSize.Height - scaledH) / 2f);
     }
 
+    /// <summary>
+    /// After a canvas size change (90° rotate swaps W/H), shift pan so the image's
+    /// visual center stays put. Zoom is left unchanged.
+    /// </summary>
+    internal void PreserveViewCenterAfterCanvasSizeChange(int previousWidth, int previousHeight)
+    {
+        if (_baseBitmap is null) return;
+        int dw = previousWidth - _baseBitmap.Width;
+        int dh = previousHeight - _baseBitmap.Height;
+        if (dw == 0 && dh == 0) return;
+
+        _pan = new PointF(
+            _pan.X + (float)(dw * _zoom * 0.5),
+            _pan.Y + (float)(dh * _zoom * 0.5));
+        _viewFitsWindow = false;
+        NotifyScrollbarActivity();
+    }
+
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
@@ -1266,7 +1298,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// <summary>Hit-tests a client point against the resize handles (or -1). Public for the
     /// editor's hover tooltip. Returns -1 unless the handles are currently interactive.</summary>
     public int HitTestResizeHandlePublic(Point client)
-        => (EditorShowResizeHandles && _baseBitmap != null && _preSpaceTool == null && _activeTool != CanvasTool.Crop)
+        => (EditorShowResizeHandles && _baseBitmap != null && !HideCanvasResizeHandles)
             ? HitTestResizeHandle(client) : -1;
 
     /// <summary>Client-space bounding box of a resize handle, for tooltip placement.</summary>

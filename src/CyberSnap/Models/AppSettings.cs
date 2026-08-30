@@ -728,6 +728,7 @@ public sealed class AppSettings
             ["editorCircle"] = 0x77,      // F8
             ["editorRect"] = 0x78,        // F9
             ["editorCrop"] = 0x33,        // 3
+            ["editorCutOut"] = 0x34,      // 4
             ["editorHighlight"] = 0x79,   // F10
             ["editorStep"] = 0x7A,        // F11
             ["editorMagnifier"] = 0x7B,   // F12

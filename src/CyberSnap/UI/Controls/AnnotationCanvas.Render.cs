@@ -53,6 +53,7 @@ public sealed partial class AnnotationCanvas
 
         RenderResizeHandles(g);
         RenderCropOverlay(g);
+        RenderCutOutOverlay(g);
         RenderCheckerboardFrame(g);
         RenderGuides(g);
         RenderToolBanner(g);

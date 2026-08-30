@@ -80,28 +80,30 @@ public sealed class TransformCanvasCommand : IEditCommand
             _afterAnnotations = new List<Annotation>();
         }
 
+        int oldW = ctx.BaseBitmap.Width;
+        int oldH = ctx.BaseBitmap.Height;
+
         ctx.BaseBitmap = new Bitmap(_afterBitmap);
         ctx.Annotations.Clear();
         ctx.Annotations.AddRange(_afterAnnotations!);
+        if (ctx is CyberSnap.UI.Controls.AnnotationCanvas view)
+            view.PreserveViewCenterAfterCanvasSizeChange(oldW, oldH);
         ctx.Invalidate();
-        RefitView(ctx);
     }
 
     public void Revert(IEditorContext ctx)
     {
         if (_disposed || _beforeBitmap is null || _beforeAnnotations is null) return;
 
+        int oldW = ctx.BaseBitmap.Width;
+        int oldH = ctx.BaseBitmap.Height;
+
         ctx.BaseBitmap = new Bitmap(_beforeBitmap);
         ctx.Annotations.Clear();
         ctx.Annotations.AddRange(_beforeAnnotations);
-        ctx.Invalidate();
-        RefitView(ctx);
-    }
-
-    private static void RefitView(IEditorContext ctx)
-    {
         if (ctx is CyberSnap.UI.Controls.AnnotationCanvas canvas)
-            canvas.ZoomFit();
+            canvas.PreserveViewCenterAfterCanvasSizeChange(oldW, oldH);
+        ctx.Invalidate();
     }
 
     private static RotateFlipType ToRotateFlipType(CanvasTransformKind kind) => kind switch
