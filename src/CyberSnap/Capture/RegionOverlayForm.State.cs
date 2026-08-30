@@ -1035,7 +1035,7 @@ public sealed partial class RegionOverlayForm
         };
     }
 
-    /// <summary>Returns the handle index (0=TL,1=TR,2=BL,3=BR,4=T,5=L,6=R,7=B) at point, or -1.</summary>
+    /// <summary>Returns the handle index (0=TL,1=TR,2=BL,3=BR,4=T,5=L,6=R,7=B,8=center plus) at point, or -1.</summary>
     private int GetSelectHandle(Point p)
     {
         return GetSelectHandle(p, _selectedAnnotationIndex);
@@ -1049,39 +1049,47 @@ public sealed partial class RegionOverlayForm
     {
         if (annotationIndex < 0 || annotationIndex >= _undoStack.Count)
             return -1;
-        // Non-resizable items never report a resize handle, so a drag on them is always a move.
-        if (!IsResizable(_undoStack[annotationIndex]))
-            return -1;
         var bounds = GetAnnotationBounds(_undoStack[annotationIndex]);
         var selRect = Rectangle.Inflate(bounds, 4, 4);
 
-        // 4 Corners: 0: TL, 1: TR, 2: BL, 3: BR
-        var corners = new[] {
-            new Point(selRect.X, selRect.Y),
-            new Point(selRect.Right - 1, selRect.Y),
-            new Point(selRect.X, selRect.Bottom - 1),
-            new Point(selRect.Right - 1, selRect.Bottom - 1)
-        };
-        for (int i = 0; i < 4; i++)
+        if (IsResizable(_undoStack[annotationIndex]))
         {
-            var hr = WindowsHandleRenderer.HitRect(corners[i]);
-            if (hr.Contains(p)) return i;
+            // 4 Corners: 0: TL, 1: TR, 2: BL, 3: BR
+            var corners = new[] {
+                new Point(selRect.X, selRect.Y),
+                new Point(selRect.Right - 1, selRect.Y),
+                new Point(selRect.X, selRect.Bottom - 1),
+                new Point(selRect.Right - 1, selRect.Bottom - 1)
+            };
+            for (int i = 0; i < 4; i++)
+            {
+                var hr = WindowsHandleRenderer.HitRect(corners[i]);
+                if (hr.Contains(p)) return i;
+            }
+
+            // Mid-edges only if size >= 56px
+            if (bounds.Width >= 56)
+            {
+                var topHr = WindowsHandleRenderer.HitRect(new Point(selRect.X + selRect.Width / 2, selRect.Y));
+                if (topHr.Contains(p)) return 4; // Top
+                var btmHr = WindowsHandleRenderer.HitRect(new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1));
+                if (btmHr.Contains(p)) return 7; // Bottom
+            }
+            if (bounds.Height >= 56)
+            {
+                var leftHr = WindowsHandleRenderer.HitRect(new Point(selRect.X, selRect.Y + selRect.Height / 2));
+                if (leftHr.Contains(p)) return 5; // Left
+                var rightHr = WindowsHandleRenderer.HitRect(new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2));
+                if (rightHr.Contains(p)) return 6; // Right
+            }
         }
 
-        // Mid-edges only if size >= 56px
-        if (bounds.Width >= 56)
+        if ((annotationIndex == _selectedAnnotationIndex || _multiSelectedIndices.Contains(annotationIndex))
+            && WindowsHandleRenderer.FitsCenterPlus(selRect.Width, selRect.Height))
         {
-            var topHr = WindowsHandleRenderer.HitRect(new Point(selRect.X + selRect.Width / 2, selRect.Y));
-            if (topHr.Contains(p)) return 4; // Top
-            var btmHr = WindowsHandleRenderer.HitRect(new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1));
-            if (btmHr.Contains(p)) return 7; // Bottom
-        }
-        if (bounds.Height >= 56)
-        {
-            var leftHr = WindowsHandleRenderer.HitRect(new Point(selRect.X, selRect.Y + selRect.Height / 2));
-            if (leftHr.Contains(p)) return 5; // Left
-            var rightHr = WindowsHandleRenderer.HitRect(new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2));
-            if (rightHr.Contains(p)) return 6; // Right
+            var center = new Point(selRect.X + selRect.Width / 2, selRect.Y + selRect.Height / 2);
+            if (WindowsHandleRenderer.CenterPlusHitRect(center).Contains(p))
+                return 8;
         }
 
         return -1;
