@@ -2443,7 +2443,11 @@ public partial class ToastWindow : Window
         if (_isPinned && !force)
             return false;
 
-        if (_current == this) _current = null;
+        if (_current == this)
+        {
+            _current = null;
+            _currentSpec = null;
+        }
         try
         {
             Close();
@@ -2460,7 +2464,11 @@ public partial class ToastWindow : Window
     {
         RunOnClosedCleanup("toast.closed.stop-timer", () => _timer.Stop());
         RunOnClosedCleanup("toast.closed.stop-dismiss-animation", StopDismissAnimationTimer);
-        if (_current == this) _current = null;
+        if (_current == this)
+        {
+            _current = null;
+            _currentSpec = null;
+        }
         RunOnClosedCleanup("toast.closed.dispose-preview", () => _previewBitmap?.Dispose());
         _previewBitmap = null;
         RunOnClosedCleanup("toast.closed.clear-inline-source", () => InlinePreviewImage.Source = null);
@@ -2481,6 +2489,7 @@ public partial class ToastWindow : Window
             });
         }
         base.OnClosed(e);
+        NotifyHostSlotCleared();
     }
 
     private static void RunOnClosedCleanup(string diagnosticKey, Action cleanup)

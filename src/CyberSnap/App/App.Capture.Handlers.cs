@@ -654,18 +654,18 @@ public partial class App
                 Celebrate = true,
                 SuppressSound = true,
                 IsSystemMessage = false,
+                CelebrationRank = ToastSpec.RankFirstTime,
                 // A trophy after the name reads as an unlock; the default capture icon would be
                 // out of place here since the tool's own icon already sits on the left badge.
                 CelebrationBodyIconId = "trophy"
             };
         });
 
-    // Shared delayed-follow-up mechanism for every celebration toast (first-time achievements,
-    // capture milestones, streaks, first-of-day greeting). The short delay lets the tool's own
-    // functional toast (scan result, "Color copied", file size, ...) appear first, so the
-    // celebration reads as a distinct follow-up instead of being merged into — and easily missed
-    // alongside — it. Plays the dedicated, user-customizable Achievement sound on show; the toast
-    // itself is built with SuppressSound so the sound isn't doubled.
+    // Shared follow-up for every celebration toast (first-time achievements, capture
+    // milestones, streaks, first-of-day greeting). Posted at Background priority so any
+    // functional toast already queued on this dispatcher turn (color copied, recording
+    // done, OCR copied, …) occupies the single-toast slot first. ToastWindow then queues
+    // the flourish until that slot is free, instead of morphing or replacing it.
     private void ShowDelayedCelebrationToast(Func<ToastSpec> buildSpec)
     {
         if (!Dispatcher.CheckAccess())
@@ -674,21 +674,11 @@ public partial class App
             return;
         }
 
-        var timer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+        Dispatcher.BeginInvoke(() =>
         {
-            Interval = TimeSpan.FromSeconds(2.2)
-        };
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            try
-            {
-                ToastWindow.Show(buildSpec());
-                SoundService.PlayAchievementSound();
-            }
+            try { ToastWindow.Show(buildSpec()); }
             catch (Exception ex) { AppDiagnostics.LogWarning("celebration.toast", ex.Message, ex); }
-        };
-        timer.Start();
+        }, DispatcherPriority.Background);
     }
 
     // Core counting logic: always runs regardless of CelebrationsEnabled so that
@@ -754,21 +744,25 @@ public partial class App
         string? title = null;
         string? body = null;
 
+        int rank = ToastSpec.RankDaily;
         if (CelebrationMilestones.IsMilestone(reg.Count))
         {
             title = "Milestone reached!";
             body = string.Format(LocalizationService.Translate("{0} captures and counting"), reg.Count);
+            rank = ToastSpec.RankMilestone;
         }
         else if (reg.IsFirstToday && CelebrationMilestones.IsStreakMilestone(reg.Streak))
         {
             title = "On a roll!";
             body = string.Format(LocalizationService.Translate("{0}-day streak"), reg.Streak);
+            rank = ToastSpec.RankStreak;
         }
         else if (reg.IsFirstToday)
         {
             // Time-neutral greeting (works for night owls). The trailing capture icon fits here.
             title = "Welcome back!";
             body = LocalizationService.Translate("Your first capture today");
+            rank = ToastSpec.RankDaily;
         }
 
         if (title is null)
@@ -776,12 +770,14 @@ public partial class App
 
         var celebrationTitle = title;
         var celebrationBody = body!;
+        var celebrationRank = rank;
         ShowDelayedCelebrationToast(() =>
             ToastSpec.Standard(celebrationTitle, celebrationBody) with
             {
                 Celebrate = true,
                 SuppressSound = true,
-                IsSystemMessage = false
+                IsSystemMessage = false,
+                CelebrationRank = celebrationRank
             });
     }
 

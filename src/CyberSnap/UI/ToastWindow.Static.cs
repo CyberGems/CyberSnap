@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
@@ -12,6 +13,10 @@ namespace CyberSnap.UI;
 
 public partial class ToastWindow
 {
+    private static readonly List<ToastSpec> _celebrationQueue = new();
+    private static ToastSpec? _currentSpec;
+    private static int _showDepth;
+
     public static void SetPosition(CyberSnap.Models.ToastPosition position) => _position = position;
     public static void SetMonitorIndex(int index) => _monitorIndex = index;
     public static void SetDuration(double seconds) => _durationSeconds = Math.Clamp(seconds, 1, 60);
@@ -94,7 +99,114 @@ public partial class ToastWindow
             && spec.StatusLines is not { Count: > 0 })
             return;
 
-        if (!spec.SuppressSound)
+        var wpfDispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (wpfDispatcher != null && !wpfDispatcher.CheckAccess())
+        {
+            wpfDispatcher.BeginInvoke(() => Show(spec));
+            return;
+        }
+
+        _showDepth++;
+        try
+        {
+            if (IsCelebration(spec))
+            {
+                // Settings test: show now so the user sees the flourish immediately.
+                if (spec.BypassQuietHours)
+                {
+                    PresentToast(spec);
+                    return;
+                }
+
+                EnqueueCelebration(spec);
+                TryPresentNextCelebration();
+                return;
+            }
+
+            // A celebration on screen keeps the slot until it dismisses. Errors still interrupt.
+            if (!spec.IsError && _currentSpec is { } showing && IsCelebration(showing))
+                return;
+
+            if (spec.IsError && _currentSpec is { } interrupted && IsCelebration(interrupted))
+                EnqueueCelebration(interrupted);
+
+            PresentToast(spec);
+        }
+        finally
+        {
+            _showDepth--;
+        }
+    }
+
+    private static bool IsCelebration(ToastSpec spec) => spec.Celebrate && !spec.IsError;
+
+    private static void EnqueueCelebration(ToastSpec spec)
+    {
+        int i = 0;
+        while (i < _celebrationQueue.Count && _celebrationQueue[i].CelebrationRank <= spec.CelebrationRank)
+            i++;
+        _celebrationQueue.Insert(i, spec);
+    }
+
+    internal static void NotifyHostSlotCleared()
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            TryPresentNextCelebration();
+            return;
+        }
+
+        dispatcher.BeginInvoke(TryPresentNextCelebration, DispatcherPriority.Background);
+    }
+
+    private static void TryPresentNextCelebration()
+    {
+        if (_celebrationQueue.Count == 0 || _current != null)
+            return;
+
+        if (!_notificationsEnabled)
+        {
+            DiscardQueuedCelebrations();
+            return;
+        }
+
+        var settings = SettingsService.LoadStatic();
+        if (settings?.CelebrationsEnabled != true)
+        {
+            DiscardQueuedCelebrations();
+            return;
+        }
+
+        var next = _celebrationQueue[0];
+        _celebrationQueue.RemoveAt(0);
+
+        if (!next.BypassQuietHours && QuietHours.IsActive(settings))
+        {
+            DiscardCelebration(next);
+            TryPresentNextCelebration();
+            return;
+        }
+
+        PresentToast(next);
+    }
+
+    private static void DiscardQueuedCelebrations()
+    {
+        foreach (var spec in _celebrationQueue)
+            DiscardCelebration(spec);
+        _celebrationQueue.Clear();
+    }
+
+    private static void DiscardCelebration(ToastSpec spec)
+        => spec.InlinePreviewBitmap?.Dispose();
+
+    private static void PresentToast(ToastSpec spec)
+    {
+        if (IsCelebration(spec) && spec.DurationSeconds is null)
+            spec = spec with { DurationSeconds = _systemDurationSeconds };
+
+        if (!spec.SuppressSound && !IsCelebration(spec))
         {
             if (spec.PlayErrorSound)
                 Services.SoundService.PlayErrorSound();
@@ -106,21 +218,20 @@ public partial class ToastWindow
                 Services.SoundService.PlayCaptureSound();
         }
 
-        if (_current?.TryUpdateInPlace(spec) == true)
-            return;
-
-        // Ensure toast creation/show happens on the WPF dispatcher thread.
-        var wpfDispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (wpfDispatcher != null && !wpfDispatcher.CheckAccess())
+        if (!IsCelebration(spec) && _current?.TryUpdateInPlace(spec) == true)
         {
-            wpfDispatcher.BeginInvoke(() => Show(spec));
+            _currentSpec = spec;
             return;
         }
 
         ReplaceCurrentToast();
         var toast = new ToastWindow(spec);
         _current = toast;
+        _currentSpec = spec;
         toast.Show();
+
+        if (IsCelebration(spec))
+            Services.SoundService.PlayAchievementSound();
     }
 
     public static void ShowWithColor(string title, string body, Color color, bool suppressSound = false)
