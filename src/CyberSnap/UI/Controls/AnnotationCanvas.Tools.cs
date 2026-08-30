@@ -1522,26 +1522,26 @@ public sealed partial class AnnotationCanvas
             {
                 var arrowEnd = GetDragLineEnd(_dragLastImg);
                 if (_dragStartImg != arrowEnd)
-                    Push(new AddAnnotationCommand(new ArrowAnnotation(_dragStartImg, arrowEnd, ToolColor, StrokeWidth)));
+                    PushAndSelectDrawn(new AddAnnotationCommand(new ArrowAnnotation(_dragStartImg, arrowEnd, ToolColor, StrokeWidth)));
                 break;
             }
             case CanvasTool.Line:
             {
                 var lineEnd = GetDragLineEnd(_dragLastImg);
                 if (_dragStartImg != lineEnd)
-                    Push(new AddAnnotationCommand(new LineAnnotation(_dragStartImg, lineEnd, ToolColor, StrokeWidth)));
+                    PushAndSelectDrawn(new AddAnnotationCommand(new LineAnnotation(_dragStartImg, lineEnd, ToolColor, StrokeWidth)));
                 break;
             }
             case CanvasTool.Rect:
                 var rect = GetDragShapeRect(_dragLastImg);
                 if (rect.Width >= 4 && rect.Height >= 4)
-                    Push(new AddAnnotationCommand(new RectShapeAnnotation(rect, ToolColor, StrokeWidth)));
+                    PushAndSelectDrawn(new AddAnnotationCommand(new RectShapeAnnotation(rect, ToolColor, StrokeWidth)));
                 Invalidate();
                 break;
             case CanvasTool.Circle:
                 var crect = GetDragShapeRect(_dragLastImg);
                 if (crect.Width >= 4 && crect.Height >= 4)
-                    Push(new AddAnnotationCommand(new CircleShapeAnnotation(crect, ToolColor, StrokeWidth)));
+                    PushAndSelectDrawn(new AddAnnotationCommand(new CircleShapeAnnotation(crect, ToolColor, StrokeWidth)));
                 Invalidate();
                 break;
             case CanvasTool.Highlight:
@@ -1557,7 +1557,7 @@ public sealed partial class AnnotationCanvas
                 Invalidate();
                 break;
             case CanvasTool.CurvedArrow when _currentStroke is { Count: >= 2 }:
-                Push(new AddAnnotationCommand(new CurvedArrowAnnotation(_currentStroke, ToolColor, StrokeWidth)));
+                PushAndSelectDrawn(new AddAnnotationCommand(new CurvedArrowAnnotation(_currentStroke, ToolColor, StrokeWidth)));
                 _currentStroke = null;
                 break;
             case CanvasTool.CurvedArrow:
@@ -1605,6 +1605,23 @@ public sealed partial class AnnotationCanvas
             Invalidate();
         }
         UpdateResizeHandlesHover();
+    }
+
+    /// <summary>Commits a drag-drawn shape (circle, rect, line, arrow) and selects it so
+    /// handles appear immediately. Stamp-like tools (text, emoji, highlight, blur, magnifier,
+    /// step) keep using plain Push so they stay unselected for rapid repeat placement.</summary>
+    private void PushAndSelectDrawn(IEditCommand command)
+    {
+        int countBefore = _annotations.Count;
+        Push(command);
+        if (_annotations.Count <= countBefore) return;
+
+        _multiSelectedIndices.Clear();
+        _multiDragOriginals = null;
+        _selectedAnnotationIndex = _annotations.Count - 1;
+        RefreshLastUndoAfterSelection();
+        OnStateChanged();
+        Invalidate();
     }
 
     /// <summary>Suppresses the hover/control box for the annotation just placed, until the
@@ -2693,6 +2710,8 @@ public sealed partial class AnnotationCanvas
         else if (commit && !hasText && editIndex >= 0 && original is not null)
         {
             Push(new DeleteAnnotationCommand(editIndex, original));
+            _selectedAnnotationIndex = -1;
+            RefreshLastUndoAfterSelection();
         }
         // cancel: original stays (was never removed)
 
@@ -2784,6 +2803,7 @@ public sealed partial class AnnotationCanvas
         var toDelete = _annotations[index];
         Push(new DeleteAnnotationCommand(index, toDelete));
         _selectedAnnotationIndex = -1;
+        RefreshLastUndoAfterSelection();
     }
 
     /// <summary>Deletes all multi-selected annotations as a single undo-able operation.</summary>
@@ -2800,6 +2820,7 @@ public sealed partial class AnnotationCanvas
         _selectedAnnotationIndex = -1;
         _multiSelectedIndices.Clear();
         _multiDragOriginals = null;
+        RefreshLastUndoAfterSelection();
         var msg = string.Format(LocalizationService.Translate("{0} objects deleted"), count);
         ShowToolBanner(msg);
         OnStateChanged();
@@ -2858,6 +2879,7 @@ public sealed partial class AnnotationCanvas
                 _multiSelectedIndices.Add(insertStart + i);
         }
         _multiDragOriginals = null;
+        RefreshLastUndoAfterSelection();
         OnStateChanged();
         Invalidate();
     }

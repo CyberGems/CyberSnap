@@ -12,6 +12,8 @@ public sealed class DeleteMultipleAnnotationsCommand : IEditCommand
         _items = items.OrderByDescending(x => x.Index).ToArray();
     }
 
+    internal IReadOnlyList<(int Index, Annotation Annotation)> Items => _items;
+
     public string Description => $"Delete {_items.Length} annotations";
 
     public void Apply(IEditorContext ctx)

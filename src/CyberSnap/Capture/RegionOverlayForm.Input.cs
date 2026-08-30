@@ -200,9 +200,17 @@ public sealed partial class RegionOverlayForm
                 {
                     // Exterior of the locked frame:
                     //  - no annotations → click = Retry, drag = new rubber-band
-                    //  - with annotations → no-op (hint + right-click menu protect work)
+                    //  - with annotations → deselect if something is selected; do not
+                    //    start a new capture (right-click menu still protects the work)
                     if (HasConfirmAnnotations())
+                    {
+                        if (_selectedAnnotationIndex >= 0 || _multiSelectedIndices.Count > 0)
+                        {
+                            ResetSelectedAnnotationState();
+                            Invalidate();
+                        }
                         return;
+                    }
 
                     _outsideReselectArmed = true;
                     _outsideReselectDown = e.Location;

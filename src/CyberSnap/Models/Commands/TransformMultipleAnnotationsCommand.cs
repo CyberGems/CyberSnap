@@ -15,6 +15,10 @@ public sealed class TransformMultipleAnnotationsCommand : IEditCommand
         _dy = dy;
     }
 
+    internal IReadOnlyList<(int Index, Annotation Original)> Items => _items;
+    internal int Dx => _dx;
+    internal int Dy => _dy;
+
     public string Description => $"Move {_items.Length} annotations";
 
     public void Apply(IEditorContext ctx)

@@ -1458,14 +1458,14 @@ public sealed partial class RegionOverlayForm
                 _isRectShapeDragging = false;
                 var rectShape = GetShapeRect(ClampAnnotationEndPoint(e.Location));
                 if (rectShape.Width > 2 && rectShape.Height > 2)
-                    AddAnnotation(new RectShapeAnnotation(rectShape, _toolColor, _strokeWidth));
+                    AddDrawnShape(new RectShapeAnnotation(rectShape, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(rectShape));
                 break;
             case CaptureMode.CircleShape when _isCircleShapeDragging:
                 _isCircleShapeDragging = false;
                 var circleShape = GetShapeRect(ClampAnnotationEndPoint(e.Location));
                 if (circleShape.Width > 2 && circleShape.Height > 2)
-                    AddAnnotation(new CircleShapeAnnotation(circleShape, _toolColor, _strokeWidth));
+                    AddDrawnShape(new CircleShapeAnnotation(circleShape, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(circleShape));
                 break;
             case CaptureMode.Magnifier:
@@ -1494,7 +1494,7 @@ public sealed partial class RegionOverlayForm
                 float ldx = lineEnd.X - _lineStart.X;
                 float ldy = lineEnd.Y - _lineStart.Y;
                 if (Math.Abs(ldx) > 4 || Math.Abs(ldy) > 4)
-                    AddAnnotation(new LineAnnotation(_lineStart, lineEnd, _toolColor, _strokeWidth));
+                    AddDrawnShape(new LineAnnotation(_lineStart, lineEnd, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(RectFromPoints(_lineStart, lineEnd, 1)));
                 break;
             case CaptureMode.Ruler when _isRulerDragging:
@@ -1513,14 +1513,14 @@ public sealed partial class RegionOverlayForm
                 float dx = end.X - _arrowStart.X;
                 float dy = end.Y - _arrowStart.Y;
                 if (Math.Abs(dx) > 4 || Math.Abs(dy) > 4)
-                    AddAnnotation(new ArrowAnnotation(_arrowStart, end, _toolColor, _strokeWidth));
+                    AddDrawnShape(new ArrowAnnotation(_arrowStart, end, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(RectFromPoints(_arrowStart, end, 1)));
                 break;
             case CaptureMode.CurvedArrow when _isCurvedArrowDragging:
                 _isCurvedArrowDragging = false;
                 if (_currentCurvedArrow is { Count: >= 2 } && GetPathLength(_currentCurvedArrow) > 5f)
                 {
-                    AddAnnotation(new CurvedArrowAnnotation(_currentCurvedArrow, _toolColor, _strokeWidth));
+                    AddDrawnShape(new CurvedArrowAnnotation(_currentCurvedArrow, _toolColor, _strokeWidth));
                     Invalidate(InflateForRepaint(BoundsOfPoints(_currentCurvedArrow, 10)));
                 }
                 _currentCurvedArrow = null;

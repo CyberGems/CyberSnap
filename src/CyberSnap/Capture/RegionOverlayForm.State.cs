@@ -765,6 +765,20 @@ public sealed partial class RegionOverlayForm
         PushEditCommand(new AddAnnotationCommand(annotation));
     }
 
+    /// <summary>Commits a drag-drawn shape and selects it so handles appear immediately.
+    /// Stamp-like tools (text, emoji, highlight, blur, magnifier, step) keep using
+    /// <see cref="AddAnnotation"/> so they stay unselected for rapid repeat placement.</summary>
+    private void AddDrawnShape(Annotation annotation)
+    {
+        int countBefore = _undoStack.Count;
+        AddAnnotation(annotation);
+        if (_undoStack.Count <= countBefore) return;
+
+        _multiSelectedIndices.Clear();
+        _selectedAnnotationIndex = _undoStack.Count - 1;
+        Invalidate();
+    }
+
     /// <summary>Returns the bounding rectangle for any annotation type, for hit-testing.</summary>
     private Rectangle GetAnnotationBounds(Annotation a) => a switch
     {

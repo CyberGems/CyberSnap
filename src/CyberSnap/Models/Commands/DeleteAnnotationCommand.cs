@@ -12,6 +12,8 @@ public sealed class DeleteAnnotationCommand : IEditCommand
         _annotation = annotation;
     }
 
+    internal Annotation Annotation => _annotation;
+
     public string Description => $"Delete {_annotation.GetType().Name}";
 
     public void Apply(IEditorContext ctx)
