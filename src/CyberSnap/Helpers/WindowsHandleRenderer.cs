@@ -62,13 +62,13 @@ public static class WindowsHandleRenderer
         float dx = corner.X - pivot.X, dy = corner.Y - pivot.Y;
         float len = MathF.Sqrt(dx * dx + dy * dy);
         if (len < 0.1f) return corner;
-        float o = 15f * px;
+        float o = 17.5f * px;
         return new PointF(corner.X + dx / len * o, corner.Y + dy / len * o);
     }
 
     public static Rectangle RotateArrowHitRect(PointF arrowCenter, float px)
     {
-        int s = Math.Max(26, (int)Math.Round(28f * px));
+        int s = Math.Max(30, (int)Math.Round(32f * px));
         int cx = (int)Math.Round(arrowCenter.X);
         int cy = (int)Math.Round(arrowCenter.Y);
         return new Rectangle(cx - s / 2, cy - s / 2, s, s);
@@ -91,7 +91,7 @@ public static class WindowsHandleRenderer
 
         float dotR = 2.45f * px;
         using (var white = new SolidBrush(Color.White))
-        using (var rim = new Pen(Color.FromArgb(210, 0, 0, 0), 1.05f * px))
+        using (var rim = new Pen(Color.FromArgb(220, accent), 1.15f * px))
         {
             foreach (var c in corners)
             {
@@ -102,61 +102,80 @@ public static class WindowsHandleRenderer
         }
 
         foreach (var c in corners)
-            PaintRotateArrow(g, c, pivot, px);
+            PaintRotateArrow(g, c, pivot, accent, px);
 
         PaintCenterBullseye(g, pivot, accent, px);
         g.SmoothingMode = old;
     }
 
     /// <summary>
-    /// Compact double-headed arc (~100°) sitting just outside a corner, oriented
-    /// along the rotation tangent. Fixed screen size — not an arc of the object's circle.
+    /// Compact double-headed arc sitting just outside a corner, oriented along the
+    /// rotation tangent. Arc and heads share GDI+ angles so they join as one glyph.
     /// </summary>
-    private static void PaintRotateArrow(Graphics g, PointF corner, PointF pivot, float px)
+    private static void PaintRotateArrow(Graphics g, PointF corner, PointF pivot, Color accent, float px)
     {
         var at = RotateArrowCenter(corner, pivot, px);
-        float dx = at.X - pivot.X, dy = at.Y - pivot.Y;
-        float radial = MathF.Atan2(dy, dx);
-        float r = 10.6f * px;
-        const float half = 0.90f;
-        float mid = radial + MathF.PI / 2f;
-        float a0 = mid - half;
-        float a1 = mid + half;
+        float radial = MathF.Atan2(at.Y - pivot.Y, at.X - pivot.X);
+        float r = 13.2f * px;
+        // Screen atan2 (Y-down) matches GDI+ DrawArc: 0° = east, clockwise.
+        // Mid of the arc along the radial so the C follows the rotation circle
+        // (opening toward the object, belly facing out) instead of sitting 90° off.
+        float midDeg = radial * 180f / MathF.PI;
+        const float halfDeg = 52f;
+        float a0 = midDeg - halfDeg;
+        float a1 = midDeg + halfDeg;
         var box = new RectangleF(at.X - r, at.Y - r, r * 2f, r * 2f);
-        float startDeg = -a1 * 180f / MathF.PI;
-        float sweepDeg = (2f * half) * 180f / MathF.PI;
 
-        using (var halo = new Pen(Color.FromArgb(235, 0, 0, 0), 2.7f * px)
-               { StartCap = LineCap.Round, EndCap = LineCap.Round })
-            g.DrawArc(halo, box, startDeg, sweepDeg);
-        using (var pen = new Pen(Color.White, 1.55f * px)
-               { StartCap = LineCap.Round, EndCap = LineCap.Round })
-            g.DrawArc(pen, box, startDeg, sweepDeg);
+        float headLen = 4.5f * px;
+        float trimDeg = headLen / r * 180f / MathF.PI * 0.70f;
+        float arcStart = a0 + trimDeg;
+        float arcSweep = (a1 - a0) - 2f * trimDeg;
+        if (arcSweep < 20f) return;
 
-        PointF On(float a) => new(at.X + MathF.Cos(a) * r, at.Y + MathF.Sin(a) * r);
-        float head = 5.35f * px;
-        float inset = 0.32f;
-        using var outline = new SolidBrush(Color.FromArgb(235, 0, 0, 0));
-        using var fill = new SolidBrush(Color.White);
-        PaintTinyArrowHead(g, outline, On(a0 + inset), On(a0), head + 0.85f * px);
-        PaintTinyArrowHead(g, fill, On(a0 + inset), On(a0), head);
-        PaintTinyArrowHead(g, outline, On(a1 - inset), On(a1), head + 0.85f * px);
-        PaintTinyArrowHead(g, fill, On(a1 - inset), On(a1), head);
+        var outline = Color.FromArgb(230, accent);
+        using (var halo = new Pen(outline, 2.8f * px)
+               { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            g.DrawArc(halo, box, arcStart, arcSweep);
+        using (var pen = new Pen(Color.White, 1.7f * px)
+               { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            g.DrawArc(pen, box, arcStart, arcSweep);
+
+        PaintArcArrowHead(g, at, r, a0, clockwise: false, headLen, px, outline);
+        PaintArcArrowHead(g, at, r, a1, clockwise: true, headLen, px, outline);
     }
 
-    private static void PaintTinyArrowHead(Graphics g, Brush brush, PointF from, PointF tip, float size)
+    private static void PaintArcArrowHead(Graphics g, PointF center, float r, float deg, bool clockwise, float len, float px, Color outlineColor)
     {
-        float dx = tip.X - from.X, dy = tip.Y - from.Y;
-        float len = MathF.Sqrt(dx * dx + dy * dy);
-        if (len < 0.01f) return;
-        dx /= len; dy /= len;
-        float px = -dy, py = dx;
-        g.FillPolygon(brush,
+        float rad = deg * MathF.PI / 180f;
+        float ax = center.X + r * MathF.Cos(rad);
+        float ay = center.Y + r * MathF.Sin(rad);
+        // Clockwise tangent in GDI space (Y-down).
+        float tx = -MathF.Sin(rad);
+        float ty = MathF.Cos(rad);
+        if (!clockwise) { tx = -tx; ty = -ty; }
+
+        float wid = len * 0.40f;
+        var tip = new PointF(ax + tx * len, ay + ty * len);
+        var back = new PointF(ax - tx * len * 0.12f, ay - ty * len * 0.12f);
+        float nx = -ty, ny = tx;
+        PointF[] tri =
         [
             tip,
-            new PointF(tip.X - dx * size + px * size * 0.45f, tip.Y - dy * size + py * size * 0.45f),
-            new PointF(tip.X - dx * size - px * size * 0.45f, tip.Y - dy * size - py * size * 0.45f),
-        ]);
+            new(back.X + nx * wid, back.Y + ny * wid),
+            new(back.X - nx * wid, back.Y - ny * wid),
+        ];
+        using (var outline = new SolidBrush(outlineColor))
+        {
+            var inflated = new PointF[]
+            {
+                new(tip.X + tx * 0.55f * px, tip.Y + ty * 0.55f * px),
+                new(tri[1].X - tx * 0.35f * px + nx * 0.55f * px, tri[1].Y - ty * 0.35f * px + ny * 0.55f * px),
+                new(tri[2].X - tx * 0.35f * px - nx * 0.55f * px, tri[2].Y - ty * 0.35f * px - ny * 0.55f * px),
+            };
+            g.FillPolygon(outline, inflated);
+        }
+        using var fill = new SolidBrush(Color.White);
+        g.FillPolygon(fill, tri);
     }
 
     public static void PaintCenterBullseye(Graphics g, PointF c, Color accent, float px)

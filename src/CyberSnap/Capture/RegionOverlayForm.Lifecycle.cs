@@ -525,6 +525,7 @@ public sealed partial class RegionOverlayForm
     private void UpdateCrosshairGuides(Point point)
     {
         bool shouldShow = ShowCrosshairGuides
+            && !_isConfirmingSelection
             && _mode != CaptureMode.ColorPicker
             && point != Point.Empty
             && !IsPointInOverlayUi(point);

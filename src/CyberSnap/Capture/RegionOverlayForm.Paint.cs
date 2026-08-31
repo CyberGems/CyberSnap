@@ -1006,7 +1006,7 @@ public sealed partial class RegionOverlayForm
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
-        var accentColor = Color.FromArgb(isSelected ? 255 : 120, 0, 255, 255);
+        var accentColor = Color.FromArgb(isSelected ? 200 : 90, 0, 255, 255);
 
         if (isSelected && _isRotateMode && source is not null && AnnotationTransforms.CanRotate(source)
             && _multiSelectedIndices.Count <= 1)
@@ -1016,7 +1016,7 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        const float offset = 4f; // offset outside bounds
+        const float offset = 3f; // offset outside bounds
         var rect = new RectangleF(
             bounds.X - offset,
             bounds.Y - offset,
@@ -1024,8 +1024,8 @@ public sealed partial class RegionOverlayForm
             bounds.Height + 2 * offset
         );
 
-        int fillAlpha   = isSelected ? 0   : 12;
-        int dashAlpha   = isSelected ? 200 : 90;
+        int fillAlpha   = isSelected ? 0   : 7;
+        int dashAlpha   = isSelected ? 40 : 28;
 
         // Subtle cyan fill (hover only)
         if (fillAlpha > 0)
@@ -1035,7 +1035,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Dashed outline
-        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), 1.2f))
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), isSelected ? 0.75f : 0.9f))
         {
             dashPen.DashStyle = DashStyle.Dash;
             dashPen.DashPattern = new[] { 4f, 3f };
@@ -1045,7 +1045,7 @@ public sealed partial class RegionOverlayForm
         float midX = rect.Left + rect.Width  / 2f;
         float midY = rect.Top  + rect.Height / 2f;
 
-        if (!moveOnly)
+        if (isSelected && !moveOnly)
         {
             // Figma-style handles: crisp white squares with 1.5px accent border and subtle drop shadow
             float hSize = (bounds.Width < 28 || bounds.Height < 28) ? 6f : 8f;

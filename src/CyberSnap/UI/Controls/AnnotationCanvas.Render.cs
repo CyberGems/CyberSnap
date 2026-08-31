@@ -295,7 +295,7 @@ public sealed partial class AnnotationCanvas
         if (z <= 0.01f) z = 1.0f;
 
         var accent = Theme.Accent;
-        var accentColor = Color.FromArgb(isSelected ? 255 : 120, accent.R, accent.G, accent.B);
+        var accentColor = Color.FromArgb(isSelected ? 200 : 90, accent.R, accent.G, accent.B);
 
         if (isSelected && _isRotateMode && source is not null && AnnotationTransforms.CanRotate(source)
             && _multiSelectedIndices.Count <= 1)
@@ -305,7 +305,7 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
-        float offset = 4f / z;
+        float offset = 3f / z;
         var rect = new RectangleF(
             bounds.X - offset,
             bounds.Y - offset,
@@ -313,8 +313,8 @@ public sealed partial class AnnotationCanvas
             bounds.Height + 2 * offset
         );
 
-        int fillAlpha = isSelected ? 0 : 10;
-        int dashAlpha = isSelected ? 200 : 75;
+        int fillAlpha = isSelected ? 0 : 6;
+        int dashAlpha = isSelected ? 40 : 28;
         byte aR = accent.R, aG = accent.G, aB = accent.B;
 
         // Fill and dash
@@ -324,7 +324,7 @@ public sealed partial class AnnotationCanvas
             g.FillRectangle(fillBrush, rect);
         }
 
-        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, aR, aG, aB), 1.2f / z))
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, aR, aG, aB), isSelected ? 0.75f / z : 0.9f / z))
         {
             dashPen.DashStyle = DashStyle.Dash;
             dashPen.DashPattern = new[] { 4f, 3f };
@@ -336,7 +336,7 @@ public sealed partial class AnnotationCanvas
         float midX = rect.Left + rect.Width / 2f;
         float midY = rect.Top + rect.Height / 2f;
 
-        if (!moveOnly)
+        if (isSelected && !moveOnly)
         {
             // Figma-style handles: crisp white squares with 1.5px accent border and subtle drop shadow
             float hSize = ((screenW < 28 || screenH < 28) ? 6f : 8f) / z;

@@ -1503,8 +1503,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public const int MaxCanvasSize = 32768;
 
     private bool _editorShowResizeHandles = true;
-    /// <summary>Whether the square resize handles float around the canvas in the gray margin.
-    /// Permanent like <see cref="EditorAutoCropControls"/>; toggled from the burger menu.</summary>
+    /// <summary>Whether the cyan edge handles on the canvas are shown for resizing
+    /// inward (trim) and outward (extend). Toggled from the burger menu.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool EditorShowResizeHandles
     {
@@ -1517,7 +1517,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
     }
 
-    /// <summary>How dragging the square handles behaves: false (default) = extend/trim the
+    /// <summary>How dragging the canvas-edge handles behaves: false (default) = extend/trim the
     /// canvas area only; true = scale (resample) the image + annotations. Toggled from the
     /// burger menu / Config. Does not affect the modal, which has its own per-use toggle.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -1534,7 +1534,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// <summary>Hit-tests a client point against the resize handles (or -1). Public for the
     /// editor's hover tooltip. Returns -1 unless the handles are currently interactive.</summary>
     public int HitTestResizeHandlePublic(Point client)
-        => (EditorShowResizeHandles && _baseBitmap != null && !HideCanvasResizeHandles)
+        => (EditorShowResizeHandles && _baseBitmap != null && !HideCanvasResizeHandles
+            && !IsOverAnnotationGrip(client))
             ? HitTestResizeHandle(client) : -1;
 
     /// <summary>Client-space bounding box of a resize handle, for tooltip placement.</summary>
@@ -1543,7 +1544,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         var pts = GetResizeHandlePositionsScreen();
         if (index < 0 || index >= pts.Length) return Rectangle.Empty;
         var h = pts[index];
-        int s = (int)(ResizeHandleSize + 4);
+        int s = 16;
         return new Rectangle((int)(h.X - s / 2f), (int)(h.Y - s / 2f), s, s);
     }
 
