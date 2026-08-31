@@ -34,16 +34,19 @@ public sealed class SettingsService : IDisposable
     public static event Action? SettingsChanged;
 
     /// <summary>
-    /// Legacy OCR toggle. Maps onto global auto-copy + OCR exclusion.
+    /// Compatibility entry point for the OCR-specific toggle. It changes only the OCR
+    /// exclusion and never enables the global auto-copy master implicitly.
     /// </summary>
     public static void SetOcrAutoCopyToClipboard(bool value)
     {
         MutateAutoCopy(settings =>
         {
-            Helpers.AutoCopyPreferences.SetKindEnabled(settings, Helpers.AutoCopyKind.Ocr, value);
+            Helpers.AutoCopyPreferences.SetExcluded(
+                settings,
+                Helpers.AutoCopyKind.Ocr,
+                excluded: !value);
         }, "settings.ocr-auto-copy.static-save");
 
-        OcrAutoCopyToClipboardChanged?.Invoke(value);
         RaiseAutoCopyEventsFromCache();
     }
 

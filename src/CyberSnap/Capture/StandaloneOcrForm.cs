@@ -106,10 +106,12 @@ public sealed class StandaloneOcrForm : Form
         _contextMenu.ShowItemToolTips = true;
 
         bool autoCopy = GetOcrAutoCopySetting();
-        _autoCopyToggle = WindowsMenuRenderer.Item("Auto-copy OCR text");
-        _autoCopyToggle.ToolTipText = LocalizationService.Translate("Copy OCR text to the clipboard (uses global Auto-copy; skips the result window)");
+        _autoCopyToggle = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Enable OCR auto-copy"));
+        _autoCopyToggle.ToolTipText = LocalizationService.Translate(
+            "When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy.");
         _autoCopyToggle.Image = autoCopy ? FluentIcons.RenderBitmap("check",
-            UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+            UiChrome.AccentColor, 20, true) : null;
         _autoCopyToggle.Click += (_, _) =>
         {
             bool current = GetOcrAutoCopySetting();
@@ -441,7 +443,9 @@ public sealed class StandaloneOcrForm : Form
     {
         try
         {
-            return SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
+            var settings = SettingsService.LoadStatic();
+            return settings is not null
+                && AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr);
         }
         catch
         {
@@ -468,8 +472,9 @@ public sealed class StandaloneOcrForm : Form
 
         if (_autoCopyToggle != null)
         {
-            _autoCopyToggle.Image = value ? FluentIcons.RenderBitmap("check",
-                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+            _autoCopyToggle.Image = value
+                ? FluentIcons.RenderBitmap("check", UiChrome.AccentColor, 20, true)
+                : null;
         }
     }
 

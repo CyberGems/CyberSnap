@@ -30,8 +30,8 @@
         <SolidColorBrush x:Key="ThemePrimaryCtaBorderBrush" Color="#3800FFFF"/>
 
         <Style x:Key="PreviewActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
-            <Setter Property="Background" Value="#0AFFFFFF"/>
-            <Setter Property="BorderBrush" Value="#15FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="MinWidth" Value="0"/>
@@ -39,15 +39,15 @@
             <Setter Property="Padding" Value="10,5"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#15FFFFFF"/>
-                    <Setter Property="BorderBrush" Value="#30FFFFFF"/>
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="PreviewIconButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
-            <Setter Property="Background" Value="#0AFFFFFF"/>
-            <Setter Property="BorderBrush" Value="#15FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="Width" Value="32"/>
@@ -57,8 +57,8 @@
             <Setter Property="Padding" Value="0"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#15FFFFFF"/>
-                    <Setter Property="BorderBrush" Value="#30FFFFFF"/>
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -87,12 +87,12 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#35FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#35FFFFFF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#50FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -103,8 +103,8 @@
         <Style x:Key="PreviewScaleButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="#0AFFFFFF"/>
-            <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="11"/>
@@ -126,11 +126,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#30FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#28FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.38"/>
@@ -255,8 +255,8 @@
                                 Margin="0,0,10,10"
                                 Padding="8,5"
                                 CornerRadius="8"
-                                Background="#E61B1B1A"
-                                BorderBrush="#30FFFFFF"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
                                 BorderThickness="1"
                                 Cursor="Arrow"
                                 Opacity="0"
@@ -316,8 +316,8 @@
                                 Margin="10,0,0,10"
                                 Padding="6,5"
                                 CornerRadius="8"
-                                Background="#E61B1B1A"
-                                BorderBrush="#30FFFFFF"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
                                 BorderThickness="1"
                                 Cursor="Arrow"
                                 Opacity="0"

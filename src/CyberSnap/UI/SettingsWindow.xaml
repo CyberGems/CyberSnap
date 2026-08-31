@@ -2274,7 +2274,7 @@
                     <TextBlock Text="Recognition" Style="{StaticResource SectionLabel}" Margin="4,0,0,9"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                        <Grid x:Name="AutoCopyExcludeOcrRow" Style="{StaticResource SettingRow}">
+                        <Grid x:Name="AutoCopyOcrRow" Style="{StaticResource SettingRow}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -2284,14 +2284,14 @@
                                 <TextBlock Text="&#xE8C8;" Style="{StaticResource SettingIconGlyph}"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Don't auto-copy OCR text" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Don't auto-copy OCR text"/>
-                                <TextBlock Text="When global Auto-copy is on, still don't copy OCR text. Keep opening the result window." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="When global Auto-copy is on, still don't copy OCR text. Keep opening the result window."/>
+                                <TextBlock Text="Enable OCR auto-copy" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Enable OCR auto-copy"/>
+                                <TextBlock Text="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy."/>
                             </StackPanel>
-                            <CheckBox x:Name="AutoCopyExcludeOcrCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                      AutomationProperties.Name="Don't auto-copy OCR text"
-                                      ToolTip="When global Auto-copy is on, still don't copy OCR text. Keep opening the result window."
-                                      Services:LocalizationService.SourceToolTip="When global Auto-copy is on, still don't copy OCR text. Keep opening the result window."
-                                      Checked="AutoCopyExcludeOcrCheck_Changed" Unchecked="AutoCopyExcludeOcrCheck_Changed"/>
+                            <CheckBox x:Name="AutoCopyOcrCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Enable OCR auto-copy"
+                                      ToolTip="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy."
+                                      Services:LocalizationService.SourceToolTip="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy."
+                                      Checked="AutoCopyOcrCheck_Changed" Unchecked="AutoCopyOcrCheck_Changed"/>
                         </Grid>
                         <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                         <Grid Style="{StaticResource SettingRow}">
