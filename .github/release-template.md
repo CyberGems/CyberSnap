@@ -6,31 +6,33 @@ Welcome to the official **CyberSnap {{VERSION}}** release! CyberSnap is a featur
 
 ### ✨ Key Features & Highlights
 
-- 💎 **Ultimate "CyberGem" Achievement**:
-  - Unlocked upon mastering and completing all achievements across all categories.
-  - Features an exclusive large centered showcase badge with a radiant diamond turquoise glow (`#40E0D0`) and faceted gem vector art.
-  - Dedicated symbolic recognition disclaimer badge and tooltip.
+- ✂️ **Cut Out strip tool**:
+  - Slice a band out of the canvas and close the gap, with the same confirm / cancel chrome as Crop.
+  - Rotate and flip moved into the editor palette so transforms stay one click away.
 
-- 🏆 **Achievements Window Polish & Milestone Tracking**:
-  - **Unlock Date History**: First-time achievement unlock dates are automatically tracked and displayed in tooltips using your local Windows system date format.
-  - **"New!" Glowing Badges**: Newly earned achievements now feature an animated amber/gold badge until reviewed.
-  - **Vibrant Multi-Theme Palettes**: Full-spectrum neon tier colors across all theme variants (Dark, Light, and Gray).
+- 🔄 **Shape rotation**:
+  - Compact corner arrows and a dedicated rotate cursor for selected annotations.
+  - A fine plus handle at the object center, with selection restored after Undo.
 
-- 📷 **Standalone QR & Barcode Scanner Result Window**:
-  - Dedicated result viewer with automatic barcode format detection (QR, Aztec, Data Matrix, Code 128, EAN, UPC, and more).
-  - High-quality source preview thumbnail and one-click *Copy and close* shortcut.
-  - Full support for live theme and language switching without reopening the window.
+- 🗂️ **Editor document tabs**:
+  - Extra captures open as tabs instead of replacing the current document.
+  - Double-click empty tab-bar space to start a new canvas.
 
-- 🎨 **Live Multilingual & Theme Synchronization**:
-  - Real-time instant language toggling between **English** and **Spanish** across all active windows (OCR Result, QR Scanner, Annotations Editor, Achievements, and Settings).
-  - Live seamless theme updates across WPF windows and Windows Forms dialogs.
+- 🌙 **Quiet Hours**:
+  - Mute notification toasts during a chosen window so captures stay silent overnight.
 
-- 📝 **Editor Toolbar Dynamic Sizing**:
-  - Top command buttons ("Undo", "Redo", "Save", "Export", "Share") now calculate their width dynamically to eliminate label clipping and ellipses in all languages.
+- 😀 **Emoji tool**:
+  - Selecting Emoji restores the last glyph and opens the drawer.
+  - Click the canvas to stamp and close, or click the tool button again to tuck the picker away.
+  - Scroll or `[` `]` to resize; hover chrome stays Pick-only so placement stays clean.
 
-- 🔍 **OCR & Multilingual Text Extraction**:
-  - Instant text recognition from screen captures with built-in translation models (MyMemory and Google Translate API).
-  - Search highlights, character counts, and cascade window positioning.
+- 🔍 **Fit / original zoom toggle**:
+  - One status-bar button switches between *Fit to window* and *Original size*, with larger icons.
+
+- 🎨 **Palette & banners**:
+  - Drawing tools always arm a palette color (cyan by default) so the first shape is never a shadow-only stroke.
+  - Color and stroke chips hint “Select a drawing tool” when they do not apply.
+  - Faster fade/slide banners that dismiss on hover.
 
 ---
 
