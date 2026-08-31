@@ -14,12 +14,124 @@ namespace CyberSnap;
 
 public partial class App
 {
+    /// <summary>
+    /// Routes a completed scrolling capture through the same optional preview used by
+    /// regular image captures. The preview is opened on the WPF dispatcher, while the
+    /// scrolling form remains responsible only for producing the bitmap.
+    /// </summary>
+    private void HandleScrollingCaptureResult(Bitmap capture)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(() => HandleScrollingCaptureResult(capture));
+            return;
+        }
+
+        var latest = Services.SettingsService.LoadStatic();
+        if (latest != null)
+            _settingsService!.Settings = latest;
+
+        var settings = _settingsService!.Settings;
+        if (!settings.ShowCapturePreview)
+        {
+            HandleCaptureResult(capture, captureKind: CaptureKind.ScrollCapture);
+            MarkFirstTime(
+                settings.HasFirstScrollingCapture,
+                () => settings.HasFirstScrollingCapture = true,
+                "First scrolling capture",
+                "scrollCapture",
+                d => settings.FirstScrollCaptureAt = d);
+            return;
+        }
+
+        bool previewOpened = false;
+        try
+        {
+            bool copiedEarly = false;
+            if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
+                copiedEarly = TryCopyCaptureOutputToClipboard(capture, null);
+
+            string? earlySavePath = TrySaveCaptureFileEarly(capture, settings);
+            var dialog = new UI.CapturePreviewDialog(
+                capture,
+                _settingsService,
+                targetMonitorPoint: null,
+                savedFilePath: earlySavePath,
+                clipboardAlreadyCopied: copiedEarly);
+
+            ShowCapturePreviewDialog(dialog, result =>
+            {
+                bool isScaled = dialog.ScaleFactor != 1;
+                var effective = isScaled ? dialog.EffectiveBitmap : capture;
+                string? effectiveSavePath =
+                    ResolvePreviewCommitSavePath(dialog.SavedFilePath, earlySavePath, isScaled);
+                bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
+
+                if (result == true)
+                {
+                    if (isScaled && !string.IsNullOrEmpty(earlySavePath) && File.Exists(earlySavePath))
+                    {
+                        try { File.Delete(earlySavePath); } catch { }
+                    }
+
+                    HandleCaptureResult(
+                        effective,
+                        dialog.SelectedAction,
+                        effectiveSavePath,
+                        effectiveCopied,
+                        isExplicitScaled: isScaled,
+                        captureKind: CaptureKind.ScrollCapture);
+                    MarkFirstTime(
+                        settings.HasFirstScrollingCapture,
+                        () => settings.HasFirstScrollingCapture = true,
+                        "First scrolling capture",
+                        "scrollCapture",
+                        d => settings.FirstScrollCaptureAt = d);
+
+                    if (isScaled)
+                    {
+                        try { capture.Dispose(); } catch { }
+                    }
+                }
+                else
+                {
+                    try { effective.Dispose(); } catch { }
+                    if (isScaled)
+                    {
+                        try { capture.Dispose(); } catch { }
+                    }
+
+                    // null means the preview was replaced by a newer capture; that new
+                    // session owns the busy slot and will perform its own cleanup.
+                    if (result == false)
+                        ResetCapturing();
+                }
+            });
+            previewOpened = true;
+        }
+        catch (Exception ex)
+        {
+            if (!previewOpened)
+            {
+                try { capture.Dispose(); } catch { }
+            }
+
+            AppDiagnostics.LogError("capture.scroll-preview", ex);
+            ResetCapturing();
+            ShowCaptureProcessingFailed(
+                LocalizationService.Translate("Scroll capture error"),
+                LocalizationService.Translate("CyberSnap could not finish the scrolling capture. Try a smaller scroll area or a visible scrollable window."),
+                ex.Message);
+        }
+    }
+
     private void HandleCaptureResult(
         Bitmap result,
         RegionOverlayForm.ConfirmCommitAction commitAction = RegionOverlayForm.ConfirmCommitAction.Default,
         string? alreadySavedPath = null,
         bool clipboardAlreadyCopied = false,
-        bool isExplicitScaled = false)
+        bool isExplicitScaled = false,
+        CaptureKind captureKind = CaptureKind.Screenshot)
     {
         var settings = _settingsService!.Settings;
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
@@ -108,7 +220,7 @@ public partial class App
                     bool copyWanted = shouldTryCopy || clipboardAlreadyCopied;
                     ResetCapturing();
 
-                    CelebrateCaptureIfEarned(settings);
+                    CelebrateCaptureIfEarned(settings, captureKind);
 
                     bool openEditor = commitAction == RegionOverlayForm.ConfirmCommitAction.Edit
                         || (commitAction == RegionOverlayForm.ConfirmCommitAction.Default

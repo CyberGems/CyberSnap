@@ -367,7 +367,7 @@ public sealed partial class RecordingControlBarWindow : Window
         UpdateCancelButtonIcon();
     }
 
-    private static readonly System.Drawing.Color IconNormal =
+    private static System.Drawing.Color IconNormal =>
         System.Drawing.Color.FromArgb(200, Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B);
 
     private void UpdateTrimmerButtonIcon()

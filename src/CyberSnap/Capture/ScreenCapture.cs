@@ -93,6 +93,16 @@ public static class ScreenCapture
     public static Bitmap CaptureRegionForRecording(Rectangle region, bool includeCursor = false)
         => CaptureRegionLegacy(region, includeCursor);
 
+    /// <summary>
+    /// Captures a region repeatedly for scrolling detection. Uses the sustained BitBlt path
+    /// instead of recreating DXGI duplication state for every frame, while retaining the
+    /// registered-window exclusion guarantees of the normal capture path.
+    /// </summary>
+    public static Bitmap CaptureRegionForScrolling(Rectangle region, bool includeCursor = false)
+        => CaptureWindowExclusion.RunWithoutIntersectingWindows(
+            region,
+            () => CaptureRegionLegacy(region, includeCursor));
+
     internal static RecordingFrameCapturer CreateRecordingFrameCapturer(Rectangle region, bool includeCursor = false)
         => new(region, includeCursor);
 
