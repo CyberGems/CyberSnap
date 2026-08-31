@@ -38,6 +38,9 @@ public sealed partial class AnnotationCanvas
     /// host can open its picker.</summary>
     public event EventHandler? EmojiPlacementRequested;
 
+    /// <summary>Raised after an emoji is stamped on the canvas so the host can close the picker.</summary>
+    public event EventHandler? EmojiPlaced;
+
     // Crop rectangle pending confirmation (image-space)
     private Rectangle _cropRect = Rectangle.Empty;
     private bool _cropDragging;
@@ -817,6 +820,7 @@ public sealed partial class AnnotationCanvas
                     var emojiPos = new Point(img.X - bitmapSize / 2, img.Y - bitmapSize / 2);
                     Push(new AddAnnotationCommand(new EmojiAnnotation(emojiPos, _selectedEmoji, _emojiPlaceSize)));
                     SuppressHoverForLastPlaced();
+                    EmojiPlaced?.Invoke(this, EventArgs.Empty);
                 }
                 else
                 {

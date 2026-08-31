@@ -185,6 +185,32 @@ public sealed class SettingsService : IDisposable
         }
     }
 
+    public static void SaveLastEmoji(string emoji)
+    {
+        if (string.IsNullOrEmpty(emoji)) return;
+
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+                s_cachedSettings.LastEmoji = emoji;
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            if (string.Equals(svc.Settings.LastEmoji, emoji, StringComparison.Ordinal))
+                return;
+            svc.Settings.LastEmoji = emoji;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.last-emoji.static-save", ex);
+        }
+    }
+
     public static void SaveShowCapturePreview(bool value)
     {
         lock (CacheGate)

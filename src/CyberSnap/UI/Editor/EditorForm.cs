@@ -2240,7 +2240,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod)
             && EditorToolHotkeyHelper.TryActivateTool(_canvas, key | mod))
+        {
+            if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Emoji)
+                OpenEmojiPicker(GetEmojiToolButton());
             return true;
+        }
 
         if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod))
         {

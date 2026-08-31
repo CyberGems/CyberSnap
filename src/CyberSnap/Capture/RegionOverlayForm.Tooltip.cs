@@ -367,7 +367,7 @@ public sealed partial class RegionOverlayForm
             CaptureMode.StepNumber => LocalizationService.Translate("Click to place step number"),
             CaptureMode.Magnifier => LocalizationService.Translate("Click to place magnifier"),
             CaptureMode.Blur => LocalizationService.Translate("Click & drag to blur"),
-            CaptureMode.Emoji => LocalizationService.Translate("Click to pick emoji"),
+            CaptureMode.Emoji => LocalizationService.Translate("Click to place emoji"),
             _ => ""
         };
     }

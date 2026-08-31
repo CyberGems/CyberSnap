@@ -33,8 +33,7 @@ public sealed partial class EditorForm
     private EditorCommandButton _copyButton = null!;
     private EditorCommandButton _pasteButton = null!;
     private EditorChromeButton _windowStateButton = null!;
-    private EditorZoomBarButton _fitZoomBtn = null!;
-    private EditorZoomBarButton _resetZoomBtn = null!;
+    private EditorZoomBarButton _zoomViewBtn = null!;
     private EditorToggleSwitch _toggleFrameSwitch = null!;
     private EditorToggleSwitch _toggleFitSwitch = null!;
     private EditorToggleSwitch _togglePanLockSwitch = null!;
@@ -78,6 +77,20 @@ public sealed partial class EditorForm
         Color.FromArgb(148, 163, 184),
         Color.Black,
     };
+
+    /// <summary>Cyan swatch — the palette chip selected when no persisted color is available.</summary>
+    private static Color DefaultPaletteColor => PaletteColors[0];
+
+    /// <summary>
+    /// Maps a stored ARGB to a drawable palette color. 0 / fully transparent was previously
+    /// applied as-is, so the first shape showed only the drop-shadow ("neutral") and no chip.
+    /// </summary>
+    private static Color ResolvePersistedToolColor(int argb)
+    {
+        if (argb == 0) return DefaultPaletteColor;
+        var color = Color.FromArgb(argb);
+        return color.A == 0 ? DefaultPaletteColor : color;
+    }
 
     /// <summary>Compact tool-cell height so the palette does not stretch when the editor is maximized.</summary>
     internal const int ToolButtonRowHeight = 66;
@@ -285,16 +298,23 @@ public sealed partial class EditorForm
 
 
 
-        // Right-side zoom controls
-        _resetZoomBtn = new EditorZoomBarButton
+        // One zoom-view toggle (CyberPaste-style): the button offers the *other* mode.
+        // Fitted → original 100%; otherwise → fit to window. Hotkeys 0 / 9 stay available.
+        _zoomViewBtn = new EditorZoomBarButton
         {
-            IconId = "fullscreen",
+            IconId = "zoomFit",
             Text = "",
             Width = 42,
             Height = 42,
             Margin = new Padding(8, 0, 0, 0),
         };
-        _resetZoomBtn.Click += (_, _) => _canvas.ZoomReset();
+        _zoomViewBtn.Click += (_, _) =>
+        {
+            if (IsZoomFitted())
+                _canvas.ZoomReset();
+            else
+                _canvas.ZoomFit();
+        };
 
         // AUTO-FIT switch: fit the image to the canvas on load, or show it at real 100% size.
         _toggleFitSwitch = new EditorToggleSwitch
@@ -326,16 +346,6 @@ public sealed partial class EditorForm
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.PersistEditorPanModeLockObjects(_togglePanLockSwitch.Checked);
         };
-
-        _fitZoomBtn = new EditorZoomBarButton
-        {
-            IconId = "zoomFit",
-            Text = "",
-            Width = 42,
-            Height = 42,
-            Margin = new Padding(8, 0, 0, 0),
-        };
-        _fitZoomBtn.Click += (_, _) => _canvas.ZoomFit();
 
         var zoomHost = new EditorZoomHostPanel
         {
@@ -408,8 +418,7 @@ public sealed partial class EditorForm
         // Coords lead the right-side group, sitting just to the left of the zoom slider.
         rightControlsFlow.Controls.Add(coordsPanel);
         rightControlsFlow.Controls.Add(zoomHost);
-        rightControlsFlow.Controls.Add(_resetZoomBtn);
-        rightControlsFlow.Controls.Add(_fitZoomBtn);
+        rightControlsFlow.Controls.Add(_zoomViewBtn);
         rightControlsFlow.Controls.Add(_toggleFitSwitch);
         rightControlsFlow.Controls.Add(_togglePanLockSwitch);
 
@@ -480,8 +489,12 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_togglePanLockSwitch, "Lock object editing in Pan mode");
         RegisterHoverTooltip(_coordsPanel, "Cursor position over the image (X, Y)");
 
-        RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomReset") ?? "0"));
-        RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomFit") ?? "9"));
+        RegisterHoverTooltip(_zoomViewBtn, () =>
+        {
+            if (IsZoomFitted())
+                return WithShortcut("Original size", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomReset") ?? "0");
+            return WithShortcut("Fit to window", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomFit") ?? "9");
+        });
         RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", $"{EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomIn") ?? "8"} / {EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomOut") ?? "7"}"));
 
         RegisterHoverTooltip(_liveStatusLabel, () =>
@@ -1122,6 +1135,8 @@ public sealed partial class EditorForm
             };
             swatch.Click += (_, _) =>
             {
+                if (!EnsureDrawingToolForPalette())
+                    return;
                 _canvas.ToolColor = color;
                 UpdateColorSwatch();
                 if (System.Windows.Application.Current is CyberSnap.App app)
@@ -1152,6 +1167,8 @@ public sealed partial class EditorForm
 
         _customColorButton.Click += (_, _) =>
         {
+            if (!EnsureDrawingToolForPalette())
+                return;
             if (!_customColorButton.HasCustomColor || _customColorButton.Checked || _canvas.ToolColor.ToArgb() == _customColorButton.SwatchColor.ToArgb())
             {
                 ShowColorPickerPopup(_customColorButton);
@@ -1193,6 +1210,8 @@ public sealed partial class EditorForm
             };
             btn.Click += (_, _) =>
             {
+                if (!EnsureDrawingToolForStroke())
+                    return;
                 _canvas.StrokeWidth = w;
                 UpdateStrokeWidthButtons();
                 if (System.Windows.Application.Current is CyberSnap.App app)
@@ -1265,10 +1284,16 @@ public sealed partial class EditorForm
         };
         button.Click += (_, _) =>
         {
+            if (tool == AnnotationCanvas.CanvasTool.Emoji)
+            {
+                // Do not Focus the canvas first: that deactivates an open picker and the
+                // deferred Close + reopen looked like the button needed a double-click.
+                _canvas.ActiveTool = tool;
+                OpenEmojiPicker(button);
+                return;
+            }
             _canvas.ActiveTool = tool;
             _canvas.Focus();
-            if (tool == AnnotationCanvas.CanvasTool.Emoji)
-                OpenEmojiPicker(button);
         };
         if (tool == AnnotationCanvas.CanvasTool.Move)
         {
@@ -1455,12 +1480,11 @@ public sealed partial class EditorForm
 
     private void OpenEmojiPicker(EditorToolButton? anchor)
     {
-        // Clicking Emoji while the picker is open toggles it shut. The deferred close in
-        // EmojiPickerPopup's Deactivate already dismisses it on outside clicks; this keeps
-        // the Emoji button itself a clean one-click toggle without a timing guard.
+        // Clicking Emoji while the picker is open toggles it shut on the same click.
         if (_emojiPicker is { IsDisposed: false })
         {
             _emojiPicker.Close();
+            _canvas.Focus();
             return;
         }
 
@@ -1543,8 +1567,9 @@ public sealed partial class EditorForm
         if (_zoomLabel.Text != zoomText)
             _zoomLabel.Text = zoomText;
 
-        _resetZoomBtn.Enabled = percent != 100;
-        _fitZoomBtn.Enabled = !IsZoomFitted();
+        bool fitted = IsZoomFitted();
+        if (_zoomViewBtn is not null)
+            _zoomViewBtn.IconId = fitted ? "fullscreen" : "zoomFit";
 
         if (_zoomSlider is null) return;
 
@@ -1620,6 +1645,22 @@ public sealed partial class EditorForm
         AnnotationCanvas.CanvasTool.Draw or AnnotationCanvas.CanvasTool.Arrow
         or AnnotationCanvas.CanvasTool.CurvedArrow or AnnotationCanvas.CanvasTool.Line
         or AnnotationCanvas.CanvasTool.Rect or AnnotationCanvas.CanvasTool.Circle;
+
+    private bool EnsureDrawingToolForPalette()
+    {
+        if (ToolUsesColor(_canvas.ActiveTool))
+            return true;
+        _canvas.ShowToolBanner(LocalizationService.Translate("Select a drawing tool"));
+        return false;
+    }
+
+    private bool EnsureDrawingToolForStroke()
+    {
+        if (ToolUsesStroke(_canvas.ActiveTool))
+            return true;
+        _canvas.ShowToolBanner(LocalizationService.Translate("Select a drawing tool"));
+        return false;
+    }
 
     private void UpdateCaptureCaption()
     {
@@ -3976,7 +4017,7 @@ internal sealed class EditorZoomBarButton : Button
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
         }
 
-        var iconSize = 22;
+        var iconSize = 28;
         bool iconOnly = string.IsNullOrEmpty(Text);
         float iconX = iconOnly
             ? rect.Left + (rect.Width - iconSize) / 2f

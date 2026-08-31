@@ -482,6 +482,7 @@ public sealed partial class RegionOverlayForm
         if (col >= 0 && col < cols && row >= 0 && row < EmojiPickerVisibleRows && idx >= 0 && idx < filtered.Length)
         {
             _selectedEmoji = filtered[idx].emoji;
+            LastUsedEmoji.Remember(_selectedEmoji);
             _isPlacingEmoji = true;
             _emojiPickerOpen = false;
             _fontPickerOpen = false;
