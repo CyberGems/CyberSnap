@@ -422,6 +422,16 @@
                                             <TextBlock x:Name="SaveText" Text="Save" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Button>
+                                    <Button x:Name="SaveAsBtn" Click="SaveAsBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="SaveAsIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="SaveAsText" Text="Save as..." VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button x:Name="CopyBtn" Click="CopyBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
                                             Margin="0,0,6,6">

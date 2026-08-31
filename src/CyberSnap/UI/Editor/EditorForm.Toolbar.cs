@@ -79,6 +79,9 @@ public sealed partial class EditorForm
         Color.Black,
     };
 
+    /// <summary>Compact tool-cell height so the palette does not stretch when the editor is maximized.</summary>
+    internal const int ToolButtonRowHeight = 66;
+
     private void ShowColorPickerPopup(EditorColorButton button)
     {
         double dpiScaleX = button.DeviceDpi / 96.0;
@@ -176,7 +179,7 @@ public sealed partial class EditorForm
         {
             Dock = DockStyle.Fill,
             BackColor = EditorColors.BgSecondary,
-            Padding = new Padding(20, 14, 20, 10),
+            Padding = new Padding(20, 10, 20, 8),
         };
         _toolbarPanel.Paint += (_, e) =>
         {
@@ -200,15 +203,24 @@ public sealed partial class EditorForm
             BackColor = Color.Transparent,
             ColumnCount = 1,
             RowCount = 2,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         EnableDoubleBuffering(layout);
+        // Colors get a reserved row so restored-window height cannot overlap them
+        // with the last tool labels. Tools fill whatever is left; the inner grid
+        // stays Dock.Top / AutoSize so maximized leftover space does not stretch buttons.
+        var colorSection = BuildColorSection();
+        int colorRowHeight = Math.Max(colorSection.MinimumSize.Height, ColorStackReservedHeight);
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, colorRowHeight));
 
         var toolSection = BuildToolSection();
+        toolSection.AutoSize = false;
         toolSection.Dock = DockStyle.Fill;
+        colorSection.AutoSize = false;
+        colorSection.Dock = DockStyle.Fill;
         layout.Controls.Add(toolSection, 0, 0);
-        layout.Controls.Add(BuildColorSection(), 0, 1);
+        layout.Controls.Add(colorSection, 0, 1);
 
         _toolbarPanel.Controls.Add(layout);
     }
@@ -753,40 +765,7 @@ public sealed partial class EditorForm
         };
         commandActions.MouseDown += BeginWindowDrag;
 
-        // Undo & Redo
-        _undoButton = RegisterLocalizedCommand("undo", "Undo", false);
-        _undoButton.Click += (_, _) => _canvas.Undo();
-        RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
-        commandActions.Controls.Add(_undoButton);
-
-        _redoButton = RegisterLocalizedCommand("redo", "Redo", false);
-        _redoButton.Click += (_, _) => _canvas.Redo();
-        RegisterHoverTooltip(_redoButton, () => WithShortcut("Redo the last undone change", "Ctrl+Y"), above: false);
-        commandActions.Controls.Add(_redoButton);
-
-        // Spacer between undo/redo and gallery
-        commandActions.Controls.Add(MakeSeparator());
-
-        // Gallery
-        _galleryButton = RegisterLocalizedCommand("history", "Gallery", false);
-        _galleryButton.Click += (_, _) => OpenHistoryWindow();
-        RegisterHoverTooltip(_galleryButton, "Open Capture Gallery", above: false);
-        commandActions.Controls.Add(_galleryButton);
-
-        // Capture
-        _captureButton = RegisterLocalizedCommand("captureRect", "Capture", false);
-        _captureButton.Click += (_, _) =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.OnHotkeyPressedProxy();
-        };
-        RegisterHoverTooltip(_captureButton, () => WithShortcut(LocalizationService.Translate("Take a new screenshot"), EditorToolHotkeyHelper.GetCaptureHotkeyLabel() ?? "Alt+Shift+A"), above: false);
-        commandActions.Controls.Add(_captureButton);
-
-        // Spacer between gallery/capture and file actions
-        commandActions.Controls.Add(MakeSeparator());
-
-        // New, Open & Save (Project operations)
+        // New, Open & Save (project operations)
         _newCommandButton = RegisterLocalizedCommand("document", "New", false);
         _newCommandButton.Click += (_, _) => DoNewCanvas();
         RegisterHoverTooltip(_newCommandButton, () => WithShortcut("Start a new document", "Ctrl+N"), above: false);
@@ -804,7 +783,37 @@ public sealed partial class EditorForm
 
         commandActions.Controls.Add(MakeSeparator());
 
-        // Clipboard actions: Copy & Paste
+        // Capture & Gallery
+        _captureButton = RegisterLocalizedCommand("captureRect", "Capture", false);
+        _captureButton.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.OnHotkeyPressedProxy();
+        };
+        RegisterHoverTooltip(_captureButton, () => WithShortcut(LocalizationService.Translate("Take a new screenshot"), EditorToolHotkeyHelper.GetCaptureHotkeyLabel() ?? "Alt+Shift+A"), above: false);
+        commandActions.Controls.Add(_captureButton);
+
+        _galleryButton = RegisterLocalizedCommand("history", "Gallery", false);
+        _galleryButton.Click += (_, _) => OpenHistoryWindow();
+        RegisterHoverTooltip(_galleryButton, "Open Capture Gallery", above: false);
+        commandActions.Controls.Add(_galleryButton);
+
+        commandActions.Controls.Add(MakeSeparator());
+
+        // Undo & Redo
+        _undoButton = RegisterLocalizedCommand("undo", "Undo", false);
+        _undoButton.Click += (_, _) => _canvas.Undo();
+        RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
+        commandActions.Controls.Add(_undoButton);
+
+        _redoButton = RegisterLocalizedCommand("redo", "Redo", false);
+        _redoButton.Click += (_, _) => _canvas.Redo();
+        RegisterHoverTooltip(_redoButton, () => WithShortcut("Redo the last undone change", "Ctrl+Y"), above: false);
+        commandActions.Controls.Add(_redoButton);
+
+        commandActions.Controls.Add(MakeSeparator());
+
+        // Clipboard: Copy & Paste
         _copyButton = RegisterLocalizedCommand("copy", "Copy", false);
         _copyButton.Click += (_, _) => DoCopy();
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy entire canvas to clipboard", "Ctrl+C"), above: false);
@@ -817,43 +826,10 @@ public sealed partial class EditorForm
 
         commandActions.Controls.Add(MakeSeparator());
 
-        // Export: primary + chevron menu (two adjacent buttons grouped into a split-button)
-        _exportButton = RegisterLocalizedCommand("export", "Export", false);
-        _exportButton.RoundLeftOnly = true;
-        _exportButton.Margin = new Padding(2, 0, 0, 0); // No right margin
-        _exportButton.Click += (_, _) => DoSaveAs();
-        RegisterHoverTooltip(_exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
-        commandActions.Controls.Add(_exportButton);
-
-        _exportMenuButton = new EditorCommandButton
-        {
-            IconId = "chevronDown",
-            Text = "",
-            Primary = false,
-            Width = 32,
-            Height = 62,
-            RoundRightOnly = true,
-            Margin = new Padding(0, 0, 2, 0), // No left margin
-        };
-        _exportMenuButton.Click += (_, _) => ShowExportMenu();
-        RegisterHoverTooltip(_exportMenuButton, LocalizationService.Translate("Choose export format"), above: false);
-        commandActions.Controls.Add(_exportMenuButton);
-
-        // Link hover and pressed states so they act as a cohesive unit
-        _exportButton.MouseEnter += (_, _) => { _exportMenuButton.HoverOverride = true; };
-        _exportButton.MouseLeave += (_, _) => { _exportMenuButton.HoverOverride = false; };
-        _exportButton.MouseDown += (_, _) => { _exportMenuButton.PressedOverride = true; };
-        _exportButton.MouseUp += (_, _) => { _exportMenuButton.PressedOverride = false; };
-
-        _exportMenuButton.MouseEnter += (_, _) => { _exportButton.HoverOverride = true; };
-        _exportMenuButton.MouseLeave += (_, _) => { _exportButton.HoverOverride = false; };
-        _exportMenuButton.MouseDown += (_, _) => { _exportButton.PressedOverride = true; };
-        _exportMenuButton.MouseUp += (_, _) => { _exportButton.PressedOverride = false; };
-
-        // Share: primary + chevron menu (two adjacent buttons grouped into a split-button)
+        // Share then Export (each is a split-button: primary + chevron)
         _shareButton = RegisterLocalizedCommand("share", "Share", false);
         _shareButton.RoundLeftOnly = true;
-        _shareButton.Margin = new Padding(2, 0, 0, 0); // No right margin
+        _shareButton.Margin = new Padding(2, 0, 0, 0);
         _shareButton.Click += (_, _) => DoShare();
         RegisterHoverTooltip(_shareButton, () => WithShortcut(LocalizationService.Translate("Upload and copy a shareable link"), "Ctrl+Shift+U"), above: false);
         commandActions.Controls.Add(_shareButton);
@@ -866,13 +842,12 @@ public sealed partial class EditorForm
             Width = 32,
             Height = 62,
             RoundRightOnly = true,
-            Margin = new Padding(0, 0, 2, 0), // No left margin
+            Margin = new Padding(0, 0, 2, 0),
         };
         _shareMenuButton.Click += (_, _) => ShowShareMenu();
         RegisterHoverTooltip(_shareMenuButton, LocalizationService.Translate("Choose share destination"), above: false);
         commandActions.Controls.Add(_shareMenuButton);
 
-        // Link hover and pressed states so they act as a cohesive unit
         _shareButton.MouseEnter += (_, _) => { _shareMenuButton.HoverOverride = true; };
         _shareButton.MouseLeave += (_, _) => { _shareMenuButton.HoverOverride = false; };
         _shareButton.MouseDown += (_, _) => { _shareMenuButton.PressedOverride = true; };
@@ -882,6 +857,37 @@ public sealed partial class EditorForm
         _shareMenuButton.MouseLeave += (_, _) => { _shareButton.HoverOverride = false; };
         _shareMenuButton.MouseDown += (_, _) => { _shareButton.PressedOverride = true; };
         _shareMenuButton.MouseUp += (_, _) => { _shareButton.PressedOverride = false; };
+
+        _exportButton = RegisterLocalizedCommand("export", "Export", false);
+        _exportButton.RoundLeftOnly = true;
+        _exportButton.Margin = new Padding(2, 0, 0, 0);
+        _exportButton.Click += (_, _) => DoSaveAs();
+        RegisterHoverTooltip(_exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
+        commandActions.Controls.Add(_exportButton);
+
+        _exportMenuButton = new EditorCommandButton
+        {
+            IconId = "chevronDown",
+            Text = "",
+            Primary = false,
+            Width = 32,
+            Height = 62,
+            RoundRightOnly = true,
+            Margin = new Padding(0, 0, 2, 0),
+        };
+        _exportMenuButton.Click += (_, _) => ShowExportMenu();
+        RegisterHoverTooltip(_exportMenuButton, LocalizationService.Translate("Choose export format"), above: false);
+        commandActions.Controls.Add(_exportMenuButton);
+
+        _exportButton.MouseEnter += (_, _) => { _exportMenuButton.HoverOverride = true; };
+        _exportButton.MouseLeave += (_, _) => { _exportMenuButton.HoverOverride = false; };
+        _exportButton.MouseDown += (_, _) => { _exportMenuButton.PressedOverride = true; };
+        _exportButton.MouseUp += (_, _) => { _exportMenuButton.PressedOverride = false; };
+
+        _exportMenuButton.MouseEnter += (_, _) => { _exportButton.HoverOverride = true; };
+        _exportMenuButton.MouseLeave += (_, _) => { _exportButton.HoverOverride = false; };
+        _exportMenuButton.MouseDown += (_, _) => { _exportButton.PressedOverride = true; };
+        _exportMenuButton.MouseUp += (_, _) => { _exportButton.PressedOverride = false; };
 
         commandBarPanel.Controls.Add(commandActions, 1, 0);
 
@@ -936,37 +942,45 @@ public sealed partial class EditorForm
 
     private Control BuildToolSection()
     {
-        var section = MakeSectionPanel(null, 530);
-        section.Dock = DockStyle.Fill;
+        // AutoSize to the tool grid — a fixed Height shorter than the 7 rows overflowed
+        // onto the palette in the restored window and hid the first color row.
+        var section = MakeAutoSizeSection();
 
         // Three groups, 7 rows total, same 3-column grid:
-        //   • Nav — 1 row (1/7)
-        //   • Drawing — 4 rows (4/7)
-        //   • Cut / crop / transform — 2 rows (2/7), below a separator after the last draw row
+        //   • Nav — 1 row
+        //   • Drawing — 4 rows
+        //   • Cut / crop / transform — 2 rows, below a separator after the last draw row
         var host = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            AutoSize = true,
             BackColor = Color.Transparent,
             ColumnCount = 1,
             RowCount = 3,
             Padding = new Padding(0, 2, 0, 0),
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         EnableDoubleBuffering(host);
         host.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        host.RowStyles.Add(new RowStyle(SizeType.Percent, 14.29f)); // 1/7
-        host.RowStyles.Add(new RowStyle(SizeType.Percent, 57.14f)); // 4/7
-        host.RowStyles.Add(new RowStyle(SizeType.Percent, 28.57f)); // 2/7
+        // AutoSize so tool cells keep a compact height when the editor is maximized;
+        // leftover space sits between this grid and the color/stroke section below.
+        host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         var nav = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            AutoSize = true,
             BackColor = Color.Transparent,
             ColumnCount = 3,
             RowCount = 1,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         for (int c = 0; c < 3; c++)
             nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        nav.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        nav.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan", bottomMargin: 5);
         AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Pick", displayKey: "Sel", bottomMargin: 5);
@@ -974,15 +988,17 @@ public sealed partial class EditorForm
 
         var draw = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            AutoSize = true,
             BackColor = Color.Transparent,
             ColumnCount = 3,
             RowCount = 4,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         for (int c = 0; c < 3; c++)
             draw.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
         for (int r = 0; r < 4; r++)
-            draw.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
+            draw.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw", topMargin: 5);
         AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", topMargin: 5);
@@ -999,15 +1015,17 @@ public sealed partial class EditorForm
 
         var transform = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            AutoSize = true,
             BackColor = Color.Transparent,
             ColumnCount = 3,
             RowCount = 2,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         for (int c = 0; c < 3; c++)
             transform.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        transform.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-        transform.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+        transform.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        transform.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         AddToolButton(transform, 0, 0, AnnotationCanvas.CanvasTool.CutOut, "cutOut", "Cut Out", displayKey: "Cut", topMargin: 5);
         AddToolButton(transform, 1, 0, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop", topMargin: 5);
@@ -1045,7 +1063,7 @@ public sealed partial class EditorForm
         host.Controls.Add(draw, 0, 1);
         host.Controls.Add(transform, 0, 2);
 
-        section.Controls.Add(host, 0, 1);
+        section.Controls.Add(host, 0, 0);
         return section;
     }
 
@@ -1079,24 +1097,32 @@ public sealed partial class EditorForm
 
     private Control BuildColorSection()
     {
-        var section = MakeSectionPanel(null, 188);
+        var section = MakeAutoSizeSection();
+        section.Padding = new Padding(0, 6, 0, 2);
 
-        int swatchSize = (int)Math.Round(28 * 1.35);
-        int strokeSize = (int)Math.Round(32 * 1.35);
+        int swatchSize = SwatchButtonSize;
+        int strokeSize = StrokeButtonSize;
 
         // Palette (6 columns) stacked over the stroke-width row (5 columns). Both are grids that
         // stretch to the full toolbar content width, so their right edge lines up with the Tools
         // grid above and the swatches stay evenly distributed.
         var outer = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = Color.Transparent,
             ColumnCount = 1,
             RowCount = 2,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         EnableDoubleBuffering(outer);
-        outer.RowStyles.Add(new RowStyle(SizeType.Absolute, (swatchSize + 8) * 2));
-        outer.RowStyles.Add(new RowStyle(SizeType.Absolute, strokeSize + 8));
+        int paletteHeight = (swatchSize + 8) * 2;
+        int strokeHeight = strokeSize + 8;
+        outer.RowStyles.Add(new RowStyle(SizeType.Absolute, paletteHeight));
+        outer.RowStyles.Add(new RowStyle(SizeType.Absolute, strokeHeight));
+        outer.MinimumSize = new Size(0, paletteHeight + strokeHeight);
+        section.MinimumSize = new Size(0, paletteHeight + strokeHeight + section.Padding.Vertical);
 
         const int paletteColumns = 6;
         var palette = new TableLayoutPanel
@@ -1225,40 +1251,34 @@ public sealed partial class EditorForm
 
         outer.Controls.Add(palette, 0, 0);
         outer.Controls.Add(widthRow, 0, 1);
-        section.Controls.Add(outer, 0, 1);
+        section.Controls.Add(outer, 0, 0);
         return section;
     }
 
-    private TableLayoutPanel MakeSectionPanel(string? title, int height)
+    private static TableLayoutPanel MakeAutoSizeSection()
     {
-        bool showTitle = !string.IsNullOrEmpty(title);
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = showTitle ? height : height - 24,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = Color.Transparent,
-            Padding = new Padding(0, 0, 0, 6),
+            Padding = new Padding(0, 0, 0, 4),
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 1,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, showTitle ? 24 : 0));
-        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-
-        if (showTitle)
-        {
-            var label = new DoubleBufferedLabel
-            {
-                Dock = DockStyle.Top,
-                Height = 24,
-                Text = title!,
-                ForeColor = EditorColors.Accent,
-                Font = UiChrome.ChromeFont(9f, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft,
-            };
-            panel.Controls.Add(label, 0, 0);
-        }
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         return panel;
     }
+
+    private static int SwatchButtonSize => (int)Math.Round(28 * 1.35);
+    private static int StrokeButtonSize => (int)Math.Round(32 * 1.35);
+
+    /// <summary>Palette (2 rows) + stroke row + section padding. Reserved as an Absolute layout row so restored height cannot steal color-stack space.</summary>
+    private static int ColorStackReservedHeight =>
+        (SwatchButtonSize + 8) * 2 + (StrokeButtonSize + 8) + 8;
 
     private void AddToolButton(
         TableLayoutPanel parent,
@@ -1281,6 +1301,8 @@ public sealed partial class EditorForm
         var button = new EditorToolButton
         {
             Dock = DockStyle.Fill,
+            Height = ToolButtonRowHeight,
+            MinimumSize = new Size(0, ToolButtonRowHeight),
             Margin = new Padding(left, topMargin, right, bottomMargin),
             IconId = iconId,
             Text = label,
@@ -1326,6 +1348,8 @@ public sealed partial class EditorForm
         var button = new EditorToolButton
         {
             Dock = DockStyle.Fill,
+            Height = ToolButtonRowHeight,
+            MinimumSize = new Size(0, ToolButtonRowHeight),
             Margin = new Padding(left, topMargin, right, bottomMargin),
             IconId = iconId,
             Text = LocalizationService.Translate(displayKey),
@@ -1961,7 +1985,7 @@ public sealed partial class EditorForm
         // ── "View" submenu: all toggles ──
         var viewItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("View"), showImages: true);
 
-        var borderItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show image outline"), iconId: null);
+        var borderItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show canvas outline"), iconId: null);
         borderItem.ToolTipText = LocalizationService.Translate("Draws a thin outline around the image in the editor. It is not included when you export.");
         var fitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-fit image to window"), iconId: null);
         fitItem.ToolTipText = LocalizationService.Translate("Fit the image to the window when the editor opens.");
@@ -2730,10 +2754,13 @@ internal sealed class EditorToolButton : EditorButtonBase
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
-        var iconSize = 34f;
-        var iconTop = 4f;
-        var textHeight = 18;
-        var textTop = rect.Bottom - 20;
+        // Compact stack at the top of the cell. Leave a tall enough caption box so
+        // descenders (j, p, g) are not clipped — TextRenderer's default padding was
+        // eating those pixels inside a 16px line.
+        const float iconSize = 32f;
+        const float iconTop = 3f;
+        const int textHeight = 22;
+        const float textGap = 1f;
 
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
@@ -2742,7 +2769,9 @@ internal sealed class EditorToolButton : EditorButtonBase
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active);
 
-        var textRect = new Rectangle(rect.Left + 4, textTop, rect.Width - 8, textHeight);
+        int textTop = (int)Math.Round(rect.Top + iconTop + iconSize + textGap);
+        int textBottom = Math.Min(textTop + textHeight, rect.Bottom - 1);
+        var textRect = new Rectangle(rect.Left + 2, textTop, rect.Width - 4, Math.Max(1, textBottom - textTop));
         TextRenderer.DrawText(
             g,
             Text,
@@ -2750,10 +2779,14 @@ internal sealed class EditorToolButton : EditorButtonBase
             textRect,
             contentColor,
             TextFormatFlags.HorizontalCenter |
-            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.Top |
+            TextFormatFlags.NoPadding |
             TextFormatFlags.EndEllipsis |
             TextFormatFlags.NoPrefix);
     }
+
+    public override Size GetPreferredSize(Size proposedSize)
+        => new(proposedSize.Width > 0 ? proposedSize.Width : Width, EditorForm.ToolButtonRowHeight);
 }
 
 
