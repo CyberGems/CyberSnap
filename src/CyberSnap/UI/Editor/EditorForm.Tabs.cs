@@ -397,7 +397,11 @@ public sealed partial class EditorForm
         for (int i = 0; i < _documents.Count; i++)
         {
             var doc = _documents[i];
-            tabs[i] = new EditorTabInfo(doc.TabTitle, doc.IsDirty, ReferenceEquals(doc, _activeDocument));
+            tabs[i] = new EditorTabInfo(
+                doc.TabTitle,
+                doc.Canvas is { IsDisposed: false, IsDirty: true },
+                !string.IsNullOrWhiteSpace(doc.SavedFilePath),
+                ReferenceEquals(doc, _activeDocument));
         }
         _tabStrip.SetTabs(tabs);
     }

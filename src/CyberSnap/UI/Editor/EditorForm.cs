@@ -1447,7 +1447,18 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         _canvas.TransformCanvas(kind);
         RefreshUi();
+        _canvas.ShowToolBanner(TransformBannerText(kind));
     }
+
+    private static string TransformBannerText(Models.Commands.CanvasTransformKind kind) => kind switch
+    {
+        Models.Commands.CanvasTransformKind.Rotate90Clockwise => LocalizationService.Translate("Rotated 90° →"),
+        Models.Commands.CanvasTransformKind.Rotate90CounterClockwise => LocalizationService.Translate("Rotated 90° ←"),
+        Models.Commands.CanvasTransformKind.Rotate180 => LocalizationService.Translate("Rotated 180°"),
+        Models.Commands.CanvasTransformKind.FlipHorizontal => LocalizationService.Translate("Flipped horizontally ↔"),
+        Models.Commands.CanvasTransformKind.FlipVertical => LocalizationService.Translate("Flipped vertically ↕"),
+        _ => LocalizationService.Translate("Canvas transformed"),
+    };
 
     private void DoNewCanvas()
     {
