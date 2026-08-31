@@ -306,7 +306,7 @@ internal static class SelectionSizeReadout
             rect.Y + (rect.Height - iconSz) / 2f,
             iconSz, iconSz);
         int iconA = hovered || active ? 255 : 220;
-        using var iconColor = new SolidBrush(Color.FromArgb(iconA, 230, 240, 255));
+        using var iconColor = new SolidBrush(Color.FromArgb(iconA, UiChrome.SurfaceTextPrimary));
         FluentIcons.DrawIcon(g, "gear", iconRect, iconColor.Color, iconInset: 0f);
     }
 

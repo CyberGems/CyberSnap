@@ -30,6 +30,12 @@ public sealed partial class ScrollingCaptureForm : Form
 
     private enum State { Selecting, Capturing, Stitching, Done }
 
+    private static Color ScrollingAccent => Color.FromArgb(
+        Theme.Accent.A,
+        Theme.Accent.R,
+        Theme.Accent.G,
+        Theme.Accent.B);
+
     private Bitmap? _screenshot;
     private readonly Rectangle _virtualBounds;
     private readonly bool _showCursor;
@@ -44,7 +50,7 @@ public sealed partial class ScrollingCaptureForm : Form
     private Rectangle _selection;
 
     // Handle resize/move during ready phase (after drag-release, before START)
-    private int _handleDragIndex = -1; // -1=none, 0=TL, 1=TR, 2=BL, 3=BR, 4=move
+    private int _handleDragIndex = -1; // -1=none, 4=top, 5=left, 6=right, 7=bottom, 8=move
     private bool _isHandleDragging;
     private Point _handleDragOrigin;
     private Rectangle _handleDragStartRect;
@@ -113,7 +119,11 @@ public sealed partial class ScrollingCaptureForm : Form
         if (screenshot is null)
         {
             Opacity = 0.01;
-            _selectionAdorner = new LiveSelectionAdornerForm(_virtualBounds, "Drag to select scrolling area");
+            _selectionAdorner = new LiveSelectionAdornerForm(
+                _virtualBounds,
+                "Drag to select scrolling area",
+                ScrollingAccent,
+                UiChrome.AccentColor);
         }
         KeyPreview = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
@@ -260,7 +270,7 @@ public sealed partial class ScrollingCaptureForm : Form
             }
             if (_selection.Contains(e.Location))
             {
-                _handleDragIndex = 4; // move
+                _handleDragIndex = 8; // move
                 _isHandleDragging = true;
                 _handleDragOrigin = e.Location;
                 _handleDragStartRect = _selection;
@@ -287,7 +297,7 @@ public sealed partial class ScrollingCaptureForm : Form
         // Handle resize/move during ready phase
         if (_isHandleDragging && _controlBar is not null)
         {
-            if (_handleDragIndex == 4)
+            if (_handleDragIndex == 8)
                 Cursor = CursorFactory.GrabbingCursor;
             ApplyHandleDrag(e.Location);
             return;
@@ -298,7 +308,15 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
-                Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+            {
+                Cursor = hit switch
+                {
+                    0 or 3 => Cursors.SizeNWSE,
+                    1 or 2 => Cursors.SizeNESW,
+                    4 or 7 => Cursors.SizeNS,
+                    _ => Cursors.SizeWE
+                };
+            }
             else if (_selection.Contains(e.Location))
                 Cursor = CursorFactory.GrabCursor;
             else
@@ -854,65 +872,59 @@ public sealed partial class ScrollingCaptureForm : Form
             if (_state == State.Capturing)
                 PaintCapturingFrame(g, borderRect);
             else
-                SelectionFrameRenderer.DrawRectangle(g, borderRect, fill: false);
+                SelectionFrameRenderer.DrawRectangle(
+                    g,
+                    borderRect,
+                    fill: false,
+                    accentOverride: ScrollingAccent,
+                    bracketAccentOverride: UiChrome.AccentColor);
 
-            // Draw resize handles when in ready phase (not yet capturing)
+            // Draw only round mid-edge resize handles; the corner brackets are part of the frame.
             if (_state == State.Selecting && _controlBar is not null)
-            {
-                var handles = GetHandleRects();
-                foreach (var h in handles)
-                    WindowsHandleRenderer.Paint(g, h);
-            }
+                SelectionFrameRenderer.DrawConfirmHandles(g, GetHandleRects(borderRect));
         }
     }
 
     /// <summary>
-    /// Frame during capture: no semi-transparent glow that can trap the ready-phase dim snapshot.
+    /// Shared Scrolling frame chrome during capture and ready phases.
     /// </summary>
     private static void PaintCapturingFrame(Graphics g, Rectangle borderRect)
     {
-        var accent = UiChrome.AccentColor;
-        using var borderPen = new Pen(accent, 1.5f)
-        {
-            DashStyle = DashStyle.Dash,
-            DashPattern = new[] { 6f, 4f }
-        };
-        g.DrawRectangle(borderPen, borderRect);
-
-        const int cornerLen = 12;
-        const int cornerOffset = 3;
-        using var cornerPen = new Pen(accent, 2f) { LineJoin = LineJoin.Miter };
-        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Y - cornerOffset, borderRect.X - cornerOffset + cornerLen, borderRect.Y - cornerOffset);
-        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Y - cornerOffset, borderRect.X - cornerOffset, borderRect.Y - cornerOffset + cornerLen);
-        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset, borderRect.Right + cornerOffset - cornerLen, borderRect.Y - cornerOffset);
-        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset + cornerLen);
-        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset, borderRect.X - cornerOffset + cornerLen, borderRect.Bottom + cornerOffset);
-        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset - cornerLen);
-        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset - cornerLen, borderRect.Bottom + cornerOffset);
-        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset - cornerLen);
+        SelectionFrameRenderer.DrawRectangle(
+            g,
+            borderRect,
+            fill: false,
+            accentOverride: ScrollingAccent,
+            bracketAccentOverride: UiChrome.AccentColor);
     }
 
     // ── Handle resize/move helpers ──
 
     private static int HandleSizeScaled => UiChrome.ScaleInt(HandleSize);
 
-    private Rectangle[] GetHandleRects()
+    private Rectangle[] GetHandleRects(Rectangle frameRect)
     {
         int hs = HandleSizeScaled;
         int h2 = hs / 2;
-        var r = _selection;
+        var r = frameRect;
+        int midX = r.Left + r.Width / 2;
+        int midY = r.Top + r.Height / 2;
         return new[]
         {
-            new Rectangle(r.Left - h2, r.Top - h2, hs, hs),       // 0 TL
-            new Rectangle(r.Right - h2, r.Top - h2, hs, hs),      // 1 TR
-            new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),    // 2 BL
-            new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs),   // 3 BR
+            new Rectangle(r.Left - h2, r.Top - h2, hs, hs),      // 0 TL
+            new Rectangle(r.Right - h2, r.Top - h2, hs, hs),     // 1 TR
+            new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),   // 2 BL
+            new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs), // 3 BR
+            new Rectangle(midX - h2, r.Top - h2, hs, hs),       // 4 Top
+            new Rectangle(r.Left - h2, midY - h2, hs, hs),       // 5 Left
+            new Rectangle(r.Right - h2, midY - h2, hs, hs),     // 6 Right
+            new Rectangle(midX - h2, r.Bottom - h2, hs, hs),    // 7 Bottom
         };
     }
 
     private int HitTestHandle(Point p)
     {
-        var handles = GetHandleRects();
+        var handles = GetHandleRects(Rectangle.Inflate(_selection, 2, 2));
         for (int i = 0; i < handles.Length; i++)
         {
             var hr = handles[i];
@@ -931,11 +943,31 @@ public sealed partial class ScrollingCaptureForm : Form
 
         Rectangle next = _handleDragIndex switch
         {
-            0 => Rectangle.FromLTRB(r.Left + dx, r.Top + dy, r.Right, r.Bottom),
-            1 => Rectangle.FromLTRB(r.Left, r.Top + dy, r.Right + dx, r.Bottom),
-            2 => Rectangle.FromLTRB(r.Left + dx, r.Top, r.Right, r.Bottom + dy),
-            3 => Rectangle.FromLTRB(r.Left, r.Top, r.Right + dx, r.Bottom + dy),
-            4 => new Rectangle(r.Left + dx, r.Top + dy, r.Width, r.Height), // move
+            0 => Rectangle.FromLTRB(
+                Math.Min(r.Right - 20, r.Left + dx),
+                Math.Min(r.Bottom - 20, r.Top + dy),
+                r.Right,
+                r.Bottom),
+            1 => Rectangle.FromLTRB(
+                r.Left,
+                Math.Min(r.Bottom - 20, r.Top + dy),
+                Math.Max(r.Left + 20, r.Right + dx),
+                r.Bottom),
+            2 => Rectangle.FromLTRB(
+                Math.Min(r.Right - 20, r.Left + dx),
+                r.Top,
+                r.Right,
+                Math.Max(r.Top + 20, r.Bottom + dy)),
+            3 => Rectangle.FromLTRB(
+                r.Left,
+                r.Top,
+                Math.Max(r.Left + 20, r.Right + dx),
+                Math.Max(r.Top + 20, r.Bottom + dy)),
+            4 => Rectangle.FromLTRB(r.Left, Math.Min(r.Bottom - 20, r.Top + dy), r.Right, r.Bottom),
+            5 => Rectangle.FromLTRB(Math.Min(r.Right - 20, r.Left + dx), r.Top, r.Right, r.Bottom),
+            6 => Rectangle.FromLTRB(r.Left, r.Top, Math.Max(r.Left + 20, r.Right + dx), r.Bottom),
+            7 => Rectangle.FromLTRB(r.Left, r.Top, r.Right, Math.Max(r.Top + 20, r.Bottom + dy)),
+            8 => new Rectangle(r.Left + dx, r.Top + dy, r.Width, r.Height), // move
             _ => r
         };
 
@@ -988,7 +1020,11 @@ public sealed partial class ScrollingCaptureForm : Form
 
         if (_selection.Width > 2 && _selection.Height > 2)
         {
-            SelectionFrameRenderer.DrawRectangle(g, _selection);
+            SelectionFrameRenderer.DrawRectangle(
+                g,
+                _selection,
+                accentOverride: ScrollingAccent,
+                bracketAccentOverride: UiChrome.AccentColor);
         }
 
         // Keep painting while fading out (Dismiss keeps the instance; opacity gates visibility).
@@ -1146,9 +1182,21 @@ public sealed partial class ScrollingCaptureForm : Form
         public event Action? ManualFrameClicked;
         public event Action<ScrollingCaptureMode>? ModeChanged;
 
-        private static readonly Color ScrollAccent = Color.FromArgb(255, 0x07, 0x87, 0x88);
-        private static readonly Color DoneAccent = Color.FromArgb(255, 0xBD, 0x70, 0x11);
-        private static readonly Color DoneAccentHover = Color.FromArgb(255, 0xD4, 0x82, 0x18);
+        // Keep Scrolling on the original MP4 accent: CyberSnap default uses cyan.
+        private static Color ScrollAccent => ScrollingCaptureForm.ScrollingAccent;
+        private static Color ScrollAccentHover => Color.FromArgb(
+            255,
+            Math.Min(255, ScrollAccent.R + 28),
+            Math.Min(255, ScrollAccent.G + 28),
+            Math.Min(255, ScrollAccent.B + 28));
+        private static Color DoneAccent =>
+            UiChrome.IsGray
+                ? ScrollAccent
+                : Color.FromArgb(255, 0xBD, 0x70, 0x11);
+        private static Color DoneAccentHover =>
+            UiChrome.IsGray
+                ? ScrollAccentHover
+                : Color.FromArgb(255, 0xD4, 0x82, 0x18);
         private static readonly Color StartShineGlow = Color.FromArgb(168, 174, 184);
         private static readonly Color StartShineCore = Color.FromArgb(210, 215, 222);
         private const float StartShineThicknessScale = 0.55f;
@@ -1378,19 +1426,19 @@ public sealed partial class ScrollingCaptureForm : Form
             var barRect = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
             var bgPath = WindowsDockRenderer.RoundedRect(barRect, CornerR);
 
+            WindowsDockRenderer.PaintShadow(g, barRect, CornerR);
+
             var glowRect = barRect;
             glowRect.Inflate(3f, 3f);
             using (var glowPath = WindowsDockRenderer.RoundedRect(glowRect, CornerR))
-            using (var glowBrush = new SolidBrush(Color.FromArgb(25, ScrollAccent)))
+            using (var glowBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 18 : 12, ScrollAccent)))
                 g.FillPath(glowBrush, glowPath);
 
-            using (var micaBrush = new SolidBrush(Color.FromArgb(225, 12, 12, 16)))
-                g.FillPath(micaBrush, bgPath);
+            using (var surfaceBrush = new SolidBrush(UiChrome.SurfaceTier1))
+                g.FillPath(surfaceBrush, bgPath);
 
-            using (var bp = new Pen(Color.FromArgb(150, ScrollAccent), 1f))
+            using (var bp = new Pen(UiChrome.SurfaceBorder, 1f))
                 g.DrawPath(bp, bgPath);
-
-            WindowsDockRenderer.PaintShadow(g, barRect, CornerR);
 
             float centerY = BarHeight / 2f;
             float dotX = _recDotRect.X;
@@ -1434,7 +1482,7 @@ public sealed partial class ScrollingCaptureForm : Form
             if (!_startBtnRect.IsEmpty)
             {
                 DrawPrimaryTextBtn(g, _startBtnRect, LocalizationService.Translate("Start scrolling capture"),
-                    _hoveredRect == _startBtnRect, ScrollAccent, Color.FromArgb(255, 0x0a, 0x9a, 0x9c),
+                    _hoveredRect == _startBtnRect, ScrollAccent, ScrollAccentHover,
                     withShine: true, shinePhase: _startShinePhase);
             }
             if (!_stopBtnRect.IsEmpty)
@@ -1484,12 +1532,13 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             var rectF = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
             using var path = WindowsDockRenderer.RoundedRect(rectF, CornerR);
-            using (var brush = new SolidBrush(hovered ? hoverFill : normal))
+            var fillColor = hovered ? hoverFill : normal;
+            using (var brush = new SolidBrush(fillColor))
                 g.FillPath(brush, path);
             using (var border = new Pen(Color.FromArgb(hovered ? 220 : 160, Color.White), 1f))
                 g.DrawPath(border, path);
 
-            using var textBrush = new SolidBrush(Color.White);
+            using var textBrush = new SolidBrush(GetButtonTextColor(fillColor));
             g.DrawString(text, _startFont, textBrush, rectF, _centerFmt);
 
             if (withShine && !UI.Motion.Disabled)
@@ -1500,6 +1549,14 @@ public sealed partial class ScrollingCaptureForm : Form
                     g, rectF, CornerR, shinePhase, StartShineGlow, StartShineCore, 1f, StartShineThicknessScale);
                 g.Restore(clipState);
             }
+        }
+
+        private static Color GetButtonTextColor(Color fill)
+        {
+            int luminance = (299 * fill.R + 587 * fill.G + 114 * fill.B) / 1000;
+            return luminance >= 150
+                ? Color.FromArgb(255, 7, 18, 28)
+                : Color.White;
         }
 
         private void InvalidateStartShine()
