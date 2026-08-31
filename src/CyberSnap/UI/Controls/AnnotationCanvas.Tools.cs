@@ -499,7 +499,7 @@ public sealed partial class AnnotationCanvas
         if (_inlineTextBox is not null && _activeTool != CanvasTool.Text)
             CommitOrCancelInlineText(commit: true);
 
-        if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _activeTool != CanvasTool.Move)
+        if (_preSpaceTool == null && ShowsAnnotationHoverChrome(_activeTool) && _activeTool != CanvasTool.Move)
         {
             int handle = -1;
             int clickedIdx = -1;
@@ -1004,7 +1004,7 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        if (IsDrawingOrMoveTool(_activeTool) && !_isDragging)
+        if (ShowsAnnotationHoverChrome(_activeTool) && !_isDragging)
         {
             if (_preSpaceTool == null)
             {
@@ -1090,7 +1090,7 @@ public sealed partial class AnnotationCanvas
                     return;
                 }
             }
-            if (IsDrawingOrMoveTool(_activeTool) && _preSpaceTool == null)
+            if (ShowsAnnotationHoverChrome(_activeTool) && _preSpaceTool == null)
             {
                 int sh = -1;
                 if (_selectedAnnotationIndex >= 0)
@@ -1691,9 +1691,8 @@ public sealed partial class AnnotationCanvas
         // the capture overlay); zoom is unaffected for every other tool.
         if (_activeTool == CanvasTool.Emoji)
         {
-            EmojiPlaceSize = _emojiPlaceSize + (e.Delta > 0 ? 4f : -4f);
-            ShowToolBanner($"{CyberSnap.Services.LocalizationService.Translate("Emoji size")}: {(int)_emojiPlaceSize}px");
-            Invalidate();
+            int notches = Math.Sign(e.Delta) * Math.Max(1, Math.Abs(e.Delta) / 120);
+            NudgeEmojiPlaceSize(notches);
             return;
         }
 
@@ -1816,6 +1815,15 @@ public sealed partial class AnnotationCanvas
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+
+        if (_inlineTextBox is null
+            && e.KeyCode is Keys.OemOpenBrackets or Keys.OemCloseBrackets
+            && !e.Control && !e.Alt && !e.Shift
+            && TryNudgeEmojiPlaceSize(e.KeyCode == Keys.OemCloseBrackets ? 1 : -1))
+        {
+            e.Handled = true;
+            return;
+        }
 
         if (_inlineTextBox is null
             && !EditorToolHotkeyHelper.IsReservedEditorChord(e.KeyData)
@@ -3266,6 +3274,33 @@ public sealed partial class AnnotationCanvas
     private bool IsDrawingOrMoveTool(CanvasTool tool)
     {
         return tool != CanvasTool.Crop && tool != CanvasTool.CutOut && tool != CanvasTool.Eraser && (tool != CanvasTool.Pan || !PanModeLockObjects);
+    }
+
+    /// <summary>
+    /// Hover/select chrome around existing annotations. Stamp tools (Emoji) skip it so
+    /// a click places a new glyph instead of wrapping whatever sits under the cursor.
+    /// Pick still shows the box.
+    /// </summary>
+    private bool ShowsAnnotationHoverChrome(CanvasTool tool)
+        => IsDrawingOrMoveTool(tool) && tool != CanvasTool.Emoji;
+
+    /// <summary>Grows or shrinks the pending emoji size. Returns false when the Emoji tool is not active.</summary>
+    public bool TryNudgeEmojiPlaceSize(int direction)
+    {
+        if (direction == 0 || _activeTool != CanvasTool.Emoji || _inlineTextBox is not null)
+            return false;
+        NudgeEmojiPlaceSize(direction);
+        return true;
+    }
+
+    private void NudgeEmojiPlaceSize(int direction)
+    {
+        float next = Math.Clamp(_emojiPlaceSize + direction * EmojiRenderer.PlaceSizeStep, EmojiRenderer.PlaceSizeMin, EmojiRenderer.PlaceSizeMax);
+        if (Math.Abs(next - _emojiPlaceSize) < 0.01f)
+            return;
+        EmojiPlaceSize = next;
+        ShowToolBanner($"{CyberSnap.Services.LocalizationService.Translate("Emoji size")}: {(int)_emojiPlaceSize}px");
+        Invalidate();
     }
 
     private int GetSelectHandle(Point screenPt)

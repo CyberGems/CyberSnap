@@ -16,6 +16,9 @@ namespace CyberSnap.Capture;
 /// </summary>
 public sealed class EmojiRenderer : IDisposable
 {
+    public const float PlaceSizeMin = 16f;
+    public const float PlaceSizeMax = 128f;
+    public const float PlaceSizeStep = 12f;
     private readonly IWICImagingFactory2 _wicFactory;
     private readonly ID2D1Factory1 _d2dFactory;
     private readonly IDWriteFactory _dwFactory;

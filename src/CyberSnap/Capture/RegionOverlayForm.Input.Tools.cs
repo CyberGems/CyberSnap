@@ -909,7 +909,7 @@ public sealed partial class RegionOverlayForm
             else if (GetActiveTextRect().Contains(e.Location)) target = Cursors.IBeam;
             else target = Cursors.Default;
         }
-        else if (IsDrawingOrMoveMode(_mode))
+        else if (ShowsAnnotationHoverChrome(_mode) || _mode == CaptureMode.Move)
         {
             bool handled = false;
             if (!IsDraggingAnyAnnotation())
@@ -1153,7 +1153,9 @@ public sealed partial class RegionOverlayForm
                     18);
                 break;
             case CaptureMode.Emoji when _isPlacingEmoji:
-                InvalidateLivePreview(GetEmojiPreviewRect(oldCursor), GetEmojiPreviewRect(e.Location), 10);
+                // Use the clamped live cursor (same point PaintAnnotations draws at), not
+                // the raw mouse, so the confirm-hole ghost does not smear at the frame edge.
+                InvalidateLivePreview(GetEmojiPreviewRect(oldCursor), GetEmojiPreviewRect(_lastCursorPos), 16);
                 break;
             case CaptureMode.Magnifier when _isPlacingMagnifier:
                 // Ghost lens is large (~150px + flip offset). Always clear old+new with a wide pad.
@@ -1737,10 +1739,8 @@ public sealed partial class RegionOverlayForm
         }
         else if (_mode == CaptureMode.Emoji && _isPlacingEmoji)
         {
-            // Scroll wheel changes emoji size
-            var oldPreview = GetEmojiPreviewRect(_lastCursorPos);
-            _emojiPlaceSize = Math.Clamp(_emojiPlaceSize + (e.Delta > 0 ? 4f : -4f), 16f, 128f);
-            Invalidate(Rectangle.Union(InflateForRepaint(oldPreview), InflateForRepaint(GetEmojiPreviewRect(_lastCursorPos))));
+            int notches = Math.Sign(e.Delta) * Math.Max(1, Math.Abs(e.Delta) / 120);
+            NudgeEmojiPlaceSize(notches);
         }
         else if (_isTyping)
         {

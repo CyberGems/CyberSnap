@@ -33,9 +33,13 @@ public sealed partial class AnnotationCanvas
         {
             g.TranslateTransform(_pan.X, _pan.Y);
             g.ScaleTransform((float)_zoom, (float)_zoom);
+            // DrawBaseImage leaves NearestNeighbor set; annotations (especially emoji
+            // bitmaps) need a smooth resample when the view is not at 100%.
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
 
             var oldClip = g.Clip;
             g.SetClip(new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+            _annotationViewScale = (float)_zoom;
             try
             {
                 RenderAnnotations(g);
@@ -44,6 +48,7 @@ public sealed partial class AnnotationCanvas
             }
             finally
             {
+                _annotationViewScale = 1f;
                 g.Clip = oldClip;
             }
         }
@@ -225,7 +230,7 @@ public sealed partial class AnnotationCanvas
         // Move hover highlight (skip if item is part of multi-selection — it already has handles)
         // Also skip the annotation currently being re-edited (live inline frame replaces it),
         // and while a new draw drag is in progress (hover must not compete with the preview).
-        if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count
+        if (_preSpaceTool == null && ShowsAnnotationHoverChrome(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count
             && _moveHoverIndex != _selectedAnnotationIndex
             && _moveHoverIndex != _renderSkipAnnotationIndex
             && !_multiSelectedIndices.Contains(_moveHoverIndex)

@@ -682,15 +682,11 @@ public sealed partial class EditorForm
                 TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
         };
 
-        RegisterHoverTooltip(_titleFileNameLabel, () =>
-        {
-            if (_canvas.IsDirty)
-                return LocalizationService.Translate("Unsaved changes");
-            else if (string.IsNullOrWhiteSpace(_savedFilePath))
-                return LocalizationService.Translate("New canvas");
-            else
-                return LocalizationService.Translate("Saved");
-        }, above: false);
+        RegisterHoverTooltip(
+            _titleFileNameLabel,
+            () => FormatDocumentStatusTooltip(_canvas.IsDirty, !string.IsNullOrWhiteSpace(_savedFilePath)),
+            above: false,
+            boundsProvider: () => GetTitleTooltipAnchorScreen());
 
         _titleBarPanel.Controls.Add(_titleFileNameLabel);
         _titleBarPanel.Controls.Add(brandPanel);
@@ -1349,6 +1345,8 @@ public sealed partial class EditorForm
                 LocalizationService.Translate("Double-click {0} to select all"),
                 LocalizationService.Translate("Pick"))}";
         }
+        if (tool == AnnotationCanvas.CanvasTool.Emoji)
+            text += $"  ·  {LocalizationService.Translate("Scroll or [ ] to resize")}";
         var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(tool);
         return hotkey is not null ? $"{text}  ({hotkey})" : text;
     }
@@ -1582,17 +1580,18 @@ public sealed partial class EditorForm
 
     private void UpdateColorSwatch()
     {
+        bool apply = ToolUsesColor(_canvas.ActiveTool);
         bool matchedAny = false;
         foreach (var kv in _colorButtons)
         {
-            bool match = kv.Key.ToArgb() == _canvas.ToolColor.ToArgb();
+            bool match = apply && kv.Key.ToArgb() == _canvas.ToolColor.ToArgb();
             kv.Value.Checked = match;
             if (match) matchedAny = true;
         }
 
         if (_customColorButton != null)
         {
-            if (_customColorButton.HasCustomColor && !matchedAny)
+            if (apply && _customColorButton.HasCustomColor && !matchedAny)
             {
                 _customColorButton.Checked = _customColorButton.SwatchColor.ToArgb() == _canvas.ToolColor.ToArgb();
             }
@@ -1605,9 +1604,22 @@ public sealed partial class EditorForm
 
     private void UpdateStrokeWidthButtons()
     {
+        bool apply = ToolUsesStroke(_canvas.ActiveTool);
         foreach (var btn in _strokeWidthButtons)
-            btn.Checked = Math.Abs(btn.StrokeWidth - _canvas.StrokeWidth) < 0.01f;
+            btn.Checked = apply && Math.Abs(btn.StrokeWidth - _canvas.StrokeWidth) < 0.01f;
     }
+
+    private static bool ToolUsesColor(AnnotationCanvas.CanvasTool tool) => tool is
+        AnnotationCanvas.CanvasTool.Draw or AnnotationCanvas.CanvasTool.Arrow
+        or AnnotationCanvas.CanvasTool.CurvedArrow or AnnotationCanvas.CanvasTool.Line
+        or AnnotationCanvas.CanvasTool.Rect or AnnotationCanvas.CanvasTool.Circle
+        or AnnotationCanvas.CanvasTool.Highlight or AnnotationCanvas.CanvasTool.Text
+        or AnnotationCanvas.CanvasTool.StepNumber;
+
+    private static bool ToolUsesStroke(AnnotationCanvas.CanvasTool tool) => tool is
+        AnnotationCanvas.CanvasTool.Draw or AnnotationCanvas.CanvasTool.Arrow
+        or AnnotationCanvas.CanvasTool.CurvedArrow or AnnotationCanvas.CanvasTool.Line
+        or AnnotationCanvas.CanvasTool.Rect or AnnotationCanvas.CanvasTool.Circle;
 
     private void UpdateCaptureCaption()
     {
@@ -1773,8 +1785,8 @@ public sealed partial class EditorForm
 
             AnnotationCanvas.CanvasTool.Emoji =>
                 string.IsNullOrEmpty(_canvas.SelectedEmoji)
-                    ? LocalizationService.Translate("Click to choose an emoji · Scroll to resize after picking")
-                    : LocalizationService.Translate("Click to place emoji · Scroll to resize · Hold Space to pan"),
+                    ? LocalizationService.Translate("Click to choose an emoji · Scroll or [ ] to resize after picking")
+                    : LocalizationService.Translate("Click to place emoji · Scroll or [ ] to resize · Hold Space to pan"),
 
             _ => LocalizationService.Translate("Hold Space to pan"),
         };
@@ -3288,10 +3300,79 @@ internal abstract class EditorButtonBase : Button
     }
 }
 
+/// <summary>
+/// Fast accent-border fade for palette chips so the selection ring can ease out
+/// when the current tool does not use color/stroke, then ease back in.
+/// </summary>
+internal sealed class PaletteAccentGlow : IDisposable
+{
+    private readonly Control _host;
+    private System.Windows.Forms.Timer? _timer;
+    private bool _armed;
+    private bool _selected;
+    private float _glow;
+
+    public PaletteAccentGlow(Control host) => _host = host;
+
+    public float Value => _glow;
+
+    public void SetSelected(bool selected)
+    {
+        if (_selected == selected && _armed)
+            return;
+        _selected = selected;
+        if (!_armed)
+        {
+            _armed = true;
+            _glow = selected ? 1f : 0f;
+            _host.Invalidate();
+            return;
+        }
+
+        _timer ??= new System.Windows.Forms.Timer { Interval = 16 };
+        _timer.Tick -= OnTick;
+        _timer.Tick += OnTick;
+        _timer.Start();
+    }
+
+    private void OnTick(object? sender, EventArgs e)
+    {
+        float target = _selected ? 1f : 0f;
+        // ~4 frames (~65ms) — snappy enough to read as a fade, not a delay.
+        _glow += (target - _glow) * 0.45f;
+        if (Math.Abs(_glow - target) < 0.04f)
+        {
+            _glow = target;
+            _timer?.Stop();
+        }
+        _host.Invalidate();
+    }
+
+    public static Color Lerp(Color from, Color to, float t)
+    {
+        t = Math.Clamp(t, 0f, 1f);
+        return Color.FromArgb(
+            (int)(from.A + (to.A - from.A) * t),
+            (int)(from.R + (to.R - from.R) * t),
+            (int)(from.G + (to.G - from.G) * t),
+            (int)(from.B + (to.B - from.B) * t));
+    }
+
+    public void Dispose()
+    {
+        if (_timer is null) return;
+        _timer.Stop();
+        _timer.Tick -= OnTick;
+        _timer.Dispose();
+        _timer = null;
+    }
+}
+
 internal sealed class EditorColorButton : Button
 {
     private bool _hover;
     private bool _checked;
+    private readonly PaletteAccentGlow _glow;
 
     public EditorColorButton()
     {
@@ -3303,6 +3384,7 @@ internal sealed class EditorColorButton : Button
         FlatAppearance.BorderSize = 0;
         Cursor = Cursors.Hand;
         TabStop = true;
+        _glow = new PaletteAccentGlow(this);
     }
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -3316,7 +3398,7 @@ internal sealed class EditorColorButton : Button
         {
             if (_checked == value) return;
             _checked = value;
-            Invalidate();
+            _glow.SetSelected(value);
         }
     }
 
@@ -3350,9 +3432,10 @@ internal sealed class EditorColorButton : Button
         g.Clear(backColor);
 
         var outer = new Rectangle(0, 0, Width - 1, Height - 1);
+        float glow = _glow.Value;
         using (var outerPath = EditorPaint.RoundedRect(outer, 7))
-        using (var outerFill = new SolidBrush(_hover || Checked ? EditorColors.BgHover : EditorColors.BgCard))
-        using (var outerPen = new Pen(Checked ? EditorColors.Accent : EditorColors.BorderSubtle, Checked ? 1.6f : 1f))
+        using (var outerFill = new SolidBrush(_hover || glow > 0.35f ? EditorColors.BgHover : EditorColors.BgCard))
+        using (var outerPen = new Pen(PaletteAccentGlow.Lerp(EditorColors.BorderSubtle, EditorColors.Accent, glow), 1f + 0.6f * glow))
         {
             g.FillPath(outerFill, outerPath);
             g.DrawPath(outerPen, outerPath);
@@ -3379,43 +3462,47 @@ internal sealed class EditorColorButton : Button
         {
             using var swatch = new SolidBrush(SwatchColor);
             g.FillPath(swatch, innerPath);
-
-            if (IsCustomButton && HasCustomColor)
-            {
-                // Rainbow corner triangle (larger for visibility)
-                int triSize = 14;
-                using (var clipRegion = new Region(innerPath))
-                {
-                    g.Clip = clipRegion;
-                    var pts = new Point[]
-                    {
-                        new Point(inner.Right - triSize, inner.Bottom),
-                        new Point(inner.Right, inner.Bottom - triSize),
-                        new Point(inner.Right, inner.Bottom)
-                    };
-                    using (var path = new GraphicsPath())
-                    {
-                        path.AddPolygon(pts);
-                        using (var brush = new LinearGradientBrush(new Rectangle(inner.Right - triSize, inner.Bottom - triSize, triSize, triSize), Color.Red, Color.Blue, 45f))
-                        {
-                            Color[] colors = { Color.Red, Color.Yellow, Color.Green, Color.Blue, Color.Purple };
-                            float[] positions = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
-                            var blend = new ColorBlend { Colors = colors, Positions = positions };
-                            brush.InterpolationColors = blend;
-                            g.FillPath(brush, path);
-                        }
-                    }
-                    using (var sepPen = new Pen(Color.FromArgb(100, 255, 255, 255), 1f))
-                    {
-                        g.DrawLine(sepPen, inner.Right - triSize, inner.Bottom, inner.Right, inner.Bottom - triSize);
-                    }
-                    g.ResetClip();
-                }
-            }
         }
+
+        if (IsCustomButton)
+            PaintCustomColorChevron(g, inner, innerPath);
 
         // Standard border for all swatches
         g.DrawPath(swatchPen, innerPath);
+    }
+
+    private static void PaintCustomColorChevron(Graphics g, Rectangle inner, GraphicsPath innerPath)
+    {
+        int triSize = 14;
+        using var clipRegion = new Region(innerPath);
+        g.Clip = clipRegion;
+        var pts = new Point[]
+        {
+            new Point(inner.Right - triSize, inner.Bottom),
+            new Point(inner.Right, inner.Bottom - triSize),
+            new Point(inner.Right, inner.Bottom)
+        };
+        using (var path = new GraphicsPath())
+        {
+            path.AddPolygon(pts);
+            using var brush = new LinearGradientBrush(
+                new Rectangle(inner.Right - triSize, inner.Bottom - triSize, triSize, triSize),
+                Color.Red, Color.Blue, 45f);
+            Color[] colors = { Color.Red, Color.Yellow, Color.Green, Color.Blue, Color.Purple };
+            float[] positions = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+            brush.InterpolationColors = new ColorBlend { Colors = colors, Positions = positions };
+            g.FillPath(brush, path);
+        }
+        using (var sepPen = new Pen(Color.FromArgb(100, 255, 255, 255), 1f))
+            g.DrawLine(sepPen, inner.Right - triSize, inner.Bottom, inner.Right, inner.Bottom - triSize);
+        g.ResetClip();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _glow.Dispose();
+        base.Dispose(disposing);
     }
 
     protected override void OnMouseEnter(EventArgs e)
@@ -3437,6 +3524,7 @@ internal sealed class EditorStrokeWidthButton : Button
 {
     private bool _hover;
     private bool _checked;
+    private readonly PaletteAccentGlow _glow;
 
     public EditorStrokeWidthButton()
     {
@@ -3448,6 +3536,7 @@ internal sealed class EditorStrokeWidthButton : Button
         FlatAppearance.BorderSize = 0;
         Cursor = Cursors.Hand;
         TabStop = true;
+        _glow = new PaletteAccentGlow(this);
     }
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -3461,7 +3550,7 @@ internal sealed class EditorStrokeWidthButton : Button
         {
             if (_checked == value) return;
             _checked = value;
-            Invalidate();
+            _glow.SetSelected(value);
         }
     }
 
@@ -3489,9 +3578,10 @@ internal sealed class EditorStrokeWidthButton : Button
         g.Clear(backColor);
 
         var outer = new Rectangle(0, 0, Width - 1, Height - 1);
+        float glow = _glow.Value;
         using (var outerPath = EditorPaint.RoundedRect(outer, 7))
-        using (var outerFill = new SolidBrush(_hover || Checked ? EditorColors.BgHover : EditorColors.BgCard))
-        using (var outerPen = new Pen(Checked ? EditorColors.Accent : EditorColors.BorderSubtle, Checked ? 1.6f : 1f))
+        using (var outerFill = new SolidBrush(_hover || glow > 0.35f ? EditorColors.BgHover : EditorColors.BgCard))
+        using (var outerPen = new Pen(PaletteAccentGlow.Lerp(EditorColors.BorderSubtle, EditorColors.Accent, glow), 1f + 0.6f * glow))
         {
             g.FillPath(outerFill, outerPath);
             g.DrawPath(outerPen, outerPath);
@@ -3507,6 +3597,13 @@ internal sealed class EditorStrokeWidthButton : Button
             pen.EndCap = LineCap.Round;
             g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
         }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _glow.Dispose();
+        base.Dispose(disposing);
     }
 
     protected override void OnMouseEnter(EventArgs e)

@@ -1051,6 +1051,13 @@ public sealed partial class RegionOverlayForm
         };
     }
 
+    /// <summary>
+    /// Hover/select chrome around existing annotations. Stamp tools (Emoji) skip it so
+    /// a click places a new glyph instead of wrapping whatever sits under the cursor.
+    /// </summary>
+    private bool ShowsAnnotationHoverChrome(CaptureMode mode)
+        => IsDrawingOrMoveMode(mode) && mode != CaptureMode.Emoji;
+
     /// <summary>Returns the handle index (0=TL,1=TR,2=BL,3=BR,4=T,5=L,6=R,7=B,8=center plus) at point, or -1.</summary>
     private int GetSelectHandle(Point p)
     {
