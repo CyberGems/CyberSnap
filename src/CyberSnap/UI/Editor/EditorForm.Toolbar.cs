@@ -227,7 +227,7 @@ public sealed partial class EditorForm
         // BORDER switch (off-screen, instantiated for burger menu synchronization)
         _toggleFrameSwitch = new EditorToggleSwitch
         {
-            LabelText = LocalizationService.Translate("Border"),
+            LabelText = LocalizationService.Translate("Outline"),
             Checked = _canvas.ShowCaptureFrame,
             Height = 42,
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
@@ -1961,8 +1961,8 @@ public sealed partial class EditorForm
         // ── "View" submenu: all toggles ──
         var viewItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("View"), showImages: true);
 
-        var borderItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show frame border"), iconId: null);
-        borderItem.ToolTipText = LocalizationService.Translate("Show a frame around the capture in the editor.");
+        var borderItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show image outline"), iconId: null);
+        borderItem.ToolTipText = LocalizationService.Translate("Draws a thin outline around the image in the editor. It is not included when you export.");
         var fitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-fit image to window"), iconId: null);
         fitItem.ToolTipText = LocalizationService.Translate("Fit the image to the window when the editor opens.");
         var lockObjectsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Lock object editing in Pan mode"), iconId: null);

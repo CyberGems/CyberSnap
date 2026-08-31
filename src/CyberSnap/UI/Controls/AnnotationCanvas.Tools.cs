@@ -51,11 +51,12 @@ public sealed partial class AnnotationCanvas
     private const float ResizeHitRadius = 10f;
     private static readonly Color ResizeAccent = Color.FromArgb(255, 0, 255, 255);
     private bool _resizeDragging;
+    private bool _hasPendingResize;
+    private Rectangle _pendingResizeRect;
+    private Rectangle _resizeStartRect;
     private int _activeResizeHandle = -1;          // 0..7, same indexing as crop handles
     private Point _resizeStartImg;                 // image-space mouse at drag start
-    private Size _resizeStartSize;                 // bitmap size at drag start
-    private Size _resizePreviewSize;               // pending new size while dragging
-    private RectangleF _resizePreviewRect;         // screen-space outline shown while dragging
+    private Size _resizePreviewSize;               // pending new size while dragging / staged
 
     // Inline text editor
     private TextBox? _inlineTextBox;
@@ -1416,39 +1417,22 @@ public sealed partial class AnnotationCanvas
 
         if (_resizeDragging)
         {
-            int handle = _activeResizeHandle;
-            var size = _resizePreviewSize;
-            bool changed = size.Width != _resizeStartSize.Width || size.Height != _resizeStartSize.Height;
-
-            // Show confirmation while the preview is still visible (don't clear
-            // _resizeDragging yet so the dashed outline and size badge stay on screen).
-            if (changed && ConfirmResizeByHandle != null && !ConfirmResizeByHandle(size.Width, size.Height))
-            {
-                // User cancelled — tear down the drag state and restore the original view.
-                _resizeDragging = false;
-                _activeResizeHandle = -1;
-                Capture = false;
-                OnStateChanged();
-                Invalidate();
-                return;
-            }
-
             _resizeDragging = false;
             _activeResizeHandle = -1;
             Capture = false;
 
+            bool changed = HasPendingResize;
             if (changed)
             {
-                // Default: drag extends/trims the canvas area, anchoring the content at the
-                // edge opposite the dragged handle. With ResizeHandlesScaleContent on, the
-                // content is resampled instead.
-                ResizeCanvas(size.Width, size.Height, ResizeHandlesScaleContent, AnchorForHandle(handle));
+                _resizePreviewSize = new Size(_pendingResizeRect.Width, _pendingResizeRect.Height);
+                ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Enter / Double-click to confirm"), sticky: true);
             }
             else
             {
-                OnStateChanged();
-                Invalidate();
+                ClearPendingResizeState();
             }
+            OnStateChanged();
+            Invalidate();
             return;
         }
 
@@ -1865,6 +1849,12 @@ public sealed partial class AnnotationCanvas
         if (e.Control && e.KeyCode == Keys.Y)
         {
             Redo();
+            e.Handled = true;
+            return;
+        }
+        if (e.KeyCode == Keys.Enter && HasPendingResize)
+        {
+            TryConfirmPendingResize();
             e.Handled = true;
             return;
         }
@@ -2295,12 +2285,64 @@ public sealed partial class AnnotationCanvas
 
     // ── Canvas resize handles (cyan L-corners on the image edge) ─────────────
 
-    /// <summary>The 8 resize handle centers in screen space, on the image edge.
-    /// Indexing matches the crop handles: 0=TL,1=TR,2=BL,3=BR, 4=Top,5=Right,6=Bottom,7=Left.</summary>
+    /// <summary>The 8 resize handle centers in screen space, on the pending canvas rect
+    /// (or the image edge when nothing is staged). Indexing matches crop handles.</summary>
     private PointF[] GetResizeHandlePositionsScreen()
     {
-        var r = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+        var r = ImageToScreenRect(CurrentResizeRect());
         return GetCropHandlePositionsScreen(r);
+    }
+
+    private Rectangle CurrentResizeRect()
+    {
+        if ((_resizeDragging || _hasPendingResize) && !_pendingResizeRect.IsEmpty)
+            return _pendingResizeRect;
+        return new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+    }
+
+    private void ClearPendingResizeState()
+    {
+        _hasPendingResize = false;
+        _pendingResizeRect = Rectangle.Empty;
+        _resizePreviewSize = Size.Empty;
+        _activeResizeHandle = -1;
+    }
+
+    public void CancelPendingResize(bool silent = false)
+    {
+        bool had = _resizeDragging || HasPendingResize;
+        _resizeDragging = false;
+        Capture = false;
+        ClearPendingResizeState();
+        if (!had) return;
+        if (!silent)
+            ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Resize canceled"));
+        OnStateChanged();
+        Invalidate();
+    }
+
+    private bool TryConfirmPendingResizeFromScreen(Point screenPt)
+    {
+        if (!HasPendingResize) return false;
+        var pendingScreen = ImageToScreenRect(_pendingResizeRect);
+        if (!pendingScreen.Contains(screenPt)) return false;
+        return TryConfirmPendingResize();
+    }
+
+    public bool TryConfirmPendingResize()
+    {
+        if (!HasPendingResize) return false;
+        var rect = _pendingResizeRect;
+        int w = rect.Width;
+        int h = rect.Height;
+        if (ConfirmResizeByHandle != null && !ConfirmResizeByHandle(w, h))
+            return false;
+
+        ClearPendingResizeState();
+        ResizeCanvasFromPending(rect, ResizeHandlesScaleContent);
+        OnStateChanged();
+        Invalidate();
+        return true;
     }
 
     /// <summary>True if an annotation grip (or rotate arrow) is under the pointer, so it
@@ -2330,9 +2372,10 @@ public sealed partial class AnnotationCanvas
         DismissWelcomeOverlay();
         _activeResizeHandle = hit;
         _resizeStartImg = ScreenToImage(screenPt);
-        _resizeStartSize = new Size(_baseBitmap.Width, _baseBitmap.Height);
-        _resizePreviewSize = _resizeStartSize;
-        _resizePreviewRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+        _resizeStartRect = CurrentResizeRect();
+        _pendingResizeRect = _resizeStartRect;
+        _hasPendingResize = true;
+        _resizePreviewSize = _resizeStartRect.Size;
         Capture = true;
         return true;
     }
@@ -2354,88 +2397,87 @@ public sealed partial class AnnotationCanvas
         var img = ScreenToImage(screenPt);
         int dx = img.X - _resizeStartImg.X;
         int dy = img.Y - _resizeStartImg.Y;
-        int startW = _resizeStartSize.Width;
-        int startH = _resizeStartSize.Height;
+        var r = _resizeStartRect;
 
-        bool affectsW = _activeResizeHandle is 0 or 1 or 2 or 3 or 5 or 7;
-        bool affectsH = _activeResizeHandle is 0 or 1 or 2 or 3 or 4 or 6;
-        bool growLeft = _activeResizeHandle is 0 or 2 or 7;   // left edge handles invert X
-        bool growTop = _activeResizeHandle is 0 or 1 or 4;     // top edge handles invert Y
+        int left = r.Left;
+        int right = r.Right;
+        int top = r.Top;
+        int bottom = r.Bottom;
 
-        int newW = startW + (affectsW ? (growLeft ? -dx : dx) : 0);
-        int newH = startH + (affectsH ? (growTop ? -dy : dy) : 0);
+        switch (_activeResizeHandle)
+        {
+            case 0: left += dx; top += dy; break;
+            case 1: right += dx; top += dy; break;
+            case 2: left += dx; bottom += dy; break;
+            case 3: right += dx; bottom += dy; break;
+            case 4: top += dy; break;
+            case 5: right += dx; break;
+            case 6: bottom += dy; break;
+            case 7: left += dx; break;
+        }
 
+        int newW = right - left;
+        int newH = bottom - top;
         bool isCorner = _activeResizeHandle is 0 or 1 or 2 or 3;
-        // In scale mode, corners keep aspect ratio unless Shift is held (the axis with the
-        // larger drag wins). In canvas-extend mode, corners resize each axis freely, since
-        // you're adding/removing margin rather than scaling the picture. Shift inverts either.
         bool keepAspect = ResizeHandlesScaleContent ^ ModifierKeys.HasFlag(Keys.Shift);
-        if (isCorner && keepAspect && startW > 0 && startH > 0)
+        if (isCorner && keepAspect && r.Width > 0 && r.Height > 0)
         {
             double s = Math.Abs(dx) >= Math.Abs(dy)
-                ? (double)newW / startW
-                : (double)newH / startH;
-            newW = (int)Math.Round(startW * s);
-            newH = (int)Math.Round(startH * s);
+                ? (double)newW / r.Width
+                : (double)newH / r.Height;
+            newW = (int)Math.Round(r.Width * s);
+            newH = (int)Math.Round(r.Height * s);
+            bool growLeft = _activeResizeHandle is 0 or 2;
+            bool growTop = _activeResizeHandle is 0 or 1;
+            if (growLeft) left = right - newW; else right = left + newW;
+            if (growTop) top = bottom - newH; else bottom = top + newH;
         }
 
+        newW = right - left;
+        newH = bottom - top;
+        if (newW < MinCanvasSize)
+        {
+            if (left != r.Left) left = right - MinCanvasSize;
+            else right = left + MinCanvasSize;
+            newW = MinCanvasSize;
+        }
+        if (newH < MinCanvasSize)
+        {
+            if (top != r.Top) top = bottom - MinCanvasSize;
+            else bottom = top + MinCanvasSize;
+            newH = MinCanvasSize;
+        }
         newW = Math.Clamp(newW, MinCanvasSize, MaxCanvasSize);
         newH = Math.Clamp(newH, MinCanvasSize, MaxCanvasSize);
-        _resizePreviewSize = new Size(newW, newH);
+        if (left != r.Left) left = right - newW; else right = left + newW;
+        if (top != r.Top) top = bottom - newH; else bottom = top + newH;
 
-        // Build the preview outline anchored at the fixed corner/edge (opposite the dragged one).
-        var imgScreen = ImageToScreenRect(new RectangleF(0, 0, startW, startH));
-        float sw = (float)(newW * _zoom);
-        float sh = (float)(newH * _zoom);
-        float left = growLeft ? imgScreen.Right - sw : imgScreen.Left;
-        float top = growTop ? imgScreen.Bottom - sh : imgScreen.Top;
-        if (!affectsW) { left = imgScreen.Left; sw = imgScreen.Width; }
-        if (!affectsH) { top = imgScreen.Top; sh = imgScreen.Height; }
-        if (isCorner)
-        {
-            left = growLeft ? imgScreen.Right - sw : imgScreen.Left;
-            top = growTop ? imgScreen.Bottom - sh : imgScreen.Top;
-        }
-        _resizePreviewRect = new RectangleF(left, top, sw, sh);
+        _pendingResizeRect = new Rectangle(left, top, right - left, bottom - top);
+        _hasPendingResize = true;
+        _resizePreviewSize = new Size(_pendingResizeRect.Width, _pendingResizeRect.Height);
 
-        OnStateChanged(); // refresh the live status-bar hint with the pending size
+        OnStateChanged();
         Invalidate();
     }
-
-    /// <summary>The content anchor for a canvas-extend drag: the edge/corner opposite the
-    /// dragged handle stays put while the canvas grows or shrinks toward the handle.</summary>
-    private static Models.Commands.AnchorPosition AnchorForHandle(int handle) => handle switch
-    {
-        0 => Models.Commands.AnchorPosition.BottomRight, // dragged TL → anchor BR
-        1 => Models.Commands.AnchorPosition.BottomLeft,  // dragged TR → anchor BL
-        2 => Models.Commands.AnchorPosition.TopRight,    // dragged BL → anchor TR
-        3 => Models.Commands.AnchorPosition.TopLeft,     // dragged BR → anchor TL
-        4 => Models.Commands.AnchorPosition.Bottom,      // dragged Top → anchor Bottom
-        5 => Models.Commands.AnchorPosition.Left,        // dragged Right → anchor Left
-        6 => Models.Commands.AnchorPosition.Top,         // dragged Bottom → anchor Top
-        7 => Models.Commands.AnchorPosition.Right,       // dragged Left → anchor Right
-        _ => Models.Commands.AnchorPosition.Center,
-    };
 
     private void RenderResizeHandles(Graphics g)
     {
         if (!EditorShowResizeHandles || _baseBitmap == null) return;
         if (HideCanvasResizeHandles) return;
 
-        var imgScreen = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+        var liveRect = ImageToScreenRect(CurrentResizeRect());
+        bool showPreview = _resizeDragging || HasPendingResize;
 
-        if (_resizeDragging)
+        if (showPreview)
         {
             using var previewShadow = new Pen(Color.FromArgb(120, 0, 0, 0), 2.5f) { DashStyle = DashStyle.Dash };
             using var previewPen = new Pen(Color.FromArgb(200, ResizeAccent), 1.35f) { DashStyle = DashStyle.Dash };
-            g.DrawRectangle(previewShadow, _resizePreviewRect.X + 1f, _resizePreviewRect.Y + 1f, _resizePreviewRect.Width, _resizePreviewRect.Height);
-            g.DrawRectangle(previewPen, _resizePreviewRect.X, _resizePreviewRect.Y, _resizePreviewRect.Width, _resizePreviewRect.Height);
-            DrawResizeSizeBadge(g, _resizePreviewRect, $"{_resizePreviewSize.Width} × {_resizePreviewSize.Height}");
-            DrawCropHandles(g, _resizePreviewRect);
-            return;
+            g.DrawRectangle(previewShadow, liveRect.X + 1f, liveRect.Y + 1f, liveRect.Width, liveRect.Height);
+            g.DrawRectangle(previewPen, liveRect.X, liveRect.Y, liveRect.Width, liveRect.Height);
+            DrawResizeSizeBadge(g, liveRect, $"{CurrentResizeRect().Width} × {CurrentResizeRect().Height}");
         }
 
-        DrawCropHandles(g, imgScreen);
+        DrawCropHandles(g, liveRect);
     }
 
     private static void DrawResizeSizeBadge(Graphics g, RectangleF previewRect, string text)
@@ -2624,6 +2666,12 @@ public sealed partial class AnnotationCanvas
 
         if (_activeTool == CanvasTool.Text)
             return;
+
+        if (_resizeDragging || HasPendingResize)
+        {
+            CancelPendingResize();
+            return;
+        }
 
         if (!TryDeselectTool())
         {
@@ -3145,6 +3193,9 @@ public sealed partial class AnnotationCanvas
             BeginReEditText(textHit);
             return;
         }
+
+        if (HasPendingResize && TryConfirmPendingResizeFromScreen(e.Location))
+            return;
 
         if (_activeTool == CanvasTool.Move)
         {

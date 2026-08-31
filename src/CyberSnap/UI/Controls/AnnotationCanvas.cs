@@ -531,6 +531,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             if (leavingCutOut)
                 cutOutApplied = FinalizeLeavingCutOut();
 
+            if (value == CanvasTool.Crop || value == CanvasTool.CutOut)
+                CancelPendingResize(silent: true);
+
             if (value == CanvasTool.Crop)
             {
                 if (!_cropHasRect || _cropRect.IsEmpty)
@@ -546,6 +549,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
                 : cutOutApplied
                     ? LocalizationService.Translate("Cut Out applied")
                     : GetToolName(value));
+            if (HasPendingResize)
+                ShowToolBanner(LocalizationService.Translate("Enter / Double-click to confirm"), sticky: true);
             if (IsDefaultBlank)
                 DismissWelcomeOverlay();
             Invalidate();
@@ -687,7 +692,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         UpdateCursor();
         // CancelCropPending / CancelCutOutPending already announced when a pending
         // strip existed; only fall back to the generic deselect banner otherwise.
-        if (!hadPendingCrop && !hadPendingCutOut)
+        if (HasPendingResize)
+            ShowToolBanner(LocalizationService.Translate("Enter / Double-click to confirm"), sticky: true);
+        else if (!hadPendingCrop && !hadPendingCutOut)
             ShowToolBanner(LocalizationService.Translate("Tool deselected"));
         Invalidate();
         OnStateChanged();
@@ -866,6 +873,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         IsDefaultBlank = false;
         IsBlankCanvas = false;
         CancelInProgressTool();
+        CancelPendingResize(silent: true);
         ActiveTool = CanvasTool.Move;
         oldBaseBitmap?.Dispose();
 
@@ -926,6 +934,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         IsDefaultBlank = false;
         IsBlankCanvas = false;
         CancelInProgressTool();
+        CancelPendingResize(silent: true);
         ActiveTool = CanvasTool.Move;
         oldBaseBitmap?.Dispose();
 
@@ -964,6 +973,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _eraserHoverIndex = -1;
         IsBlankCanvas = false;
         CancelInProgressTool();
+        CancelPendingResize(silent: true);
 
         if (EditorAutoCropControls)
         {
@@ -1057,6 +1067,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public void Undo()
     {
         CommitPendingHistory();
+        if (HasPendingResize)
+        {
+            CancelPendingResize();
+            return;
+        }
         if (_undoStack.Count == 0) return;
         var cmd = _undoStack[^1];
         var views = _undoViews[^1];
@@ -1068,6 +1083,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public void Redo()
     {
         CommitPendingHistory();
+        if (HasPendingResize)
+        {
+            CancelPendingResize();
+            return;
+        }
         if (_redoStack.Count == 0) return;
         var cmd = _redoStack[^1];
         var views = _redoViews[^1];
@@ -1167,6 +1187,14 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         if (_undoViews.Count == 0) return;
         var snap = _undoViews[^1];
         _undoViews[^1] = snap with { AfterSelection = CaptureSelection() };
+    }
+
+    /// <summary>Call after Push when the caller then adjusts pan/zoom (handle resize view-lock).</summary>
+    private void RefreshLastUndoAfterView()
+    {
+        if (_undoViews.Count == 0) return;
+        var snap = _undoViews[^1];
+        _undoViews[^1] = snap with { After = CaptureView() };
     }
 
     private readonly record struct CanvasViewSnapshot(
@@ -1523,13 +1551,24 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ResizeHandlesScaleContent { get; set; }
 
-    /// <summary>True while the user is dragging a canvas resize handle.</summary>
+    /// <summary>True while dragging a canvas resize handle or a pending size is waiting
+    /// for Enter / double-click confirm.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public bool IsResizingCanvas => _resizeDragging;
+    public bool IsResizingCanvas => _resizeDragging || HasPendingResize;
 
-    /// <summary>Live pending size while dragging a resize handle (for the status-bar hint).</summary>
+    /// <summary>Live pending size while dragging or waiting to confirm a canvas resize.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Size ResizePreviewSize => _resizePreviewSize;
+
+    /// <summary>True when a handle resize has been staged and not yet confirmed.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool HasPendingResize =>
+        _hasPendingResize
+        && _baseBitmap is not null
+        && (_pendingResizeRect.X != 0
+            || _pendingResizeRect.Y != 0
+            || _pendingResizeRect.Width != _baseBitmap.Width
+            || _pendingResizeRect.Height != _baseBitmap.Height);
 
     /// <summary>Hit-tests a client point against the resize handles (or -1). Public for the
     /// editor's hover tooltip. Returns -1 unless the handles are currently interactive.</summary>
@@ -1554,10 +1593,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Func<int, int, Bitmap>? BlankBitmapFactory { get; set; }
 
-    /// <summary>Optional host hook to confirm an interactive (handle-drag) canvas resize before
-    /// it is applied. Receives the resulting (width, height) in pixels; return false to cancel
-    /// the resize. When null, handle-drag resizes apply without confirmation. Only the on-canvas
-    /// resize handles consult this — the resize dialog has its own Apply button.</summary>
+    /// <summary>Optional host hook to confirm an on-canvas canvas resize before it is applied.
+    /// Called when the user confirms with Enter / double-click, not on each handle drag.
+    /// Receives the resulting (width, height) in pixels; return false to cancel.
+    /// When null, handle-drag resizes apply without a modal. The resize dialog has its own Apply.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Func<int, int, bool>? ConfirmResizeByHandle { get; set; }
 
@@ -1571,19 +1610,51 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         if (width == _baseBitmap.Width && height == _baseBitmap.Height) return;
 
         var command = new Models.Commands.ResizeCanvasCommand(width, height, scaleContent, anchor);
+        ApplyResizeCommand(command, preserveView: false);
+    }
 
-        // A pristine blank document regenerates its checkerboard at the new size (handled inside
-        // the command via BlankBitmapFactory). Record it through PushClean so the resize stays
-        // undoable while keeping the document "clean": IsDefaultBlank is preserved, which keeps
-        // Save disabled and suppresses the save-on-close prompt for an untouched canvas.
+    /// <summary>Handle-drag confirm: explicit content origin so multiple edge adjustments
+    /// compose, and the camera stays put relative to the existing pixels.</summary>
+    private void ResizeCanvasFromPending(Rectangle pending, bool scaleContent)
+    {
+        int width = Math.Clamp(pending.Width, MinCanvasSize, MaxCanvasSize);
+        int height = Math.Clamp(pending.Height, MinCanvasSize, MaxCanvasSize);
+        if (width == _baseBitmap.Width && height == _baseBitmap.Height
+            && pending.X == 0 && pending.Y == 0)
+            return;
+
+        int offX = -pending.X;
+        int offY = -pending.Y;
+        var command = new Models.Commands.ResizeCanvasCommand(width, height, scaleContent, offX, offY);
+        ApplyResizeCommand(command, preserveView: true, offX, offY);
+    }
+
+    private void ApplyResizeCommand(
+        Models.Commands.ResizeCanvasCommand command,
+        bool preserveView,
+        int offX = 0,
+        int offY = 0)
+    {
         if (IsDefaultBlank)
             PushClean(command);
         else
             Push(command);
 
+        if (preserveView)
+        {
+            _pan.X -= (float)(offX * _zoom);
+            _pan.Y -= (float)(offY * _zoom);
+            _viewFitsWindow = false;
+            _userPanned = true;
+            RefreshLastUndoAfterView();
+        }
+        else
+        {
+            _userPanned = true;
+        }
+
         HideToolBanner();
         DismissWelcomeOverlay();
-        _userPanned = true;
         Invalidate();
     }
 
@@ -1664,7 +1735,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         g.DrawImageUnscaled(_baseBitmap, 0, 0);
         g.CompositingMode = CompositingMode.SourceOver;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        RenderAnnotations(g);
+        for (int i = 0; i < _annotations.Count; i++)
+            RenderAnnotation(g, _annotations[i]);
         return output;
     }
 
@@ -1737,12 +1809,22 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     {
         // Handle double-click at the message level — UserControl + manual mouse routing can
         // prevent OnMouseDoubleClick from firing even when the OS sends WM_LBUTTONDBLCLK.
-        if (m.Msg == WM_LBUTTONDBLCLK && _activeTool == CanvasTool.Move && _preSpaceTool == null)
+        if (m.Msg == WM_LBUTTONDBLCLK && _preSpaceTool == null)
         {
-            // Same entry as MouseDown timing path — text under cursor re-edits; else select-all.
-            SelectAllFromDoubleClick();
-            m.Result = IntPtr.Zero;
-            return;
+            int lp = unchecked((int)(long)m.LParam);
+            var pt = new Point((short)(lp & 0xFFFF), (short)((lp >> 16) & 0xFFFF));
+            if (TryConfirmPendingResizeFromScreen(pt))
+            {
+                m.Result = IntPtr.Zero;
+                return;
+            }
+            if (_activeTool == CanvasTool.Move)
+            {
+                // Same entry as MouseDown timing path — text under cursor re-edits; else select-all.
+                SelectAllFromDoubleClick();
+                m.Result = IntPtr.Zero;
+                return;
+            }
         }
 
         base.WndProc(ref m);

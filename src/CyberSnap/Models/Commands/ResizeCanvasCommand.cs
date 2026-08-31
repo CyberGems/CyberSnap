@@ -31,6 +31,9 @@ public sealed class ResizeCanvasCommand : IEditCommand
     private readonly int _newHeight;
     private readonly bool _scaleContent;
     private readonly AnchorPosition _anchor;
+    private readonly bool _explicitOffset;
+    private readonly int _offX;
+    private readonly int _offY;
 
     private Bitmap? _beforeBitmap;
     private Bitmap? _afterBitmap;
@@ -46,6 +49,20 @@ public sealed class ResizeCanvasCommand : IEditCommand
         _anchor = anchor;
     }
 
+    /// <summary>Canvas-size resize with an explicit content origin in the new bitmap
+    /// (where the old (0,0) lands). Used by on-canvas handle drags that may move more
+    /// than one edge before confirming.</summary>
+    public ResizeCanvasCommand(int newWidth, int newHeight, bool scaleContent, int contentOffsetX, int contentOffsetY)
+    {
+        _newWidth = newWidth;
+        _newHeight = newHeight;
+        _scaleContent = scaleContent;
+        _anchor = AnchorPosition.TopLeft;
+        _explicitOffset = true;
+        _offX = contentOffsetX;
+        _offY = contentOffsetY;
+    }
+
     public string Description => "Resize canvas";
 
     public void Apply(IEditorContext ctx)
@@ -54,7 +71,9 @@ public sealed class ResizeCanvasCommand : IEditCommand
 
         var source = ctx.BaseBitmap;
         if (_newWidth <= 0 || _newHeight <= 0) return;
-        if (_newWidth == source.Width && _newHeight == source.Height) return;
+        bool sameSize = _newWidth == source.Width && _newHeight == source.Height;
+        if (sameSize && (_scaleContent || !_explicitOffset || (_offX == 0 && _offY == 0)))
+            return;
 
         if (_afterBitmap is null)
         {
@@ -89,7 +108,7 @@ public sealed class ResizeCanvasCommand : IEditCommand
                 }
                 else
                 {
-                    var (offX, offY) = AnchorOffset(source.Width, source.Height, _newWidth, _newHeight, _anchor);
+                    var (offX, offY) = ResolveOffset(source.Width, source.Height);
                     if (!isBlank)
                         g.DrawImage(source, offX, offY, source.Width, source.Height);
 
@@ -130,6 +149,11 @@ public sealed class ResizeCanvasCommand : IEditCommand
         if (ctx is CyberSnap.UI.Controls.AnnotationCanvas canvas)
             canvas.Invalidate();
     }
+
+    private (int offX, int offY) ResolveOffset(int oldW, int oldH) =>
+        _explicitOffset
+            ? (_offX, _offY)
+            : AnchorOffset(oldW, oldH, _newWidth, _newHeight, _anchor);
 
     private static (int offX, int offY) AnchorOffset(int oldW, int oldH, int newW, int newH, AnchorPosition anchor)
     {
