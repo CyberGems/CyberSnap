@@ -79,6 +79,7 @@ public static class UiChrome
     }
 
     public static bool IsDark => CyberSnap.UI.Theme.IsDark;
+    public static bool IsGray => CyberSnap.UI.Theme.IsGray;
     public static string PreferredFamilyName => "Segoe UI Variable Text";
     public static string FallbackFamilyName => "Segoe UI";
 
@@ -91,13 +92,47 @@ public static class UiChrome
     public static System.Drawing.Color SurfaceTextPrimary => IsDark ? System.Drawing.Color.FromArgb(240, 240, 245) : System.Drawing.Color.FromArgb(24, 24, 24);
     public static System.Drawing.Color SurfaceTextSecondary => IsDark ? System.Drawing.Color.FromArgb(192, 197, 204) : System.Drawing.Color.FromArgb(120, 0, 0, 0);
     public static System.Drawing.Color SurfaceTextMuted => IsDark ? System.Drawing.Color.FromArgb(120, 130, 146) : System.Drawing.Color.FromArgb(150, 150, 150);
-    public static System.Drawing.Color SurfaceHover => IsDark ? System.Drawing.Color.FromArgb(22, 75, 130, 246) : System.Drawing.Color.FromArgb(14, 0, 120, 215);
+    public static System.Drawing.Color SurfaceHover =>
+        IsGray
+            ? System.Drawing.Color.FromArgb(22, 184, 190, 198)
+            : IsDark
+                ? System.Drawing.Color.FromArgb(22, 75, 130, 246)
+                : System.Drawing.Color.FromArgb(14, 0, 120, 215);
     public static System.Drawing.Color SurfacePill => IsDark ? System.Drawing.Color.FromArgb(255, 46, 49, 50) : System.Drawing.Color.FromArgb(255, 236, 239, 246);
     public static System.Drawing.Color SurfaceTier1 => IsDark ? System.Drawing.Color.FromArgb(255, 26, 27, 31) : System.Drawing.Color.FromArgb(255, 228, 231, 238);
     public static System.Drawing.Color SurfaceTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 36, 38, 42) : System.Drawing.Color.FromArgb(255, 233, 236, 243);
     public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 30, 33, 34) : System.Drawing.Color.FromArgb(255, 237, 240, 246);
-    public static System.Drawing.Color AccentColor => IsDark ? System.Drawing.Color.FromArgb(255, 75, 130, 246) : System.Drawing.Color.FromArgb(255, 0, 120, 215);
-    public static System.Drawing.Color AccentTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 61, 109, 245) : System.Drawing.Color.FromArgb(255, 0, 100, 200);
+    private static System.Drawing.Color ThemeAccentColor =>
+        System.Drawing.Color.FromArgb(
+            CyberSnap.UI.Theme.Accent.A,
+            CyberSnap.UI.Theme.Accent.R,
+            CyberSnap.UI.Theme.Accent.G,
+            CyberSnap.UI.Theme.Accent.B);
+
+    public static System.Drawing.Color AccentColor =>
+        IsGray
+            ? ThemeAccentColor
+            : IsDark
+                ? System.Drawing.Color.FromArgb(255, 75, 130, 246)
+                : System.Drawing.Color.FromArgb(255, 0, 120, 215);
+
+    public static System.Drawing.Color AccentTier2 =>
+        IsGray
+            ? System.Drawing.Color.FromArgb(255, 154, 161, 171)
+            : IsDark
+                ? System.Drawing.Color.FromArgb(255, 61, 109, 245)
+                : System.Drawing.Color.FromArgb(255, 0, 100, 200);
+
+    public static System.Drawing.Color GifAccentColor =>
+        IsGray
+            ? AccentColor
+            : System.Drawing.Color.FromArgb(255, 249, 115, 22);
+
+    public static System.Drawing.Color SelectionBracketColor =>
+        IsGray
+            ? AccentColor
+            : System.Drawing.Color.FromArgb(255, 0, 255, 255);
+
     // Destructive-action accent (cancel/discard). Matches the menu's danger red so the X reads as "not a tool".
     public static System.Drawing.Color SurfaceDanger => IsDark ? System.Drawing.Color.FromArgb(255, 248, 113, 113) : System.Drawing.Color.FromArgb(255, 220, 38, 38);
     public static System.Drawing.Color SurfaceShadow => System.Drawing.Color.FromArgb(IsDark ? 60 : 34, 0, 0, 0);

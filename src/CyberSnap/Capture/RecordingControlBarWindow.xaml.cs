@@ -30,13 +30,23 @@ public sealed partial class RecordingControlBarWindow : Window
     public event Action<bool>? SendToTrimmerChanged;
 
     // ── Accent colors ──
-    private static readonly Color DoneAccent = Color.FromArgb(255, 0xBD, 0x70, 0x11);
-    private static readonly Color DoneAccentHover = Color.FromArgb(255, 0xD4, 0x82, 0x18);
+    private static Color DoneAccent =>
+        UiChrome.IsGray
+            ? ToMediaColor(UiChrome.AccentColor)
+            : Color.FromArgb(255, 0xBD, 0x70, 0x11);
+    private static Color DoneAccentHover =>
+        UiChrome.IsGray
+            ? Color.FromArgb(
+                255,
+                (byte)Math.Min(255, UiChrome.AccentColor.R + 28),
+                (byte)Math.Min(255, UiChrome.AccentColor.G + 28),
+                (byte)Math.Min(255, UiChrome.AccentColor.B + 28))
+            : Color.FromArgb(255, 0xD4, 0x82, 0x18);
     private static readonly Color CancelHoverColor = Color.FromArgb(255, 255, 80, 80);
 
     // ── Bar dimensions (100% DPI baseline, scaled via UiScale.LayoutTransform) ──
     private const double BarWidth = 598;
-    private const double BarHeight = 64;
+    private const double BarHeight = 58;
 
     // ── State ──
     private readonly Models.RecordingFormat _format;
@@ -73,15 +83,16 @@ public sealed partial class RecordingControlBarWindow : Window
         int fps,
         bool sendToTrimmer)
     {
+        Theme.Refresh();
         _format = format;
         _fps = NormalizeFps(format, fps);
         _sendToTrimmer = sendToTrimmer;
         _supportsPause = format != Models.RecordingFormat.GIF;
 
-        // Accent: GIF = orange, MP4 = theme accent
+        // Accent: GIF keeps its format orange outside grayscale; MP4 follows the selection accent.
         _accent = format == Models.RecordingFormat.GIF
-            ? Color.FromArgb(255, 140, 0, 255)   // orange for GIF
-            : Theme.Accent;
+            ? ToMediaColor(UiChrome.GifAccentColor)
+            : ToMediaColor(UiChrome.AccentColor);
         _accentHover = Color.FromArgb(
             255,
             (byte)Math.Min(255, _accent.R + 28),
@@ -94,14 +105,13 @@ public sealed partial class RecordingControlBarWindow : Window
         Height = BarHeight;
 
         // ── Chrome setup ──
-        Theme.Refresh();
         ConfigureShell();
         LoadIcons();
         HookHoverEffects();
         HookClickHandlers();
 
         // ── Rounded corners + no-activate + owner-window for z-order ──
-        CyberSnapWindowChrome.ApplyRoundedCorners(this, 10);
+        CyberSnapWindowChrome.ApplyRoundedCorners(this, UiChrome.ToolbarCornerRadius);
         SourceInitialized += (_, _) =>
         {
             PopupWindowHelper.ApplyNoActivateChrome(this);
@@ -319,28 +329,35 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void ConfigureShell()
     {
-        // Bar background: semi-transparent dark (matches the GDI+ version's "mica" fill)
-        Root.Background = Theme.Brush(Color.FromArgb(225, 12, 12, 16));
+        // Use the same opaque surface, subtle border, and soft shadow tokens as the capture dock.
+        Root.Background = Theme.Brush(ToMediaColor(UiChrome.SurfaceTier1));
 
-        // Edge ring: accent-tinted border
-        EdgeRing.Background = Theme.Brush(Color.FromArgb(150, _accent.R, _accent.G, _accent.B));
+        // Edge ring: quiet surface border; active accents belong to controls, not the whole shell.
+        EdgeRing.Background = Theme.Brush(ToMediaColor(UiChrome.SurfaceBorder));
         EdgeRing.Padding = new Thickness(1);
 
         // Shadow
-        ShadowPlate.Background = Theme.Brush(Color.FromArgb(225, 12, 12, 16));
+        ShadowPlate.Background = Theme.Brush(ToMediaColor(UiChrome.SurfaceTier1));
         ShadowPlate.Effect = new System.Windows.Media.Effects.DropShadowEffect
         {
-            BlurRadius = 20,
-            ShadowDepth = 4,
-            Opacity = Theme.IsDark ? 0.42 : 0.20,
+            BlurRadius = 16,
+            ShadowDepth = 3,
+            Opacity = Theme.IsDark ? 0.34 : 0.16,
             Direction = 270,
             Color = Colors.Black,
             RenderingBias = System.Windows.Media.Effects.RenderingBias.Quality
         };
 
-        // Accent glow behind the bar
-        OuterShell.Background = Theme.Brush(Color.FromArgb(25, _accent.R, _accent.G, _accent.B));
+        // A restrained accent halo mirrors the capture dock's edge treatment.
+        OuterShell.Background = Theme.Brush(ToMediaColor(
+            System.Drawing.Color.FromArgb(Theme.IsDark ? 18 : 12, _accent.R, _accent.G, _accent.B)));
     }
+
+    private static Color ToMediaColor(System.Drawing.Color color) =>
+        Color.FromArgb(color.A, color.R, color.G, color.B);
+
+    private static System.Drawing.Color ToDrawingColor(Color color) =>
+        System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
 
     private void LoadIcons()
     {
@@ -437,12 +454,12 @@ public sealed partial class RecordingControlBarWindow : Window
         // ── FPS combo hover ──
         FpsCombo.MouseEnter += (_, _) =>
         {
-            FpsCombo.Background = Theme.Brush(Color.FromArgb(90, _accent.R, _accent.G, _accent.B));
+            FpsCombo.Background = Theme.Brush(ToMediaColor(UiChrome.SurfaceHover));
             FpsComboLabel.Foreground = Theme.Brush(Theme.TextPrimary);
         };
         FpsCombo.MouseLeave += (_, _) =>
         {
-            FpsCombo.Background = Theme.Brush(Color.FromArgb(70, _accent.R, _accent.G, _accent.B));
+            FpsCombo.Background = Theme.Brush(ToMediaColor(UiChrome.SurfacePill));
         };
     }
 
@@ -551,12 +568,21 @@ public sealed partial class RecordingControlBarWindow : Window
 
         PrimaryText.Text = label;
         PrimaryBtn.Background = Theme.Brush(_accent);
+        var primaryContentColor = GetButtonTextColor(_accent);
+        PrimaryText.Foreground = Theme.Brush(primaryContentColor);
         PrimaryBtn.Cursor = _isEncoding ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand;
 
-        // Icon: white, rendered at 28 for crispness; only shown when primary is enabled
-        var iconColor = System.Drawing.Color.FromArgb(255, 255, 255, 255);
-        PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, iconColor, 28);
+        // Use a dark foreground when the accent is a light silver/cyan, keeping icon and label readable.
+        PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(primaryContentColor), 28);
         PrimaryIcon.Visibility = Visibility.Visible;
+    }
+
+    private static Color GetButtonTextColor(Color fill)
+    {
+        double luminance = (0.299 * fill.R + 0.587 * fill.G + 0.114 * fill.B) / 255.0;
+        return luminance >= 0.58
+            ? Color.FromRgb(7, 18, 28)
+            : Colors.White;
     }
 
     private void SetPrimaryEnabled(bool enabled)
@@ -589,8 +615,11 @@ public sealed partial class RecordingControlBarWindow : Window
     private void UpdateFpsComboVisual()
     {
         FpsComboLabel.Text = $"{_fps} FPS";
-        FpsCombo.Background = Theme.Brush(Color.FromArgb(70, _accent.R, _accent.G, _accent.B));
-        FpsChevron.Fill = Theme.Brush(Color.FromArgb(180, _accent.R, _accent.G, _accent.B));
+        FpsComboLabel.Foreground = Theme.Brush(Theme.TextPrimary);
+        FpsCombo.Background = Theme.Brush(ToMediaColor(UiChrome.SurfacePill));
+        FpsCombo.BorderBrush = Theme.Brush(ToMediaColor(UiChrome.SurfaceBorderSubtle));
+        FpsCombo.BorderThickness = new Thickness(1);
+        FpsChevron.Fill = Theme.Brush(_accent);
     }
 
     private void UpdateRecordingDot()

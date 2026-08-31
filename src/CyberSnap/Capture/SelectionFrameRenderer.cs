@@ -17,12 +17,23 @@ internal static class SelectionFrameRenderer
         EndCap = LineCap.Round
     };
 
-    public static void DrawRectangle(Graphics g, Rectangle rect, bool fill = true)
+    public static void DrawRectangle(
+        Graphics g,
+        Rectangle rect,
+        bool fill = true,
+        Color? accentOverride = null,
+        Color? bracketAccentOverride = null)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
-        DrawSelectionChrome(g, rect, fill, provisional: false);
+        DrawSelectionChrome(
+            g,
+            rect,
+            fill,
+            provisional: false,
+            accentOverride: accentOverride,
+            bracketAccentOverride: bracketAccentOverride);
     }
 
     /// <summary>
@@ -34,7 +45,13 @@ internal static class SelectionFrameRenderer
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
-        DrawSelectionChrome(g, rect, fill: false, provisional: true);
+        DrawSelectionChrome(
+            g,
+            rect,
+            fill: false,
+            provisional: true,
+            accentOverride: null,
+            bracketAccentOverride: null);
     }
 
     /// <summary>
@@ -43,13 +60,19 @@ internal static class SelectionFrameRenderer
     /// for contrast. HUD L-brackets own the corners alone — no second glow bracket and no
     /// thick rectangle miters sitting behind them.
     /// </summary>
-    private static void DrawSelectionChrome(Graphics g, Rectangle rect, bool fill, bool provisional)
+    private static void DrawSelectionChrome(
+        Graphics g,
+        Rectangle rect,
+        bool fill,
+        bool provisional,
+        Color? accentOverride,
+        Color? bracketAccentOverride)
     {
         var oldSmoothing = g.SmoothingMode;
         // Axis-aligned frames stay crisp without AA (matches the dim/desaturate hole edge).
         g.SmoothingMode = SmoothingMode.None;
 
-        var accent = UiChrome.AccentColor;
+        var accent = accentOverride ?? UiChrome.AccentColor;
         float scale = Math.Max(1f, (float)UiChrome.UiScale);
 
         // Stroke weights
@@ -114,7 +137,23 @@ internal static class SelectionFrameRenderer
         })
             DrawEdgeSegments(g, x0, y0, x1, y1, edgeClear, edgePen);
 
-        Color bracketAccent = Color.FromArgb(0x00, 0xFF, 0xFF); // #00FFFF — matches the widget capture icon cyan
+        // Thin white segmented highlight adds the same layered readability as area selection.
+        var dashSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using (var whiteDashPen = new Pen(
+            Color.FromArgb(provisional ? 190 : 255, Color.White),
+            Math.Max(1.25f, scale)))
+        {
+            whiteDashPen.DashStyle = DashStyle.Dash;
+            whiteDashPen.DashPattern = new[] { 5f * scale, 4f * scale };
+            whiteDashPen.LineJoin = LineJoin.Miter;
+            whiteDashPen.StartCap = LineCap.Flat;
+            whiteDashPen.EndCap = LineCap.Flat;
+            DrawEdgeSegments(g, x0, y0, x1, y1, edgeClear, whiteDashPen);
+        }
+        g.SmoothingMode = dashSmoothing;
+
+        Color bracketAccent = bracketAccentOverride ?? UiChrome.SelectionBracketColor;
 
         // One crisp bracket pass — no behind-glow L (that read as extra corner chrome).
         // Flat caps on two separate DrawLines leave a bite at the outer corner; a single

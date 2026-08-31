@@ -144,7 +144,7 @@ public sealed partial class RecordingForm : Form
         if (screenshot is null && _state == State.Selecting)
         {
             Opacity = 0.01;
-            var adornerAccent = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
+            var adornerAccent = _format == Models.RecordingFormat.GIF ? UiChrome.GifAccentColor : UiChrome.AccentColor;
             _selectionAdorner = new LiveSelectionAdornerForm(_virtualBounds, "Drag to select recording area", adornerAccent);
         }
         KeyPreview = true;
@@ -508,7 +508,7 @@ public sealed partial class RecordingForm : Form
             g.FillRectangle(dimBrush, ClientRectangle);
             g.Restore(state);
 
-            var selAccent = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
+            var selAccent = _format == Models.RecordingFormat.GIF ? UiChrome.GifAccentColor : UiChrome.AccentColor;
             DrawRecordingFrame(g, _selection, selAccent);
             SelectionSizeReadout.Draw(
                 g,
@@ -563,7 +563,7 @@ public sealed partial class RecordingForm : Form
         g.PixelOffsetMode = PixelOffsetMode.Half;
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
-        var accentColor = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
+        var accentColor = _format == Models.RecordingFormat.GIF ? UiChrome.GifAccentColor : UiChrome.AccentColor;
 
         DrawRecordingFrame(g, _recordRegion, accentColor);
 
@@ -588,7 +588,11 @@ public sealed partial class RecordingForm : Form
     /// Draws the recording frame: thick solid rounded-corner border with a dashed
     /// overlay and a soft outer glow — matching the reference OBS-style design.
     /// </summary>
-    internal static void DrawRecordingFrame(Graphics g, Rectangle region, Color accent)
+    internal static void DrawRecordingFrame(
+        Graphics g,
+        Rectangle region,
+        Color accent,
+        Color? bracketAccentOverride = null)
     {
         float scale = Math.Max(1f, (float)UiChrome.UiScale);
         float solidWidth = 3f * scale;     // thick outer solid border
@@ -643,13 +647,15 @@ public sealed partial class RecordingForm : Form
         float x1 = region.Right + bOff;
         float y1 = region.Bottom + bOff;
 
+        var bracketAccent = bracketAccentOverride ?? accent;
+
         // Soft glow halo behind brackets
-        using var bracketGlow = new Pen(Color.FromArgb(50, accent), bracketWidth + 3f * scale)
+        using var bracketGlow = new Pen(Color.FromArgb(50, bracketAccent), bracketWidth + 3f * scale)
         {
             LineJoin = LineJoin.Miter, StartCap = LineCap.Round, EndCap = LineCap.Round
         };
         // Solid accent bracket (no white core — pure accent color)
-        using var bracketPen = new Pen(accent, bracketWidth)
+        using var bracketPen = new Pen(bracketAccent, bracketWidth)
         {
             LineJoin = LineJoin.Miter, StartCap = LineCap.Round, EndCap = LineCap.Round
         };

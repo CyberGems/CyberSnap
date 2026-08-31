@@ -11,33 +11,33 @@
         UseLayoutRounding="True"
         Focusable="False"
         ShowActivated="False"
-        Width="598" Height="64">
+        Width="598" Height="58">
 
     <!-- Outer shell: rounded-corner chrome with shadow.
          Fixed size on the shell so the window never re-sizes between phases
          (Start↔Stop content swap would otherwise shift the anchored position). -->
     <Border x:Name="OuterShell"
-            Width="598" Height="64"
-            CornerRadius="10"
+            Width="598" Height="58"
+            CornerRadius="8"
             Background="Transparent">
         <Grid SnapsToDevicePixels="True" UseLayoutRounding="True">
 
             <!-- Shadow plate (receives the DropShadowEffect) -->
             <Border x:Name="ShadowPlate"
-                    CornerRadius="10"
+                    CornerRadius="8"
                     Background="Transparent"
                     IsHitTestVisible="False"/>
 
             <!-- Edge ring: 1px padding-ring technique for crisp rounded borders -->
             <Border x:Name="EdgeRing"
-                    CornerRadius="10"
+                    CornerRadius="8"
                     Padding="1"
                     Background="Transparent"
                     BorderThickness="0">
 
                 <!-- Root: main content area -->
                 <Border x:Name="Root"
-                        CornerRadius="9"
+                        CornerRadius="7"
                         ClipToBounds="True">
 
                     <Grid Margin="0">
@@ -56,7 +56,7 @@
                         <StackPanel Grid.Column="0"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center"
-                                    Margin="14,0,0,0">
+                                    Margin="10,0,0,0">
                             <Border x:Name="RecDotGlow"
                                     Width="18" Height="18"
                                     CornerRadius="9"
@@ -124,7 +124,7 @@
                             <Border x:Name="PrimaryBtn"
                                     Width="110" Height="40"
                                     CornerRadius="8"
-                                    Margin="18,0,0,0"
+                                    Margin="10,0,0,0"
                                     Cursor="Hand"
                                     ClipToBounds="True"
                                     Visibility="Visible">
@@ -173,9 +173,9 @@
                             <!-- Stop button: ALWAYS visible (both ready and recording) with a red
                                  square icon of accessible size. In ready phase it is disabled. -->
                             <Border x:Name="StopBtn"
-                                    Width="38" Height="38"
+                                    Width="36" Height="36"
                                     CornerRadius="8"
-                                    Margin="18,0,0,0"
+                                    Margin="8,0,0,0"
                                     Cursor="Hand"
                                     Visibility="Visible">
                                 <Image x:Name="StopIcon"
@@ -186,9 +186,9 @@
 
                             <!-- Send-to-trimmer toggle -->
                             <Border x:Name="TrimmerBtn"
-                                    Width="38" Height="38"
+                                    Width="36" Height="36"
                                     CornerRadius="8"
-                                    Margin="18,0,0,0"
+                                    Margin="8,0,0,0"
                                     Cursor="Hand"
                                     Visibility="Visible">
                                 <Image x:Name="TrimmerIcon"
@@ -199,9 +199,9 @@
 
                             <!-- Cancel button -->
                             <Border x:Name="CancelBtn"
-                                    Width="38" Height="38"
+                                    Width="36" Height="36"
                                     CornerRadius="8"
-                                    Margin="18,0,0,0"
+                                    Margin="8,0,0,0"
                                     Cursor="Hand"
                                     Visibility="Visible">
                                 <Image x:Name="CancelIcon"

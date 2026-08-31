@@ -407,6 +407,9 @@ public sealed partial class RegionOverlayForm
     private static Color ConfirmChromeAccent(ConfirmChromeKind kind, bool isPrimary)
     {
         _ = isPrimary;
+        if (CyberSnap.UI.Theme.IsGray && kind != ConfirmChromeKind.Cancel)
+            return UiChrome.AccentColor;
+
         return kind switch
         {
             ConfirmChromeKind.Retry => Color.FromArgb(160, 160, 160),      // neutral gray
@@ -663,7 +666,9 @@ public sealed partial class RegionOverlayForm
         float stroke = string.IsNullOrEmpty(label) ? UiChrome.ScaleFloat(1.5f) : UiChrome.ScaleFloat(2f);
         Color baseIconColor = (accentColor.ToArgb() == UiChrome.SurfaceDanger.ToArgb())
             ? UiChrome.SurfaceDanger
-            : (kind == ConfirmChromeKind.Done ? Color.FromArgb(34, 197, 94) : UiChrome.SurfaceTextPrimary);
+            : (kind == ConfirmChromeKind.Done && !CyberSnap.UI.Theme.IsGray
+                ? Color.FromArgb(34, 197, 94)
+                : UiChrome.SurfaceTextPrimary);
 
         float baseAlphaFactor = 0.25f + 0.75f * opacity;
         Color iconColor = Color.FromArgb((int)(255 * baseAlphaFactor), baseIconColor);
@@ -1006,7 +1011,11 @@ public sealed partial class RegionOverlayForm
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
-        var accentColor = Color.FromArgb(isSelected ? 200 : 90, 0, 255, 255);
+        var accentColor = Color.FromArgb(
+            isSelected ? 200 : 90,
+            UiChrome.SelectionBracketColor.R,
+            UiChrome.SelectionBracketColor.G,
+            UiChrome.SelectionBracketColor.B);
 
         if (isSelected && _isRotateMode && source is not null && AnnotationTransforms.CanRotate(source)
             && _multiSelectedIndices.Count <= 1)
@@ -1027,15 +1036,15 @@ public sealed partial class RegionOverlayForm
         int fillAlpha   = isSelected ? 0   : 7;
         int dashAlpha   = isSelected ? 40 : 28;
 
-        // Subtle cyan fill (hover only)
+        // Subtle accent fill (hover only)
         if (fillAlpha > 0)
         {
-            using var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, 0, 255, 255));
+            using var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, UiChrome.SelectionBracketColor));
             g.FillRectangle(fillBrush, rect);
         }
 
         // Dashed outline
-        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), isSelected ? 0.75f : 0.9f))
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, UiChrome.SelectionBracketColor), isSelected ? 0.75f : 0.9f))
         {
             dashPen.DashStyle = DashStyle.Dash;
             dashPen.DashPattern = new[] { 4f, 3f };
