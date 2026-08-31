@@ -246,13 +246,13 @@ If you'd like to support this work, a donation would mean a lot. Thank you! 🙏
 ```
 bc1q5mxzz05nmvsheqzx7970euswta3fksxzcfzag4
 ```
-![BTC QR](docs/donate/qr-btc.png)
+<img src="docs/donate/qr-btc.png" width="120" height="120" alt="BTC QR" />
 
 **Ethereum (ETH) — ERC20**
 ```
 0x79b703Ec0f77493679Fcd280aF3b983E20c580B8
 ```
-![ETH QR](docs/donate/qr-eth.png)
+<img src="docs/donate/qr-eth.png" width="120" height="120" alt="ETH QR" />
 
 **USDT — ERC20 / BEP20**
 ```
@@ -263,13 +263,13 @@ bc1q5mxzz05nmvsheqzx7970euswta3fksxzcfzag4
 ```
 TSVbSk1HSyZ1NprCnAYiw56ECwXgH887mD
 ```
-![USDT TRC20 QR](docs/donate/qr-usdt-tron.png)
+<img src="docs/donate/qr-usdt-tron.png" width="120" height="120" alt="USDT TRC20 QR" />
 
 **Litecoin (LTC)**
 ```
 LWGnEHgcFCE2BRkzLnsdPDD8Y8ZeDK577X
 ```
-![LTC QR](docs/donate/qr-ltc.png)
+<img src="docs/donate/qr-ltc.png" width="120" height="120" alt="LTC QR" />
 
 > ⚠️ Send only the selected asset on the indicated network. Using the wrong network will result in permanent loss of funds.
 
