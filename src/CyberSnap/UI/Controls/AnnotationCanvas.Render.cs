@@ -636,19 +636,10 @@ public sealed partial class AnnotationCanvas
         try
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            RecalcBannerLayout();
+            var rect = _bannerPaintRect;
+            if (rect.Width <= 0 || rect.Height <= 0) return;
 
-            float x = 18;
-            float y = 18;
-
-            using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
-            var size = g.MeasureString(_bannerText, font);
-            
-            int paddingH = 16;
-            int paddingV = 10;
-            
-            float width = size.Width + paddingH * 2;
-            float height = size.Height + paddingV * 2;
-            
             int alphaBg = (int)(200 * _bannerOpacity);
             int alphaBorder = (int)(150 * _bannerOpacity);
             int alphaGlow = (int)(40 * _bannerOpacity);
@@ -657,23 +648,23 @@ public sealed partial class AnnotationCanvas
             var bgCol = EditorColors.BgCard;
             var accentCol = EditorColors.Accent;
 
-            using var path = EditorPaint.RoundedRect(new Rectangle((int)x, (int)y, (int)width, (int)height), 8);
+            using var path = EditorPaint.RoundedRect(rect, 8);
             using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, bgCol.R, bgCol.G, bgCol.B));
             using var glowPen = new Pen(Color.FromArgb(alphaGlow, accentCol.R, accentCol.G, accentCol.B), 3f);
             using var borderPen = new Pen(Color.FromArgb(alphaBorder, accentCol.R, accentCol.G, accentCol.B), 1.2f);
-            using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accentCol.R, accentCol.G, accentCol.B));
+            using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
 
             g.FillPath(bgBrush, path);
             g.DrawPath(glowPen, path);
             g.DrawPath(borderPen, path);
 
-            var textRect = new RectangleF(x + paddingH, y + paddingV, size.Width, size.Height);
-            using var sf = new StringFormat
-            {
-                Alignment = StringAlignment.Center,
-                LineAlignment = StringAlignment.Center
-            };
-            g.DrawString(_bannerText, font, textBrush, textRect, sf);
+            TextRenderer.DrawText(
+                g,
+                _bannerText,
+                font,
+                Rectangle.Inflate(rect, -16, -10),
+                Color.FromArgb(alphaText, accentCol),
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
         }
         finally
         {

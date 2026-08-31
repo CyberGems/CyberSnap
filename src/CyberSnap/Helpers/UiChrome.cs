@@ -157,6 +157,18 @@ public static class UiChrome
         public int dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
     }
 
+    public static float EaseOutCubic(float t)
+    {
+        t = Math.Clamp(t, 0f, 1f);
+        return 1f - MathF.Pow(1f - t, 3f);
+    }
+
+    public static float EaseInCubic(float t)
+    {
+        t = Math.Clamp(t, 0f, 1f);
+        return t * t * t;
+    }
+
     private static FontFamily? TryCreateFontFamily(string name)
     {
         try { return new FontFamily(name); }

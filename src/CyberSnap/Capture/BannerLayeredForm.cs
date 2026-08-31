@@ -16,10 +16,11 @@ internal sealed class BannerLayeredForm : Form
 {
     private const int SurfacePadding = 16;
     private const int WmDpiChanged = 0x02E0;
-    private const float FadeInSeconds = 0.144f;
-    private const float HoldSeconds = 1.44f;
-    private const float DismissSeconds = 0.096f;
-    private const float AutoFadeSeconds = 0.192f;
+    private const float FadeInSeconds = 0.10f;
+    private const float HoldSeconds = 1.20f;
+    private const float DismissSeconds = 0.05f;
+    private const float AutoFadeSeconds = 0.12f;
+    private const float SlidePixels = 12f;
 
     private readonly string _text;
     private readonly IReadOnlyList<BannerSegment>? _segments;
@@ -35,7 +36,9 @@ internal sealed class BannerLayeredForm : Form
     private Rectangle _pillScreenBounds;
     private RectangleF _pillSurfaceBounds;
     private float _opacity;
+    private float _slide = 1f;
     private float _animationStartOpacity;
+    private float _animationStartSlide = 1f;
     private float _animationDuration;
     private AnimationState _state = AnimationState.FadeIn;
     private long _stateStartedAt;
@@ -142,6 +145,7 @@ internal sealed class BannerLayeredForm : Form
 
         _state = AnimationState.FadeIn;
         _animationStartOpacity = _opacity;
+        _animationStartSlide = _slide;
         _animationDuration = FadeInSeconds;
         _stateStartedAt = _clock.ElapsedMilliseconds;
         _timer.Start();
@@ -154,20 +158,25 @@ internal sealed class BannerLayeredForm : Form
             return;
 
         float elapsed = (float)(_clock.ElapsedMilliseconds - _stateStartedAt) / 1000f;
+        float u = Math.Clamp(elapsed / Math.Max(0.001f, _animationDuration), 0f, 1f);
         switch (_state)
         {
             case AnimationState.FadeIn:
-                _opacity = Math.Clamp(_animationStartOpacity +
-                    (1f - _animationStartOpacity) * Math.Clamp(elapsed / _animationDuration, 0f, 1f), 0f, 1f);
+            {
+                float ease = UiChrome.EaseOutCubic(u);
+                _opacity = _animationStartOpacity + (1f - _animationStartOpacity) * ease;
+                _slide = _animationStartSlide * (1f - ease);
                 if (elapsed >= _animationDuration)
                 {
                     _opacity = 1f;
+                    _slide = 0f;
                     _state = AnimationState.Hold;
                     _stateStartedAt = _clock.ElapsedMilliseconds;
                     if (_persistent)
                         _timer.Stop();
                 }
                 break;
+            }
 
             case AnimationState.Hold:
                 if (_persistent)
@@ -179,14 +188,18 @@ internal sealed class BannerLayeredForm : Form
                 break;
 
             case AnimationState.FadeOut:
-                _opacity = Math.Clamp(_animationStartOpacity *
-                    (1f - Math.Clamp(elapsed / _animationDuration, 0f, 1f)), 0f, 1f);
+            {
+                float ease = UiChrome.EaseInCubic(u);
+                _opacity = _animationStartOpacity * (1f - ease);
+                _slide = _animationStartSlide + (1f - _animationStartSlide) * ease;
                 if (elapsed >= _animationDuration)
                 {
                     _opacity = 0f;
+                    _slide = 1f;
                     _timer.Stop();
                 }
                 break;
+            }
         }
 
         Present();
@@ -196,6 +209,7 @@ internal sealed class BannerLayeredForm : Form
     {
         _state = AnimationState.FadeOut;
         _animationStartOpacity = _opacity;
+        _animationStartSlide = _slide;
         _animationDuration = Math.Max(0.001f, duration);
         _stateStartedAt = _clock.ElapsedMilliseconds;
         _timer.Start();
@@ -242,7 +256,7 @@ internal sealed class BannerLayeredForm : Form
             graphics.Clear(Color.Transparent);
             graphics.CompositingMode = CompositingMode.SourceOver;
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            BannerRenderer.Render(graphics, _pillSurfaceBounds, _text, _segments,
+            BannerRenderer.Render(graphics, OffsetSlide(_pillSurfaceBounds), _text, _segments,
                 _iconId, _iconColor, _opacity);
             graphics.Flush(FlushIntention.Sync);
         }
@@ -281,6 +295,12 @@ internal sealed class BannerLayeredForm : Form
             if (hdcScreen != IntPtr.Zero)
                 User32.ReleaseDC(IntPtr.Zero, hdcScreen);
         }
+    }
+
+    private RectangleF OffsetSlide(RectangleF rect)
+    {
+        rect.Y -= SlidePixels * _slide;
+        return rect;
     }
 
     protected override void WndProc(ref Message m)
