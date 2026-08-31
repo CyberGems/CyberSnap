@@ -534,6 +534,24 @@ public partial class App
         }
     }
 
+    /// <summary>Picks the file path to hand to <see cref="HandleCaptureResult"/> after preview.
+    /// Prefers a copy the user named with Save as...; a scaled preview cannot reuse the
+    /// original-size early-save file.</summary>
+    private static string? ResolvePreviewCommitSavePath(string? dialogPath, string? earlySavePath, bool isScaled)
+    {
+        if (isScaled)
+        {
+            bool namedCopy = !string.IsNullOrEmpty(dialogPath)
+                && !string.Equals(dialogPath, earlySavePath, StringComparison.OrdinalIgnoreCase)
+                && File.Exists(dialogPath);
+            return namedCopy ? dialogPath : null;
+        }
+
+        if (!string.IsNullOrEmpty(dialogPath) && File.Exists(dialogPath))
+            return dialogPath;
+        return earlySavePath;
+    }
+
     /// <summary>
     /// Materializes a temp PNG so a file-dependent after-capture step (system viewer)
     /// can run when SaveToFile is off. The caller schedules best-effort cleanup.

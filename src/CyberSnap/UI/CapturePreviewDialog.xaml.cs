@@ -12,8 +12,10 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using CyberSnap.Helpers;
+using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.Capture;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 
 namespace CyberSnap.UI
 {
@@ -38,7 +40,7 @@ namespace CyberSnap.UI
         private readonly SettingsService _settingsService;
         private readonly Bitmap _capturedBitmap;
         private readonly System.Drawing.Point _targetMonitorPoint;
-        private readonly string? _savedFilePath;
+        private string? _savedFilePath;
         private bool _isPinned = false;
         /// <summary>True while the countdown is paused because the cursor is moving over the window.</summary>
         private bool _countdownPausedForMotion;
@@ -112,6 +114,9 @@ namespace CyberSnap.UI
         }
 
         public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; private set; } = RegionOverlayForm.ConfirmCommitAction.Default;
+
+        /// <summary>Path written by Save / Save as... in this preview, if any.</summary>
+        public string? SavedFilePath => _savedFilePath;
 
         /// <summary>
         /// Result of the preview session, replacing the WPF DialogResult (this window is
@@ -294,6 +299,7 @@ namespace CyberSnap.UI
                 LocalizationService.Translate("Actions already covered by automatic actions are listed above.");
             EditAfterCaptureSettingsBtn.ToolTip = LocalizationService.Translate("Configure automatic actions");
             SaveText.Text = LocalizationService.Translate("Save");
+            SaveAsText.Text = LocalizationService.Translate("Save as...");
             CopyText.Text = LocalizationService.Translate("Copy");
             EditText.Text = LocalizationService.Translate("Edit");
             OpenViewerText.Text = LocalizationService.Translate("Open in viewer");
@@ -317,6 +323,9 @@ namespace CyberSnap.UI
             // Optional-action tooltips: previously Edit/Copy/Save had none, so hovering
             // them gave no feedback. Each also carries its hotkey as a discreet suffix.
             SaveBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Save a copy of the image"), "Ctrl+S");
+            SaveAsBtn.ToolTip = WithHotkeyHint(
+                LocalizationService.Translate("Choose a file name and location for this capture."),
+                "Ctrl+Shift+S");
             CopyBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Copy to clipboard"), "Ctrl+C");
             EditBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in the annotation editor"), "Ctrl+E");
             OpenViewerBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in system default viewer"), "Ctrl+O");
@@ -327,6 +336,7 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(OptionalActionsHeaderLabel);
             ApplyTooltipPlacement(EditAfterCaptureSettingsBtn);
             ApplyTooltipPlacement(SaveBtn);
+            ApplyTooltipPlacement(SaveAsBtn);
             ApplyTooltipPlacement(CopyBtn);
             ApplyTooltipPlacement(EditBtn);
             ApplyTooltipPlacement(OpenViewerBtn);
@@ -452,6 +462,7 @@ namespace CyberSnap.UI
             // Render at 2× display DIPs so 150% DPI + UiScale LayoutTransform stay sharp
             // (same pattern as Settings achievements / crisp toolbar glyphs).
             SetPreviewIcon(SaveIcon, "save", primaryIconColor, 13);
+            SetPreviewIcon(SaveAsIcon, "save", primaryIconColor, 13);
             SetPreviewIcon(CopyIcon, "copy", primaryIconColor, 13);
             SetPreviewIcon(EditIcon, "draw", primaryIconColor, 13);
             SetPreviewIcon(OpenViewerIcon, "eye", primaryIconColor, 13);
@@ -2272,6 +2283,7 @@ namespace CyberSnap.UI
             bool viewerAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.SystemViewer);
 
             SaveBtn.Visibility = saveAuto ? Visibility.Collapsed : Visibility.Visible;
+            SaveAsBtn.Visibility = Visibility.Visible;
             CopyBtn.Visibility = Visibility.Visible;
             EditBtn.Visibility = editAuto ? Visibility.Collapsed : Visibility.Visible;
             OpenViewerBtn.Visibility = viewerAuto ? Visibility.Collapsed : Visibility.Visible;
@@ -2286,6 +2298,7 @@ namespace CyberSnap.UI
 
             bool anyOptionalVisible =
                 SaveBtn.Visibility == Visibility.Visible
+                || SaveAsBtn.Visibility == Visibility.Visible
                 || CopyBtn.Visibility == Visibility.Visible
                 || EditBtn.Visibility == Visibility.Visible
                 || OpenViewerBtn.Visibility == Visibility.Visible
@@ -2333,6 +2346,67 @@ namespace CyberSnap.UI
                 return;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
             CommitAndClose(true);
+        }
+
+        private void SaveAsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isClosing)
+                return;
+            CancelAutoCloseOnInteraction();
+            try
+            {
+                var settings = _settingsService.Settings;
+                var source = EffectiveBitmap;
+                var format = settings.CaptureImageFormat;
+                var ext = CaptureOutputService.GetExtension(format);
+                var defaultPath = CaptureSavePath.BuildAvailablePath(
+                    settings.SaveDirectory,
+                    $"{FileNameTemplate.Format(settings.FileNameTemplate, source.Width, source.Height)}.{ext}",
+                    settings.SaveInMonthlyFolders);
+
+                var dialog = new SaveFileDialog
+                {
+                    Title = LocalizationService.Translate("Save as..."),
+                    FileName = Path.GetFileName(defaultPath),
+                    InitialDirectory = Path.GetDirectoryName(defaultPath),
+                    DefaultExt = ext,
+                    AddExtension = true,
+                    Filter = "PNG Image (*.png)|*.png|JPEG Image (*.jpg)|*.jpg|Bitmap Image (*.bmp)|*.bmp",
+                    FilterIndex = format switch
+                    {
+                        CaptureImageFormat.Jpeg => 2,
+                        CaptureImageFormat.Bmp => 3,
+                        _ => 1
+                    }
+                };
+
+                if (dialog.ShowDialog(this) != true)
+                {
+                    InitAutoCloseCountdown();
+                    return;
+                }
+
+                var chosenFormat = Path.GetExtension(dialog.FileName).ToLowerInvariant() switch
+                {
+                    ".jpg" or ".jpeg" => CaptureImageFormat.Jpeg,
+                    ".bmp" => CaptureImageFormat.Bmp,
+                    _ => CaptureImageFormat.Png
+                };
+                CaptureOutputService.SaveBitmap(source, dialog.FileName, chosenFormat, settings.JpegQuality);
+                _savedFilePath = dialog.FileName;
+                UpdateOptionalActionsAvailability();
+                ToastWindow.Show(
+                    LocalizationService.Translate("Image saved"),
+                    Path.GetFileName(dialog.FileName),
+                    dialog.FileName);
+            }
+            catch (Exception ex)
+            {
+                ToastWindow.ShowError(
+                    LocalizationService.Translate("Save failed"),
+                    ex.Message);
+                InitAutoCloseCountdown();
+            }
         }
 
         private void CopyBtn_Click(object sender, RoutedEventArgs e)
@@ -2547,6 +2621,17 @@ namespace CyberSnap.UI
                 if (e.Key == Key.P)                     // P — pin / unpin
                 {
                     TogglePinned();
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Ctrl+Shift+... ───────────────────────────────────────────────
+            if (mods == (ModifierKeys.Control | ModifierKeys.Shift))
+            {
+                if (e.Key == Key.S && SaveAsBtn.IsEnabled && SaveAsBtn.IsVisible)
+                {
+                    SaveAsBtn_Click(SaveAsBtn, new RoutedEventArgs());
                     e.Handled = true;
                     return;
                 }

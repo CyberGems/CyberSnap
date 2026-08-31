@@ -786,7 +786,7 @@ public partial class App
                                 {
                                     bool isScaled = dialog.ScaleFactor != 1;
                                     var effective = isScaled ? dialog.EffectiveBitmap : cropped;
-                                    string? effectiveSavePath = isScaled ? null : earlySavePath;
+                                    string? effectiveSavePath = ResolvePreviewCommitSavePath(dialog.SavedFilePath, earlySavePath, isScaled);
                                     bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
                                     if (result == true)
                                     {
@@ -1098,7 +1098,7 @@ public partial class App
             {
                 bool isScaled = dialog.ScaleFactor != 1;
                 var effective = isScaled ? dialog.EffectiveBitmap : bmp;
-                string? effectiveSavePath = isScaled ? null : earlySavePath;
+                string? effectiveSavePath = ResolvePreviewCommitSavePath(dialog.SavedFilePath, earlySavePath, isScaled);
                 bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
                 if (result == true)
                 {
