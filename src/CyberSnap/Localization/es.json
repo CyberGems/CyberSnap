@@ -1734,6 +1734,8 @@
   "CyberSnap was unable to open Achievements": "CyberSnap no pudo abrir Logros",
   "Open the post-capture editor for annotations.": "Abrir el editor de anotaciones después de la captura.",
   "Untitled": "Sin título",
+  "Close tab": "Cerrar pestaña",
+  "Several documents are open. Close some tabs if the editor feels slow.": "Hay varios documentos abiertos. Cierra algunas pestañas si el editor se siente lento.",
   "Save project...": "Guardar proyecto...",
   "Save project as...": "Guardar proyecto como...",
   "CyberSnap Project": "Proyecto CyberSnap",

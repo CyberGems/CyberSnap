@@ -832,6 +832,7 @@ public sealed partial class AnnotationCanvas
         Point oldCursorClient = _cursorClient;
         _cursorClient = e.Location;
         _cursorOnCanvas = true;
+        base.OnMouseMove(e);
 
         if (TryWelcomeMouseMove(e.Location))
             return;

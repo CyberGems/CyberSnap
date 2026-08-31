@@ -738,6 +738,39 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _textAlign = (TextHAlign)Math.Clamp(alignment, 0, 2);
     }
 
+    /// <summary>
+    /// Copies tool, stroke, text style, and editor chrome from another canvas so a new tab
+    /// matches the one the user is already working in.
+    /// </summary>
+    public void CopySharedToolStateFrom(AnnotationCanvas source)
+    {
+        if (source is null || ReferenceEquals(source, this)) return;
+
+        ToolColor = source.ToolColor;
+        StrokeWidth = source.StrokeWidth;
+        ShowCaptureFrame = source.ShowCaptureFrame;
+        FitToWindowOnLoad = source.FitToWindowOnLoad;
+        ShowBanners = source.ShowBanners;
+        ShowWelcomeBanner = source.ShowWelcomeBanner;
+        ShowHints = source.ShowHints;
+        EditorAutoCropControls = source.EditorAutoCropControls;
+        EditorShowResizeHandles = source.EditorShowResizeHandles;
+        ResizeHandlesScaleContent = source.ResizeHandlesScaleContent;
+        PanModeLockObjects = source.PanModeLockObjects;
+        UndoLimit = source.UndoLimit;
+        ShowScrollbarsAlways = source.ShowScrollbarsAlways;
+        ApplyTextStyle(
+            source.TextFontSize,
+            source._textFontFamily,
+            source._textBold,
+            source._textItalic,
+            source._textStroke,
+            source._textShadow,
+            source._textBackground,
+            (int)source._textAlign);
+        ActiveTool = source.ActiveTool;
+    }
+
     /// <summary>Raised when the user changes the Text-tool font size (toolbar buttons or wheel).</summary>
     public event Action<float>? TextFontSizeChanged;
 
@@ -875,7 +908,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         CancelInProgressTool();
         CancelPendingResize(silent: true);
         ActiveTool = CanvasTool.Move;
-        oldBaseBitmap?.Dispose();
+        if (!ReferenceEquals(oldBaseBitmap, newBaseBitmap))
+            oldBaseBitmap?.Dispose();
 
         if (EditorAutoCropControls)
         {
@@ -936,7 +970,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         CancelInProgressTool();
         CancelPendingResize(silent: true);
         ActiveTool = CanvasTool.Move;
-        oldBaseBitmap?.Dispose();
+        if (!ReferenceEquals(oldBaseBitmap, newBaseBitmap))
+            oldBaseBitmap?.Dispose();
 
         if (EditorAutoCropControls)
         {

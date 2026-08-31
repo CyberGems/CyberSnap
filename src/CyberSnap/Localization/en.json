@@ -1451,6 +1451,8 @@
   "Gallery...": "Gallery...",
   "Open the post-capture editor for annotations.": "Open the post-capture editor for annotations.",
   "Untitled": "Untitled",
+  "Close tab": "Close tab",
+  "Several documents are open. Close some tabs if the editor feels slow.": "Several documents are open. Close some tabs if the editor feels slow.",
   "Save project...": "Save project...",
   "Save project as...": "Save project as...",
   "CyberSnap Project": "CyberSnap Project",

@@ -11,8 +11,11 @@ namespace CyberSnap.UI.Controls;
 
 public abstract class EditorRuler : UserControl
 {
-    protected readonly AnnotationCanvas _canvas;
+    protected AnnotationCanvas _canvas;
     protected Point? _currentMouseImgPos;
+    private readonly EventHandler _onCanvasStateChanged;
+    private readonly MouseEventHandler _onCanvasMouseMove;
+    private readonly EventHandler _onCanvasMouseLeave;
 
     protected EditorRuler(AnnotationCanvas canvas)
     {
@@ -24,8 +27,8 @@ public abstract class EditorRuler : UserControl
                  ControlStyles.ResizeRedraw, true);
         BackColor = EditorColors.BgPrimary;
 
-        _canvas.StateChanged += (s, e) => Invalidate();
-        _canvas.MouseMove += (s, e) =>
+        _onCanvasStateChanged = (_, _) => Invalidate();
+        _onCanvasMouseMove = (_, e) =>
         {
             var imgPos = _canvas.PointFromScreenToImage(e.Location);
             if (_currentMouseImgPos != imgPos)
@@ -34,7 +37,7 @@ public abstract class EditorRuler : UserControl
                 Invalidate();
             }
         };
-        _canvas.MouseLeave += (s, e) =>
+        _onCanvasMouseLeave = (_, _) =>
         {
             if (_currentMouseImgPos != null)
             {
@@ -42,6 +45,33 @@ public abstract class EditorRuler : UserControl
                 Invalidate();
             }
         };
+
+        AttachCanvas(canvas);
+    }
+
+    public void Retarget(AnnotationCanvas canvas)
+    {
+        if (ReferenceEquals(_canvas, canvas)) return;
+        DetachCanvas();
+        AttachCanvas(canvas);
+        _currentMouseImgPos = null;
+        Invalidate();
+    }
+
+    private void AttachCanvas(AnnotationCanvas canvas)
+    {
+        _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
+        _canvas.StateChanged += _onCanvasStateChanged;
+        _canvas.MouseMove += _onCanvasMouseMove;
+        _canvas.MouseLeave += _onCanvasMouseLeave;
+    }
+
+    private void DetachCanvas()
+    {
+        if (_canvas is null || _canvas.IsDisposed) return;
+        _canvas.StateChanged -= _onCanvasStateChanged;
+        _canvas.MouseMove -= _onCanvasMouseMove;
+        _canvas.MouseLeave -= _onCanvasMouseLeave;
     }
 
     protected static double GetMajorStep(double zoom)
@@ -362,7 +392,7 @@ public sealed class VerticalRuler : EditorRuler
 
 public sealed class RulerCornerBlock : UserControl
 {
-    private readonly AnnotationCanvas _canvas;
+    private AnnotationCanvas _canvas;
     private bool _isDraggingNewGuides = false;
     private bool _isHovered = false;
 
@@ -375,6 +405,12 @@ public sealed class RulerCornerBlock : UserControl
                  ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer, true);
         BackColor = EditorColors.BgPrimary;
+    }
+
+    public void Retarget(AnnotationCanvas canvas)
+    {
+        _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
+        Invalidate();
     }
 
     protected override void OnMouseEnter(EventArgs e)

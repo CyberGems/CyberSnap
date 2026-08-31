@@ -58,6 +58,7 @@ public sealed partial class EditorForm
         }
         UpdateCaptureCaption();
         UpdateLiveStatusText();
+        RefreshTabStrip();
 
         if (_menuButton is not null)
         {
