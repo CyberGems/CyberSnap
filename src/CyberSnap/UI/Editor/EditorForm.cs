@@ -47,13 +47,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     public static EditorForm? ActiveInstance => _instance is { IsDisposed: false, Visible: true } ? _instance : null;
 
-    private readonly AnnotationCanvas _canvas;
     private Panel? _topRulerContainer;
     private HorizontalRuler? _topRuler;
     private VerticalRuler? _leftRuler;
     private RulerCornerBlock? _cornerBlock;
+    private bool _rulersEnabled = true;
 
-    private string? _savedFilePath;
     private bool _suppressCloseConfirm;
     private bool _isManualMaximized;
     private bool _userRestoredWindow;
@@ -90,21 +89,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         if (_instance is not null && !_instance.IsDisposed)
         {
-            if (_instance._canvas.IsDirty && !_instance._canvas.IsDefaultBlank)
-            {
-                var docName = string.IsNullOrWhiteSpace(_instance._savedFilePath)
-                    ? LocalizationService.Translate("Untitled")
-                    : TruncateDocName(Path.GetFileName(_instance._savedFilePath), 36);
-                var title = LocalizationService.Translate("New capture received");
-                var message = string.Format(
-                    LocalizationService.Translate("Save changes to {0} before opening the new capture?"), docName);
-
-                if (!_instance.PromptSaveChanges(title, message))
-                {
-                    return false;
-                }
-            }
-            _instance.LoadCapture(captured, savedFilePath, performanceWarning: eval.ShouldWarn);
+            _instance.OpenDocumentInTab(captured, savedFilePath, autoMaximize: true, performanceWarning: eval.ShouldWarn);
             _instance.RestoreAndActivate();
             App.NotifyFirstTimeTool("editor");
             return true;
@@ -171,22 +156,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
                 if (_instance is not null && !_instance.IsDisposed)
                 {
-                    if (_instance._canvas.IsDirty && !_instance._canvas.IsDefaultBlank)
-                    {
-                        var docName = string.IsNullOrWhiteSpace(_instance._savedFilePath)
-                            ? LocalizationService.Translate("Untitled")
-                            : TruncateDocName(Path.GetFileName(_instance._savedFilePath), 36);
-                        var title = LocalizationService.Translate("Unsaved changes");
-                        var message = string.Format(
-                            LocalizationService.Translate("Save changes to {0} before opening the selected file?"), docName);
-
-                        if (!_instance.PromptSaveChanges(title, message))
-                        {
-                            baseBitmap.Dispose();
-                            return;
-                        }
-                    }
-                    _instance.LoadCaptureProject(baseBitmap, projectData, filePath, performanceWarning: dimEval.ShouldWarn);
+                    _instance.OpenProjectInTab(baseBitmap, projectData, filePath, autoMaximize: true, performanceWarning: dimEval.ShouldWarn);
                     _instance.RestoreAndActivate();
                     return;
                 }
@@ -372,7 +342,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         if (captured is null) throw new ArgumentNullException(nameof(captured));
 
-        _savedFilePath = savedFilePath;
+        var initial = CreateDocument(new Bitmap(captured), savedFilePath, cloneFrom: null);
+        _documents.Add(initial);
+        _activeDocument = initial;
 
         SuspendLayout();
         try
@@ -409,75 +381,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         var settings = Services.SettingsService.LoadStatic();
         _showTooltips = settings?.EditorShowTooltips ?? true;
-        _canvas = new AnnotationCanvas(new Bitmap(captured))
-        {
-            Dock = DockStyle.Fill,
-            BackColor = EditorColors.CanvasBg,
-            ToolColor = settings != null ? Color.FromArgb(settings.EditorToolColorArgb) : EditorColors.Accent,
-            StrokeWidth = settings?.StrokeWidth ?? 4f,
-            TextFontSize = settings?.EditorTextFontSize ?? 24f,
-            FitToWindowOnLoad = settings?.EditorFitToWindowOnOpen ?? true,
-            ShowBanners = settings?.EditorShowBanners ?? true,
-            ShowWelcomeBanner = settings?.EditorShowWelcomeBanner ?? true,
-            ShowHints = settings?.EditorShowHints ?? true,
-            EditorAutoCropControls = settings?.EditorAutoCropControls ?? true,
-            EditorShowResizeHandles = settings?.EditorShowResizeHandles ?? true,
-            ResizeHandlesScaleContent = settings?.EditorResizeHandlesScaleContent ?? false,
-            PanModeLockObjects = settings?.EditorPanModeLockObjects ?? true,
-            UndoLimit = settings?.EditorUndoLimit ?? 100,
-            ShowScrollbarsAlways = settings?.EditorShowScrollbars ?? false,
-        };
-        _canvas.StateChanged += OnCanvasStateChanged;
-        _canvas.BlankBitmapFactory = (w, h) => CreateBlankCheckerboard(EditorColors.IsDark, w, h);
-        _canvas.ConfirmResizeByHandle = (w, h) =>
-        {
-            // Reload fresh each time — the delegate outlives the constructor's snapshot.
-            var s = Services.SettingsService.LoadStatic();
-            if (s?.EditorSuppressResizeConfirm == true)
-                return true;
-
-            var title = LocalizationService.Translate("Resize canvas");
-            var message = string.Format(
-                LocalizationService.Translate("The canvas will be resized to {0} × {1} px. Continue?"),
-                w, h);
-            bool confirmed = ThemedConfirmDialog.Confirm(Handle, title, message, out bool dontShowAgain,
-                danger: false, iconId: "maximize");
-            if (dontShowAgain && System.Windows.Application.Current is CyberSnap.App app)
-                app.PersistEditorSuppressResizeConfirm(true);
-            return confirmed;
-        };
-        if (settings != null)
-        {
-            _canvas.ApplyTextStyle(
-                settings.EditorTextFontSize,
-                settings.EditorTextFontFamily ?? "Segoe UI",
-                settings.EditorTextBold,
-                settings.EditorTextItalic,
-                settings.EditorTextStroke,
-                settings.EditorTextShadow,
-                settings.EditorTextBackground,
-                settings.EditorTextAlignment);
-            _canvas.LoadRecentFonts(settings.EditorTextRecentFonts, settings.EditorTextFavoriteFonts);
-        }
-        _canvas.TextFontSizeChanged += size =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.PersistEditorTextFontSize(size);
-        };
-        _canvas.TextStyleChanged += (size, family, bold, italic, stroke, shadow, bg, align) =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.PersistEditorTextStyle(size, family, bold, italic, stroke, shadow, bg, align);
-        };
-        _canvas.FavoriteFontsChanged += serialized =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.PersistEditorTextFavoriteFonts(serialized);
-        };
-        _canvas.MouseMove += OnCanvasMouseMove;
-        _canvas.MouseUp += OnCanvasMouseUp;
-        _canvas.DoubleClick += OnCanvasDoubleClick;
-        _canvas.EmojiPlacementRequested += (_, _) => OpenEmojiPicker(GetEmojiToolButton());
+        AttachCanvas(_canvas);
         RegisterCanvasMessageFilter();
         _saveStatusTimer.Tick += (_, _) =>
         {
@@ -504,6 +408,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         };
         _clipboardMonitorTimer.Start();
 
+        WireTabStrip();
         BuildToolbar();
         BuildStatusBar();
         // Build the burger menu during initialization so opening it does not incur
@@ -518,6 +423,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         };
 
         bool showRulers = settings?.EditorShowRulers ?? true;
+        _rulersEnabled = showRulers;
 
         _topRuler = new HorizontalRuler(_canvas)
         {
@@ -538,6 +444,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
             Height = 28,
             Visible = showRulers
         };
+        _tabStrip.Dock = DockStyle.Fill;
+        _tabStrip.Visible = false;
+        _topRulerContainer.Controls.Add(_tabStrip);
         _topRulerContainer.Controls.Add(_topRuler);
         _topRulerContainer.Controls.Add(_cornerBlock);
 
@@ -548,16 +457,16 @@ public sealed partial class EditorForm : Form, IMessageFilter
             Visible = showRulers
         };
 
-        var canvasInner = new Panel
+        _canvasInner = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = EditorColors.CanvasBg,
             Padding = new Padding(1),
         };
-        canvasInner.Controls.Add(_canvas);
-        canvasInner.Controls.Add(_leftRuler);
-        canvasInner.Controls.Add(_topRulerContainer);
-        canvasContainer.Controls.Add(canvasInner);
+        _canvasInner.Controls.Add(_canvas);
+        _canvasInner.Controls.Add(_leftRuler);
+        _canvasInner.Controls.Add(_topRulerContainer);
+        canvasContainer.Controls.Add(_canvasInner);
 
         var workArea = new Panel
         {
@@ -601,19 +510,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
         root.DragLeave += OnEditorDragLeave;
         root.DragDrop += OnEditorDragDrop;
 
-        _canvas.AllowDrop = true;
-        _canvas.DragEnter += OnEditorDragEnter;
-        _canvas.DragLeave += OnEditorDragLeave;
-        _canvas.DragDrop += OnEditorDragDrop;
-        _canvas.WelcomeNewCanvasRequested = () => DoNewCanvas();
-        _canvas.WelcomeOpenRequested = () => DoOpen();
-        _canvas.WelcomePasteRequested = () => DoPaste();
-        _canvas.WelcomeCaptureRequested = () =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.OnHotkeyPressedProxy();
-        };
-
         BuildContextMenus();
 
         ResumeLayout(false);
@@ -646,6 +542,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             _startupSplash = null;
             if (ReferenceEquals(_instance, this)) _instance = null;
             UnregisterCanvasMessageFilter();
+            DisposeAllDocuments();
         };
         Resize += (_, _) =>
         {
@@ -972,14 +869,15 @@ public sealed partial class EditorForm : Form, IMessageFilter
         UpdateToolButtonState();
         UpdateCaptureCaption();
         UpdateLiveStatusText();
+        RefreshTabStrip();
     }
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
         if (_emojiPicker is { IsDisposed: false })
             _emojiPicker.Close();
-        if (_suppressCloseConfirm || !_canvas.IsDirty) return;
-        if (!PromptSaveChanges())
+        if (_suppressCloseConfirm) return;
+        if (!PromptSaveAllDirtyDocuments())
             e.Cancel = true;
     }
 
@@ -1476,27 +1374,19 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void DoNew()
     {
-        if (_canvas.IsDirty)
+        if (ShouldReplaceActiveDocument)
         {
-            if (!PromptSaveChanges())
+            if (_canvas.IsDirty && !PromptSaveChanges())
                 return;
+            ResetActiveToBlank();
+            return;
         }
 
-        var blank = CreateBlankCheckerboard(EditorColors.IsDark);
-
-        LoadCapture(blank, null, autoMaximize: false);
-        _canvas.IsDefaultBlank = true;
-        _canvas.IsBlankCanvas = true;
-        // The blank document has no real pixels worth inspecting at 100%, so always frame it
-        // to fit the window regardless of the user's auto-fit preference. Without this, the
-        // crop handles would sit off-screen when auto-fit is disabled (we no longer maximize).
-        _canvas.ZoomFit();
-        _canvas.DismissWelcomeOverlay();
-        _canvas.Invalidate();
+        OpenBlankTab();
     }
 
-    /// <summary>Closes the current document and returns to a fresh blank canvas (Editor stays open).</summary>
-    private void DoCloseDocument() => DoNew();
+    /// <summary>Closes the current document tab, or resets to a blank canvas when only one is open.</summary>
+    private void DoCloseDocument() => CloseActiveTab();
 
     private void DoResizeCanvas()
     {
@@ -1540,7 +1430,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void DoNewCanvas()
     {
-        if (_canvas.IsDirty)
+        if (ShouldReplaceActiveDocument && _canvas.IsDirty)
         {
             if (!PromptSaveChanges())
                 return;
@@ -1552,23 +1442,26 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var blank = result.BackgroundColor is { } bg
              ? CreateSolidBackground(result.Width, result.Height, bg)
              : CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
-        LoadCapture(blank, null, autoMaximize: false);
-        _canvas.IsDefaultBlank = true;
-        _canvas.IsBlankCanvas = true;
-        _canvas.ZoomFit();
-        _canvas.DismissWelcomeOverlay();
-        _canvas.Invalidate();
+
+        if (ShouldReplaceActiveDocument)
+        {
+            LoadCapture(blank, null, autoMaximize: false);
+            blank.Dispose();
+            _canvas.IsDefaultBlank = true;
+            _canvas.IsBlankCanvas = true;
+            _canvas.ZoomFit();
+            _canvas.DismissWelcomeOverlay();
+            _canvas.Invalidate();
+            _canvas.ShowToolBanner(LocalizationService.Translate("New canvas created"));
+            return;
+        }
+
+        OpenBlankTab(blank);
         _canvas.ShowToolBanner(LocalizationService.Translate("New canvas created"));
     }
 
     private void DoOpen()
     {
-        if (_canvas.IsDirty)
-        {
-            if (!PromptSaveChanges())
-                return;
-        }
-
         using (var dlg = new OpenFileDialog
         {
             Filter = $"{LocalizationService.Translate("All Supported Files")} (*.csnp, *.png, *.jpg...)|*.csnp;*.png;*.jpg;*.jpeg;*.bmp;*.webp|" +
@@ -1600,7 +1493,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                             return;
                         }
 
-                        LoadCaptureProject(baseBitmap, projectData, dlg.FileName, performanceWarning: dimEval.ShouldWarn);
+                        OpenProjectInTab(baseBitmap, projectData, dlg.FileName, autoMaximize: true, performanceWarning: dimEval.ShouldWarn);
                     }
                     else
                     {
@@ -1615,7 +1508,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                             return;
                         }
 
-                        LoadCapture(captured, dlg.FileName, performanceWarning: eval.ShouldWarn);
+                        OpenDocumentInTab(captured, dlg.FileName, autoMaximize: true, performanceWarning: eval.ShouldWarn);
                         captured.Dispose();
                         AddRecentFile(dlg.FileName);
                     }
@@ -2050,56 +1943,41 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         try
         {
-            if (Clipboard.ContainsImage())
+            if (!Clipboard.ContainsImage())
+                return;
+
+            if (_canvas.IsDefaultBlank)
+                _canvas.DismissWelcomeOverlay();
+
+            using (var img = Clipboard.GetImage())
             {
-                if (_canvas.IsDefaultBlank)
-                    _canvas.DismissWelcomeOverlay();
+                if (img is null)
+                    return;
 
-                if (!_canvas.IsDefaultBlank)
+                var bmp = new Bitmap(img);
+                var eval = ImageOpenPolicy.EvaluateBitmap(bmp, ImageOpenSource.Clipboard);
+                if (!eval.IsAllowed)
                 {
-                    var s = Services.SettingsService.LoadStatic();
-                    if (s?.EditorSuppressPasteConfirm != true)
-                    {
-                        var confirmTitle = LocalizationService.Translate("Confirm Paste");
-                        var confirmMsg = LocalizationService.Translate("Pasting this image will replace your current document. Do you want to proceed?");
-                        bool pasteConfirmed = ThemedConfirmDialog.Confirm(Handle, confirmTitle, confirmMsg,
-                            out bool dontShowAgain, danger: false, iconId: "paste");
-                        if (dontShowAgain && System.Windows.Application.Current is CyberSnap.App app)
-                            app.PersistEditorSuppressPasteConfirm(true);
-                        if (!pasteConfirmed)
-                            return;
-                    }
+                    bmp.Dispose();
+                    ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
+                    return;
                 }
 
-                if (_canvas.IsDirty)
+                if (ShouldReplaceActiveDocument)
                 {
-                    if (!PromptSaveChanges())
-                        return;
+                    var command = new CyberSnap.Models.Commands.PasteImageCommand(bmp);
+                    bmp.Dispose();
+                    _canvas.Push(command);
+                    _canvas.ZoomFit();
+                    _canvas.IsDefaultBlank = false;
+                    RefreshUi();
+                    if (eval.ShouldWarn)
+                        ShowLargeImagePerformanceBanner(eval);
+                    return;
                 }
 
-                using (var img = Clipboard.GetImage())
-                {
-                    if (img != null)
-                    {
-                        var bmp = new Bitmap(img);
-                        var eval = ImageOpenPolicy.EvaluateBitmap(bmp, ImageOpenSource.Clipboard);
-                        if (!eval.IsAllowed)
-                        {
-                            bmp.Dispose();
-                            ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
-                            return;
-                        }
-
-                        var command = new CyberSnap.Models.Commands.PasteImageCommand(bmp);
-                        bmp.Dispose(); // command owns its own clone
-                        _canvas.Push(command);
-                        _canvas.ZoomFit();
-                        _canvas.IsDefaultBlank = false;
-                        RefreshUi();
-                        if (eval.ShouldWarn)
-                            ShowLargeImagePerformanceBanner(eval);
-                    }
-                }
+                OpenDocumentInTab(bmp, null, autoMaximize: false, performanceWarning: eval.ShouldWarn);
+                bmp.Dispose();
             }
         }
         catch (Exception ex)
@@ -2162,6 +2040,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.U)) { DoShare(); return true; }
         if (keyData == (Keys.Control | Keys.W)) { DoCloseDocument(); return true; }
+        if (keyData == (Keys.Control | Keys.Tab)) { CycleTab(1); return true; }
+        if (keyData == (Keys.Control | Keys.Shift | Keys.Tab)) { CycleTab(-1); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
         if (keyData == (Keys.Control | Keys.V)) { DoPaste(); return true; }
         if (keyData == (Keys.Control | Keys.A)) { _canvas.SelectAll(); return true; }
@@ -2300,6 +2180,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (mod == Keys.Control && key is Keys.S) { DoSave(); return true; }
         if (mod == (Keys.Control | Keys.Shift) && key is Keys.S) { DoSaveAs(); return true; }
         if (mod == (Keys.Control | Keys.Shift) && key is Keys.U) { DoShare(); return true; }
+        if (mod == Keys.Control && key is Keys.W) { DoCloseDocument(); return true; }
+        if (mod == Keys.Control && key is Keys.Tab) { CycleTab(1); return true; }
+        if (mod == (Keys.Control | Keys.Shift) && key is Keys.Tab) { CycleTab(-1); return true; }
         if (mod == Keys.Control && key is Keys.C) { DoCopy(); return true; }
         if (mod == Keys.Control && key is Keys.V) { DoPaste(); return true; }
 
@@ -2889,10 +2772,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     public void ToggleRulers(bool show)
     {
-        if (_topRulerContainer != null) _topRulerContainer.Visible = show;
-        if (_leftRuler != null) _leftRuler.Visible = show;
-        if (_topRuler != null) _topRuler.Visible = show;
-        if (_cornerBlock != null) _cornerBlock.Visible = show;
+        _rulersEnabled = show;
+        ApplyRulerAndTabLayout();
         RefreshLayoutAndRedraw();
     }
 
@@ -2958,12 +2839,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     return;
                 }
 
-                if (_canvas.IsDirty)
-                {
-                    if (!PromptSaveChanges())
-                        return;
-                }
-
                 var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
                 var dimEval = ImageOpenPolicy.EvaluateBitmap(baseBitmap, ImageOpenSource.UserImport, sizeEval.FileSizeBytes);
                 if (!dimEval.IsAllowed)
@@ -2973,16 +2848,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     return;
                 }
 
-                LoadCaptureProject(baseBitmap, projectData, filePath, autoMaximize: false, performanceWarning: dimEval.ShouldWarn);
+                OpenProjectInTab(baseBitmap, projectData, filePath, autoMaximize: false, performanceWarning: dimEval.ShouldWarn);
             }
             else
             {
-                if (_canvas.IsDirty)
-                {
-                    if (!PromptSaveChanges())
-                        return;
-                }
-
                 var eval = ImageOpenPolicy.EvaluateAndLoad(
                     filePath,
                     ImageOpenSource.UserImport,
@@ -2994,7 +2863,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     return;
                 }
 
-                LoadCapture(captured, filePath, autoMaximize: false, performanceWarning: eval.ShouldWarn);
+                OpenDocumentInTab(captured, filePath, autoMaximize: false, performanceWarning: eval.ShouldWarn);
                 captured.Dispose();
                 AddRecentFile(filePath);
             }

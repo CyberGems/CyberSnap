@@ -1885,7 +1885,6 @@ public sealed partial class EditorForm
         newFromClipboardItem.Click += (_, _) =>
         {
             if (!Clipboard.ContainsImage()) return;
-            if (_canvas.IsDirty && !PromptSaveChanges()) return;
             if (_canvas.IsDefaultBlank)
                 _canvas.DismissWelcomeOverlay();
             using (var img = Clipboard.GetImage())
@@ -1900,7 +1899,7 @@ public sealed partial class EditorForm
                         ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
                         return;
                     }
-                    LoadCapture(bmp, null, performanceWarning: eval.ShouldWarn);
+                    OpenDocumentInTab(bmp, null, autoMaximize: true, performanceWarning: eval.ShouldWarn);
                     bmp.Dispose();
                     _canvas.ZoomFit();
                     _canvas.IsDefaultBlank = false;
@@ -2092,7 +2091,7 @@ public sealed partial class EditorForm
         };
         rulersItem.Click += (_, _) =>
         {
-            bool nextState = !(_topRulerContainer != null && _topRulerContainer.Visible);
+            bool nextState = !_rulersEnabled;
             ToggleRulers(nextState);
             if (System.Windows.Application.Current is CyberSnap.App app)
             {
@@ -2217,8 +2216,8 @@ public sealed partial class EditorForm
             // blank canvas, enabled when there's something to save.
             saveItem.Enabled = !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
 
-            // Close document is a no-op on the pristine welcome canvas.
-            closeDocumentItem.Enabled = !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
+            // Close is a no-op on the pristine welcome canvas unless another tab is open.
+            closeDocumentItem.Enabled = _documents.Count > 1 || !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
 
             WindowsMenuRenderer.NormalizeDropDownWidths(transformSubmenu);
             WindowsMenuRenderer.NormalizeDropDownWidths(objectSubmenu);
@@ -2300,7 +2299,7 @@ public sealed partial class EditorForm
         resizeHandlesItem.Image = _canvas.EditorShowResizeHandles ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         welcomeBannerItem.Image = _canvas.ShowWelcomeBanner ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        rulersItem.Image = _rulersEnabled ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         hintsItem.Image = _canvas.ShowHints ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         coordinatesItem.Image = _coordsPanel.Visible ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         tooltipsItem.Image = _showTooltips ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
