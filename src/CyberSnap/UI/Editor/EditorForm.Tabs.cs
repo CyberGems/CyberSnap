@@ -169,6 +169,7 @@ public sealed partial class EditorForm
                 ActivateDocument(_documents[index]);
         };
         _tabStrip.TabCloseRequested += (_, index) => CloseDocumentAt(index);
+        _tabStrip.EmptyAreaDoubleClicked += (_, _) => DoNewCanvas();
     }
 
     private void ActivateDocument(EditorDocument document)
@@ -365,15 +366,27 @@ public sealed partial class EditorForm
     {
         if (_tabStrip is null) return;
         bool tabs = _documents.Count > 1;
+        bool rulers = _rulersEnabled;
+
         _tabStrip.Visible = tabs;
+        if (_tabRow is not null)
+            _tabRow.Visible = tabs;
         if (_topRuler is not null)
-            _topRuler.Visible = _rulersEnabled && !tabs;
+            _topRuler.Visible = rulers;
+        if (_rulerRow is not null)
+            _rulerRow.Visible = rulers;
         if (_leftRuler is not null)
-            _leftRuler.Visible = _rulersEnabled;
+            _leftRuler.Visible = rulers;
         if (_cornerBlock is not null)
-            _cornerBlock.Visible = _rulersEnabled;
+            _cornerBlock.Visible = rulers;
+
         if (_topRulerContainer is not null)
-            _topRulerContainer.Visible = _rulersEnabled || tabs;
+        {
+            int height = (tabs ? EditorTabStrip.PreferredHeight : 0) + (rulers ? 28 : 0);
+            _topRulerContainer.Height = height;
+            _topRulerContainer.Visible = height > 0;
+        }
+
         RefreshTabStrip();
     }
 

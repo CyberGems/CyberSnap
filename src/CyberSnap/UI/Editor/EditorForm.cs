@@ -48,6 +48,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
     public static EditorForm? ActiveInstance => _instance is { IsDisposed: false, Visible: true } ? _instance : null;
 
     private Panel? _topRulerContainer;
+    private Panel? _tabRow;
+    private Panel? _rulerRow;
     private HorizontalRuler? _topRuler;
     private VerticalRuler? _leftRuler;
     private RulerCornerBlock? _cornerBlock;
@@ -438,17 +440,36 @@ public sealed partial class EditorForm : Form, IMessageFilter
             Visible = showRulers
         };
 
+        _tabRow = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = EditorTabStrip.PreferredHeight,
+            Visible = false,
+            BackColor = EditorColors.BgPrimary,
+        };
+        _tabStrip.Dock = DockStyle.Fill;
+        _tabStrip.Visible = false;
+        _tabRow.Controls.Add(_tabStrip);
+
+        _rulerRow = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 28,
+            Visible = showRulers,
+            BackColor = EditorColors.BgPrimary,
+        };
+        _rulerRow.Controls.Add(_topRuler);
+        _rulerRow.Controls.Add(_cornerBlock);
+
         _topRulerContainer = new Panel
         {
             Dock = DockStyle.Top,
             Height = 28,
-            Visible = showRulers
+            Visible = showRulers,
+            BackColor = EditorColors.BgPrimary,
         };
-        _tabStrip.Dock = DockStyle.Fill;
-        _tabStrip.Visible = false;
-        _topRulerContainer.Controls.Add(_tabStrip);
-        _topRulerContainer.Controls.Add(_topRuler);
-        _topRulerContainer.Controls.Add(_cornerBlock);
+        _topRulerContainer.Controls.Add(_rulerRow);
+        _topRulerContainer.Controls.Add(_tabRow);
 
         _leftRuler = new VerticalRuler(_canvas)
         {
