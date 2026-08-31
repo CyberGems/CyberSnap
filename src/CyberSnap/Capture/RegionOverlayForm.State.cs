@@ -1088,8 +1088,10 @@ public sealed partial class RegionOverlayForm
 
         var bounds = GetAnnotationBounds(selected);
         var selRect = Rectangle.Inflate(bounds, 4, 4);
+        bool isActiveSelection = annotationIndex == _selectedAnnotationIndex
+            || _multiSelectedIndices.Contains(annotationIndex);
 
-        if (IsResizable(_undoStack[annotationIndex]))
+        if (IsResizable(_undoStack[annotationIndex]) && isActiveSelection)
         {
             // 4 Corners: 0: TL, 1: TR, 2: BL, 3: BR
             var corners = new[] {
@@ -1430,6 +1432,7 @@ public sealed partial class RegionOverlayForm
         _modeBeforeConfirm = _mode;
         _toolIdBeforeConfirm = _activeToolId;
         _isConfirmingSelection = true;
+        ClearCrosshairGuides();
         // Fresh anchor on the frame — do not keep a leftover drag offset from capture phase.
         _toolbarCustomOffset = Point.Empty;
         _confirmCustomOffset = Point.Empty;
@@ -2145,6 +2148,7 @@ public sealed partial class RegionOverlayForm
         {
             HideToolbarImmediately();
         }
+        UpdateCrosshairGuides(_lastCursorPos);
         Invalidate();
     }
 

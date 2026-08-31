@@ -3830,10 +3830,10 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Show resize handles" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Show the square resize handles around the canvas to resize it." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Show the cyan handles on the canvas edge to resize it inward or outward." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="EditorShowResizeHandlesCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Show the square resize handles around the canvas to resize it."
+                                          ToolTip="Show the cyan handles on the canvas edge to resize it inward or outward."
                                           AutomationProperties.Name="Show resize handles"
                                           Checked="EditorShowResizeHandlesCheck_Changed" Unchecked="EditorShowResizeHandlesCheck_Changed"/>
                             </Grid>

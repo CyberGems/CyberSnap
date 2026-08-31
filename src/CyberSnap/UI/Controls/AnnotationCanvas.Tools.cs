@@ -46,15 +46,10 @@ public sealed partial class AnnotationCanvas
     private Point _cropDragStartImg;
     private Rectangle _cropDragStartRect;
 
-    // Canvas resize via the square handles floating outside the image (screen-space).
-    // How far outside the image edge the square handles float, in screen pixels. Kept well
-    // clear of the crop L-handles (which sit on the image edge) so the two don't get confused.
-    private const float ResizeHandleOffset = 28f;
-    private const float ResizeHandleSize = 11f;   // side length of each square handle (screen px)
-    private const float ResizeHitRadius = 9f;
-    // Amber/gold — a warm hue that can't be confused with the bright cyan crop handles, and
-    // reads clearly against the dark canvas. Distinguishes the canvas-resize squares at a glance.
-    private static readonly Color ResizeAccent = Color.FromArgb(255, 255, 176, 32);
+    // Canvas resize via the cyan edge handles on the image bounds (screen-space).
+    // Same L-corner / mid-bar chrome as crop, but dragging grows or shrinks the canvas.
+    private const float ResizeHitRadius = 10f;
+    private static readonly Color ResizeAccent = Color.FromArgb(255, 0, 255, 255);
     private bool _resizeDragging;
     private int _activeResizeHandle = -1;          // 0..7, same indexing as crop handles
     private Point _resizeStartImg;                 // image-space mouse at drag start
@@ -441,50 +436,10 @@ public sealed partial class AnnotationCanvas
 
         Focus();
 
-        // Square resize handles float outside the image; they take priority over the crop
-        // handles (which sit on the image edge) and over starting a stroke in the margin.
-        if (e.Button == MouseButtons.Left && EditorShowResizeHandles && _baseBitmap != null &&
-            !HideCanvasResizeHandles)
-        {
-            int hit = HitTestResizeHandle(e.Location);
-            if (hit >= 0)
-            {
-                _resizeDragging = true;
-                _userPanned = true;
-                DismissWelcomeOverlay();
-                _activeResizeHandle = hit;
-                _resizeStartImg = ScreenToImage(e.Location);
-                _resizeStartSize = new Size(_baseBitmap.Width, _baseBitmap.Height);
-                _resizePreviewSize = _resizeStartSize;
-                _resizePreviewRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
-                Capture = true;
-                return;
-            }
-        }
-
-        if (e.Button == MouseButtons.Left && EditorAutoCropControls && _cropHasRect
-            && _activeTool != CanvasTool.Crop && _activeTool != CanvasTool.CutOut)
-        {
-            var screenPt = e.Location;
-            var cropScreen = ImageToScreenRect(_cropRect);
-            var handles = GetCropHandlePositionsScreen(cropScreen);
-            int hitHandle = -1;
-            const float hitRadius = 9f;
-            for (int i = 0; i < handles.Length; i++)
-            {
-                var h = handles[i];
-                if (Math.Abs(screenPt.X - h.X) <= hitRadius && Math.Abs(screenPt.Y - h.Y) <= hitRadius)
-                {
-                    hitHandle = i;
-                    break;
-                }
-            }
-
-            if (hitHandle >= 0 && hitHandle <= 7)
-            {
-                ActiveTool = CanvasTool.Crop;
-            }
-        }
+        // Cyan edge handles resize the canvas in both directions. Annotation grips on a
+        // selected object win when they overlap the canvas edge.
+        if (e.Button == MouseButtons.Left && TryBeginCanvasResize(e.Location))
+            return;
 
         if (e.Button == MouseButtons.Left)
         {
@@ -618,7 +573,7 @@ public sealed partial class AnnotationCanvas
                 else
                 {
                     // Center move knob or plain body click → select and immediately start moving it from its surface!
-                    _pendingRotateToggle = alreadySelected && handle < 0
+                    _pendingRotateToggle = alreadySelected && (handle < 0 || handle == 8)
                         && AnnotationTransforms.CanRotate(_annotations[clickedIdx]);
                     _selectOriginalAnnotation = _annotations[clickedIdx];
                     _selectDragStartImg = img;
@@ -753,7 +708,7 @@ public sealed partial class AnnotationCanvas
                         if (!alreadySelected)
                             ExitRotateMode(invalidate: false);
                         _selectedAnnotationIndex = targetIdx;
-                        _pendingRotateToggle = alreadySelected && handle < 0
+                        _pendingRotateToggle = alreadySelected && (handle < 0 || handle == 8)
                             && AnnotationTransforms.CanRotate(_annotations[targetIdx]);
                         _selectOriginalAnnotation = _annotations[targetIdx];
                         _selectDragStartImg = img;
@@ -1115,43 +1070,13 @@ public sealed partial class AnnotationCanvas
         }
         else if (!_isDragging && !_cropDragging && !_cutOutDragging && !_resizeDragging)
         {
-            if (EditorShowResizeHandles && _baseBitmap != null && _preSpaceTool == null)
+            if (EditorShowResizeHandles && _baseBitmap != null && _preSpaceTool == null
+                && !IsOverAnnotationGrip(e.Location))
             {
                 int rh = HitTestResizeHandle(e.Location);
                 if (rh >= 0)
                 {
                     Cursor = rh switch
-                    {
-                        0 or 3 => Cursors.SizeNWSE,
-                        1 or 2 => Cursors.SizeNESW,
-                        4 or 6 => Cursors.SizeNS,
-                        5 or 7 => Cursors.SizeWE,
-                        _ => Cursors.Default
-                    };
-                    return;
-                }
-            }
-            if (EditorAutoCropControls && _cropHasRect && _preSpaceTool == null
-                && _activeTool != CanvasTool.CutOut)
-            {
-                var screenPt = e.Location;
-                var cropScreen = ImageToScreenRect(_cropRect);
-                var handles = GetCropHandlePositionsScreen(cropScreen);
-                int hitHandle = -1;
-                const float hitRadius = 7f;
-                for (int i = 0; i < handles.Length; i++)
-                {
-                    var h = handles[i];
-                    if (Math.Abs(screenPt.X - h.X) <= hitRadius && Math.Abs(screenPt.Y - h.Y) <= hitRadius)
-                    {
-                        hitHandle = i;
-                        break;
-                    }
-                }
-
-                if (hitHandle >= 0 && hitHandle <= 7)
-                {
-                    Cursor = hitHandle switch
                     {
                         0 or 3 => Cursors.SizeNWSE,
                         1 or 2 => Cursors.SizeNESW,
@@ -2283,32 +2208,25 @@ public sealed partial class AnnotationCanvas
     private void RenderCropOverlay(Graphics g)
     {
         bool cropToolMode = IsCropOverlayActive;
-        bool showDefaultControls = EditorAutoCropControls && _cropHasRect && !cropToolMode && !IsCutOutOverlayActive;
-        if (!cropToolMode && !showDefaultControls) return;
+        if (!cropToolMode) return;
         if (!_cropDragging && !_cropHasRect) return;
         if (_cropRect.Width <= 0 || _cropRect.Height <= 0) return;
 
         var imgRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
         var cropScreen = ImageToScreenRect(_cropRect);
 
-        if (cropToolMode)
+        using (var dark = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
+        using (var region = new Region(imgRect))
         {
-            using (var dark = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
-            using (var region = new Region(imgRect))
-            {
-                region.Exclude(cropScreen);
-                g.FillRegion(dark, region);
-            }
+            region.Exclude(cropScreen);
+            g.FillRegion(dark, region);
         }
 
-        if (cropToolMode)
+        using (var shadowPen = new Pen(Color.FromArgb(120, 0, 0, 0), 1.5f))
+        using (var borderPen = new Pen(Color.FromArgb(255, 0, 255, 255), 1.5f) { DashStyle = DashStyle.Dash })
         {
-            using (var shadowPen = new Pen(Color.FromArgb(120, 0, 0, 0), 1.5f))
-            using (var borderPen = new Pen(Color.FromArgb(255, 0, 255, 255), 1.5f) { DashStyle = DashStyle.Dash })
-            {
-                g.DrawRectangle(shadowPen, cropScreen.X + 1f, cropScreen.Y + 1f, cropScreen.Width, cropScreen.Height);
-                g.DrawRectangle(borderPen, cropScreen.X, cropScreen.Y, cropScreen.Width, cropScreen.Height);
-            }
+            g.DrawRectangle(shadowPen, cropScreen.X + 1f, cropScreen.Y + 1f, cropScreen.Width, cropScreen.Height);
+            g.DrawRectangle(borderPen, cropScreen.X, cropScreen.Y, cropScreen.Width, cropScreen.Height);
         }
 
         bool showHandles = _cropHasRect && (_preSpaceTool == null || _preSpaceTool == CanvasTool.Crop);
@@ -2322,11 +2240,11 @@ public sealed partial class AnnotationCanvas
         var accent = Color.FromArgb(255, 0, 255, 255);
         var shadow = Color.FromArgb(100, 0, 0, 0);
 
-        using var thickPen = new Pen(accent, 3.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        using var shadowPen = new Pen(shadow, 5.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using var thickPen = new Pen(accent, 2.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using var shadowPen = new Pen(shadow, 4f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
 
         // Corner line length
-        const float len = 12f;
+        const float len = 11f;
         // Offset from the actual crop boundary to float nicely (or aligned perfectly)
         const float offset = 0f; 
 
@@ -2375,26 +2293,48 @@ public sealed partial class AnnotationCanvas
         g.DrawLine(pen, x, y, x, y + dy);
     }
 
-    // ── Canvas resize handles (square, float outside the image) ─────────────
+    // ── Canvas resize handles (cyan L-corners on the image edge) ─────────────
 
-    /// <summary>The 8 resize handle centers in screen space, laid out on a rectangle inflated
-    /// outward from the image edge. Indexing matches the crop handles: 0=TL,1=TR,2=BL,3=BR,
-    /// 4=Top,5=Right,6=Bottom,7=Left.</summary>
+    /// <summary>The 8 resize handle centers in screen space, on the image edge.
+    /// Indexing matches the crop handles: 0=TL,1=TR,2=BL,3=BR, 4=Top,5=Right,6=Bottom,7=Left.</summary>
     private PointF[] GetResizeHandlePositionsScreen()
     {
-        var img = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
-        var r = RectangleF.Inflate(img, ResizeHandleOffset, ResizeHandleOffset);
-        return new PointF[]
-        {
-            new(r.Left, r.Top),
-            new(r.Right, r.Top),
-            new(r.Left, r.Bottom),
-            new(r.Right, r.Bottom),
-            new(r.Left + r.Width / 2f, r.Top),
-            new(r.Right, r.Top + r.Height / 2f),
-            new(r.Left + r.Width / 2f, r.Bottom),
-            new(r.Left, r.Top + r.Height / 2f),
-        };
+        var r = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+        return GetCropHandlePositionsScreen(r);
+    }
+
+    /// <summary>True if an annotation grip (or rotate arrow) is under the pointer, so it
+    /// should win over the canvas-edge resize handles.</summary>
+    private bool IsOverAnnotationGrip(Point screenPt)
+    {
+        if (_selectedAnnotationIndex >= 0 && GetSelectHandle(screenPt, _selectedAnnotationIndex) >= 0)
+            return true;
+        if (_moveHoverIndex >= 0 && _moveHoverIndex != _suppressHoverIndex
+            && GetSelectHandle(screenPt, _moveHoverIndex) >= 0)
+            return true;
+        return false;
+    }
+
+    private bool TryBeginCanvasResize(Point screenPt)
+    {
+        if (!EditorShowResizeHandles || _baseBitmap == null || HideCanvasResizeHandles)
+            return false;
+        if (IsOverAnnotationGrip(screenPt))
+            return false;
+        int hit = HitTestResizeHandle(screenPt);
+        if (hit < 0)
+            return false;
+
+        _resizeDragging = true;
+        _userPanned = true;
+        DismissWelcomeOverlay();
+        _activeResizeHandle = hit;
+        _resizeStartImg = ScreenToImage(screenPt);
+        _resizeStartSize = new Size(_baseBitmap.Width, _baseBitmap.Height);
+        _resizePreviewSize = _resizeStartSize;
+        _resizePreviewRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+        Capture = true;
+        return true;
     }
 
     private int HitTestResizeHandle(Point screenPt)
@@ -2481,37 +2421,21 @@ public sealed partial class AnnotationCanvas
     {
         if (!EditorShowResizeHandles || _baseBitmap == null) return;
         if (HideCanvasResizeHandles) return;
-        if (_resizeHandlesOpacity <= 0f && !_resizeDragging) return;
 
-        // While dragging, draw the pending-size outline plus a size badge.
+        var imgScreen = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+
         if (_resizeDragging)
         {
             using var previewShadow = new Pen(Color.FromArgb(120, 0, 0, 0), 2.5f) { DashStyle = DashStyle.Dash };
-            using var previewPen = new Pen(Color.FromArgb(128, ResizeAccent.R, ResizeAccent.G, ResizeAccent.B), 1.6f) { DashStyle = DashStyle.Dash };
+            using var previewPen = new Pen(Color.FromArgb(200, ResizeAccent), 1.35f) { DashStyle = DashStyle.Dash };
             g.DrawRectangle(previewShadow, _resizePreviewRect.X + 1f, _resizePreviewRect.Y + 1f, _resizePreviewRect.Width, _resizePreviewRect.Height);
             g.DrawRectangle(previewPen, _resizePreviewRect.X, _resizePreviewRect.Y, _resizePreviewRect.Width, _resizePreviewRect.Height);
             DrawResizeSizeBadge(g, _resizePreviewRect, $"{_resizePreviewSize.Width} × {_resizePreviewSize.Height}");
+            DrawCropHandles(g, _resizePreviewRect);
+            return;
         }
 
-        var handles = GetResizeHandlePositionsScreen();
-        int alphaFill = (int)(128 * _resizeHandlesOpacity);
-        int alphaShadow = (int)(110 * _resizeHandlesOpacity);
-        if (alphaFill <= 0) return;
-
-        var fill = Color.FromArgb(alphaFill, ResizeAccent.R, ResizeAccent.G, ResizeAccent.B);
-        var shadow = Color.FromArgb(alphaShadow, 0, 0, 0);
-        float half = ResizeHandleSize / 2f;
-
-        using var fillBrush = new SolidBrush(fill);
-        using var shadowBrush = new SolidBrush(shadow);
-        foreach (var h in handles)
-        {
-            var rect = new RectangleF(h.X - half, h.Y - half, ResizeHandleSize, ResizeHandleSize);
-            using (var sp = RoundedRect(new RectangleF(rect.X + 1f, rect.Y + 1f, rect.Width, rect.Height), 2.5f))
-                g.FillPath(shadowBrush, sp);
-            using (var fp = RoundedRect(rect, 2.5f))
-                g.FillPath(fillBrush, fp);
-        }
+        DrawCropHandles(g, imgScreen);
     }
 
     private static void DrawResizeSizeBadge(Graphics g, RectangleF previewRect, string text)
@@ -3375,8 +3299,11 @@ public sealed partial class AnnotationCanvas
         var bounds = GetAnnotationVisualBounds(selected);
         var screenRect = Rectangle.Round(ImageToScreenRect(bounds));
         var selRect = Rectangle.Inflate(screenRect, 4, 4);
+        bool isActiveSelection = annotationIndex == _selectedAnnotationIndex
+            || _multiSelectedIndices.Contains(annotationIndex);
         // Non-resizable items expose only the center move knob (handle 8), never a resize handle.
-        if (IsResizable(selected))
+        // Hover chrome is wrap-only, so resize grips are hit-tested only while selected.
+        if (IsResizable(selected) && isActiveSelection)
         {
             // 4 Corners: 0: TL, 1: TR, 2: BL, 3: BR
             var corners = new[] {

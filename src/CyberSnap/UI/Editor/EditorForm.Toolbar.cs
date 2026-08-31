@@ -176,7 +176,7 @@ public sealed partial class EditorForm
         {
             Dock = DockStyle.Fill,
             BackColor = EditorColors.BgSecondary,
-            Padding = new Padding(20, 18, 20, 18),
+            Padding = new Padding(20, 14, 20, 10),
         };
         _toolbarPanel.Paint += (_, e) =>
         {
@@ -202,10 +202,12 @@ public sealed partial class EditorForm
             RowCount = 2,
         };
         EnableDoubleBuffering(layout);
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        layout.Controls.Add(BuildToolSection(), 0, 0);
+        var toolSection = BuildToolSection();
+        toolSection.Dock = DockStyle.Fill;
+        layout.Controls.Add(toolSection, 0, 0);
         layout.Controls.Add(BuildColorSection(), 0, 1);
 
         _toolbarPanel.Controls.Add(layout);
@@ -537,7 +539,7 @@ public sealed partial class EditorForm
             double dpiScale = DeviceDpi / 96.0;
             double totalScale = dpiScale * UiChrome.UiScale;
 
-            int iconSize = Math.Max(20, (int)Math.Round(19.5 * totalScale));
+            int iconSize = Math.Max(18, (int)Math.Round(17.5 * totalScale));
             int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
             int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
             int cy = brandPanel.Height / 2;
@@ -548,12 +550,34 @@ public sealed partial class EditorForm
             }
 
             var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
-            using var font = UiChrome.ChromeFont(10.5f, FontStyle.Bold);
+            SplitEditorBrandTitle(titleText, out var feature, out var brand);
+            using var featureFont = UiChrome.ChromeFont(9.75f, FontStyle.Bold);
+            using var brandFont = UiChrome.ChromeFont(8f, FontStyle.Regular);
+            var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
             int textX = leftPad + iconSize + textGap;
-            TextRenderer.DrawText(g, titleText, font,
-                new Rectangle(textX, 0, brandPanel.Width - textX, brandPanel.Height),
-                EditorColors.TextPrimary,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            int h = brandPanel.Height;
+            if (!string.IsNullOrEmpty(feature))
+            {
+                int fw = TextRenderer.MeasureText(g, feature, featureFont, Size.Empty, flags).Width;
+                TextRenderer.DrawText(g, feature, featureFont,
+                    new Rectangle(textX, 0, fw, h),
+                    EditorColors.TextPrimary, flags);
+                textX += fw;
+            }
+            if (!string.IsNullOrEmpty(brand))
+            {
+                // Quiet caption: smaller, regular weight, secondary color — not a second headline.
+                const string sep = "  ·  ";
+                int sw = TextRenderer.MeasureText(g, sep, brandFont, Size.Empty, flags).Width;
+                TextRenderer.DrawText(g, sep, brandFont,
+                    new Rectangle(textX, 0, sw, h),
+                    EditorColors.TextSecondary, flags);
+                textX += sw;
+                int bw = TextRenderer.MeasureText(g, brand, brandFont, Size.Empty, flags).Width;
+                TextRenderer.DrawText(g, brand, brandFont,
+                    new Rectangle(textX, 0, bw, h),
+                    EditorColors.TextSecondary, flags);
+            }
         };
 
         // Window controls FlowLayoutPanel (Dock Right)
@@ -871,22 +895,49 @@ public sealed partial class EditorForm
         return _topBarPanel;
     }
 
+    private static void SplitEditorBrandTitle(string title, out string feature, out string brand)
+    {
+        foreach (var sep in new[] { " ⋅ ", " ᐧ ", " · " })
+        {
+            int i = title.LastIndexOf(sep, StringComparison.Ordinal);
+            if (i >= 0)
+            {
+                feature = title[..i];
+                brand = title[(i + sep.Length)..];
+                return;
+            }
+        }
+        feature = title;
+        brand = "";
+    }
+
     private int CalculateBrandWidth()
     {
         double dpiScale = DeviceDpi / 96.0;
         double totalScale = dpiScale * UiChrome.UiScale;
-        int iconSize = Math.Max(20, (int)Math.Round(19.5 * totalScale));
+        int iconSize = Math.Max(18, (int)Math.Round(17.5 * totalScale));
         int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
         int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
         var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
-        using var font = UiChrome.ChromeFont(10.5f, FontStyle.Bold);
-        var textSize = TextRenderer.MeasureText(titleText, font);
-        return leftPad + iconSize + textGap + textSize.Width + 16;
+        SplitEditorBrandTitle(titleText, out var feature, out var brand);
+        var flags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
+        using var featureFont = UiChrome.ChromeFont(9.75f, FontStyle.Bold);
+        using var brandFont = UiChrome.ChromeFont(8f, FontStyle.Regular);
+        int textW = 0;
+        if (!string.IsNullOrEmpty(feature))
+            textW += TextRenderer.MeasureText(feature, featureFont, Size.Empty, flags).Width;
+        if (!string.IsNullOrEmpty(brand))
+        {
+            textW += TextRenderer.MeasureText("  ·  ", brandFont, Size.Empty, flags).Width;
+            textW += TextRenderer.MeasureText(brand, brandFont, Size.Empty, flags).Width;
+        }
+        return leftPad + iconSize + textGap + textW + 16;
     }
 
     private Control BuildToolSection()
     {
         var section = MakeSectionPanel(null, 530);
+        section.Dock = DockStyle.Fill;
 
         // Three groups, 7 rows total, same 3-column grid:
         //   • Nav — 1 row (1/7)
@@ -1028,7 +1079,7 @@ public sealed partial class EditorForm
 
     private Control BuildColorSection()
     {
-        var section = MakeSectionPanel(null, 240);
+        var section = MakeSectionPanel(null, 188);
 
         int swatchSize = (int)Math.Round(28 * 1.35);
         int strokeSize = (int)Math.Round(32 * 1.35);
@@ -1186,7 +1237,7 @@ public sealed partial class EditorForm
             Dock = DockStyle.Top,
             Height = showTitle ? height : height - 24,
             BackColor = Color.Transparent,
-            Padding = new Padding(0, 0, 0, 12),
+            Padding = new Padding(0, 0, 0, 6),
             ColumnCount = 1,
             RowCount = 2,
         };
@@ -1919,7 +1970,7 @@ public sealed partial class EditorForm
         var cropHandlesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-show crop handles"), iconId: null);
         cropHandlesItem.ToolTipText = LocalizationService.Translate("Automatically show crop handles when the crop tool is active.");
         var resizeHandlesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show resize handles"), iconId: null);
-        resizeHandlesItem.ToolTipText = LocalizationService.Translate("Show the square resize handles around the canvas to resize it.");
+        resizeHandlesItem.ToolTipText = LocalizationService.Translate("Show the cyan handles on the canvas edge to resize it inward or outward.");
         var resizeScaleItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize stretches content"), iconId: null);
         resizeScaleItem.ToolTipText = LocalizationService.Translate("When on, dragging the handles stretches the image. When off, it extends or trims the canvas area only.");
         var bannersItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show instruction banners"), iconId: null);
@@ -2464,7 +2515,7 @@ internal sealed class EditorCanvasFrame : Panel
             Math.Max(1, Width - Padding.Horizontal + 16),
             Math.Max(1, Height - Padding.Vertical + 16));
 
-        using var glow = new Pen(Color.FromArgb(34, EditorColors.Accent), 2f);
+        using var glow = new Pen(Color.FromArgb(28, EditorColors.Accent), 1.15f);
         using var border = new Pen(EditorColors.Border);
         using var path = EditorPaint.RoundedRect(rect, 8);
         e.Graphics.DrawPath(glow, path);

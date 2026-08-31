@@ -649,7 +649,7 @@ public sealed partial class RegionOverlayForm
                 }
                 else
                 {
-                    _pendingRotateToggle = alreadySelected && handle < 0
+                    _pendingRotateToggle = alreadySelected && (handle < 0 || handle == 8)
                         && AnnotationTransforms.CanRotate(_undoStack[clickedIdx]);
                     _isSelectDragging = true;
                     var bounds = GetAnnotationBounds(_undoStack[clickedIdx]);
@@ -747,6 +747,8 @@ public sealed partial class RegionOverlayForm
                 }
                 else
                 {
+                    _pendingRotateToggle = alreadySelected
+                        && AnnotationTransforms.CanRotate(_undoStack[clickedIdx]);
                     _isSelectDragging = true;
                     var bounds = GetAnnotationBounds(_undoStack[clickedIdx]);
                     _selectPreviewAnnotation = _undoStack[clickedIdx];
