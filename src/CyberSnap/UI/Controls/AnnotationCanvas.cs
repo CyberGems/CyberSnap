@@ -136,7 +136,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public string? SelectedEmoji
     {
         get => _selectedEmoji;
-        set => _selectedEmoji = value;
+        set
+        {
+            _selectedEmoji = value;
+            if (!string.IsNullOrEmpty(value))
+                LastUsedEmoji.Remember(value);
+        }
     }
 
     /// <summary>Pixel size for emoji placed by the Emoji tool (clamped 16–128).</summary>
@@ -290,7 +295,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public List<Annotation> Annotations => _annotations;
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color ToolColor { get; set; } = Color.FromArgb(255, 220, 0);
+    public Color ToolColor { get; set; } = Color.FromArgb(0, 255, 255);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ShowCaptureFrame { get; set; } = false;
@@ -653,6 +658,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
                     _cropHasRect = true;
                 }
             }
+
+            if (value == CanvasTool.Emoji)
+                SelectedEmoji = LastUsedEmoji.Get();
+
             UpdateCursor();
             UpdateResizeHandlesHover();
             ShowToolBanner(cropApplied

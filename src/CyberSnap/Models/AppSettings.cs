@@ -283,6 +283,8 @@ public sealed class AppSettings
     // Font size last chosen for the Text tool in the post-capture Editor (pixels). Editor-specific,
     // like EditorToolColorArgb. Clamped to the same 10..120 range the Text toolbar enforces.
     public float EditorTextFontSize { get; set; } = 24f;
+    /// <summary>Last emoji glyph placed in the editor or capture overlay.</summary>
+    public string LastEmoji { get; set; } = "";
     // Last Text-tool style (shared defaults for Editor; also seed Capture when available).
     public string EditorTextFontFamily { get; set; } = "Segoe UI";
     public bool EditorTextBold { get; set; } = true;

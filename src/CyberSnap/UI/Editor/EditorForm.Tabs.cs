@@ -52,7 +52,11 @@ public sealed partial class EditorForm
         }
         else
         {
-            canvas.ToolColor = settings != null ? Color.FromArgb(settings.EditorToolColorArgb) : EditorColors.Accent;
+            var resolvedColor = ResolvePersistedToolColor(settings?.EditorToolColorArgb ?? 0);
+            canvas.ToolColor = resolvedColor;
+            if (settings != null && settings.EditorToolColorArgb != resolvedColor.ToArgb()
+                && System.Windows.Application.Current is CyberSnap.App persistApp)
+                persistApp.PersistEditorToolColor(resolvedColor.ToArgb());
             canvas.StrokeWidth = settings?.StrokeWidth ?? 4f;
             canvas.TextFontSize = settings?.EditorTextFontSize ?? 24f;
             if (settings != null)
@@ -85,6 +89,7 @@ public sealed partial class EditorForm
         canvas.MouseUp += OnCanvasMouseUp;
         canvas.DoubleClick += OnCanvasDoubleClick;
         canvas.EmojiPlacementRequested += OnCanvasEmojiPlacementRequested;
+        canvas.EmojiPlaced += OnCanvasEmojiPlaced;
         canvas.AllowDrop = true;
         canvas.DragEnter += OnEditorDragEnter;
         canvas.DragLeave += OnEditorDragLeave;
@@ -110,6 +115,7 @@ public sealed partial class EditorForm
         canvas.MouseUp -= OnCanvasMouseUp;
         canvas.DoubleClick -= OnCanvasDoubleClick;
         canvas.EmojiPlacementRequested -= OnCanvasEmojiPlacementRequested;
+        canvas.EmojiPlaced -= OnCanvasEmojiPlaced;
         canvas.DragEnter -= OnEditorDragEnter;
         canvas.DragLeave -= OnEditorDragLeave;
         canvas.DragDrop -= OnEditorDragDrop;
@@ -159,6 +165,12 @@ public sealed partial class EditorForm
 
     private void OnCanvasEmojiPlacementRequested(object? sender, EventArgs e)
         => OpenEmojiPicker(GetEmojiToolButton());
+
+    private void OnCanvasEmojiPlaced(object? sender, EventArgs e)
+    {
+        if (_emojiPicker is { IsDisposed: false })
+            _emojiPicker.Close();
+    }
 
     private void WireTabStrip()
     {

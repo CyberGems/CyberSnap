@@ -53,6 +53,7 @@ internal sealed class EmojiPickerPopup : Form
         };
 
         _grid = new EmojiGrid(_renderer) { Dock = DockStyle.Fill };
+        _grid.SetSelectedEmoji(_canvas.SelectedEmoji);
 
         _search = new TextBox
         {
@@ -165,6 +166,7 @@ internal sealed class EmojiPickerPopup : Form
         private (string emoji, string name)[] _items = EmojiCatalog.Items;
         private int _scrollRow;
         private int _hover = -1;
+        private string? _selectedEmoji;
 
         public event Action<string>? EmojiChosen;
 
@@ -177,6 +179,13 @@ internal sealed class EmojiPickerPopup : Form
                      ControlStyles.OptimizedDoubleBuffer |
                      ControlStyles.ResizeRedraw, true);
             BackColor = EditorColors.BgSecondary;
+        }
+
+        public void SetSelectedEmoji(string? emoji)
+        {
+            if (_selectedEmoji == emoji) return;
+            _selectedEmoji = emoji;
+            Invalidate();
         }
 
         public void SetFilter(string text)
@@ -258,7 +267,7 @@ internal sealed class EmojiPickerPopup : Form
                     int y = (row - firstRow) * CellSize;
                     var cell = new Rectangle(x, y, CellSize, CellSize);
 
-                    if (idx == _hover)
+                    if (idx == _hover || _items[idx].emoji == _selectedEmoji)
                     {
                         using var hl = new SolidBrush(EditorColors.BgHover);
                         using var path = EditorPaint.RoundedRect(Rectangle.Inflate(cell, -3, -3), 7);

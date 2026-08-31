@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 
 namespace CyberSnap.Capture;
@@ -28,6 +29,8 @@ public sealed partial class RegionOverlayForm
         {
             _emojiPickerOpen = false;
             HideEmojiSearchBox();
+            if (_mode == CaptureMode.Emoji && !string.IsNullOrEmpty(_selectedEmoji))
+                _isPlacingEmoji = true;
             RefreshToolbar();
             Invalidate();
             return;
@@ -146,6 +149,7 @@ public sealed partial class RegionOverlayForm
                 if (_emojiHovered < filtered.Length)
                 {
                     _selectedEmoji = filtered[_emojiHovered].emoji;
+                    LastUsedEmoji.Remember(_selectedEmoji);
                     _isPlacingEmoji = true;
                     _emojiPickerOpen = false;
                     RefreshToolbar();
@@ -205,7 +209,7 @@ public sealed partial class RegionOverlayForm
         // Emoji placing: Tab re-opens picker; [ ] resize like the editor.
         if (_mode == CaptureMode.Emoji && _isPlacingEmoji)
         {
-            if (e.KeyCode == Keys.Tab) { _emojiPickerOpen = true; _isPlacingEmoji = false; QueueEmojiWarmup(); RefreshToolbar(); }
+            if (e.KeyCode == Keys.Tab) { OpenCaptureEmojiPicker(resetSearch: false); RefreshToolbar(); }
             else if (e.KeyCode == Keys.OemOpenBrackets) NudgeEmojiPlaceSize(-1);
             else if (e.KeyCode == Keys.OemCloseBrackets) NudgeEmojiPlaceSize(1);
             return;

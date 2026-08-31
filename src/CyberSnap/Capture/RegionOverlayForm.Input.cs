@@ -392,10 +392,16 @@ public sealed partial class RegionOverlayForm
         }
 
         // 4. Click outside any menu / popup:
-        // If a popup was open or a menu was just closed by this click, dismiss popups and RETURN
-        // without starting selection or capture!
+        // Dismiss popups. If the emoji drawer was open, stamp the last-armed glyph in the
+        // same click so placing does not take two clicks.
         if (hadOpenPopup || recentlyClosedMenu)
         {
+            string? armedEmoji = _selectedEmoji;
+            bool stampEmoji = _mode == CaptureMode.Emoji
+                && _emojiPickerOpen
+                && !string.IsNullOrEmpty(armedEmoji)
+                && !_emojiPickerRect.Contains(e.Location);
+
             _colorPickerOpen = false;
             _fontPickerOpen = false;
             _emojiPickerOpen = false;
@@ -403,6 +409,19 @@ public sealed partial class RegionOverlayForm
             HideFontSearchBox();
             HideEmojiSearchBox();
             HideToolbarTooltip();
+
+            if (stampEmoji)
+            {
+                _isPlacingEmoji = true;
+                HideToolBanner();
+                var pos = new Point(e.Location.X - (int)(_emojiPlaceSize / 2), e.Location.Y - (int)(_emojiPlaceSize / 2));
+                AddAnnotation(new EmojiAnnotation(pos, armedEmoji!, _emojiPlaceSize));
+                SuppressHoverBoxForLastPlaced();
+                RefreshToolbar();
+                Invalidate(InflateForRepaint(GetEmojiPreviewRect(e.Location)));
+                return;
+            }
+
             RefreshToolbar();
             Invalidate();
             return;

@@ -159,7 +159,8 @@ public sealed partial class RegionOverlayForm
     private void SetMode(CaptureMode m, string? toolId = null, bool showHelpBanner = true)
     {
         if (_isTyping) CommitText();
-        bool wasEmoji = _mode == CaptureMode.Emoji && _emojiPickerOpen;
+        bool previousWasEmoji = _mode == CaptureMode.Emoji;
+        bool pickerWasOpen = previousWasEmoji && _emojiPickerOpen;
         bool wasSelectionMode = IsSelectionCaptureMode();
         _colorPickerOpen = false;
         _fontPickerOpen = false;
@@ -241,40 +242,28 @@ public sealed partial class RegionOverlayForm
         _pickerTimer.Stop();
         CloseMagWindow();
 
-        // Emoji mode: toggle picker if already in emoji mode
+        // Emoji: first select arms the last-used glyph and opens the drawer.
+        // Clicking the same button again closes the drawer; clicking the canvas stamps and closes.
         if (m == CaptureMode.Emoji)
         {
             try
             {
-                if (wasEmoji)
+                if (previousWasEmoji && pickerWasOpen)
                 {
-                    _emojiPickerOpen = false;
-                    _isPlacingEmoji = false;
-                    _emojiWarmupPending = false;
-                    _emojiWarmupIndex = 0;
                     HideEmojiSearchBox();
+                    ArmLastEmojiForPlacement();
                     RefreshToolbar();
                     return;
                 }
-                _emojiPickerOpen = true;
-                _isPlacingEmoji = false;
-                _selectedEmoji = null;
-                _emojiSearch = "";
-                _emojiScrollOffset = 0;
-                int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding, visibleRows = EmojiPickerVisibleRows;
-                int searchBarH = EmojiPickerSearchBarHeight;
-                int pw = cols * emojiSize + pad * 2;
-                int ph = pad + searchBarH + pad + visibleRows * emojiSize + pad;
-                _emojiPickerRect = PositionPopupFromAnchor(_toolbarRect, pw, ph);
-                EnsureToolbarReady();
-                ShowEmojiSearchBox();
-                QueueEmojiWarmup();
+
+                OpenCaptureEmojiPicker();
             }
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("overlay.emoji-mode", ex);
                 _emojiPickerOpen = false;
                 HideEmojiSearchBox();
+                ArmLastEmojiForPlacement();
             }
         }
         else
@@ -353,7 +342,7 @@ public sealed partial class RegionOverlayForm
         else if (m == CaptureMode.Blur)
             action = LocalizationService.Translate("Click & drag to blur");
         else if (m == CaptureMode.Emoji)
-            action = LocalizationService.Translate("Click to pick emoji");
+            action = LocalizationService.Translate("Click to place emoji");
 
         // Silent restores (e.g. last annotation tool after locking a region) must not flash a help banner.
         if (showHelpBanner && action != null && !string.IsNullOrEmpty(toolName))
@@ -469,6 +458,53 @@ public sealed partial class RegionOverlayForm
         int x = cursor.X - (int)(_emojiPlaceSize / 2);
         int y = cursor.Y - (int)(_emojiPlaceSize / 2);
         return new Rectangle(x - 8, y - 8, bitmapSize + 16, bitmapSize + 16);
+    }
+
+    private void ArmLastEmojiForPlacement()
+    {
+        _selectedEmoji = LastUsedEmoji.Get();
+        _isPlacingEmoji = true;
+        _emojiPickerOpen = false;
+        _emojiWarmupPending = false;
+        _emojiWarmupIndex = 0;
+        HideEmojiSearchBox();
+    }
+
+    private void OpenCaptureEmojiPicker(bool resetSearch = true)
+    {
+        _emojiPickerOpen = true;
+        if (string.IsNullOrEmpty(_selectedEmoji))
+            _selectedEmoji = LastUsedEmoji.Get();
+        _isPlacingEmoji = !string.IsNullOrEmpty(_selectedEmoji);
+        if (resetSearch)
+        {
+            _emojiSearch = "";
+            _emojiScrollOffset = 0;
+        }
+        HighlightLastEmojiInPicker();
+        int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding, visibleRows = EmojiPickerVisibleRows;
+        int searchBarH = EmojiPickerSearchBarHeight;
+        int pw = cols * emojiSize + pad * 2;
+        int ph = pad + searchBarH + pad + visibleRows * emojiSize + pad;
+        _emojiPickerRect = PositionPopupFromAnchor(_toolbarRect, pw, ph);
+        EnsureToolbarReady();
+        ShowEmojiSearchBox();
+        QueueEmojiWarmup();
+    }
+
+    private void HighlightLastEmojiInPicker()
+    {
+        if (string.IsNullOrEmpty(_selectedEmoji))
+        {
+            _emojiHovered = -1;
+            return;
+        }
+
+        var filtered = GetFilteredEmojiPalette();
+        int idx = Array.FindIndex(filtered, it => it.emoji == _selectedEmoji);
+        _emojiHovered = idx;
+        if (idx >= 0)
+            _emojiScrollOffset = Math.Max(0, idx / EmojiPickerColumns);
     }
 
     private void NudgeEmojiPlaceSize(int direction)

@@ -443,6 +443,17 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-stroke-width", ex); }
     }
 
+    /// <summary>Persists the last emoji glyph chosen in the editor or capture overlay.</summary>
+    public void PersistLastEmoji(string emoji)
+    {
+        if (_settingsService is null) return;
+        if (string.IsNullOrEmpty(emoji)) return;
+        if (string.Equals(_settingsService.Settings.LastEmoji, emoji, StringComparison.Ordinal)) return;
+        _settingsService.Settings.LastEmoji = emoji;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-last-emoji", ex); }
+    }
+
     /// <summary>Persists the Text tool font size last chosen in the editor.</summary>
     public void PersistEditorTextFontSize(float size)
     {
