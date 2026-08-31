@@ -731,6 +731,9 @@ public partial class SettingsWindow
 
                         if (w is OcrResultWindow ocrWin && ocrWin.IsLoaded)
                             ocrWin.ApplyTheme();
+
+                        if (w is CapturePreviewDialog preview && preview.IsLoaded)
+                            preview.ApplyTheme();
                     }
                     catch (Exception ex)
                     {
