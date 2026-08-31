@@ -660,27 +660,9 @@ public sealed partial class EditorForm
             var g = e.Graphics;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int cy = _titleFileNameLabel.Height / 2;
+            bool dirty = _canvas.IsDirty;
+            bool hasSavedPath = !string.IsNullOrWhiteSpace(_savedFilePath);
 
-            // Determine LED status colors
-            Color ledColor;
-            Color ledAuraColor;
-            if (_canvas.IsDirty)
-            {
-                ledColor = Color.FromArgb(245, 158, 11); // Amber/Orange
-                ledAuraColor = Color.FromArgb(50, 245, 158, 11);
-            }
-            else if (string.IsNullOrWhiteSpace(_savedFilePath))
-            {
-                ledColor = Color.FromArgb(14, 165, 233); // Blue
-                ledAuraColor = Color.FromArgb(50, 14, 165, 233);
-            }
-            else
-            {
-                ledColor = Color.FromArgb(34, 197, 94); // Green
-                ledAuraColor = Color.FromArgb(50, 34, 197, 94);
-            }
-
-            int ledSize = 8;
             int ledAuraSize = 14;
             int gap = 8;
             using var titleFont = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
@@ -690,31 +672,9 @@ public sealed partial class EditorForm
             int startX = (_titleFileNameLabel.Width - totalWidth) / 2;
             if (startX < 4) startX = 4;
 
-            // Draw LED with glow effect
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            float ledCenterY = cy;
-            float ledX = startX + (ledAuraSize - ledSize) / 2f;
-            float ledY = cy - ledSize / 2f;
+            EditorColors.DrawStatusLed(g, startX, cy, dirty, hasSavedPath, coreSize: 8f, auraSize: ledAuraSize);
 
-            // Aura
-            float auraX = startX;
-            float auraY = cy - ledAuraSize / 2f;
-            using (var auraBrush = new SolidBrush(ledAuraColor))
-            {
-                g.FillEllipse(auraBrush, auraX, auraY, ledAuraSize, ledAuraSize);
-            }
-            // Core
-            using (var coreBrush = new SolidBrush(ledColor))
-            {
-                g.FillEllipse(coreBrush, ledX, ledY, ledSize, ledSize);
-            }
-            // Specular Highlight
-            using (var whiteBrush = new SolidBrush(Color.FromArgb(200, 255, 255, 255)))
-            {
-                g.FillEllipse(whiteBrush, ledX + 2, ledY + 2, 2.5f, 2.5f);
-            }
-
-            // Draw Text directly after the LED (replaces the blank document icon)
             int textX = startX + ledAuraSize + gap;
             TextRenderer.DrawText(g, _titleFileNameText, titleFont,
                 new Rectangle(textX, 0, _titleFileNameLabel.Width - textX, _titleFileNameLabel.Height),
@@ -2470,6 +2430,36 @@ internal static class EditorColors
     public static Color Border => P(Color.FromArgb(76, 184, 190, 198), Color.FromArgb(76, 0, 255, 255), Color.FromArgb(22, 0, 0, 0));
     public static Color BorderSubtle => P(Color.FromArgb(34, 184, 190, 198), Color.FromArgb(34, 0, 255, 255), Color.FromArgb(14, 0, 0, 0));
     public static Color WindowBorder => P(Color.FromArgb(75, 184, 190, 198), Color.FromArgb(75, 0, 255, 255), Color.FromArgb(20, 0, 0, 0));
+
+    public static void DrawStatusLed(Graphics g, float left, float centerY, bool dirty, bool hasSavedPath, float coreSize = 8f, float auraSize = 14f)
+    {
+        Color core;
+        Color aura;
+        if (dirty)
+        {
+            core = Color.FromArgb(245, 158, 11);
+            aura = Color.FromArgb(50, 245, 158, 11);
+        }
+        else if (!hasSavedPath)
+        {
+            core = Color.FromArgb(14, 165, 233);
+            aura = Color.FromArgb(50, 14, 165, 233);
+        }
+        else
+        {
+            core = Color.FromArgb(34, 197, 94);
+            aura = Color.FromArgb(50, 34, 197, 94);
+        }
+
+        float ledX = left + (auraSize - coreSize) / 2f;
+        float ledY = centerY - coreSize / 2f;
+        using (var auraBrush = new SolidBrush(aura))
+            g.FillEllipse(auraBrush, left, centerY - auraSize / 2f, auraSize, auraSize);
+        using (var coreBrush = new SolidBrush(core))
+            g.FillEllipse(coreBrush, ledX, ledY, coreSize, coreSize);
+        using (var spec = new SolidBrush(Color.FromArgb(200, 255, 255, 255)))
+            g.FillEllipse(spec, ledX + coreSize * 0.25f, ledY + coreSize * 0.25f, coreSize * 0.31f, coreSize * 0.31f);
+    }
 }
 
 internal sealed class EditorWindowFrame : DoubleBufferedPanel

@@ -6,7 +6,7 @@ using CyberSnap.Services;
 
 namespace CyberSnap.UI.Editor;
 
-internal readonly record struct EditorTabInfo(string Title, bool Dirty, bool Active);
+internal readonly record struct EditorTabInfo(string Title, bool Dirty, bool HasSavedPath, bool Active);
 
 /// <summary>
 /// Compact document tabs above the horizontal ruler when more than one
@@ -172,13 +172,10 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
                 g.DrawLine(accent, rect.Left + 8, rect.Bottom - 2, rect.Right - 8, rect.Bottom - 2);
             }
 
-            int textLeft = rect.Left + 10;
-            if (tab.Dirty)
-            {
-                using var dot = new SolidBrush(EditorColors.Accent);
-                g.FillEllipse(dot, textLeft, rect.Top + (rect.Height - 7) / 2, 7, 7);
-                textLeft += 12;
-            }
+            int textLeft = rect.Left + 8;
+            float ledCy = rect.Top + rect.Height / 2f;
+            EditorColors.DrawStatusLed(g, textLeft, ledCy, tab.Dirty, tab.HasSavedPath, coreSize: 6f, auraSize: 10f);
+            textLeft += 14;
 
             var close = _closeRects[i];
             var textRect = new Rectangle(textLeft, rect.Top, Math.Max(0, close.Left - textLeft - 4), rect.Height);
@@ -215,7 +212,7 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         {
             int titleW = TextRenderer.MeasureText(tab.Title, font, Size.Empty,
                 TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
-            int w = Math.Clamp(titleW + (tab.Dirty ? 12 : 0) + 32, 88, 200);
+            int w = Math.Clamp(titleW + 14 + 32, 96, 210);
             var rect = new Rectangle(x, y, w, tabH);
             _tabRects.Add(rect);
             _closeRects.Add(new Rectangle(rect.Right - 20, rect.Top + 2, 16, rect.Height - 4));
