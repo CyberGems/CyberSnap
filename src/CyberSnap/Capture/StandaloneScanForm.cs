@@ -15,12 +15,19 @@ namespace CyberSnap.Capture;
 /// </summary>
 public sealed class StandaloneScanForm : Form
 {
+    private readonly System.Windows.Forms.Timer _processingAnimationTimer =
+        new() { Interval = ProcessingScanRenderer.AnimationIntervalMs };
+
     private readonly Bitmap _screenshot;
     private readonly BannerLayeredForm _banner;
     private Point _cursorPos;
     private Point _dragStart;
     private bool _isDragging;
     private bool _closed;
+    private bool _isProcessing;
+    private float _processingScanProgress;
+    private long _processingStartedAtMs;
+    private int _processingAnimationDurationMs = ProcessingScanRenderer.AnimationMaxDurationMs;
 
     // Selection rectangle (normalized)
     private Rectangle _selectionRect;
@@ -41,6 +48,20 @@ public sealed class StandaloneScanForm : Form
         StartPosition = FormStartPosition.Manual;
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+
+        _processingAnimationTimer.Tick += (_, _) =>
+        {
+            if (!_isProcessing || _closed)
+                return;
+
+            long elapsedMs = Environment.TickCount64 - _processingStartedAtMs;
+            _processingScanProgress = Math.Clamp(
+                elapsedMs / (float)_processingAnimationDurationMs,
+                0f,
+                1f);
+
+            Invalidate(_selectionRect);
+        };
 
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
@@ -81,6 +102,8 @@ public sealed class StandaloneScanForm : Form
     {
         if (disposing)
         {
+            _processingAnimationTimer.Stop();
+            _processingAnimationTimer.Dispose();
             if (IsHandleCreated)
                 WindowDetector.UnregisterIgnoredWindow(Handle);
             WindowDetector.ClearSnapshot();
@@ -118,7 +141,7 @@ public sealed class StandaloneScanForm : Form
             return;
         }
 
-        if (e.Button == MouseButtons.Left)
+        if (e.Button == MouseButtons.Left && !_isProcessing)
         {
             _isDragging = true;
             _dragStart = e.Location;
@@ -192,7 +215,7 @@ public sealed class StandaloneScanForm : Form
         base.OnMouseMove(e);
     }
 
-    protected override void OnMouseUp(MouseEventArgs e)
+    protected override async void OnMouseUp(MouseEventArgs e)
     {
         if (!_isDragging || e.Button != MouseButtons.Left)
         {
@@ -219,15 +242,28 @@ public sealed class StandaloneScanForm : Form
             }
         }
 
-        // Decode barcode from the selected region
+        // Freeze the selection visually, start the scan animation and decode in the background.
+        _isProcessing = true;
+        _processingScanProgress = 0f;
+        _processingStartedAtMs = Environment.TickCount64;
+        _processingAnimationDurationMs =
+            ProcessingScanRenderer.GetAnimationDurationMs(_selectionRect.Height);
+        _processingAnimationTimer.Start();
         Cursor = Cursors.WaitCursor;
         Invalidate();
 
         try
         {
             using var cropped = _screenshot.Clone(_selectionRect, _screenshot.PixelFormat);
-            var decoded = BarcodeService.DecodeDetailed(cropped);
+            var decoded = await Task.Run(() => BarcodeService.DecodeDetailed(cropped));
             var previewSource = decoded is null ? null : BitmapPerf.ToBitmapSource(cropped);
+
+            // Always let one complete scan pass finish, while slower decodes add no delay.
+            long elapsedMs = Environment.TickCount64 - _processingStartedAtMs;
+            int remainingMs = _processingAnimationDurationMs
+                - (int)Math.Min(int.MaxValue, elapsedMs);
+            if (remainingMs > 0)
+                await Task.Delay(remainingMs);
 
             // Close overlay first so screenshot is released
             Close();
@@ -287,6 +323,11 @@ public sealed class StandaloneScanForm : Form
             AppDiagnostics.LogError("standalone-scan", ex);
             Close();
         }
+        finally
+        {
+            _isProcessing = false;
+            _processingAnimationTimer.Stop();
+        }
 
         base.OnMouseUp(e);
     }
@@ -311,11 +352,17 @@ public sealed class StandaloneScanForm : Form
         {
             SelectionFrameRenderer.DrawAutoDetectRectangle(g, _autoDetectRect);
         }
+
+        if (_isProcessing && _hasSelection)
+        {
+            ProcessingScanRenderer.Draw(g, _selectionRect, _processingScanProgress);
+        }
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         _closed = true;
+        _processingAnimationTimer.Stop();
         base.OnFormClosed(e);
     }
 

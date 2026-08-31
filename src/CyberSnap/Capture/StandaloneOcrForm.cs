@@ -22,6 +22,11 @@ public sealed class StandaloneOcrForm : Form
     private bool _isDragging;
     private bool _closed;
     private bool _isProcessing;
+    private readonly System.Windows.Forms.Timer _processingAnimationTimer =
+        new() { Interval = ProcessingScanRenderer.AnimationIntervalMs };
+    private float _processingScanProgress;
+    private long _processingStartedAtMs;
+    private int _processingAnimationDurationMs = ProcessingScanRenderer.AnimationMaxDurationMs;
 
     // Selection rectangle (normalized)
     private Rectangle _selectionRect;
@@ -47,6 +52,20 @@ public sealed class StandaloneOcrForm : Form
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
         KeyPreview = true;
+
+        _processingAnimationTimer.Tick += (_, _) =>
+        {
+            if (!_isProcessing || _closed)
+                return;
+
+            long elapsedMs = Environment.TickCount64 - _processingStartedAtMs;
+            _processingScanProgress = Math.Clamp(
+                elapsedMs / (float)_processingAnimationDurationMs,
+                0f,
+                1f);
+
+            Invalidate(_selectionRect);
+        };
 
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
@@ -118,6 +137,8 @@ public sealed class StandaloneOcrForm : Form
         if (disposing)
         {
             SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopyToClipboardChanged;
+            _processingAnimationTimer.Stop();
+            _processingAnimationTimer.Dispose();
             if (IsHandleCreated)
                 WindowDetector.UnregisterIgnoredWindow(Handle);
             WindowDetector.ClearSnapshot();
@@ -259,6 +280,11 @@ public sealed class StandaloneOcrForm : Form
 
         // Freeze the selection visually, start OCR processing
         _isProcessing = true;
+        _processingScanProgress = 0f;
+        _processingStartedAtMs = Environment.TickCount64;
+        _processingAnimationDurationMs =
+            ProcessingScanRenderer.GetAnimationDurationMs(_selectionRect.Height);
+        _processingAnimationTimer.Start();
         Cursor = Cursors.WaitCursor;
         Invalidate();
 
@@ -272,6 +298,13 @@ public sealed class StandaloneOcrForm : Form
             var langTag = GetOcrLanguageTag();
             string text = await Task.Run(() => OcrService.RecognizeAsync(cropped, langTag));
             var previewSource = BitmapPerf.ToBitmapSource(cropped);
+
+            // Always let one complete scan pass before closing, while slower OCR runs add no delay.
+            long elapsedMs = Environment.TickCount64 - _processingStartedAtMs;
+            int remainingMs = _processingAnimationDurationMs
+                - (int)Math.Min(int.MaxValue, elapsedMs);
+            if (remainingMs > 0)
+                await Task.Delay(remainingMs);
 
             // Close the overlay first so screenshot is released
             Close();
@@ -367,16 +400,17 @@ public sealed class StandaloneOcrForm : Form
             SelectionFrameRenderer.DrawAutoDetectRectangle(g, _autoDetectRect);
         }
 
-        // If processing, show processing indicator
+        // If processing, show a lightweight scan animation without obscuring the capture.
         if (_isProcessing && _hasSelection)
         {
-            DrawProcessingIndicator(g, _selectionRect);
+            ProcessingScanRenderer.Draw(g, _selectionRect, _processingScanProgress);
         }
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         _closed = true;
+        _processingAnimationTimer.Stop();
         base.OnFormClosed(e);
     }
 
@@ -389,32 +423,6 @@ public sealed class StandaloneOcrForm : Form
         int w = Math.Abs(a.X - b.X);
         int h = Math.Abs(a.Y - b.Y);
         return new Rectangle(x, y, w, h);
-    }
-
-    private static void DrawProcessingIndicator(Graphics g, Rectangle rect)
-    {
-        // Draw a subtle scanning/processing overlay on the selection
-        using var brush = new SolidBrush(Color.FromArgb(40, 0, 120, 255));
-        g.FillRectangle(brush, rect);
-
-        // "Processing..." text centered in the selection
-        var text = "Processing...";
-        using var font = new Font("Segoe UI", 10f, FontStyle.Regular);
-        var textSize = g.MeasureString(text, font);
-        float tx = rect.X + (rect.Width - textSize.Width) / 2f;
-        float ty = rect.Y + (rect.Height - textSize.Height) / 2f;
-
-        // Text background
-        var bgRect = new RectangleF(tx - 6, ty - 2, textSize.Width + 12, textSize.Height + 4);
-        using (var bgBrush = new SolidBrush(Color.FromArgb(200, 0, 0, 0)))
-        {
-            g.FillRectangle(bgBrush, bgRect);
-        }
-
-        using (var textBrush = new SolidBrush(Color.White))
-        {
-            g.DrawString(text, font, textBrush, tx, ty);
-        }
     }
 
     private static string GetOcrLanguageTag()
