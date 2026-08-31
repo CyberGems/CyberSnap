@@ -899,7 +899,8 @@ public partial class SettingsWindow
             "autocopytoclipboard"       => AfterCaptureOutcomeEditor,
             "autocopy"                  => AfterCaptureOutcomeEditor,
             "autocopyexcludeimages"     => AutoCopyExcludeImagesCheck,
-            "autocopyexcludeocr"        => AutoCopyExcludeOcrCheck,
+            "autocopyocr"               => AutoCopyOcrCheck,
+            "autocopyexcludeocr"        => AutoCopyOcrCheck, // legacy search term
             "autocopyexcludescan"       => AutoCopyExcludeScanCheck,
             "autocopyexcluderecording"  => VideoOutcomeEditor,
             "autocopyexcludegif"        => GifOutcomeEditor,

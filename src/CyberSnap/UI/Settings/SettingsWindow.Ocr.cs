@@ -28,8 +28,9 @@ public partial class SettingsWindow
         {
             LoadOcrLanguageOptions();
             LoadTranslateLanguageCombos();
-            if (AutoCopyExcludeOcrCheck != null)
-                AutoCopyExcludeOcrCheck.IsChecked = _settingsService.Settings.AutoCopyExcludeOcr;
+            if (AutoCopyOcrCheck != null)
+                AutoCopyOcrCheck.IsChecked =
+                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Ocr);
             UpdateAutoCopyExcludeEnabledState();
             OcrPinByDefaultCheck.IsChecked = _settingsService.Settings.OcrResultWindowPinnedByDefault;
             GoogleApiKeyBox.Password = _settingsService.Settings.GoogleTranslateApiKey ?? "";
@@ -121,19 +122,24 @@ public partial class SettingsWindow
             SetOcrPreferenceStatus);
     }
 
-    private void AutoCopyExcludeOcrCheck_Changed(object sender, RoutedEventArgs e)
+    private void AutoCopyOcrCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressOcrPreferenceChange || _suppressAutoCopyPreferenceChange) return;
 
-        var previous = _settingsService.Settings.AutoCopyExcludeOcr;
-        var selected = AutoCopyExcludeOcrCheck.IsChecked == true;
+        var previous = AutoCopyPreferences.ShouldCopy(
+            _settingsService.Settings,
+            AutoCopyKind.Ocr);
+        var selected = AutoCopyOcrCheck.IsChecked == true;
         UpdateOcrPreference(
-            "settings.auto-copy-exclude-ocr",
-            "Don't auto-copy OCR text",
+            "settings.auto-copy-ocr",
+            "Enable OCR auto-copy",
             previous,
             selected,
-            value => AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Ocr, value),
-            value => AutoCopyExcludeOcrCheck.IsChecked = value,
+            value => AutoCopyPreferences.SetExcluded(
+                _settingsService.Settings,
+                AutoCopyKind.Ocr,
+                excluded: !value),
+            value => AutoCopyOcrCheck.IsChecked = value,
             SetOcrPreferenceStatus,
             _ =>
             {

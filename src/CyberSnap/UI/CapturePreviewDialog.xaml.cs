@@ -91,6 +91,18 @@ namespace CyberSnap.UI
         private static readonly System.Drawing.Color PillPendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
         private static readonly System.Drawing.Color DeleteAccentRed = System.Drawing.Color.FromArgb(255, 239, 83, 80);
 
+        private static System.Drawing.Color ToDrawingColor(System.Windows.Media.Color color) =>
+            System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
+
+        private static System.Drawing.Color GetPillPendingAccent() =>
+            Theme.IsGray ? ToDrawingColor(Theme.Accent) : PillPendingBlue;
+
+        private static System.Drawing.Color GetPillDoneAccent() =>
+            Theme.IsGray ? ToDrawingColor(Theme.TextPrimary) : PillDoneGreen;
+
+        private static System.Drawing.Color GetDeleteAccent() =>
+            Theme.IsGray ? ToDrawingColor(Theme.TextSecondary) : DeleteAccentRed;
+
         private enum PillVisualState
         {
             Pending,
@@ -474,7 +486,7 @@ namespace CyberSnap.UI
             SetPreviewIcon(EditIcon, "draw", primaryIconColor, 13);
             SetPreviewIcon(OpenViewerIcon, "eye", primaryIconColor, 13);
             SetPreviewIcon(PrintIcon, "print", primaryIconColor, 13);
-            SetPreviewIcon(DeleteIcon, "trash", DeleteAccentRed, 13);
+            SetPreviewIcon(DeleteIcon, "trash", GetDeleteAccent(), 13);
             SetPreviewIcon(ShareIcon, "share", primaryIconColor, 14);
             SetPreviewIcon(GalleryIcon, "history", primaryIconColor, 14);
             SetPreviewIcon(MoreIcon, "more", primaryIconColor, 13);
@@ -497,7 +509,7 @@ namespace CyberSnap.UI
         /// <summary>Secondary/accent color used by the pills for their pending spinner.
         /// Matches the tone of the chips so the "Processing" button loader matches them.</summary>
         private System.Drawing.Color GetPrimaryButtonSpinnerColor()
-            => System.Drawing.Color.FromArgb(255, 0, 162, 255);
+            => GetPillPendingAccent();
 
         private void CapturePreviewDialog_Activated(object? sender, EventArgs e)
         {
@@ -1657,7 +1669,9 @@ namespace CyberSnap.UI
         {
             StopPillStatusSpin(chip);
 
-            var accent = visual == PillVisualState.Done ? PillDoneGreen : PillPendingBlue;
+            var accent = visual == PillVisualState.Done
+                ? GetPillDoneAccent()
+                : GetPillPendingAccent();
             chip.ChipBorder.Background = Theme.Brush(System.Windows.Media.Color.FromArgb(22, accent.R, accent.G, accent.B));
             chip.ChipBorder.BorderBrush = Theme.Brush(System.Windows.Media.Color.FromArgb(55, accent.R, accent.G, accent.B));
             chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 26, active: false);

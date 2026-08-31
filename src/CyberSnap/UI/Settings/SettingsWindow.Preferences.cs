@@ -1325,8 +1325,8 @@ public partial class SettingsWindow
         {
             if (AutoCopyExcludeImagesCheck != null)
                 AutoCopyExcludeImagesCheck.IsChecked = s.AutoCopyExcludeImages;
-            if (AutoCopyExcludeOcrCheck != null)
-                AutoCopyExcludeOcrCheck.IsChecked = s.AutoCopyExcludeOcr;
+            if (AutoCopyOcrCheck != null)
+                AutoCopyOcrCheck.IsChecked = AutoCopyPreferences.ShouldCopy(s, AutoCopyKind.Ocr);
             if (AutoCopyExcludeScanCheck != null)
                 AutoCopyExcludeScanCheck.IsChecked = s.AutoCopyExcludeScan;
             UpdateAutoCopyExcludeEnabledState();
@@ -1361,7 +1361,7 @@ public partial class SettingsWindow
         }
 
         Apply(AutoCopyExcludeImagesRow, AutoCopyExcludeImagesCheck);
-        Apply(AutoCopyExcludeOcrRow, AutoCopyExcludeOcrCheck);
+        Apply(AutoCopyOcrRow, AutoCopyOcrCheck);
         Apply(AutoCopyExcludeScanRow, AutoCopyExcludeScanCheck);
     }
 

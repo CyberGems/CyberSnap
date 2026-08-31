@@ -348,6 +348,8 @@
   "When global Auto-copy is on, still don't copy scanned codes.": "Aunque el Auto-copy global esté activo, no copiar códigos escaneados.",
   "Don't auto-copy OCR text": "No auto-copiar texto OCR",
   "When global Auto-copy is on, still don't copy OCR text. Keep opening the result window.": "Aunque el Auto-copy global esté activo, no copiar texto OCR. Seguir abriendo la ventana de resultado.",
+  "Enable OCR auto-copy": "Activar auto-copiado de OCR",
+  "When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy.": "Cuando está activado, el texto OCR se copia automáticamente y no se abre la ventana de resultados. Cuando está desactivado, OCR abre la ventana de resultados. Requiere Auto-copy global.",
   "Don't auto-copy recordings": "No auto-copiar grabaciones",
   "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.": "Aunque el Auto-copy global esté activo, no colocar el video o GIF guardado en el portapapeles.",
   "Auto-copy OCR text": "Auto-copiar texto OCR",

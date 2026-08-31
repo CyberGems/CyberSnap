@@ -307,6 +307,8 @@
   "When global Auto-copy is on, still don't copy scanned codes.": "When global Auto-copy is on, still don't copy scanned codes.",
   "Don't auto-copy OCR text": "Don't auto-copy OCR text",
   "When global Auto-copy is on, still don't copy OCR text. Keep opening the result window.": "When global Auto-copy is on, still don't copy OCR text. Keep opening the result window.",
+  "Enable OCR auto-copy": "Enable OCR auto-copy",
+  "When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy.": "When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy.",
   "Don't auto-copy recordings": "Don't auto-copy recordings",
   "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.": "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.",
   "Auto-copy OCR text": "Auto-copy OCR text",
