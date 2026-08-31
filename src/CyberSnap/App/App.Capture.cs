@@ -354,9 +354,11 @@ public partial class App
 
     private void LaunchScrollingCapture(Rectangle? preSelectedRegion = null)
     {
-        _isCapturing = 1;
         var thread = new Thread(() =>
         {
+            // The caller already owns _isCapturing. Keep that ownership while the
+            // selection overlay hands off to this form and, when enabled, to Preview.
+            bool outcomeDelegatedToPreview = false;
             try
             {
                 Theme.Refresh();
@@ -373,11 +375,15 @@ public partial class App
 
                 form.CaptureCompleted += result =>
                 {
+                    var latestSettings = Services.SettingsService.LoadStatic();
+                    bool willShowPreview = latestSettings?.ShowCapturePreview
+                        ?? _settingsService!.Settings.ShowCapturePreview;
+                    if (willShowPreview)
+                        outcomeDelegatedToPreview = true;
+
                     Dispatcher.BeginInvoke(() =>
                     {
-                        HandleCaptureResult(result);
-                        MarkFirstTime(_settingsService!.Settings.HasFirstScrollingCapture,
-                            () => _settingsService!.Settings.HasFirstScrollingCapture = true, "First scrolling capture", "scrollCapture", d => _settingsService!.Settings.FirstScrollCaptureAt = d);
+                        HandleScrollingCaptureResult(result);
                         ScheduleIdleMemoryTrim();
                     });
                 };
@@ -397,7 +403,16 @@ public partial class App
 
                 form.CaptureCancelled += () => Dispatcher.BeginInvoke(ResetCapturing);
 
-                form.FormClosed += (_, _) => Dispatcher.BeginInvoke(ResetCapturing);
+                form.FormClosed += (_, _) =>
+                {
+                    // A preview owns the session after the scrolling form closes. It
+                    // releases _isCapturing only after commit/cancel, just like the
+                    // regular area-capture preview flow.
+                    if (outcomeDelegatedToPreview)
+                        return;
+
+                    Dispatcher.BeginInvoke(ResetCapturing);
+                };
 
                 System.Windows.Forms.Application.Run(form);
             }
@@ -596,6 +611,7 @@ public partial class App
             // FormClosed handler skips its default ResetCapturing to avoid prematurely
             // re-arming the hotkey while the Preview is still open.
             bool outcomeDelegatedToPreview = false;
+            bool handoffScrolling = false;
             try
             {
                 Theme.Refresh();
@@ -865,6 +881,11 @@ public partial class App
 
                 overlay.ScrollRegionSelected += sel =>
                 {
+                    // Keep the capture slot claimed while the scrolling form is being
+                    // created on its own STA thread. FormClosed fires synchronously from
+                    // overlay.Close(), so releasing here would allow a second capture
+                    // to start before ScrollingCaptureForm exists.
+                    handoffScrolling = true;
                     overlay.Hide();
                     UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(
                         captureBounds.X + sel.Right, captureBounds.Y + sel.Bottom));
@@ -1028,7 +1049,7 @@ public partial class App
                     // The Preview now owns the session and will call ResetCapturing itself
                     // once the user commits or cancels. Skipping here keeps _isCapturing=1
                     // so the hotkey guard blocks parallel captures while Preview is open.
-                    if (outcomeDelegatedToPreview)
+                    if (outcomeDelegatedToPreview || handoffScrolling)
                         return;
 
                     Dispatcher.BeginInvoke(() =>

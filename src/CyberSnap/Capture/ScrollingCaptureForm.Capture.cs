@@ -30,7 +30,7 @@ public sealed partial class ScrollingCaptureForm
 
     internal static bool TryEstimateNewContentHeight(Bitmap prev, Bitmap curr, out int newContent)
     {
-        var match = TryFindScrollingAppend(prev, curr, 0, 0, 0);
+        var match = TryFindScrollingAppend(prev, curr);
         if (!match.Success)
         {
             newContent = curr.Height;
@@ -43,17 +43,13 @@ public sealed partial class ScrollingCaptureForm
 
     internal static int FindOverlap(Bitmap prev, Bitmap curr, int stripHeight)
     {
-        var match = TryFindScrollingAppend(prev, curr, 0, 0, 0);
+        var match = TryFindScrollingAppend(prev, curr);
         return match.Success ? curr.Height - match.NewContentHeight : 0;
     }
 
     private static ScrollAppendMatch TryAppendScrollingFrame(Bitmap result, Bitmap currentImage,
-        int bestMatchCount, int bestMatchIndex, int bestIgnoreBottomOffset)
+        ScrollAppendMatch match)
     {
-        var match = TryFindScrollingAppend(result, currentImage, bestMatchCount, bestMatchIndex, bestIgnoreBottomOffset);
-        if (!match.Success)
-            return match;
-
         int keepResultHeight = result.Height - match.IgnoreBottomOffset;
         int totalHeight = keepResultHeight + match.NewContentHeight;
         if (totalHeight > 32000)
@@ -63,26 +59,33 @@ public sealed partial class ScrollingCaptureForm
             return match with { Success = false };
 
         var newResult = new Bitmap(result.Width, totalHeight, PixelFormat.Format32bppArgb);
-        using var g = Graphics.FromImage(newResult);
-        g.CompositingMode = CompositingMode.SourceCopy;
-        g.InterpolationMode = InterpolationMode.NearestNeighbor;
-        g.PixelOffsetMode = PixelOffsetMode.None;
-        g.DrawImage(result,
-            new Rectangle(0, 0, result.Width, keepResultHeight),
-            new Rectangle(0, 0, result.Width, keepResultHeight),
-            GraphicsUnit.Pixel);
+        try
+        {
+            using var g = Graphics.FromImage(newResult);
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = PixelOffsetMode.None;
+            g.DrawImage(result,
+                new Rectangle(0, 0, result.Width, keepResultHeight),
+                new Rectangle(0, 0, result.Width, keepResultHeight),
+                GraphicsUnit.Pixel);
 
-        int drawHeight = totalHeight - keepResultHeight;
-        g.DrawImage(currentImage,
-            new Rectangle(0, keepResultHeight, currentImage.Width, drawHeight),
-            new Rectangle(0, match.MatchIndex + 1, currentImage.Width, drawHeight),
-            GraphicsUnit.Pixel);
+            int drawHeight = totalHeight - keepResultHeight;
+            g.DrawImage(currentImage,
+                new Rectangle(0, keepResultHeight, currentImage.Width, drawHeight),
+                new Rectangle(0, match.MatchIndex + 1, currentImage.Width, drawHeight),
+                GraphicsUnit.Pixel);
 
-        return match with { Image = newResult };
+            return match with { Image = newResult };
+        }
+        catch
+        {
+            newResult.Dispose();
+            throw;
+        }
     }
 
-    private static ScrollAppendMatch TryFindScrollingAppend(Bitmap result, Bitmap currentImage,
-        int bestMatchCount, int bestMatchIndex, int bestIgnoreBottomOffset)
+    private static ScrollAppendMatch TryFindScrollingAppend(Bitmap result, Bitmap currentImage)
     {
         if (result.Width != currentImage.Width || result.Height <= 0 || currentImage.Height <= 0)
             return new ScrollAppendMatch(false, null, 0, 0, 0, 0, false);
@@ -102,13 +105,16 @@ public sealed partial class ScrollingCaptureForm
         int ignoreBottomOffsetMax = Math.Max(0, currentImage.Height / 3);
         int ignoreBottomOffset = 0;
 
-        var resultData = result.LockBits(new Rectangle(0, 0, result.Width, result.Height),
-            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-        var currentData = currentImage.LockBits(new Rectangle(0, 0, currentImage.Width, currentImage.Height),
-            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        BitmapData? resultData = null;
+        BitmapData? currentData = null;
 
         try
         {
+            resultData = result.LockBits(new Rectangle(0, 0, result.Width, result.Height),
+                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            currentData = currentImage.LockBits(new Rectangle(0, 0, currentImage.Width, currentImage.Height),
+                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+
             if (ignoreBottomOffsetMax > 0)
             {
                 int resultLastY = result.Height - 1;
@@ -123,8 +129,6 @@ public sealed partial class ScrollingCaptureForm
                     }
                 }
 
-                ignoreBottomOffset = Math.Max(ignoreBottomOffset, bestIgnoreBottomOffset);
-                ignoreBottomOffset = Math.Min(ignoreBottomOffset, ignoreBottomOffsetMax);
             }
 
             int resultBottomY = result.Height - ignoreBottomOffset - 1;
@@ -154,17 +158,10 @@ public sealed partial class ScrollingCaptureForm
         }
         finally
         {
-            result.UnlockBits(resultData);
-            currentImage.UnlockBits(currentData);
-        }
-
-        bool usedBestGuess = false;
-        if (matchCount == 0 && bestMatchCount > 0)
-        {
-            matchCount = bestMatchCount;
-            matchIndex = bestMatchIndex;
-            ignoreBottomOffset = bestIgnoreBottomOffset;
-            usedBestGuess = true;
+            if (currentData is not null)
+                currentImage.UnlockBits(currentData);
+            if (resultData is not null)
+                result.UnlockBits(resultData);
         }
 
         if (matchCount <= 0)
@@ -172,9 +169,9 @@ public sealed partial class ScrollingCaptureForm
 
         int newContentHeight = currentImage.Height - matchIndex - 1;
         if (newContentHeight <= 0)
-            return new ScrollAppendMatch(false, null, 0, matchCount, matchIndex, ignoreBottomOffset, usedBestGuess);
+            return new ScrollAppendMatch(false, null, 0, matchCount, matchIndex, ignoreBottomOffset, false);
 
-        return new ScrollAppendMatch(true, null, newContentHeight, matchCount, matchIndex, ignoreBottomOffset, usedBestGuess);
+        return new ScrollAppendMatch(true, null, newContentHeight, matchCount, matchIndex, ignoreBottomOffset, false);
     }
 
     private static unsafe bool RowsSimilar(BitmapData aData, BitmapData bData, int aY, int bY, int x, int width)
@@ -245,19 +242,23 @@ public sealed partial class ScrollingCaptureForm
     {
         if (a.Width != b.Width || a.Height != b.Height) return false;
 
-        var aData = a.LockBits(new Rectangle(0, 0, a.Width, a.Height),
-            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-        var bData = b.LockBits(new Rectangle(0, 0, b.Width, b.Height),
-            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        BitmapData? aData = null;
+        BitmapData? bData = null;
 
         try
         {
+            aData = a.LockBits(new Rectangle(0, 0, a.Width, a.Height),
+                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            bData = b.LockBits(new Rectangle(0, 0, b.Width, b.Height),
+                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
             return CompareRegions(aData, bData, a.Width, 0, 0, a.Height) > DuplicateThreshold;
         }
         finally
         {
-            a.UnlockBits(aData);
-            b.UnlockBits(bData);
+            if (bData is not null)
+                b.UnlockBits(bData);
+            if (aData is not null)
+                a.UnlockBits(aData);
         }
     }
 }

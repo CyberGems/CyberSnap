@@ -68,11 +68,12 @@ public sealed partial class ScrollingCaptureForm : Form
     private Bitmap? _stitchedResult;
     private Bitmap? _previousCapturedFrame;
     private int _frameCount;
-    private int _bestMatchCount;
-    private int _bestMatchIndex;
-    private int _bestIgnoreBottomOffset;
     private int _consecutiveDuplicates;
     private DateTime _lastAcceptedFrameTime;
+    private int _captureWorkInProgress;
+    private int _stopRequested;
+    private int _cancelRequested;
+    private int _finishScheduled;
     private static readonly TimeSpan AutoscrollNoProgressTimeout = TimeSpan.FromSeconds(1.5);
     private static readonly TimeSpan ManualScrollNoProgressTimeout = TimeSpan.FromMinutes(2);
     private enum FrameCaptureResult { Accepted, Pending, Duplicate, Rejected, Failed }
@@ -180,6 +181,20 @@ public sealed partial class ScrollingCaptureForm : Form
     }
 
     // â”€â”€â”€ Input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        // Never let an external close dispose bitmaps that a background capture or final
+        // stitching pass still owns. Convert it into the normal cancellation handshake.
+        if (_state != State.Done && Volatile.Read(ref _captureWorkInProgress) != 0)
+        {
+            e.Cancel = true;
+            Cancel();
+            return;
+        }
+
+        base.OnFormClosing(e);
+    }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
@@ -388,17 +403,14 @@ public sealed partial class ScrollingCaptureForm : Form
         catch { /* settings may be locked */ }
     }
 
-    /// <summary>
-    /// Overlay chrome is excluded from capture via WDA_EXCLUDEFROMCAPTURE; never hide/show per frame.
-    /// </summary>
-    private static Rectangle ScrollingCaptureOverlayExclusionBounds() => Rectangle.Empty;
-
     private void RegisterCaptureOverlayExclusion()
     {
         if (!IsHandleCreated)
             return;
 
-        CaptureWindowExclusion.SetLogicalBounds(Handle, ScrollingCaptureOverlayExclusionBounds);
+        // A null provider lets the exclusion helper query the HWND bounds directly. That
+        // keeps the fallback safe because capture runs on a worker thread, not this UI thread.
+        CaptureWindowExclusion.SetLogicalBounds(Handle, null);
     }
 
     /// <summary>
@@ -442,6 +454,9 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             // User clicked START — begin capturing now
             _state = State.Capturing;
+            Volatile.Write(ref _stopRequested, 0);
+            Volatile.Write(ref _cancelRequested, 0);
+            Volatile.Write(ref _finishScheduled, 0);
             ReleaseSelectionPreview(); // free screenshot memory now that capture has started
             Services.SoundService.PlayRecordStartSound();
             _controlBar?.TransitionToCapturing();
@@ -457,17 +472,14 @@ public sealed partial class ScrollingCaptureForm : Form
 
             _lastAcceptedFrameTime = DateTime.UtcNow;
 
-            CaptureFrame(forceAccept: true);
-
-            if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
-                User32.mouse_event(User32.MOUSEEVENTF_WHEEL, 0, 0, unchecked((uint)-120), 0);
+            StartCaptureFrame(forceAccept: true);
 
             if (_captureMode == ScrollingCaptureMode.Automatic || _captureMode == ScrollingCaptureMode.AssistAutoscroll)
                 StartAutomaticTimer();
         };
         _controlBar.StopClicked += () => StopCapturing();
         _controlBar.CancelClicked += () => Cancel();
-        _controlBar.ManualFrameClicked += () => CaptureFrame(forceAccept: true);
+        _controlBar.ManualFrameClicked += () => StartCaptureFrame(forceAccept: true);
         _controlBar.Show();
         // Ensure the bar is on top of the dimmed-screenshot background
         Native.User32.SetWindowPos(_controlBar.Handle, Native.User32.HWND_TOPMOST,
@@ -487,6 +499,14 @@ public sealed partial class ScrollingCaptureForm : Form
 
     private void HandleTimerTick()
     {
+        if (_state != State.Capturing
+            || Volatile.Read(ref _stopRequested) != 0
+            || Volatile.Read(ref _cancelRequested) != 0)
+            return;
+
+        if (Volatile.Read(ref _captureWorkInProgress) != 0)
+            return;
+
         var timeout = _captureMode == ScrollingCaptureMode.AssistAutoscroll
             ? AutoscrollNoProgressTimeout
             : ManualScrollNoProgressTimeout;
@@ -496,37 +516,139 @@ public sealed partial class ScrollingCaptureForm : Form
             return;
         }
 
-        if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
-        {
-            var result = CaptureFrame(forceAccept: false);
-            if (result == FrameCaptureResult.Accepted)
-            {
-                _consecutiveDuplicates = 0;
-                _lastAcceptedFrameTime = DateTime.UtcNow;
-            }
-            else if (result == FrameCaptureResult.Duplicate)
-            {
-                _consecutiveDuplicates++;
-                if (_consecutiveDuplicates >= 3)
-                {
-                    StopCapturing();
-                    return;
-                }
-            }
+        // Capture and stitching are intentionally serialized, but no longer run inside the
+        // WinForms message loop. A slow BitBlt or a tall-image match must not freeze Escape,
+        // the control bar, or the transparent input surface.
+        StartCaptureFrame(forceAccept: false);
+    }
 
-            // Send next scroll event
+    private void StartCaptureFrame(bool forceAccept)
+    {
+        if (_state != State.Capturing
+            || Volatile.Read(ref _stopRequested) != 0
+            || Volatile.Read(ref _cancelRequested) != 0
+            || Interlocked.CompareExchange(ref _captureWorkInProgress, 1, 0) != 0)
+            return;
+
+        var region = _screenRegion;
+        var mode = _captureMode;
+        CaptureFrameAsync(region, mode, forceAccept);
+    }
+
+    private async void CaptureFrameAsync(
+        Rectangle region,
+        ScrollingCaptureMode mode,
+        bool forceAccept)
+    {
+        Bitmap? frame = null;
+        FrameCaptureResult result = FrameCaptureResult.Failed;
+        Exception? failure = null;
+
+        try
+        {
+            frame = await Task.Run(() =>
+                ScreenCapture.CaptureRegionForScrolling(region, _showCursor));
+
+            if (Volatile.Read(ref _cancelRequested) != 0)
+                return;
+
+            // ProcessCapturedFrame owns the bitmap from this point. It disposes rejected
+            // frames and keeps accepted/pending frames in the form state.
+            var captured = frame ?? throw new InvalidOperationException("The screen capture returned no frame.");
+            frame = null;
+            result = await Task.Run(() =>
+                ProcessCapturedFrame(captured, forceAccept, mode));
+        }
+        catch (Exception ex)
+        {
+            failure = ex;
+        }
+        finally
+        {
+            frame?.Dispose();
+            Interlocked.Exchange(ref _captureWorkInProgress, 0);
+
+            if (failure is not null)
+                HandleCaptureFailure(failure);
+            else
+                HandleCaptureFrameCompleted(result, mode);
+        }
+    }
+
+    private void HandleCaptureFailure(Exception ex)
+    {
+        if (Volatile.Read(ref _cancelRequested) != 0)
+        {
+            CompleteCancelledCapture();
+            return;
+        }
+
+        if (Volatile.Read(ref _stopRequested) != 0)
+        {
+            ScheduleFinishCapture();
+            return;
+        }
+
+        // Capture can fail transiently; surface a failure only when no frame has ever
+        // been captured, instead of interrupting an otherwise usable session.
+        if (_frameCount == 0 && _state == State.Capturing)
+        {
+            _initialCaptureFailures++;
+            if (string.IsNullOrWhiteSpace(_initialCaptureFailureMessage))
+                _initialCaptureFailureMessage = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Unable to capture this region."
+                    : ex.Message;
+
+            if (_initialCaptureFailures >= 3)
+                Fail(_initialCaptureFailureMessage);
+        }
+    }
+
+    private void HandleCaptureFrameCompleted(
+        FrameCaptureResult result,
+        ScrollingCaptureMode mode)
+    {
+        if (Volatile.Read(ref _cancelRequested) != 0)
+        {
+            CompleteCancelledCapture();
+            return;
+        }
+
+        if (_state != State.Capturing)
+        {
+            if (Volatile.Read(ref _stopRequested) != 0)
+                ScheduleFinishCapture();
+            return;
+        }
+
+        if (result == FrameCaptureResult.Accepted)
+        {
+            _consecutiveDuplicates = 0;
+            _lastAcceptedFrameTime = DateTime.UtcNow;
+            _controlBar?.SetFrameCount(_frameCount);
+        }
+        else if (result == FrameCaptureResult.Duplicate
+                 && mode == ScrollingCaptureMode.AssistAutoscroll)
+        {
+            _consecutiveDuplicates++;
+            if (_consecutiveDuplicates >= 3)
+            {
+                StopCapturing();
+                return;
+            }
+        }
+
+        if (mode == ScrollingCaptureMode.AssistAutoscroll
+            && _state == State.Capturing
+            && Volatile.Read(ref _stopRequested) == 0)
+        {
+            // Scroll only after the corresponding frame has been captured and processed.
+            // This avoids accumulating wheel events while a large frame is being stitched.
             User32.mouse_event(User32.MOUSEEVENTF_WHEEL, 0, 0, unchecked((uint)-120), 0);
         }
-        else
-        {
-            var result = CaptureFrame(forceAccept: false);
-            if (result == FrameCaptureResult.Accepted)
-            {
-                _consecutiveDuplicates = 0;
-                _lastAcceptedFrameTime = DateTime.UtcNow;
-            }
-            // In manual-scroll mode, unchanged frames just mean the user has not scrolled yet.
-        }
+
+        if (Volatile.Read(ref _stopRequested) != 0)
+            ScheduleFinishCapture();
     }
 
     private void FocusScrollTargetWindow()
@@ -592,42 +714,31 @@ public sealed partial class ScrollingCaptureForm : Form
         _captureTimer = null;
     }
 
-    private FrameCaptureResult CaptureFrame(bool forceAccept)
+    private FrameCaptureResult ProcessCapturedFrame(
+        Bitmap frame,
+        bool forceAccept,
+        ScrollingCaptureMode mode)
     {
         try
         {
-            var frame = ScreenCapture.CaptureRegion(_screenRegion, _showCursor);
-
-            if (forceAccept || _captureMode == ScrollingCaptureMode.Manual)
+            if (forceAccept || mode == ScrollingCaptureMode.Manual)
             {
                 ClearPendingAutoFrame();
-                return TryAcceptFrame(frame, forceAccept);
+                return TryAcceptFrame(frame, forceAccept, mode);
             }
 
-            return ProcessAutomaticFrame(frame);
+            return ProcessAutomaticFrame(frame, mode);
         }
-        catch (Exception ex)
+        catch
         {
-            // Capture can fail transiently; skip this tick.
-            // If we never captured a frame at all, surface a failure instead of a silent cancel.
-            if (_frameCount == 0 && _state == State.Capturing)
-            {
-                _initialCaptureFailures++;
-                if (string.IsNullOrWhiteSpace(_initialCaptureFailureMessage))
-                    _initialCaptureFailureMessage = string.IsNullOrWhiteSpace(ex.Message)
-                        ? "Unable to capture this region."
-                        : ex.Message;
-
-                // After a few consecutive failures, stop and report a failure to the user.
-                if (_initialCaptureFailures >= 3)
-                    Fail(_initialCaptureFailureMessage);
-            }
-
-            return FrameCaptureResult.Failed;
+            // If processing fails after ownership was transferred, do not leak the frame.
+            // Accepted frames are fully committed before TryAcceptFrame returns.
+            try { frame.Dispose(); } catch { }
+            throw;
         }
     }
 
-    private FrameCaptureResult ProcessAutomaticFrame(Bitmap frame)
+    private FrameCaptureResult ProcessAutomaticFrame(Bitmap frame, ScrollingCaptureMode mode)
     {
         if (_previousCapturedFrame is not null && AreFramesDuplicate(_previousCapturedFrame, frame))
         {
@@ -636,10 +747,24 @@ public sealed partial class ScrollingCaptureForm : Form
             return FrameCaptureResult.Duplicate;
         }
 
-        if (ShouldKeepFrame(frame, forceAccept: false))
+        if (_stitchedResult is null)
         {
             ClearPendingAutoFrame();
-            return TryAcceptFrame(frame, forceAccept: false);
+            return TryAcceptFrame(frame, forceAccept: false, mode: mode);
+        }
+
+        // Compute overlap once. The previous implementation searched here and then searched
+        // again in TryAcceptFrame, which was especially expensive for tall selections.
+        var match = TryFindScrollingAppend(_stitchedResult, frame);
+        int minimumNewContent = Math.Max(MinimumAutoNewContentPixels, frame.Height / 20);
+        if (match.Success && match.NewContentHeight >= minimumNewContent)
+        {
+            ClearPendingAutoFrame();
+            return TryAcceptFrame(
+                frame,
+                forceAccept: false,
+                mode: mode,
+                knownMatch: match);
         }
 
         _pendingAutoFrame?.Dispose();
@@ -647,7 +772,11 @@ public sealed partial class ScrollingCaptureForm : Form
         return FrameCaptureResult.Pending;
     }
 
-    private FrameCaptureResult TryAcceptFrame(Bitmap frame, bool forceAccept)
+    private FrameCaptureResult TryAcceptFrame(
+        Bitmap frame,
+        bool forceAccept,
+        ScrollingCaptureMode mode,
+        ScrollAppendMatch? knownMatch = null)
     {
         if (_stitchedResult is null)
         {
@@ -655,20 +784,22 @@ public sealed partial class ScrollingCaptureForm : Form
             return FrameCaptureResult.Accepted;
         }
 
-        if (_previousCapturedFrame is not null && AreFramesDuplicate(_previousCapturedFrame, frame))
+        if (knownMatch is null
+            && _previousCapturedFrame is not null
+            && AreFramesDuplicate(_previousCapturedFrame, frame))
         {
             frame.Dispose();
             return FrameCaptureResult.Duplicate;
         }
 
-        var match = TryAppendScrollingFrame(_stitchedResult, frame, _bestMatchCount, _bestMatchIndex, _bestIgnoreBottomOffset);
+        var match = knownMatch ?? TryFindScrollingAppend(_stitchedResult, frame);
         if (!match.Success)
         {
             frame.Dispose();
             return FrameCaptureResult.Rejected;
         }
 
-        int minimumNewContent = forceAccept || _captureMode == ScrollingCaptureMode.Manual
+        int minimumNewContent = forceAccept || mode == ScrollingCaptureMode.Manual
             ? 1
             : Math.Max(MinimumAutoNewContentPixels, frame.Height / 20);
         if (match.NewContentHeight < minimumNewContent)
@@ -678,22 +809,17 @@ public sealed partial class ScrollingCaptureForm : Form
             return FrameCaptureResult.Rejected;
         }
 
-        bool usedBestGuess = match.UsedBestGuess;
-        if (!usedBestGuess)
+        var stitched = TryAppendScrollingFrame(_stitchedResult, frame, match);
+        if (!stitched.Success || stitched.Image is null)
         {
-            _bestMatchCount = Math.Max(_bestMatchCount, match.MatchCount);
-            _bestMatchIndex = match.MatchIndex;
-            _bestIgnoreBottomOffset = match.IgnoreBottomOffset;
+            frame.Dispose();
+            return FrameCaptureResult.Rejected;
         }
 
         _stitchedResult.Dispose();
-        _stitchedResult = match.Image;
+        _stitchedResult = stitched.Image;
         ReplacePreviousCapturedFrame(frame);
         _frameCount++;
-        if (usedBestGuess)
-            _controlBar?.SetPartialFrameCount(_frameCount);
-        else
-            _controlBar?.SetFrameCount(_frameCount);
         return FrameCaptureResult.Accepted;
     }
 
@@ -702,7 +828,6 @@ public sealed partial class ScrollingCaptureForm : Form
         _stitchedResult = (Bitmap)frame.Clone();
         ReplacePreviousCapturedFrame(frame);
         _frameCount = 1;
-        _controlBar?.SetFrameCount(_frameCount);
     }
 
     private void ReplacePreviousCapturedFrame(Bitmap frame)
@@ -711,35 +836,58 @@ public sealed partial class ScrollingCaptureForm : Form
         _previousCapturedFrame = frame;
     }
 
-    private bool ShouldKeepFrame(Bitmap frame, bool forceAccept)
-    {
-        if (_stitchedResult is null)
-            return true;
-
-        if (_previousCapturedFrame is not null && AreFramesDuplicate(_previousCapturedFrame, frame))
-            return false;
-
-        var match = TryFindScrollingAppend(_stitchedResult, frame, _bestMatchCount, _bestMatchIndex, _bestIgnoreBottomOffset);
-        if (!match.Success)
-            return false;
-
-        int minimumNewContent = forceAccept || _captureMode == ScrollingCaptureMode.Manual
-            ? 1
-            : Math.Max(MinimumAutoNewContentPixels, frame.Height / 20);
-        return match.NewContentHeight >= minimumNewContent;
-    }
-
     private void StopCapturing()
     {
+        if (_state != State.Capturing || Interlocked.Exchange(ref _stopRequested, 1) != 0)
+            return;
+
         StopAutomaticTimer();
-        TryAcceptPendingAutoFrame();
-        ClearPendingAutoFrame();
         Services.SoundService.PlayRecordStopSound();
 
         _state = State.Stitching;
         _controlBar?.SetStatus(LocalizationService.Translate("Scroll capture stitching"));
 
-        FinishCapture();
+        // If a frame is still being captured or stitched, let it finish first. The final
+        // pending candidate is then evaluated off the UI thread before the result is closed.
+        if (Volatile.Read(ref _captureWorkInProgress) == 0)
+            ScheduleFinishCapture();
+    }
+
+    private void ScheduleFinishCapture()
+    {
+        if (Interlocked.CompareExchange(ref _finishScheduled, 1, 0) != 0)
+            return;
+
+        FinishCaptureAsync();
+    }
+
+    private async void FinishCaptureAsync()
+    {
+        // Reuse the work flag while the last pending candidate is evaluated. This keeps
+        // Cancel from releasing the stitched bitmap underneath this final background pass.
+        Interlocked.Exchange(ref _captureWorkInProgress, 1);
+        try
+        {
+            await Task.Run(TryAcceptPendingAutoFrame);
+
+            if (Volatile.Read(ref _cancelRequested) != 0)
+            {
+                CompleteCancelledCapture();
+                return;
+            }
+
+            FinishCapture();
+        }
+        catch (Exception ex)
+        {
+            Fail(string.IsNullOrWhiteSpace(ex.Message)
+                ? LocalizationService.Translate("Scrolling capture failed.")
+                : ex.Message);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _captureWorkInProgress, 0);
+        }
     }
 
     private void FinishCapture()
@@ -759,8 +907,8 @@ public sealed partial class ScrollingCaptureForm : Form
             var singleFrame = _stitchedResult;
             _stitchedResult = null;
             ReleaseCaptureBitmaps();
-            CaptureCompleted?.Invoke(singleFrame);
             _state = State.Done;
+            CaptureCompleted?.Invoke(singleFrame);
             Close();
             return;
         }
@@ -768,6 +916,7 @@ public sealed partial class ScrollingCaptureForm : Form
         var stitched = _stitchedResult;
         _stitchedResult = null;
         ReleaseCaptureBitmaps();
+        _state = State.Done;
 
         if (stitched != null)
         {
@@ -812,15 +961,31 @@ public sealed partial class ScrollingCaptureForm : Form
 
     private void Cancel()
     {
+        if (_state == State.Done || Interlocked.Exchange(ref _cancelRequested, 1) != 0)
+            return;
+
         StopAutomaticTimer();
-        ClearPendingAutoFrame();
         _controlBar?.Close();
         _controlBar?.Dispose();
         _controlBar = null;
+        _state = State.Stitching;
+
+        // Do not release bitmaps while a background frame operation still owns them.
+        if (Volatile.Read(ref _captureWorkInProgress) == 0)
+            CompleteCancelledCapture();
+    }
+
+    private void CompleteCancelledCapture()
+    {
+        if (_state == State.Done)
+            return;
+
+        StopAutomaticTimer();
+        ClearPendingAutoFrame();
         ReleaseCaptureBitmaps();
-        CaptureCancelled?.Invoke();
         _state = State.Done;
-        Close();
+        try { CaptureCancelled?.Invoke(); } catch { }
+        try { Close(); } catch { }
     }
 
     // â”€â”€â”€ Paint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1114,9 +1279,6 @@ public sealed partial class ScrollingCaptureForm : Form
         _previousCapturedFrame?.Dispose();
         _previousCapturedFrame = null;
         _frameCount = 0;
-        _bestMatchCount = 0;
-        _bestMatchIndex = 0;
-        _bestIgnoreBottomOffset = 0;
     }
 
     private void ClearPendingAutoFrame()
@@ -1132,7 +1294,7 @@ public sealed partial class ScrollingCaptureForm : Form
 
         var frame = _pendingAutoFrame;
         _pendingAutoFrame = null;
-        TryAcceptFrame(frame, forceAccept: false);
+        TryAcceptFrame(frame, forceAccept: false, mode: _captureMode);
     }
 
     private void ReleaseSelectionPreview()
@@ -1771,7 +1933,9 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             base.OnHandleCreated(e);
             CaptureWindowExclusion.Apply(this);
-            CaptureWindowExclusion.SetLogicalBounds(Handle, static () => Rectangle.Empty);
+            // WDA_EXCLUDEFROMCAPTURE is the fast path. If it is unavailable, the helper
+            // queries this HWND's screen bounds and hides the bar briefly.
+            CaptureWindowExclusion.SetLogicalBounds(Handle, null);
             ApplyRoundedChromeRegion();
             try
             {
