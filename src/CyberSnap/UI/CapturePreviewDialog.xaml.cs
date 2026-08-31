@@ -1067,8 +1067,14 @@ namespace CyberSnap.UI
             return item;
         }
 
-        private void ApplyTheme()
+        public void ApplyTheme()
         {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(ApplyTheme));
+                return;
+            }
+
             RootBorder.Background = Theme.Brush(Theme.BgPrimary);
             RootBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
             RootBorder.BorderThickness = new Thickness(1);
