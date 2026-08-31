@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using CyberSnap.Helpers;
@@ -66,17 +67,21 @@ public sealed class StandaloneToolBanner : IDisposable
         : Color.FromArgb(232, 238, 247);
 
     private float _opacity;
+    private float _slide = 1f;
+    private float _animFromOpacity;
+    private float _animFromSlide = 1f;
+    private float _animDuration = 0.10f;
     private System.Windows.Forms.Timer? _timer;
-    private int _holdTicks;
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private long _stateStartedAt;
     private RectangleF _bannerRect;
     private State _state = State.FadeIn;
-    /// <summary>Per-tick opacity drop while fading out. Auto-hide uses the slow rate;
-    /// user-initiated <see cref="Dismiss"/> uses a short fade (~100 ms) to clear the UI quickly.</summary>
-    private float _fadeOutStep = AutoFadeOutStep;
 
-    private const float AutoFadeOutStep = 0.08f;
-    /// <summary>~0.16 opacity per 16 ms tick → ~100 ms full fade from opaque.</summary>
-    private const float DismissFadeOutStep = 0.16f;
+    private const float FadeInSeconds = 0.10f;
+    private const float HoldSeconds = 1.20f;
+    private const float AutoFadeOutSeconds = 0.12f;
+    private const float DismissFadeOutSeconds = 0.05f;
+    private const float SlidePixels = 12f;
 
     private enum State { FadeIn, Hold, FadeOut }
 
@@ -110,8 +115,9 @@ public sealed class StandaloneToolBanner : IDisposable
         // Pre-compute the banner rect so region-based invalidation works from the very first tick
         // (before Render has run once). Matches the layout math in Render().
         ComputeBannerRect();
-
-        _timer = new System.Windows.Forms.Timer { Interval = 16 }; // ~60 fps
+        _animDuration = FadeInSeconds;
+        _stateStartedAt = _clock.ElapsedMilliseconds;
+        _timer = new System.Windows.Forms.Timer { Interval = Math.Max(1, UiChrome.FrameIntervalMs) };
         _timer.Tick += OnTick;
         _timer.Start();
     }
@@ -140,8 +146,9 @@ public sealed class StandaloneToolBanner : IDisposable
         _anchorBottom = anchorBottom;
 
         ComputeBannerRect();
-
-        _timer = new System.Windows.Forms.Timer { Interval = 16 };
+        _animDuration = FadeInSeconds;
+        _stateStartedAt = _clock.ElapsedMilliseconds;
+        _timer = new System.Windows.Forms.Timer { Interval = Math.Max(1, UiChrome.FrameIntervalMs) };
         _timer.Tick += OnTick;
         _timer.Start();
     }
@@ -192,8 +199,8 @@ public sealed class StandaloneToolBanner : IDisposable
     {
         get
         {
-            var r = _bannerRect;
-            r.Inflate(16, 16);
+            var r = VisualBannerRect();
+            r.Inflate(16, 16 + SlidePixels);
             var current = Rectangle.Round(r);
             return _dirtyUnion.IsEmpty ? current : Rectangle.Union(_dirtyUnion, current);
         }
@@ -211,7 +218,14 @@ public sealed class StandaloneToolBanner : IDisposable
     }
 
     /// <summary>Whether the given client-space cursor position is over the banner.</summary>
-    public bool ContainsCursor(Point cursorPos) => _bannerRect.Contains(cursorPos);
+    public bool ContainsCursor(Point cursorPos) => VisualBannerRect().Contains(cursorPos);
+
+    private RectangleF VisualBannerRect()
+    {
+        var r = _bannerRect;
+        r.Y -= SlidePixels * _slide;
+        return r;
+    }
 
     /// <summary>
     /// If the cursor is over a still-visible banner, fade it out quickly so the hint
@@ -234,7 +248,7 @@ public sealed class StandaloneToolBanner : IDisposable
         {
             BannerRenderer.Render(
                 g,
-                _bannerRect,
+                VisualBannerRect(),
                 _text,
                 _segments,
                 _iconId,
@@ -249,45 +263,65 @@ public sealed class StandaloneToolBanner : IDisposable
 
     private void OnTick(object? sender, EventArgs e)
     {
+        float elapsed = (_clock.ElapsedMilliseconds - _stateStartedAt) / 1000f;
+        float u = Math.Clamp(elapsed / Math.Max(0.001f, _animDuration), 0f, 1f);
         switch (_state)
         {
             case State.FadeIn:
-                _opacity += 0.12f;
-                if (_opacity >= 1.0f)
+            {
+                float ease = UiChrome.EaseOutCubic(u);
+                _opacity = _animFromOpacity + (1f - _animFromOpacity) * ease;
+                _slide = _animFromSlide * (1f - ease);
+                if (elapsed >= _animDuration)
                 {
-                    _opacity = 1.0f;
+                    _opacity = 1f;
+                    _slide = 0f;
                     _state = State.Hold;
-                    _holdTicks = 0;
+                    _stateStartedAt = _clock.ElapsedMilliseconds;
+                    if (_persistent)
+                        _timer?.Stop();
                 }
                 RaiseInvalidate();
                 break;
-
+            }
             case State.Hold:
                 if (_persistent)
                 {
-                    _timer?.Stop(); // fully visible; no more animation until Dismiss()
+                    _timer?.Stop();
                     break;
                 }
-                _holdTicks++;
-                if (_holdTicks >= 90) // ~1.5 s
-                    _state = State.FadeOut;
+                if (elapsed >= HoldSeconds)
+                    StartFadeOut(AutoFadeOutSeconds);
                 break;
-
             case State.FadeOut:
-                _opacity -= _fadeOutStep;
-                if (_opacity <= 0.0f)
+            {
+                float ease = UiChrome.EaseInCubic(u);
+                _opacity = _animFromOpacity * (1f - ease);
+                _slide = _animFromSlide + (1f - _animFromSlide) * ease;
+                if (elapsed >= _animDuration)
                 {
-                    _opacity = 0.0f;
-                    _fadeOutStep = AutoFadeOutStep;
+                    _opacity = 0f;
+                    _slide = 1f;
                     _timer?.Stop();
-                    // Final clear of the union footprint (Render bails at opacity 0).
                     RaiseInvalidate();
                     _dirtyUnion = Rectangle.Empty;
                     break;
                 }
                 RaiseInvalidate();
                 break;
+            }
         }
+    }
+
+    private void StartFadeOut(float duration)
+    {
+        _state = State.FadeOut;
+        _animFromOpacity = Math.Max(_opacity, 0.001f);
+        _animFromSlide = _slide;
+        _animDuration = Math.Max(0.02f, duration);
+        _stateStartedAt = _clock.ElapsedMilliseconds;
+        _timer?.Start();
+        RaiseInvalidate();
     }
 
     /// <summary>Reset to fully visible (e.g. when the user clicks without completing a drag
@@ -295,28 +329,25 @@ public sealed class StandaloneToolBanner : IDisposable
     /// clear the hint, not keep it up.</summary>
     public void Revive()
     {
-        _fadeOutStep = AutoFadeOutStep;
         if (_state == State.FadeOut || _opacity < 1f)
         {
-            // Resume/restart fade-in from the current opacity so a mid-fade dismiss
-            // can be recovered smoothly (aborted selection, hover re-enter).
             _state = State.FadeIn;
-            if (_opacity <= 0f)
-                _opacity = 0f;
+            _animFromOpacity = _opacity;
+            _animFromSlide = _slide;
+            _animDuration = FadeInSeconds;
+            _stateStartedAt = _clock.ElapsedMilliseconds;
             _timer?.Start();
             RaiseInvalidate();
         }
         else if (_state == State.Hold)
         {
-            _holdTicks = 0;
+            _stateStartedAt = _clock.ElapsedMilliseconds;
         }
     }
 
     /// <summary>
-    /// Fade the banner out quickly (~100 ms). Safe to call from any state, including
-    /// an already-running auto fade-out (accelerates it). Prefer this on user interaction
-    /// so the pill leaves without a hard cut; use <see cref="DismissImmediate"/> only if
-    /// mid-drag repaints of the banner region prove problematic.
+    /// Fade the banner out quickly. Safe to call from any state, including
+    /// an already-running auto fade-out (accelerates it).
     /// </summary>
     public void Dismiss()
     {
@@ -327,11 +358,7 @@ public sealed class StandaloneToolBanner : IDisposable
             return;
         }
 
-        _state = State.FadeOut;
-        _fadeOutStep = DismissFadeOutStep;
-        _timer?.Start();
-        // First tick will drop opacity; force an immediate repaint so the host stays in sync.
-        RaiseInvalidate();
+        StartFadeOut(DismissFadeOutSeconds);
     }
 
     /// <summary>
@@ -349,7 +376,7 @@ public sealed class StandaloneToolBanner : IDisposable
 
         _state = State.FadeOut;
         _opacity = 0f;
-        _fadeOutStep = AutoFadeOutStep;
+        _slide = 1f;
         _timer?.Stop();
         RaiseInvalidate();
     }

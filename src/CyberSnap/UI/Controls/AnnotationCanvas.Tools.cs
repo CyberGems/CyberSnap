@@ -833,6 +833,7 @@ public sealed partial class AnnotationCanvas
         _cursorClient = e.Location;
         _cursorOnCanvas = true;
         base.OnMouseMove(e);
+        DismissToolBannerIfHovered(e.Location);
 
         if (TryWelcomeMouseMove(e.Location))
             return;

@@ -1434,40 +1434,75 @@ namespace CyberSnap.UI
             _bannerTimer.Stop();
 
             BannerBorder.BeginAnimation(UIElement.OpacityProperty, null);
+            if (BannerSlide != null)
+                BannerSlide.BeginAnimation(TranslateTransform.YProperty, null);
 
+            bool alreadyUp = BannerBorder.Opacity > 0.2;
             var fadeIn = new DoubleAnimation
             {
+                From = alreadyUp ? BannerBorder.Opacity : 0,
                 To = 1.0,
-                Duration = TimeSpan.FromMilliseconds(150),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                Duration = TimeSpan.FromMilliseconds(90),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             };
             BannerBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+
+            if (BannerSlide != null)
+            {
+                var slide = new DoubleAnimation
+                {
+                    From = alreadyUp ? BannerSlide.Y : -10,
+                    To = 0,
+                    Duration = TimeSpan.FromMilliseconds(90),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                BannerSlide.BeginAnimation(TranslateTransform.YProperty, slide);
+            }
 
             _bannerTicks = 0;
             _bannerTimer.Start();
         }
 
+        private void BannerBorder_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) => HideBanner(fast: true);
+
         private void BannerTimer_Tick(object? sender, EventArgs e)
         {
             _bannerTicks++;
-            if (_bannerTicks >= 40)
-            {
-                _bannerTimer?.Stop();
+            if (_bannerTicks >= 16)
+                HideBanner(fast: false);
+        }
 
-                var fadeOut = new DoubleAnimation
+        private void HideBanner(bool fast)
+        {
+            _bannerTimer?.Stop();
+            if (BannerBorder == null)
+                return;
+
+            int ms = fast ? 50 : 100;
+            BannerBorder.BeginAnimation(UIElement.OpacityProperty, null);
+            var fadeOut = new DoubleAnimation
+            {
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(ms),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (_, _) =>
+            {
+                if (BannerBorder != null && BannerBorder.Opacity == 0.0)
+                    BannerBorder.Visibility = Visibility.Collapsed;
+            };
+            BannerBorder.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+
+            if (BannerSlide != null)
+            {
+                BannerSlide.BeginAnimation(TranslateTransform.YProperty, null);
+                var slide = new DoubleAnimation
                 {
-                    To = 0.0,
-                    Duration = TimeSpan.FromMilliseconds(250),
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+                    To = -10,
+                    Duration = TimeSpan.FromMilliseconds(ms),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
                 };
-                fadeOut.Completed += (s, ev) =>
-                {
-                    if (BannerBorder != null && BannerBorder.Opacity == 0.0)
-                    {
-                        BannerBorder.Visibility = Visibility.Collapsed;
-                    }
-                };
-                BannerBorder?.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+                BannerSlide.BeginAnimation(TranslateTransform.YProperty, slide);
             }
         }
 

@@ -686,7 +686,11 @@
                         Padding="16,10"
                         Opacity="0"
                         Visibility="Collapsed"
-                        IsHitTestVisible="False">
+                        Cursor="Hand"
+                        MouseEnter="BannerBorder_MouseEnter">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="BannerSlide" Y="-10"/>
+                    </Border.RenderTransform>
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="White" Opacity="0.15"/>
                     </Border.Effect>

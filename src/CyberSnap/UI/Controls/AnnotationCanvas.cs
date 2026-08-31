@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -303,9 +304,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             if (!_showBanners)
             {
                 _bannerOpacity = 0f;
+                _bannerSlide = 1f;
                 _bannerText = "";
                 _bannerTimer?.Stop();
-                Invalidate();
+                InvalidateBannerRegion();
+                _bannerDirtyUnion = Rectangle.Empty;
             }
         }
     }
@@ -346,10 +349,23 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? WelcomeCaptureRequested { get; set; }
 
-    private float _bannerOpacity = 0f;
+    private const float BannerFadeInSeconds = 0.10f;
+    private const float BannerFadeOutSeconds = 0.10f;
+    private const float BannerHoverFadeOutSeconds = 0.05f;
+    private const float BannerHoldSeconds = 0.80f;
+    private const float BannerSlidePixels = 10f;
+
+    private float _bannerOpacity;
+    private float _bannerSlide;
     private string _bannerText = "";
+    private Rectangle _bannerPaintRect;
+    private Rectangle _bannerDirtyUnion;
     private System.Windows.Forms.Timer? _bannerTimer;
-    private int _bannerHoldTicks = 0;
+    private readonly Stopwatch _bannerClock = new();
+    private long _bannerStateStartedMs;
+    private float _bannerAnimFromOpacity;
+    private float _bannerAnimFromSlide;
+    private float _bannerAnimDuration = BannerFadeInSeconds;
     private enum BannerState { FadeIn, Hold, FadeOut }
     private BannerState _bannerState = BannerState.FadeIn;
     private bool _bannerIsSticky;
@@ -400,82 +416,174 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public void ShowToolBanner(string text, bool sticky = false)
     {
         if (!_showBanners) return;
+        if (string.IsNullOrEmpty(text)) return;
 
-        if (_bannerText == text && _bannerOpacity > 0f)
+        if (_bannerText == text && _bannerOpacity > 0.05f)
         {
             _bannerIsSticky = sticky;
-            _bannerHoldTicks = 0;
             if (_bannerState == BannerState.FadeOut)
-            {
-                _bannerState = BannerState.FadeIn;
-            }
+                StartBannerFadeIn(fromCurrent: true);
+            else if (_bannerState == BannerState.Hold)
+                _bannerStateStartedMs = BannerNowMs();
             return;
         }
 
         _bannerText = text;
         _bannerIsSticky = sticky;
-        _bannerState = BannerState.FadeIn;
-        _bannerOpacity = 0f;
-        if (_bannerTimer == null)
-        {
-            _bannerTimer = new System.Windows.Forms.Timer { Interval = 16 };
-            _bannerTimer.Tick += BannerTimer_Tick;
-        }
-        _bannerTimer.Stop();
-        _bannerTimer.Start();
-        Invalidate();
+        RecalcBannerLayout();
+        StartBannerFadeIn(fromCurrent: _bannerOpacity > 0.05f);
     }
 
     public void HideToolBanner()
     {
+        if (_bannerOpacity <= 0f && _bannerState != BannerState.FadeIn)
+            return;
         _bannerIsSticky = false;
+        StartBannerFadeOut(BannerFadeOutSeconds);
+    }
+
+    private void DismissToolBannerIfHovered(Point clientPoint)
+    {
+        if (_bannerOpacity <= 0.02f || _bannerState == BannerState.FadeOut)
+            return;
+        var hit = _bannerPaintRect;
+        hit.Inflate(4, 4);
+        if (!hit.Contains(clientPoint))
+            return;
+        _bannerIsSticky = false;
+        StartBannerFadeOut(BannerHoverFadeOutSeconds);
+    }
+
+    private void StartBannerFadeIn(bool fromCurrent)
+    {
+        _bannerState = BannerState.FadeIn;
+        _bannerAnimFromOpacity = fromCurrent ? _bannerOpacity : 0f;
+        _bannerAnimFromSlide = fromCurrent ? _bannerSlide : 1f;
+        if (!fromCurrent)
+        {
+            _bannerOpacity = 0f;
+            _bannerSlide = 1f;
+        }
+        _bannerAnimDuration = BannerFadeInSeconds;
+        _bannerStateStartedMs = BannerNowMs();
+        EnsureBannerTimer().Start();
+        InvalidateBannerRegion();
+    }
+
+    private void StartBannerFadeOut(float duration)
+    {
+        if (_bannerState == BannerState.FadeOut && duration >= _bannerAnimDuration && _bannerOpacity < 0.95f)
+            return;
+
         _bannerState = BannerState.FadeOut;
+        _bannerAnimFromOpacity = Math.Max(_bannerOpacity, 0.001f);
+        _bannerAnimFromSlide = _bannerSlide;
+        _bannerAnimDuration = Math.Max(0.02f, duration);
+        _bannerStateStartedMs = BannerNowMs();
+        EnsureBannerTimer().Start();
+        InvalidateBannerRegion();
+    }
+
+    private long BannerNowMs()
+    {
+        if (!_bannerClock.IsRunning)
+            _bannerClock.Start();
+        return _bannerClock.ElapsedMilliseconds;
+    }
+
+    private System.Windows.Forms.Timer EnsureBannerTimer()
+    {
         if (_bannerTimer == null)
         {
-            _bannerTimer = new System.Windows.Forms.Timer { Interval = 16 };
+            _bannerTimer = new System.Windows.Forms.Timer { Interval = Math.Max(1, UiChrome.FrameIntervalMs) };
             _bannerTimer.Tick += BannerTimer_Tick;
         }
-        _bannerTimer.Start();
+        return _bannerTimer;
     }
 
     private void BannerTimer_Tick(object? sender, EventArgs e)
     {
+        float elapsed = (BannerNowMs() - _bannerStateStartedMs) / 1000f;
         switch (_bannerState)
         {
             case BannerState.FadeIn:
-                _bannerOpacity += 0.12f;
-                if (_bannerOpacity >= 1.0f)
+            {
+                float t = Math.Clamp(elapsed / _bannerAnimDuration, 0f, 1f);
+                float ease = UiChrome.EaseOutCubic(t);
+                _bannerOpacity = _bannerAnimFromOpacity + (1f - _bannerAnimFromOpacity) * ease;
+                _bannerSlide = _bannerAnimFromSlide * (1f - ease);
+                if (t >= 1f)
                 {
-                    _bannerOpacity = 1.0f;
+                    _bannerOpacity = 1f;
+                    _bannerSlide = 0f;
                     _bannerState = BannerState.Hold;
-                    _bannerHoldTicks = 0;
+                    _bannerStateStartedMs = BannerNowMs();
                 }
-                Invalidate();
+                RecalcBannerLayout();
+                InvalidateBannerRegion();
                 break;
-
+            }
             case BannerState.Hold:
                 if (_bannerIsSticky)
                 {
-                    _bannerHoldTicks = 0;
+                    _bannerTimer?.Stop();
                     break;
                 }
-                _bannerHoldTicks++;
-                if (_bannerHoldTicks >= 45)
-                {
-                    _bannerState = BannerState.FadeOut;
-                }
+                if (elapsed >= BannerHoldSeconds)
+                    StartBannerFadeOut(BannerFadeOutSeconds);
                 break;
-
             case BannerState.FadeOut:
-                _bannerOpacity -= 0.08f;
-                if (_bannerOpacity <= 0.0f)
+            {
+                float t = Math.Clamp(elapsed / _bannerAnimDuration, 0f, 1f);
+                float ease = UiChrome.EaseInCubic(t);
+                _bannerOpacity = _bannerAnimFromOpacity * (1f - ease);
+                _bannerSlide = _bannerAnimFromSlide + (1f - _bannerAnimFromSlide) * ease;
+                if (t >= 1f)
                 {
-                    _bannerOpacity = 0.0f;
+                    _bannerOpacity = 0f;
+                    _bannerSlide = 1f;
                     _bannerTimer?.Stop();
                 }
-                Invalidate();
+                RecalcBannerLayout();
+                InvalidateBannerRegion();
+                if (_bannerOpacity <= 0f)
+                    _bannerDirtyUnion = Rectangle.Empty;
                 break;
+            }
         }
+    }
+
+    private void RecalcBannerLayout()
+    {
+        if (string.IsNullOrEmpty(_bannerText))
+        {
+            _bannerPaintRect = Rectangle.Empty;
+            return;
+        }
+
+        using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
+        var size = TextRenderer.MeasureText(
+            _bannerText,
+            font,
+            Size.Empty,
+            TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+        int paddingH = 16;
+        int paddingV = 10;
+        int y = 18 + (int)Math.Round(-BannerSlidePixels * _bannerSlide);
+        _bannerPaintRect = new Rectangle(18, y, size.Width + paddingH * 2, size.Height + paddingV * 2);
+    }
+
+    private void InvalidateBannerRegion()
+    {
+        var r = _bannerPaintRect;
+        if (r.IsEmpty && _bannerDirtyUnion.IsEmpty)
+            return;
+        r.Inflate(10, 12);
+        var dirty = _bannerDirtyUnion.IsEmpty ? r : Rectangle.Union(_bannerDirtyUnion, r);
+        dirty.Intersect(ClientRectangle);
+        _bannerDirtyUnion = r;
+        if (dirty.Width > 0 && dirty.Height > 0)
+            Invalidate(dirty);
     }
 
     private string GetToolName(CanvasTool tool)
