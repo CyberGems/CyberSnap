@@ -39,7 +39,7 @@ public sealed partial class EditorForm
         }
 
         if (_toggleFrameSwitch is not null)
-            _toggleFrameSwitch.LabelText = LocalizationService.Translate("Border");
+            _toggleFrameSwitch.LabelText = LocalizationService.Translate("Outline");
 
         if (_closeButton is not null)
             _closeButton.AccessibleName = LocalizationService.Translate("Close");

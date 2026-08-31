@@ -3658,7 +3658,7 @@
                                           Checked="EditorFitCheck_Changed" Unchecked="EditorFitCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <!-- Show frame border -->
+                            <!-- Show image outline -->
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -3669,12 +3669,12 @@
                                     <TextBlock Text="&#xE91B;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show frame border" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Show a frame around the capture in the editor." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Show image outline" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Draws a thin outline around the image in the editor. It is not included when you export." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="EditorShowFrameCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Show a frame around the capture in the editor."
-                                          AutomationProperties.Name="Show frame border"
+                                          ToolTip="Draws a thin outline around the image in the editor. It is not included when you export."
+                                          AutomationProperties.Name="Show image outline"
                                           Checked="EditorShowFrameCheck_Changed" Unchecked="EditorShowFrameCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
