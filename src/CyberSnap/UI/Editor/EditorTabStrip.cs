@@ -9,8 +9,8 @@ namespace CyberSnap.UI.Editor;
 internal readonly record struct EditorTabInfo(string Title, bool Dirty, bool Active);
 
 /// <summary>
-/// Compact document tabs hosted in the horizontal-ruler row so they do not
-/// steal extra chrome. Hidden by the host when only one document is open.
+/// Compact document tabs above the horizontal ruler when more than one
+/// document is open. Hidden with a single document so chrome stays unchanged.
 /// </summary>
 internal sealed class EditorTabStrip : DoubleBufferedPanel
 {
@@ -26,6 +26,7 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
 
     public event EventHandler<int>? TabSelected;
     public event EventHandler<int>? TabCloseRequested;
+    public event EventHandler? EmptyAreaDoubleClicked;
 
     private readonly ToolTip _closeTip = new()
     {
@@ -39,6 +40,7 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
     {
         Dock = DockStyle.Fill;
         TabStop = false;
+        SetStyle(ControlStyles.StandardDoubleClick, true);
         BackColor = EditorColors.BgPrimary;
         Cursor = Cursors.Hand;
     }
@@ -112,6 +114,15 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         int tab = HitTestTab(e.Location);
         if (tab >= 0)
             TabSelected?.Invoke(this, tab);
+    }
+
+    protected override void OnMouseDoubleClick(MouseEventArgs e)
+    {
+        base.OnMouseDoubleClick(e);
+        if (e.Button != MouseButtons.Left) return;
+        if (HitTestTab(e.Location) >= 0 || HitTestClose(e.Location) >= 0)
+            return;
+        EmptyAreaDoubleClicked?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnMouseWheel(MouseEventArgs e)
