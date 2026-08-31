@@ -137,7 +137,7 @@ public sealed partial class RegionOverlayForm
         RenderCursorToolPreview(g);
 
         // Move tool: hover highlight (skip annotation currently being re-edited)
-        if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation()
+        if (ShowsAnnotationHoverChrome(_mode) && !IsDraggingAnyAnnotation()
             && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count
             && _moveHoverIndex != _selectedAnnotationIndex
             && _moveHoverIndex != _renderSkipIndex

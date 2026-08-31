@@ -28,14 +28,6 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
     public event EventHandler<int>? TabCloseRequested;
     public event EventHandler? EmptyAreaDoubleClicked;
 
-    private readonly ToolTip _closeTip = new()
-    {
-        ShowAlways = true,
-        AutoPopDelay = 4000,
-        InitialDelay = 400,
-        ReshowDelay = 200,
-    };
-
     public EditorTabStrip()
     {
         Dock = DockStyle.Fill;
@@ -74,10 +66,6 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
             Invalidate();
         }
         Cursor = tab >= 0 ? Cursors.Hand : Cursors.Default;
-        if (close >= 0)
-            _closeTip.SetToolTip(this, LocalizationService.Translate("Close tab"));
-        else
-            _closeTip.SetToolTip(this, string.Empty);
     }
 
     protected override void OnMouseLeave(EventArgs e)
@@ -89,14 +77,60 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
             _hoverCloseIndex = -1;
             Invalidate();
         }
-        _closeTip.SetToolTip(this, string.Empty);
     }
 
-    protected override void Dispose(bool disposing)
+    /// <summary>
+    /// Themed tooltip target under the cursor: close button, or tab body with
+    /// filename plus save-state (same wording as the title-bar LED).
+    /// </summary>
+    public bool TryGetHoverTooltip(out string text, out Rectangle screenAnchor)
     {
-        if (disposing)
-            _closeTip.Dispose();
-        base.Dispose(disposing);
+        text = "";
+        screenAnchor = Rectangle.Empty;
+        if (!IsHandleCreated)
+            return false;
+
+        var client = PointToClient(Cursor.Position);
+        int close = HitTestClose(client);
+        if (close >= 0 && close < _closeRects.Count)
+        {
+            text = LocalizationService.Translate("Close tab");
+            screenAnchor = PinTooltipAnchor(_closeRects[close], client);
+            return true;
+        }
+
+        int tab = HitTestTab(client);
+        if (tab >= 0 && tab < _tabs.Count && tab < _tabRects.Count)
+        {
+            text = FormatTabStatusTooltip(_tabs[tab]);
+            screenAnchor = PinTooltipAnchor(_tabRects[tab], client);
+            return true;
+        }
+
+        return false;
+    }
+
+    private Rectangle PinTooltipAnchor(Rectangle localRect, Point client)
+    {
+        const int pinWidth = 24;
+        const int snap = 16;
+        int width = Math.Min(pinWidth, Math.Max(8, localRect.Width));
+        int maxX = Math.Max(localRect.Left, localRect.Right - width);
+        int x = Math.Clamp(client.X - width / 2, localRect.Left, maxX);
+        x = localRect.Left + ((x - localRect.Left) / snap) * snap;
+        return RectangleToScreen(new Rectangle(x, localRect.Top, width, localRect.Height));
+    }
+
+    private static string FormatTabStatusTooltip(EditorTabInfo tab)
+    {
+        string status;
+        if (tab.Dirty)
+            status = LocalizationService.Translate("Unsaved changes");
+        else if (!tab.HasSavedPath)
+            status = LocalizationService.Translate("New canvas");
+        else
+            status = LocalizationService.Translate("Saved document");
+        return $"{tab.Title} — {status}";
     }
 
     protected override void OnMouseDown(MouseEventArgs e)

@@ -191,8 +191,44 @@ public sealed partial class AnnotationCanvas
 
     private void PaintEmoji(Graphics g, Point pos, string emoji, float size, float opacity = 1f)
     {
-        var emojiBmp = _emojiRenderer.GetEmoji(emoji, size);
+        float viewScale = _annotationViewScale;
+        bool screenSpace = viewScale > 0.05f && Math.Abs(viewScale - 1f) > 0.02f;
 
+        if (!screenSpace)
+        {
+            DrawEmojiBitmap(g, pos.X, pos.Y, _emojiRenderer.GetEmoji(emoji, size), opacity);
+            return;
+        }
+
+        // Rasterize at screen pixels and blit 1:1 so zoom does not nearest-neighbor
+        // the low-res glyph (the view transform is paused for this draw).
+        var emojiBmp = _emojiRenderer.GetEmoji(emoji, size * viewScale);
+        int layout = (int)(size * 1.4f) + 4;
+        float dest = layout * viewScale;
+        float sx = _pan.X + pos.X * viewScale;
+        float sy = _pan.Y + pos.Y * viewScale;
+
+        var state = g.Save();
+        try
+        {
+            g.ResetTransform();
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            if (_baseBitmap is not null)
+                g.SetClip(ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height)));
+            DrawEmojiBitmap(g, sx, sy, dest, dest, emojiBmp, opacity);
+        }
+        finally
+        {
+            g.Restore(state);
+        }
+    }
+
+    private static void DrawEmojiBitmap(Graphics g, float x, float y, Bitmap emojiBmp, float opacity)
+        => DrawEmojiBitmap(g, x, y, emojiBmp.Width, emojiBmp.Height, emojiBmp, opacity);
+
+    private static void DrawEmojiBitmap(Graphics g, float x, float y, float destW, float destH, Bitmap emojiBmp, float opacity)
+    {
         if (opacity < 1f)
         {
             _emojiOpacityAttr ??= new ImageAttributes();
@@ -203,12 +239,14 @@ public sealed partial class AnnotationCanvas
             _emojiOpacityMatrix.Matrix33 = opacity;
             _emojiOpacityMatrix.Matrix44 = 1f;
             _emojiOpacityAttr.SetColorMatrix(_emojiOpacityMatrix);
-            g.DrawImage(emojiBmp, new Rectangle(pos.X, pos.Y, emojiBmp.Width, emojiBmp.Height),
-                0, 0, emojiBmp.Width, emojiBmp.Height, GraphicsUnit.Pixel, _emojiOpacityAttr);
+            var dest = new Rectangle(
+                (int)Math.Round(x), (int)Math.Round(y),
+                Math.Max(1, (int)Math.Round(destW)), Math.Max(1, (int)Math.Round(destH)));
+            g.DrawImage(emojiBmp, dest, 0, 0, emojiBmp.Width, emojiBmp.Height, GraphicsUnit.Pixel, _emojiOpacityAttr);
         }
         else
         {
-            g.DrawImage(emojiBmp, pos.X, pos.Y);
+            g.DrawImage(emojiBmp, x, y, destW, destH);
         }
     }
 }

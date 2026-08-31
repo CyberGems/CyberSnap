@@ -170,6 +170,11 @@ public sealed partial class EditorForm
         };
         _tabStrip.TabCloseRequested += (_, index) => CloseDocumentAt(index);
         _tabStrip.EmptyAreaDoubleClicked += (_, _) => DoNewCanvas();
+        RegisterHoverTooltip(
+            _tabStrip,
+            () => _tabStrip.TryGetHoverTooltip(out var text, out _) ? text : null,
+            above: false,
+            boundsProvider: () => _tabStrip.TryGetHoverTooltip(out _, out var bounds) ? bounds : null);
     }
 
     private void ActivateDocument(EditorDocument document)

@@ -582,7 +582,7 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        if (IsDrawingOrMoveMode(_mode) && _mode != CaptureMode.Move)
+        if (ShowsAnnotationHoverChrome(_mode) && _mode != CaptureMode.Move)
         {
             int handle = -1;
             int clickedIdx = -1;

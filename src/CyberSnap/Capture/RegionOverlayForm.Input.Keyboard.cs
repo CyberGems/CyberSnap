@@ -202,10 +202,12 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // Emoji placing: Tab re-opens picker
+        // Emoji placing: Tab re-opens picker; [ ] resize like the editor.
         if (_mode == CaptureMode.Emoji && _isPlacingEmoji)
         {
             if (e.KeyCode == Keys.Tab) { _emojiPickerOpen = true; _isPlacingEmoji = false; QueueEmojiWarmup(); RefreshToolbar(); }
+            else if (e.KeyCode == Keys.OemOpenBrackets) NudgeEmojiPlaceSize(-1);
+            else if (e.KeyCode == Keys.OemCloseBrackets) NudgeEmojiPlaceSize(1);
             return;
         }
 

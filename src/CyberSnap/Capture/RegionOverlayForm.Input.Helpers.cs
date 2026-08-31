@@ -463,10 +463,28 @@ public sealed partial class RegionOverlayForm
     {
         if (cursor == Point.Empty)
             return Rectangle.Empty;
-        int size = (int)Math.Ceiling(_emojiPlaceSize);
-        int x = cursor.X - size / 2;
-        int y = cursor.Y - size / 2;
-        return new Rectangle(x - 8, y - 8, size + 16, size + 16);
+        // Must match PaintEmojiAnnotation: bitmap is size*1.4+4, top-left is cursor - size/2.
+        // A rect of only `size` left a large smear, especially inside the confirm hole.
+        int bitmapSize = (int)(_emojiPlaceSize * 1.4f) + 4;
+        int x = cursor.X - (int)(_emojiPlaceSize / 2);
+        int y = cursor.Y - (int)(_emojiPlaceSize / 2);
+        return new Rectangle(x - 8, y - 8, bitmapSize + 16, bitmapSize + 16);
+    }
+
+    private void NudgeEmojiPlaceSize(int direction)
+    {
+        if (direction == 0)
+            return;
+        float next = Math.Clamp(
+            _emojiPlaceSize + direction * EmojiRenderer.PlaceSizeStep,
+            EmojiRenderer.PlaceSizeMin,
+            EmojiRenderer.PlaceSizeMax);
+        if (Math.Abs(next - _emojiPlaceSize) < 0.01f)
+            return;
+        var oldPreview = GetEmojiPreviewRect(_lastCursorPos);
+        _emojiPlaceSize = next;
+        ShowToolBanner($"{LocalizationService.Translate("Emoji size")}: {(int)_emojiPlaceSize}px");
+        Invalidate(Rectangle.Union(InflateForRepaint(oldPreview), InflateForRepaint(GetEmojiPreviewRect(_lastCursorPos))));
     }
 
     /// <summary>Conservative bounds for the step-number placement ghost centered at the cursor

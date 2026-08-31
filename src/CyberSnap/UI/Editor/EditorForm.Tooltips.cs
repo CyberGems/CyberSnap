@@ -24,7 +24,9 @@ public sealed partial class EditorForm
         => RegisterHoverTooltip(anchor, () => LocalizationService.Translate(textKey), above);
 
     private System.Windows.Forms.Timer? _tooltipTimer;
-    private readonly System.Collections.Generic.List<(Control Control, Func<string?> TextProvider, bool Above)> _tooltipControls = new();
+    private readonly System.Collections.Generic.List<(Control Control, Func<string?> TextProvider, bool Above, Func<Rectangle?>? BoundsProvider)> _tooltipControls = new();
+    private string? _hoverTooltipText;
+    private Rectangle _hoverTooltipBounds;
 
     // The cursor must dwell on a control for this many timer ticks (~100ms each) before its
     // tooltip appears, so brushing the pointer across tools no longer triggers them instantly.
@@ -38,9 +40,9 @@ public sealed partial class EditorForm
     private int _resizeTipDwell;
     private bool _resizeTipShown;
 
-    private void RegisterHoverTooltip(Control anchor, Func<string?> textProvider, bool above = true)
+    private void RegisterHoverTooltip(Control anchor, Func<string?> textProvider, bool above = true, Func<Rectangle?>? boundsProvider = null)
     {
-        _tooltipControls.Add((anchor, textProvider, above));
+        _tooltipControls.Add((anchor, textProvider, above, boundsProvider));
         EnsureTooltipTimerStarted();
     }
 
@@ -114,6 +116,7 @@ public sealed partial class EditorForm
         Control? hovered = null;
         Func<string?>? provider = null;
         bool above = true;
+        Func<Rectangle?>? boundsProvider = null;
 
         foreach (var item in _tooltipControls)
         {
@@ -125,9 +128,20 @@ public sealed partial class EditorForm
                     hovered = item.Control;
                     provider = item.TextProvider;
                     above = item.Above;
+                    boundsProvider = item.BoundsProvider;
                     break;
                 }
             }
+        }
+
+        string? hoverText = null;
+        Rectangle? hoverBounds = null;
+        if (hovered is not null)
+        {
+            hoverText = provider!();
+            hoverBounds = boundsProvider?.Invoke();
+            if (string.IsNullOrWhiteSpace(hoverText) || (boundsProvider is not null && hoverBounds is null))
+                hovered = null;
         }
 
         if (hovered is not null)
@@ -135,9 +149,11 @@ public sealed partial class EditorForm
             HideResizeTip();
             if (ReferenceEquals(_hoverAnchor, hovered))
             {
-                // Already showing for this control — nothing left to dwell on.
+                // Already showing for this control — refresh text/position for painted
+                // targets (tabs, title LED) so the bubble tracks the cursor and hot target.
                 _pendingHover = null;
                 _pendingHoverTicks = 0;
+                ShowHoverTooltip(hovered, hoverText, above, hoverBounds);
             }
             else
             {
@@ -150,7 +166,7 @@ public sealed partial class EditorForm
                 {
                     if (++_pendingHoverTicks >= TooltipDwellTicks)
                     {
-                        ShowHoverTooltip(hovered, provider!(), above);
+                        ShowHoverTooltip(hovered, hoverText, above, hoverBounds);
                         _pendingHover = null;
                         _pendingHoverTicks = 0;
                     }
@@ -224,27 +240,51 @@ public sealed partial class EditorForm
         }
     }
 
-    private void ShowHoverTooltip(Control anchor, string? text, bool above)
+    private void ShowHoverTooltip(Control anchor, string? text, bool above, Rectangle? customBounds = null)
     {
         if (IsDisposed || string.IsNullOrWhiteSpace(text) || !anchor.IsHandleCreated)
             return;
 
+        var bounds = customBounds ?? (anchor == _titleFileNameLabel
+            ? GetTitleTooltipAnchorScreen()
+            : anchor.RectangleToScreen(anchor.ClientRectangle));
+
+        if (ReferenceEquals(_hoverAnchor, anchor)
+            && _hoverTooltipText == text
+            && _hoverTooltipBounds == bounds
+            && _hoverToolTip is { Visible: true, IsDisposed: false })
+            return;
+
         _hoverToolTip ??= new WindowsToolTip();
         _hoverAnchor = anchor;
-        var bounds = anchor.RectangleToScreen(anchor.ClientRectangle);
-
-        if (anchor == _titleFileNameLabel)
-        {
-            using var titleFont = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
-            int textWidth = TextRenderer.MeasureText(_titleFileNameText ?? "", titleFont).Width;
-            int totalWidth = 14 + 8 + textWidth; // ledAuraSize (14) + gap (8) + textWidth
-            int startX = (anchor.Width - totalWidth) / 2;
-            if (startX < 4) startX = 4;
-            var localBounds = new Rectangle(startX, 0, totalWidth, anchor.Height);
-            bounds = anchor.RectangleToScreen(localBounds);
-        }
-
+        _hoverTooltipText = text;
+        _hoverTooltipBounds = bounds;
         _hoverToolTip.ShowNear(this, text!, bounds, above);
+    }
+
+    /// <summary>
+    /// Pins the title-bar tooltip to a narrow strip around the cursor so a long
+    /// filename does not park the bubble in the horizontal center of the title.
+    /// Position is quantized so the bubble does not chase every mouse pixel.
+    /// </summary>
+    private Rectangle GetTitleTooltipAnchorScreen()
+    {
+        const int pinWidth = 24;
+        const int snap = 16;
+        var client = _titleFileNameLabel.PointToClient(Cursor.Position);
+        int maxX = Math.Max(0, _titleFileNameLabel.Width - pinWidth);
+        int x = Math.Clamp(client.X - pinWidth / 2, 0, maxX);
+        x = (x / snap) * snap;
+        return _titleFileNameLabel.RectangleToScreen(new Rectangle(x, 0, pinWidth, _titleFileNameLabel.Height));
+    }
+
+    private static string FormatDocumentStatusTooltip(bool dirty, bool hasSavedPath)
+    {
+        if (dirty)
+            return LocalizationService.Translate("Unsaved changes");
+        if (!hasSavedPath)
+            return LocalizationService.Translate("New canvas");
+        return LocalizationService.Translate("Saved document");
     }
 
     private void HideHoverTooltip(Control anchor)
@@ -252,6 +292,8 @@ public sealed partial class EditorForm
         if (!ReferenceEquals(_hoverAnchor, anchor))
             return;
         _hoverAnchor = null;
+        _hoverTooltipText = null;
+        _hoverTooltipBounds = Rectangle.Empty;
         try { _hoverToolTip?.Hide(); } catch { }
     }
 

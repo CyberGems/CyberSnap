@@ -2233,6 +2233,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return true;
         }
 
+        if (mod == Keys.None && !_canvas.IsEditingText
+            && key is Keys.OemOpenBrackets or Keys.OemCloseBrackets
+            && _canvas.TryNudgeEmojiPlaceSize(key == Keys.OemCloseBrackets ? 1 : -1))
+            return true;
+
         if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod)
             && EditorToolHotkeyHelper.TryActivateTool(_canvas, key | mod))
             return true;

@@ -127,6 +127,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private Bitmap? _blurScratch;
     private string? _selectedEmoji;
     private float _emojiPlaceSize = 32f;
+    // While OnPaint is inside the zoom/pan transform, PaintEmoji draws in screen space
+    // at 1:1 so the glyph is not nearest-neighbor scaled. RenderFinal leaves this at 1.
+    private float _annotationViewScale = 1f;
 
     /// <summary>Emoji glyph placed by the Emoji tool on the next click. Set by the editor's picker.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -141,7 +144,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public float EmojiPlaceSize
     {
         get => _emojiPlaceSize;
-        set => _emojiPlaceSize = Math.Clamp(value, 16f, 128f);
+        set => _emojiPlaceSize = Math.Clamp(value, CyberSnap.Capture.EmojiRenderer.PlaceSizeMin, CyberSnap.Capture.EmojiRenderer.PlaceSizeMax);
     }
 
     public AnnotationCanvas(Bitmap baseBitmap)
