@@ -71,7 +71,8 @@ namespace CyberSnap.UI
         private const double ZoomMax = 8.0;
         private const double ZoomStep = 1.2;
         private double _currentZoom = 1.0;
-        private bool _zoomToFit = true;
+        private bool _zoomToFit;
+        private bool _didInitialContain;
         private bool _isPanning;
         private System.Windows.Point _panStart;
         private double _panStartHorizontalOffset;
@@ -245,16 +246,22 @@ namespace CyberSnap.UI
             PreviewImage.Source = BitmapPerf.ToBitmapSource(bitmap);
             UpdateScaleControls();
             ApplyZoom();
+            TryApplyInitialContain();
             ZoomViewport.SizeChanged += (_, _) =>
             {
                 ApplyZoom();
+                TryApplyInitialContain();
             };
             Loaded += (_, _) =>
             {
                 // The first SizeChanged can occur before the preview is fully arranged (and
                 // before ApplyLayoutMode has moved the actions panel). Run one final fit pass
                 // after WPF completes the initial layout.
-                Dispatcher.BeginInvoke(new Action(ApplyZoom), DispatcherPriority.ContextIdle);
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    ApplyZoom();
+                    TryApplyInitialContain();
+                }), DispatcherPriority.ContextIdle);
             };
             PopulateAfterCapturePills();
             UpdateContinueOrExitButton();
@@ -313,7 +320,7 @@ namespace CyberSnap.UI
             NoAutomaticActionsLabel.Text = LocalizationService.Translate("None");
             ZoomOutBtn.ToolTip = LocalizationService.Translate("Zoom out");
             ZoomInBtn.ToolTip = LocalizationService.Translate("Zoom in");
-            ZoomFitBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Fit to window"), "Ctrl+0");
+            UpdateZoomViewButton();
             ZoomLevelBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Click for actual size (100%)"), "Ctrl+1");
             ScaleLabel.Text = LocalizationService.Translate("Scale");
             Scale1xBtn.ToolTip = LocalizationService.Translate("Original size");
@@ -474,7 +481,7 @@ namespace CyberSnap.UI
             SetPreviewIcon(EditSettingsBtnIcon, "gear", secondaryIconColor, 14);
             SetPreviewIcon(ZoomOutIcon, "zoomOut", secondaryIconColor, 12);
             SetPreviewIcon(ZoomInIcon, "zoomIn", secondaryIconColor, 12);
-            SetPreviewIcon(ZoomFitIcon, "zoomFit", secondaryIconColor, 12);
+            UpdateZoomViewButton();
         }
 
         private static void SetPreviewIcon(
@@ -1833,11 +1840,10 @@ namespace CyberSnap.UI
 
             if (_zoomToFit)
             {
-                // Fit large images to the viewport, but never upscale small captures.
-                // The canvas still fills the viewport so the image remains centered.
+                // Fill the viewport (shrink or enlarge), matching the editor ZoomFit.
                 ZoomCanvas.Width = availW;
                 ZoomCanvas.Height = availH;
-                _currentZoom = Math.Min(1.0, Math.Min(availW / baseW, availH / baseH));
+                _currentZoom = ComputeFitZoom(availW, availH, baseW, baseH);
                 PreviewImage.Width = baseW * _currentZoom;
                 PreviewImage.Height = baseH * _currentZoom;
             }
@@ -1856,6 +1862,63 @@ namespace CyberSnap.UI
             UpdateZoomLevelText();
             UpdateZoomCursor();
             UpdateZoomControlsVisibility();
+            UpdateZoomViewButton();
+        }
+
+        /// <summary>
+        /// First layout: shrink oversized captures so the whole image is visible, but keep
+        /// small captures at 1:1. User-requested Fit (the toggle) may still enlarge.
+        /// </summary>
+        private void TryApplyInitialContain()
+        {
+            if (_didInitialContain) return;
+            if (PreviewImage.Source is not BitmapSource bmp) return;
+            double availW = ZoomViewport.ViewportWidth;
+            double availH = ZoomViewport.ViewportHeight;
+            if (availW <= 0 || availH <= 0) return;
+
+            _didInitialContain = true;
+            GetPhysicalBaseDimensions(bmp, out double baseW, out double baseH);
+            if (baseW > availW || baseH > availH)
+                ZoomToFitWindow();
+        }
+
+        private static double ComputeFitZoom(double availW, double availH, double baseW, double baseH)
+        {
+            if (baseW <= 0 || baseH <= 0) return 1.0;
+            double fit = Math.Min(availW / baseW, availH / baseH) * 0.95;
+            return Math.Clamp(fit, ZoomMin, ZoomMax);
+        }
+
+        private bool IsZoomFitted()
+        {
+            if (_zoomToFit) return true;
+            if (PreviewImage.Source is not BitmapSource bmp) return false;
+            double availW = ZoomViewport.ViewportWidth;
+            double availH = ZoomViewport.ViewportHeight;
+            if (availW <= 0 || availH <= 0) return false;
+            GetPhysicalBaseDimensions(bmp, out double baseW, out double baseH);
+            return Math.Abs(_currentZoom - ComputeFitZoom(availW, availH, baseW, baseH)) < 0.02;
+        }
+
+        private void ToggleZoomView()
+        {
+            if (IsZoomFitted())
+                ZoomActualSize();
+            else
+                ZoomToFitWindow();
+        }
+
+        private void UpdateZoomViewButton()
+        {
+            if (ZoomFitBtn is null || ZoomFitIcon is null) return;
+            bool fitted = IsZoomFitted();
+            var c = Theme.TextSecondary;
+            var iconColor = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
+            SetPreviewIcon(ZoomFitIcon, fitted ? "fullscreen" : "zoomFit", iconColor, 12);
+            string key = fitted ? "Original size" : "Fit to window";
+            ZoomFitBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate(key), "Ctrl+0");
+            System.Windows.Automation.AutomationProperties.SetName(ZoomFitBtn, LocalizationService.Translate(key));
         }
 
         private void UpdateZoomLevelText()
@@ -2021,7 +2084,7 @@ namespace CyberSnap.UI
 
         private void ZoomFitBtn_Click(object sender, RoutedEventArgs e)
         {
-            ZoomToFitWindow();
+            ToggleZoomView();
         }
 
         private void ZoomLevelBtn_Click(object sender, RoutedEventArgs e)
@@ -2654,7 +2717,7 @@ namespace CyberSnap.UI
                 }
                 if (e.Key == Key.D0 || e.Key == Key.NumPad0)
                 {
-                    ZoomToFitWindow();
+                    ToggleZoomView();
                     e.Handled = true;
                     return;
                 }
