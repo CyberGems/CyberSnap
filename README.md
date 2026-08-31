@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4.svg?logo=windows&logoColor=white" alt="Platform" />
   <img src="https://img.shields.io/badge/version-1.11.0-00F0FF.svg" alt="Version" />
   <img src="https://img.shields.io/badge/.NET-9-512BD4.svg?logo=dotnet&logoColor=white" alt=".NET" />
-  <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/%F0%9F%93%96_Wiki-Documentation-222222.svg?logo=github&logoColor=white" alt="Wiki" /></a>
+  📖 [Wiki](https://github.com/CyberGems/CyberSnap/wiki)
 </p>
 
 A full-featured **screenshot, annotation, OCR, translation, screen-recording and sharing tool** for Windows. CyberSnap combines a floating capture widget, an annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload — all in a single .NET 9 / WPF desktop application.
