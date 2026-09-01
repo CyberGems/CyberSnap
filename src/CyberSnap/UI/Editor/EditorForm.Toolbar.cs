@@ -2883,7 +2883,7 @@ internal sealed class EditorToolButton : EditorButtonBase
             rect.Top + iconTop,
             iconSize,
             iconSize);
-        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
 
         int textTop = (int)Math.Round(rect.Top + iconTop + iconSize + textGap);
         int textBottom = Math.Min(textTop + textHeight, rect.Bottom - 1);
@@ -3097,7 +3097,7 @@ internal sealed class EditorCommandButton : Button
             rect.Top + 3,
             iconSize,
             iconSize);
-        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed || Primary));
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
 
         var textRect = new Rectangle(rect.Left + 2, rect.Top + 38, rect.Width - 4, 22);
         TextRenderer.DrawText(
@@ -3204,13 +3204,7 @@ internal sealed class EditorChromeButton : EditorButtonBase
             rect.Top + (rect.Height - iconSize) / 2f,
             iconSize,
             iconSize);
-        // The filled maximize glyph grows into the viewBox edges and is clipped at
-        // title-bar scale. Keep maximize/restore at the stable regular geometry while
-        // still using the hover color and background.
-        bool useFilledGeometry = active
-            && !string.Equals(IconId, "maximize", StringComparison.Ordinal)
-            && !string.Equals(IconId, "restore", StringComparison.Ordinal);
-        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, useFilledGeometry);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
     }
 }
 
@@ -4097,7 +4091,7 @@ internal sealed class EditorZoomBarButton : Button
             ? rect.Left + (rect.Width - iconSize) / 2f
             : rect.Left + 12;
         var iconRect = new RectangleF(iconX, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
-        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed));
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
 
         if (!iconOnly)
         {

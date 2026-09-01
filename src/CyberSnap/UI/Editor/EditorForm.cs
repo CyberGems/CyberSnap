@@ -29,6 +29,19 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
     private const int WM_LBUTTONDBLCLK = 0x0203;
+    private const int WM_ERASEBKGND = 0x0014;
+    private const int WM_SHOWWINDOW = 0x0018;
+    private const int WM_WINDOWPOSCHANGING = 0x0046;
+    private const int WM_WINDOWPOSCHANGED = 0x0047;
+    private const int WM_SIZE = 0x0005;
+    private const int WM_SYSCOMMAND = 0x0112;
+    private const int SC_RESTORE = 0xF120;
+    private const int WM_SETREDRAW = 0x000B;
+    private const uint RDW_INVALIDATE = 0x0001;
+    private const uint RDW_ERASE = 0x0004;
+    private const uint RDW_ALLCHILDREN = 0x0080;
+    private const uint RDW_UPDATENOW = 0x0100;
+    private const uint RDW_FRAME = 0x0400;
     private const int DefaultEditorWidth = 1400;
     private const int DefaultEditorHeight = 920;
     private const int RestoredWindowMargin = 80;
@@ -63,6 +76,14 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private bool _windowStateToggleInProgress;
     private FormWindowState _lastWindowState = FormWindowState.Normal;
     private bool _enableComposited = true;
+    /// <summary>
+    /// True while restore/maximize paints into a cloaked HWND. DWM must not present
+    /// the empty form + sequential child paint that looks like a rebuild.
+    /// </summary>
+    private bool _silentPresentation;
+    private bool _presentationCloaked;
+    private bool _endPresentationPosted;
+    private bool _boundsChangeInProgress;
     /// <summary>
     /// True until the first Shown layout/maximize pass finishes. The form opens at Opacity 0
     /// so toolbar/canvas composition and optional auto-maximize never flash mid-construction.
@@ -542,6 +563,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             if (IsDisposed || Disposing || !Visible || _canvas.IsDisposed)
                 return;
+            if (_silentPresentation && WindowState != FormWindowState.Minimized)
+                ScheduleEndSilentPresentation();
             RefreshUi();
         };
         FormClosed += (_, _) =>
@@ -562,6 +585,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
             _shareCts?.Dispose();
             try { _startupSplash?.Dispose(); } catch { }
             _startupSplash = null;
+            if (_presentationCloaked && IsHandleCreated)
+            {
+                try { CyberSnap.Native.Dwm.TrySetCloaked(Handle, false); } catch { }
+                _presentationCloaked = false;
+            }
             if (ReferenceEquals(_instance, this)) _instance = null;
             UnregisterCanvasMessageFilter();
             DisposeAllDocuments();
@@ -575,19 +603,24 @@ public sealed partial class EditorForm : Form, IMessageFilter
             }
 
             UpdateWindowStateButton();
-            UpdateWindowChromeRegion();
-            if (WindowState != FormWindowState.Minimized)
-            {
-                if (_lastWindowState == FormWindowState.Minimized)
-                {
-                    RefreshLayoutAndRedraw();
-                }
+            if (!_boundsChangeInProgress)
+                UpdateWindowChromeRegion();
 
-                if (_canvas != null)
-                {
-                    RefreshUi();
-                    _canvas.Invalidate();
-                }
+            // Minimize/restore does not change layout. RefreshLayoutAndRedraw here is what
+            // painted the empty chrome then rebuilt the UI on screen. Skip that — and skip
+            // RefreshUi — while a silent (cloaked) presentation is in flight, during a
+            // maximize toggle, or when coming back from the taskbar.
+            bool skipVisibleRebuild = _silentPresentation
+                || _windowStateToggleInProgress
+                || _boundsChangeInProgress
+                || _lastWindowState == FormWindowState.Minimized;
+
+            if (WindowState != FormWindowState.Minimized
+                && !skipVisibleRebuild
+                && _canvas != null)
+            {
+                RefreshUi();
+                _canvas.Invalidate();
             }
             _lastWindowState = WindowState;
             UpdateStatusBarResponsiveLayout();
@@ -617,8 +650,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
             // Disable compositing after the initial pass — leaving it on permanently
             // corrupts layout when the window loses/regains focus (known WinForms issue).
-            _enableComposited = false;
-            UpdateStyles();
+            SetComposited(false);
             RefreshLayoutAndRedraw();
         }
         finally
@@ -678,6 +710,73 @@ public sealed partial class EditorForm : Form, IMessageFilter
         ResumeLayout(true);
         Invalidate(true);
         Update();
+    }
+
+    private void SetComposited(bool enabled)
+    {
+        if (_enableComposited == enabled)
+            return;
+        _enableComposited = enabled;
+        if (IsHandleCreated && !IsDisposed)
+            UpdateStyles();
+    }
+
+    /// <summary>
+    /// Paint the next taskbar-restore pass off-screen (cloaked + composited).
+    /// Maximize/restore of a visible window must not use this — cloaking made
+    /// the HWND vanish, and toggling compositing while visible rebuilt chrome
+    /// control-by-control.
+    /// </summary>
+    private void BeginSilentPresentation()
+    {
+        if (_silentPresentation || IsDisposed || Disposing || !IsHandleCreated)
+            return;
+
+        _silentPresentation = true;
+        SetComposited(true);
+
+        if (!_awaitingInitialReveal && Opacity >= 1.0)
+        {
+            CyberSnap.Native.Dwm.TrySetCloaked(Handle, true);
+            _presentationCloaked = true;
+        }
+    }
+
+    private void EndSilentPresentation()
+    {
+        if (!_silentPresentation)
+            return;
+
+        try
+        {
+            if (IsHandleCreated && !IsDisposed && WindowState != FormWindowState.Minimized)
+            {
+                Invalidate(true);
+                Update();
+            }
+
+            SetComposited(false);
+
+            if (_presentationCloaked && IsHandleCreated && !IsDisposed)
+                Update();
+        }
+        finally
+        {
+            if (_presentationCloaked && IsHandleCreated && !IsDisposed)
+                CyberSnap.Native.Dwm.TrySetCloaked(Handle, false);
+            _presentationCloaked = false;
+            _silentPresentation = false;
+            _endPresentationPosted = false;
+        }
+    }
+
+    private void ScheduleEndSilentPresentation()
+    {
+        if (!_silentPresentation || _endPresentationPosted || !IsHandleCreated || IsDisposed)
+            return;
+
+        _endPresentationPosted = true;
+        BeginInvoke(new Action(EndSilentPresentation));
     }
 
     public void SetShowWelcomeBanner(bool show)
@@ -2286,23 +2385,59 @@ public sealed partial class EditorForm : Form, IMessageFilter
         // Matches the WPF windows (CyberSnapWindowChrome): rounded, anti-aliased corners on
         // Windows 11. No-op on Windows 10, where UpdateWindowChromeRegion clips the corners instead.
         CyberSnap.Native.Dwm.TrySetWindowCornerPreference(Handle, CyberSnap.Native.Dwm.DWMWCP_ROUND);
+        // Borderless WinForms otherwise morphs an unpainted HWND from the taskbar.
+        CyberSnap.Native.Dwm.TrySetTransitionsForcedDisabled(Handle, disabled: true);
     }
 
     protected override void WndProc(ref Message m)
     {
         if (m.Msg == WM_ENTERSIZEMOVE)
         {
-            _enableComposited = true;
-            UpdateStyles();
+            SetComposited(true);
         }
         else if (m.Msg == WM_EXITSIZEMOVE)
         {
-            _enableComposited = false;
-            UpdateStyles();
+            SetComposited(false);
             RefreshLayoutAndRedraw();
+        }
+        else if (m.Msg == WM_SYSCOMMAND)
+        {
+            int command = unchecked((int)(long)m.WParam) & 0xFFF0;
+            if (command == SC_RESTORE && WindowState == FormWindowState.Minimized)
+                BeginSilentPresentation();
+        }
+        else if (m.Msg == WM_SHOWWINDOW
+                 && m.WParam != IntPtr.Zero
+                 && (WindowState == FormWindowState.Minimized
+                     || _lastWindowState == FormWindowState.Minimized))
+        {
+            BeginSilentPresentation();
+        }
+        else if (m.Msg == WM_WINDOWPOSCHANGING && IsHandleCreated)
+        {
+            var pos = Marshal.PtrToStructure<WindowPos>(m.LParam);
+            if ((pos.flags & CyberSnap.Native.User32.SWP_SHOWWINDOW) != 0
+                && (WindowState == FormWindowState.Minimized
+                    || _lastWindowState == FormWindowState.Minimized))
+            {
+                BeginSilentPresentation();
+            }
+        }
+        else if (m.Msg == WM_ERASEBKGND && _silentPresentation)
+        {
+            // Parent BackColor fill is the solid empty frame in the restore video.
+            m.Result = 1;
+            return;
         }
 
         base.WndProc(ref m);
+
+        if ((m.Msg == WM_WINDOWPOSCHANGED || m.Msg == WM_SIZE)
+            && _silentPresentation
+            && WindowState != FormWindowState.Minimized)
+        {
+            ScheduleEndSilentPresentation();
+        }
 
         if (m.Msg != WM_NCHITTEST || _isManualMaximized || m.Result != (IntPtr)HTCLIENT)
             return;
@@ -2386,23 +2521,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (userInitiated)
             _userRestoredWindow = false;
 
-        _enableComposited = true;
-        UpdateStyles();
-
-        SuspendLayout();
-        try
-        {
-            SetBounds(area.X, area.Y, area.Width, area.Height, BoundsSpecified.All);
-        }
-        finally
-        {
-            ResumeLayout(true);
-            UpdateWindowChromeRegion();
-
-            _enableComposited = false;
-            UpdateStyles();
-            RefreshLayoutAndRedraw();
-        }
+        ApplyEditorBounds(area.X, area.Y, area.Width, area.Height);
     }
 
     private void RestoreManualMaximize()
@@ -2424,22 +2543,51 @@ public sealed partial class EditorForm : Form, IMessageFilter
         _isManualMaximized = false;
         _userRestoredWindow = true;
 
-        _enableComposited = true;
-        UpdateStyles();
+        ApplyEditorBounds(restoreBounds.X, restoreBounds.Y, restoreBounds.Width, restoreBounds.Height);
+    }
 
-        SuspendLayout();
+    /// <summary>
+    /// Visible maximize/restore: freeze painting so nested controls cannot present
+    /// one-by-one, toggle compositing while frozen, then thaw into a single frame.
+    /// The HWND stays on screen (no DWM cloak).
+    /// </summary>
+    private void ApplyEditorBounds(int x, int y, int width, int height)
+    {
+        bool freezePaint = IsHandleCreated && !_awaitingInitialReveal && Opacity >= 1.0;
+        _boundsChangeInProgress = true;
         try
         {
-            SetBounds(restoreBounds.X, restoreBounds.Y, restoreBounds.Width, restoreBounds.Height, BoundsSpecified.All);
+            if (freezePaint)
+            {
+                SendMessage(Handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+                SetComposited(true);
+            }
+
+            SuspendLayout();
+            try
+            {
+                SetBounds(x, y, width, height, BoundsSpecified.All);
+            }
+            finally
+            {
+                ResumeLayout(true);
+                UpdateWindowChromeRegion();
+            }
         }
         finally
         {
-            ResumeLayout(true);
-            UpdateWindowChromeRegion();
+            if (freezePaint && IsHandleCreated && !IsDisposed)
+            {
+                SendMessage(Handle, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
+                RedrawWindow(
+                    Handle,
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_UPDATENOW | RDW_FRAME);
+                BeginInvoke(new Action(() => SetComposited(false)));
+            }
 
-            _enableComposited = false;
-            UpdateStyles();
-            RefreshLayoutAndRedraw();
+            _boundsChangeInProgress = false;
         }
     }
 
@@ -2499,11 +2647,26 @@ public sealed partial class EditorForm : Form, IMessageFilter
         return new Point((short)(value & 0xffff), (short)((value >> 16) & 0xffff));
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowPos
+    {
+        public IntPtr hwnd;
+        public IntPtr hwndInsertAfter;
+        public int x;
+        public int y;
+        public int cx;
+        public int cy;
+        public uint flags;
+    }
+
     [DllImport("user32.dll")]
     private static extern bool ReleaseCapture();
 
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
 
     // The "properties" verb is only honored by ShellExecuteEx when SEE_MASK_INVOKEIDLIST
     // is set; the simpler ShellExecute API cannot pass that flag and fails (SE_ERR_NOASSOC).
