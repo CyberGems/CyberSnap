@@ -77,6 +77,15 @@ public sealed partial class RecordingControlBarWindow : Window
     /// <summary>True while the user is dragging/resizing the selection; bar hides to not obstruct.</summary>
     private bool _isDragInProgress;
 
+    /// <summary>True while the user is dragging the bar itself.</summary>
+    private bool _isBarDragging;
+
+    /// <summary>Once the user moves the bar, auto-anchoring to the capture region stops.</summary>
+    private bool _userPositioned;
+
+    private System.Drawing.Point _dragCursorStart;
+    private System.Drawing.Point _dragWindowStart;
+
     public RecordingControlBarWindow(
         System.Drawing.Rectangle captureRegion,
         Models.RecordingFormat format,
@@ -237,6 +246,8 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Reposition(captureRegion)); return; }
         _lastCaptureRegion = captureRegion;
+        if (_userPositioned || _isBarDragging)
+            return;
         PositionAboveRegion(captureRegion);
     }
 
@@ -312,15 +323,134 @@ public sealed partial class RecordingControlBarWindow : Window
         if (tx < screenBounds.Left + edge) tx = screenBounds.Left + edge;
         if (tx + barWidthPhys > screenBounds.Right - edge) tx = screenBounds.Right - edge - barWidthPhys;
 
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd != IntPtr.Zero)
-        {
-            // SWP_SHOWWINDOW + no NOZORDER flag → re-asserts HWND_TOPMOST each call,
-            // so the bar stays above the fullscreen overlay even mid drag.
-            User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, tx, ty, 0, 0,
-                User32.SWP_NOSIZE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
-        }
+        MoveBarToPhysical(tx, ty);
         // If handle isn't ready, SourceInitialized re-invokes this and places it then.
+    }
+
+    private void MoveBarToPhysical(int x, int y)
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        // SWP_SHOWWINDOW + no NOZORDER flag → re-asserts HWND_TOPMOST each call,
+        // so the bar stays above the fullscreen overlay even mid drag.
+        User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, x, y, 0, 0,
+            User32.SWP_NOSIZE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Drag (chrome, not buttons — those mark MouseLeftButtonDown handled)
+    // ══════════════════════════════════════════════════════════════
+
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(e);
+        if (e.Handled || _isDragInProgress || _isBarDragging)
+            return;
+        if (!TryGetBarDragOrigin(out _dragCursorStart, out _dragWindowStart))
+            return;
+
+        _isBarDragging = true;
+        CaptureMouse();
+        Cursor = System.Windows.Input.Cursors.SizeAll;
+        Mouse.OverrideCursor = System.Windows.Input.Cursors.SizeAll;
+        ForceCursor = true;
+        e.Handled = true;
+    }
+
+    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (!_isBarDragging || e.LeftButton != MouseButtonState.Pressed)
+            return;
+        if (!User32.GetCursorPos(out var cursor))
+            return;
+
+        int dx = cursor.X - _dragCursorStart.X;
+        int dy = cursor.Y - _dragCursorStart.Y;
+        if (!_userPositioned &&
+            Math.Abs(dx) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(dy) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        _userPositioned = true;
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        int barWidth = (int)Math.Round(BarWidth * UiScale.Current);
+        int barHeight = (int)Math.Round(BarHeight * UiScale.Current);
+        if (hwnd != IntPtr.Zero && User32.GetWindowRect(hwnd, out var wr))
+        {
+            barWidth = wr.Width;
+            barHeight = wr.Height;
+        }
+
+        int tx = _dragWindowStart.X + dx;
+        int ty = _dragWindowStart.Y + dy;
+        ClampToVirtualScreen(ref tx, ref ty, barWidth, barHeight);
+        MoveBarToPhysical(tx, ty);
+    }
+
+    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonUp(e);
+        if (!_isBarDragging)
+            return;
+        EndBarDrag();
+        e.Handled = true;
+    }
+
+    protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        if (_isBarDragging)
+            EndBarDrag();
+    }
+
+    private void EndBarDrag()
+    {
+        _isBarDragging = false;
+        if (IsMouseCaptured)
+            ReleaseMouseCapture();
+        ForceCursor = false;
+        Mouse.OverrideCursor = null;
+        Cursor = System.Windows.Input.Cursors.SizeAll;
+    }
+
+    private bool TryGetBarDragOrigin(out System.Drawing.Point cursor, out System.Drawing.Point window)
+    {
+        cursor = default;
+        window = default;
+        if (!User32.GetCursorPos(out var pt))
+            return false;
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero || !User32.GetWindowRect(hwnd, out var wr))
+            return false;
+
+        cursor = new System.Drawing.Point(pt.X, pt.Y);
+        window = new System.Drawing.Point(wr.Left, wr.Top);
+        return true;
+    }
+
+    private static void ClampToVirtualScreen(ref int x, ref int y, int width, int height)
+    {
+        var vs = new System.Drawing.Rectangle(
+            User32.GetSystemMetrics(User32.SM_XVIRTUALSCREEN),
+            User32.GetSystemMetrics(User32.SM_YVIRTUALSCREEN),
+            User32.GetSystemMetrics(User32.SM_CXVIRTUALSCREEN),
+            User32.GetSystemMetrics(User32.SM_CYVIRTUALSCREEN));
+
+        const int edge = 4;
+        if (width < vs.Width - edge * 2)
+            x = Math.Clamp(x, vs.Left + edge, vs.Right - edge - width);
+        else
+            x = vs.Left + edge;
+
+        if (height < vs.Height - edge * 2)
+            y = Math.Clamp(y, vs.Top + edge, vs.Bottom - edge - height);
+        else
+            y = vs.Top + edge;
     }
 
     // ══════════════════════════════════════════════════════════════
