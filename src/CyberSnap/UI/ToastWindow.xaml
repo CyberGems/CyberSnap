@@ -189,11 +189,35 @@
                     <Border x:Name="ColorSwatch" Grid.Column="0" Width="28" Height="28" CornerRadius="8"
                             Margin="0,0,12,0" Visibility="Collapsed" VerticalAlignment="Center"
                             BorderBrush="#44FFFFFF" BorderThickness="1"/>
-                    <Border x:Name="InlinePreviewHost" Grid.Column="1" Width="44" Height="44" CornerRadius="8"
+                    <Border x:Name="InlinePreviewHost" Grid.Column="1" Width="48" Height="48" CornerRadius="8"
                             Margin="0,0,12,0" Visibility="Collapsed" VerticalAlignment="Center"
-                            Background="#12FFFFFF" BorderBrush="#22FFFFFF" BorderThickness="1">
-                        <Image x:Name="InlinePreviewImage" Stretch="Uniform" Margin="4"
-                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                            SnapsToDevicePixels="True" UseLayoutRounding="True"
+                            ClipToBounds="False"
+                            Background="#12FFFFFF" BorderBrush="#55FFFFFF" BorderThickness="1">
+                        <Grid>
+                            <!-- Clip the photo only — never the host — so the 1px ring stays sharp at the corners. -->
+                            <Border x:Name="InlinePreviewClip"
+                                    CornerRadius="7"
+                                    ClipToBounds="True"
+                                    SnapsToDevicePixels="True">
+                                <Image x:Name="InlinePreviewImage" Stretch="UniformToFill"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <Ellipse x:Name="InlineIconBadgeCircle"
+                                     Width="28" Height="28"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     Fill="#A8000000"
+                                     Visibility="Collapsed"
+                                     IsHitTestVisible="False"/>
+                            <Path x:Name="InlineBadgeIconPath"
+                                  Width="16" Height="16"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Stretch="Uniform"
+                                  Visibility="Collapsed"
+                                  IsHitTestVisible="False"
+                                  SnapsToDevicePixels="True"/>
+                        </Grid>
                     </Border>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,84,0">
                         <TextBlock x:Name="TitleText" FontSize="12.75" FontWeight="SemiBold"

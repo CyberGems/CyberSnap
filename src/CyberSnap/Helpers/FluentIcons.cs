@@ -25,4 +25,7 @@ public static class FluentIcons
 
     public static BitmapSource? RenderWpf(string id, Color color, int size, bool active = false)
         => StreamlineIcons.RenderWpf(id, color, size, active);
+
+    public static System.Windows.Media.Geometry? GetGeometry(string id, bool active = false)
+        => StreamlineIcons.GetGeometry(id, active);
 }

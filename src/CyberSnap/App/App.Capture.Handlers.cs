@@ -254,7 +254,6 @@ public partial class App
                         if (!openedInEditor)
                         {
                             TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
-                            persisted.Output.Dispose();
                             if (showCompactToast)
                             {
                                 ShowDynamicAfterCaptureToast(
@@ -264,13 +263,14 @@ public partial class App
                                     share: default,
                                     openedEditor: false,
                                     openedViewer: true,
-                                    filePath: persisted.FilePath);
+                                    filePath: persisted.FilePath,
+                                    preview: BitmapPerf.CloneToastThumb(persisted.Output));
                             }
+                            persisted.Output.Dispose();
                             ScheduleIdleMemoryTrim();
                             return;
                         }
 
-                        persisted.Output.Dispose();
                         if (showCompactToast)
                         {
                             ShowDynamicAfterCaptureToast(
@@ -280,8 +280,10 @@ public partial class App
                                 share: default,
                                 openedEditor: true,
                                 openedViewer: false,
-                                filePath: persisted.FilePath);
+                                filePath: persisted.FilePath,
+                                preview: BitmapPerf.CloneToastThumb(persisted.Output));
                         }
+                        persisted.Output.Dispose();
                     }
                     else if (commitAction == RegionOverlayForm.ConfirmCommitAction.History)
                     {
@@ -341,6 +343,9 @@ public partial class App
                         }
                         else
                         {
+                            Bitmap? toastThumb = showCompactToast
+                                ? BitmapPerf.CloneToastThumb(persisted.Output)
+                                : null;
                             persisted.Output.Dispose();
                             if (showCompactToast)
                             {
@@ -351,7 +356,8 @@ public partial class App
                                     share: default,
                                     openedEditor: false,
                                     openedViewer: openedViewer,
-                                    filePath: persisted.FilePath);
+                                    filePath: persisted.FilePath,
+                                    preview: toastThumb);
                             }
                         }
                     }
@@ -384,6 +390,7 @@ public partial class App
         bool openedViewer)
     {
         ShareAttempt shareAttempt = default;
+        Bitmap? toastThumb = showCompactToast ? BitmapPerf.CloneToastThumb(bitmap) : null;
         try
         {
             // When the enriched summary toast will list "Shared", skip PresentResult's own toast.
@@ -404,7 +411,12 @@ public partial class App
                 share: shareAttempt,
                 openedEditor: false,
                 openedViewer: openedViewer,
-                filePath: filePath);
+                filePath: filePath,
+                preview: toastThumb);
+        }
+        else
+        {
+            try { toastThumb?.Dispose(); } catch { }
         }
 
         ScheduleIdleMemoryTrim();
@@ -491,7 +503,8 @@ public partial class App
         ShareAttempt share,
         bool openedEditor,
         bool openedViewer,
-        string? filePath)
+        string? filePath,
+        Bitmap? preview = null)
     {
         var state = Helpers.AfterCaptureOutcomeModel.FromSettings(_settingsService!.Settings);
         var rows = new List<(int Order, UI.ToastStatusLine Line)>();
@@ -598,7 +611,8 @@ public partial class App
             StatusLines = rows.Select(r => r.Line).ToList(),
             FilePath = filePath,
             PlayCaptureSound = true,
-            IsSystemMessage = false
+            IsSystemMessage = false,
+            InlinePreviewBitmap = preview
         });
     }
 

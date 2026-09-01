@@ -16,6 +16,41 @@ internal static class BitmapPerf
         return new Bitmap(source);
     }
 
+    /// <summary>
+    /// Small detached copy for toast thumbs. Downscales so a 4K capture does not stay in memory.
+    /// Returns null when <paramref name="source"/> is null or cannot be cloned.
+    /// </summary>
+    public static Bitmap? CloneToastThumb(Bitmap? source, int maxEdge = 96)
+    {
+        if (source is null)
+            return null;
+
+        try
+        {
+            int w = source.Width;
+            int h = source.Height;
+            if (w <= 0 || h <= 0)
+                return null;
+
+            if (w <= maxEdge && h <= maxEdge)
+                return Clone32bppArgb(source);
+
+            double scale = maxEdge / (double)Math.Max(w, h);
+            int tw = Math.Max(1, (int)Math.Round(w * scale));
+            int th = Math.Max(1, (int)Math.Round(h * scale));
+            var bmp = new Bitmap(tw, th, DrawingPixelFormat.Format32bppArgb);
+            using var g = Graphics.FromImage(bmp);
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.DrawImage(source, 0, 0, tw, th);
+            return bmp;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static Bitmap Clone32bppArgb(Bitmap source)
     {
         if (source.PixelFormat == DrawingPixelFormat.Format32bppArgb)

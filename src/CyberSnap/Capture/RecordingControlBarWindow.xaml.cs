@@ -867,6 +867,41 @@ public sealed partial class RecordingControlBarWindow : Window
         FormatBadge.Background = Theme.Brush(fill);
         FormatBadge.BorderBrush = Theme.Brush(border);
         FormatBadge.BorderThickness = new Thickness(1);
+        UpdateFormatBadgeTooltip();
+    }
+
+    private string? _lastBadgeTipKey;
+
+    private void UpdateFormatBadgeTooltip()
+    {
+        string stateKey;
+        string stateText;
+        if (_isEncoding)
+        {
+            stateKey = _format == Models.RecordingFormat.GIF ? "enc-gif" : "enc";
+            stateText = LocalizationService.Translate(
+                _format == Models.RecordingFormat.GIF ? "Encoding GIF..." : "Saving...");
+        }
+        else if (!_isRecording)
+        {
+            stateKey = "ready";
+            stateText = LocalizationService.Translate("Recording ready");
+        }
+        else if (_isPaused)
+        {
+            stateKey = "paused";
+            stateText = LocalizationService.Translate("Recording paused");
+        }
+        else
+        {
+            stateKey = "active";
+            stateText = LocalizationService.Translate("Recording active");
+        }
+
+        if (stateKey == _lastBadgeTipKey)
+            return;
+        _lastBadgeTipKey = stateKey;
+        FormatBadge.ToolTip = $"{FormatLabel()} · {stateText}";
     }
 
     private void UpdateStatusText()
@@ -913,12 +948,11 @@ public sealed partial class RecordingControlBarWindow : Window
         _lastUsedBytes = used;
         _lastFreeBytes = freeCmp;
 
-        // Size appears once the output file has bytes (MP4 grows live; GIF often 0 until encode).
-        bool showUsed = used > 0;
         long freeDisplay = freeCmp < 0 ? -1 : freeCmp;
+        long usedDisplay = Math.Max(0, used);
         StorageText.Text = freeDisplay >= 0
-            ? (showUsed ? $"{FormatBytes(used)} · {FormatBytes(freeDisplay)}" : FormatBytes(freeDisplay))
-            : (showUsed ? FormatBytes(used) : "");
+            ? $"{FormatBytes(usedDisplay)} · {FormatBytes(freeDisplay)}"
+            : FormatBytes(usedDisplay);
 
         bool lowDisk = freeDisplay >= 0 && freeDisplay < LowDiskWarnBytes;
         StorageText.Foreground = Theme.Brush(lowDisk ? StopRed : Theme.TextMuted);
@@ -1121,6 +1155,8 @@ public sealed partial class RecordingControlBarWindow : Window
         StopBtn.ToolTip = LocalizationService.Translate("Recording stop tooltip");
 
         StorageText.ToolTip = LocalizationService.Translate("Recording storage tooltip");
+        _lastBadgeTipKey = null;
+        UpdateFormatBadgeTooltip();
 
         // Trimmer
         UpdateTrimmerTooltip();

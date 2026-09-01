@@ -79,16 +79,25 @@ public partial class ToastWindow
     {
         // Master switch: nothing is shown when notifications are off.
         if (!_notificationsEnabled)
+        {
+            DiscardUnpresentedPreview(spec);
             return;
+        }
 
         // Sub-toggle: suppress brief text-only system messages while leaving previews/errors.
         if (spec.IsSystemMessage && !_systemNotificationsEnabled)
+        {
+            DiscardUnpresentedPreview(spec);
             return;
+        }
 
         // Quiet hours: mute everything except critical error alerts (and settings test previews).
         if (!spec.IsError && !spec.BypassQuietHours
             && QuietHours.IsActive(SettingsService.LoadStatic()))
+        {
+            DiscardUnpresentedPreview(spec);
             return;
+        }
 
         // Guard: skip completely empty toasts (no text, no image, no color, no status rows)
         if (string.IsNullOrWhiteSpace(spec.Title)
@@ -97,7 +106,10 @@ public partial class ToastWindow
             && string.IsNullOrEmpty(spec.InlineIconId)
             && !spec.SwatchColor.HasValue
             && spec.StatusLines is not { Count: > 0 })
+        {
+            DiscardUnpresentedPreview(spec);
             return;
+        }
 
         var wpfDispatcher = System.Windows.Application.Current?.Dispatcher;
         if (wpfDispatcher != null && !wpfDispatcher.CheckAccess())
@@ -125,7 +137,10 @@ public partial class ToastWindow
 
             // A celebration on screen keeps the slot until it dismisses. Errors still interrupt.
             if (!spec.IsError && _currentSpec is { } showing && IsCelebration(showing))
+            {
+                DiscardUnpresentedPreview(spec);
                 return;
+            }
 
             if (spec.IsError && _currentSpec is { } interrupted && IsCelebration(interrupted))
                 EnqueueCelebration(interrupted);
@@ -136,6 +151,11 @@ public partial class ToastWindow
         {
             _showDepth--;
         }
+    }
+
+    private static void DiscardUnpresentedPreview(ToastSpec spec)
+    {
+        try { spec.InlinePreviewBitmap?.Dispose(); } catch { }
     }
 
     private static bool IsCelebration(ToastSpec spec) => spec.Celebrate && !spec.IsError;
