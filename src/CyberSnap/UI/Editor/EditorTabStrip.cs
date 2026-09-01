@@ -26,6 +26,8 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
 
     public event EventHandler<int>? TabSelected;
     public event EventHandler<int>? TabCloseRequested;
+    public event EventHandler<int>? TabContextMenuRequested;
+    public event EventHandler? BarContextMenuRequested;
     public event EventHandler? EmptyAreaDoubleClicked;
 
     public EditorTabStrip()
@@ -136,6 +138,21 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
+        if (e.Button == MouseButtons.Right)
+        {
+            int tab = HitTestTab(e.Location);
+            if (tab >= 0)
+            {
+                TabSelected?.Invoke(this, tab);
+                TabContextMenuRequested?.Invoke(this, tab);
+            }
+            else
+            {
+                BarContextMenuRequested?.Invoke(this, EventArgs.Empty);
+            }
+            return;
+        }
+
         if (e.Button != MouseButtons.Left) return;
 
         int close = HitTestClose(e.Location);
@@ -145,9 +162,9 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
             return;
         }
 
-        int tab = HitTestTab(e.Location);
-        if (tab >= 0)
-            TabSelected?.Invoke(this, tab);
+        int hit = HitTestTab(e.Location);
+        if (hit >= 0)
+            TabSelected?.Invoke(this, hit);
     }
 
     protected override void OnMouseDoubleClick(MouseEventArgs e)

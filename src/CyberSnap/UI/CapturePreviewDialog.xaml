@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
+        xmlns:ui="clr-namespace:CyberSnap.UI"
         Title="Capture Preview"
         Height="520" Width="860"
         MinHeight="440" MinWidth="580"
@@ -35,8 +36,8 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="Padding" Value="9,3"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
@@ -203,6 +204,7 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -212,8 +214,12 @@
                                       CloseRequested="TitleBar_CloseRequested"
                                       PinRequested="TitleBar_PinRequested"/>
 
+            <ui:PreviewTabStrip x:Name="PreviewTabStripHost" Grid.Row="1"
+                                Height="28"
+                                Visibility="Collapsed"/>
+
             <!-- Preview (left) + actions (right); stacks when narrow -->
-            <Grid x:Name="MainLayout" Grid.Row="1" Margin="14,2,14,12">
+            <Grid x:Name="MainLayout" Grid.Row="2" Margin="14,2,14,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="PreviewCol" Width="*"/>
                     <ColumnDefinition x:Name="ActionsCol" Width="285"/>
@@ -233,7 +239,8 @@
                         MouseLeftButtonUp="ZoomViewport_MouseLeftButtonUp"
                         MouseMove="ZoomViewport_MouseMove"
                         MouseEnter="ZoomViewport_MouseEnter"
-                        MouseLeave="ZoomViewport_MouseLeave">
+                        MouseLeave="ZoomViewport_MouseLeave"
+                        MouseRightButtonUp="PreviewFrame_MouseRightButtonUp">
                     <Grid>
                         <Border x:Name="CheckerboardHost" CornerRadius="9"/>
                         <ScrollViewer x:Name="ZoomViewport"
@@ -402,19 +409,19 @@
                         <!-- You can also — anchored to the bottom, right above the primary CTA,
                              so the breathing room stays under the pills instead of mid-card. -->
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                      PanningMode="VerticalOnly" Focusable="False" Margin="0,10,0,0">
+                                      PanningMode="VerticalOnly" Focusable="False" Margin="0,8,0,0">
                             <StackPanel x:Name="OptionalActionsSection" VerticalAlignment="Top">
                                 <TextBlock x:Name="OptionalActionsHeaderLabel"
                                            Text="You can also:"
                                            FontSize="11.5" FontWeight="SemiBold"
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                           Margin="0,0,0,6"
+                                           Margin="0,0,0,4"
                                            TextTrimming="CharacterEllipsis"/>
 
                                 <WrapPanel x:Name="OptionalActionsPanel" Orientation="Horizontal">
                                     <Button x:Name="SaveBtn" Click="SaveBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6">
+                                            Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="SaveIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
@@ -424,7 +431,7 @@
                                     </Button>
                                     <Button x:Name="SaveAsBtn" Click="SaveAsBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6">
+                                            Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="SaveAsIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
@@ -434,7 +441,7 @@
                                     </Button>
                                     <Button x:Name="CopyBtn" Click="CopyBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6">
+                                            Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="CopyIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
@@ -444,7 +451,7 @@
                                     </Button>
                                     <Button x:Name="EditBtn" Click="EditBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6">
+                                            Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
@@ -454,7 +461,7 @@
                                     </Button>
                                     <Button x:Name="OpenViewerBtn" Click="OpenViewerBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6">
+                                            Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="OpenViewerIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
@@ -464,7 +471,7 @@
                                     </Button>
                                     <Button x:Name="PrintBtn" Click="PrintBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6">
+                                            Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
@@ -474,7 +481,7 @@
                                     </Button>
                                     <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6"
+                                            Margin="0,0,6,4"
                                             Visibility="Collapsed">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0"
@@ -485,7 +492,7 @@
                                     </Button>
                                     <Button x:Name="MoreBtn" Click="MoreBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,6"
+                                            Margin="0,0,6,4"
                                             ToolTip="More">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="MoreIcon" Width="13" Height="13" Margin="0,0,6,0"
@@ -505,7 +512,7 @@
                         </ScrollViewer>
 
                         <!-- Primary CTA + auto-close countdown ring docked right (skip-ad style). -->
-                        <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                        <StackPanel Grid.Row="2" Margin="0,10,0,0">
                             <Grid>
                                 <Button x:Name="CancelBtn" Click="CancelBtn_Click"
                                         Style="{StaticResource PreviewPrimaryButton}"
@@ -519,7 +526,7 @@
 
                                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center"
+                                            <TextBlock x:Name="CancelText" Text="Close" VerticalAlignment="Center"
                                                        FontSize="12.5" FontWeight="SemiBold"/>
                                             <!-- Host owns the invite slide so spinner RotateTransform on CancelIcon stays independent. -->
                                             <Grid x:Name="CancelIconHost" Margin="7,0,0,0" VerticalAlignment="Center">

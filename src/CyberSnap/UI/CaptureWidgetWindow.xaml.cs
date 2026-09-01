@@ -1435,8 +1435,8 @@ public partial class CaptureWidgetWindow : Window
     private void TriggerAppCapture(Models.CaptureMode mode, RecordingFormat? recordingFormat = null)
     {
         // Hide so the widget is not included in the capture, then launch after a brief delay.
-        // The proxy methods call TryClaimCaptureSlotAllowingPreviewReplace() which auto-closes
-        // any open Preview before starting the new capture (same behaviour as hotkeys).
+        // The proxy methods call TryClaimCaptureSlotAllowingPreviewReplace() which hides
+        // an open Preview so the next capture can stack as a tab (same as hotkeys).
         HideAndLaunch(app =>
         {
             switch (mode)

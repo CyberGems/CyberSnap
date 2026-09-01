@@ -2593,6 +2593,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(undoItem);
         menu.Items.Add(redoItem);
+        AppendDocumentChromeMenuItems(menu, includeOpenInFolder: true);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exitItem);
 
@@ -2657,9 +2658,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(openLocItem);
         menu.Items.Add(propsItem);
 
-        if (hasPath)
-            menu.Items.Add(new ToolStripSeparator());
-
+        AppendDocumentChromeMenuItems(menu);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exitItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
