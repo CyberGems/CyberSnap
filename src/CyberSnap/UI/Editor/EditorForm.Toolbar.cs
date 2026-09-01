@@ -2212,6 +2212,7 @@ public sealed partial class EditorForm
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(closeDocumentItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exportAsItem);
         menu.Items.Add(shareToItem);
         menu.Items.Add(sendToItem);

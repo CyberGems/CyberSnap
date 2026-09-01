@@ -466,14 +466,16 @@ namespace CyberSnap.UI
                         DiscardSessionAt(index);
                     else if (!HasMultipleSessions)
                         RequestChromeClose();
-                }));
+                },
+                danger: true));
 
             if (HasMultipleSessions)
             {
                 menu.Items.Add(CreateTabMenuItem(
                     "Close all",
                     "close",
-                    RequestPrimaryClose));
+                    RequestPrimaryClose,
+                    danger: true));
             }
 
             if (_lastClosed is not null)
@@ -509,14 +511,13 @@ namespace CyberSnap.UI
             return menu;
         }
 
-        private MenuItem CreateTabMenuItem(string label, string iconId, Action onClick)
+        private MenuItem CreateTabMenuItem(string label, string iconId, Action onClick, bool danger = false)
         {
             var c = Theme.TextPrimary;
-            var icon = FluentIcons.RenderWpf(
-                iconId,
-                System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B),
-                28,
-                active: false);
+            var color = danger
+                ? System.Drawing.Color.FromArgb(239, 68, 68)
+                : System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
+            var icon = FluentIcons.RenderWpf(iconId, color, 28, active: false);
             return CreateMoreMenuItem(LocalizationService.Translate(label), icon, onClick);
         }
 

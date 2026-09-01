@@ -2569,7 +2569,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
         var redoItem = WindowsMenuRenderer.Item("Redo", iconId: null);
-        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "signOut", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Close window", iconId: "close", danger: true, dangerIconOnly: true);
 
         openItem.Click += (_, _) => DoOpen();
         pasteItem.Click += (_, _) => DoPaste();
@@ -2595,6 +2595,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(redoItem);
         AppendDocumentChromeMenuItems(menu, includeOpenInFolder: true);
         menu.Items.Add(new ToolStripSeparator());
+        AppendDocumentCloseItems(menu);
         menu.Items.Add(exitItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
@@ -2618,7 +2619,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var transformItem = BuildTransformSubmenu();
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
-        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "signOut", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Close window", iconId: "close", danger: true, dangerIconOnly: true);
 
         copyItem.Click += (_, _) => DoCopy();
         pasteItem.Click += (_, _) => DoPaste();
@@ -2660,6 +2661,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         AppendDocumentChromeMenuItems(menu);
         menu.Items.Add(new ToolStripSeparator());
+        AppendDocumentCloseItems(menu);
         menu.Items.Add(exitItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
