@@ -234,6 +234,10 @@ public partial class App
                         CelebrateCaptureIfEarned(s, CaptureKind.Recording);
                         MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true, "First recording", "record", d => s.FirstRecordingAt = d);
 
+                        Bitmap? toastThumb = wantRecordingNotification
+                            ? BitmapPerf.CloneToastThumb(firstFrame)
+                            : null;
+
                         if (openTrimmer)
                         {
                             if (isGif)
@@ -276,7 +280,7 @@ public partial class App
                         // When ON, the completion toast is always shown (in addition to —
                         // or instead of — the trimmer window).
                         if (wantRecordingNotification)
-                            ShowRecordingToast(path, copiedToClipboard, isGif, ephemeral: !persistRecording);
+                            ShowRecordingToast(path, copiedToClipboard, isGif, ephemeral: !persistRecording, preview: toastThumb);
 
                         ScheduleIdleMemoryTrim();
                     });
@@ -337,7 +341,7 @@ public partial class App
     /// true = copied, false = copy attempted and failed, null = auto-copy skipped for recordings.
     /// </param>
     /// <param name="ephemeral">When true, recording is temp (per-media save off); toast deletes it on dismiss.</param>
-    private void ShowRecordingToast(string path, bool? copiedToClipboard, bool isGif, bool ephemeral = false)
+    private void ShowRecordingToast(string path, bool? copiedToClipboard, bool isGif, bool ephemeral = false, Bitmap? preview = null)
     {
         string body = copiedToClipboard switch
         {
@@ -358,7 +362,9 @@ public partial class App
         {
             PlayCaptureSound = true,
             DeleteFileOnDismiss = ephemeral,
-            InlineIconId = isGif ? "recordGif" : "record"
+            InlineIconId = isGif ? "recordGif" : "record",
+            InlinePreviewBitmap = preview,
+            IsSystemMessage = preview is null
         });
     }
 

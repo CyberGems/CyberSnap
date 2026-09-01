@@ -339,37 +339,46 @@ public partial class ToastWindow : Window
 
         if (spec.IsWelcomeToast)
         {
+            HideInlineBadge();
             InlinePreviewHost.Visibility = Visibility.Visible;
             InlinePreviewHost.Width = 40;
             InlinePreviewHost.Height = 40;
             InlinePreviewHost.Background = System.Windows.Media.Brushes.Transparent;
             InlinePreviewHost.BorderBrush = System.Windows.Media.Brushes.Transparent;
             InlinePreviewHost.BorderThickness = new Thickness(0);
+            InlinePreviewHost.Clip = null;
+            InlinePreviewClip.Clip = null;
             InlinePreviewImage.Margin = new System.Windows.Thickness(0);
+            InlinePreviewImage.Stretch = Stretch.Uniform;
             InlinePreviewImage.Source = ThemedLogo.Square(40);
         }
         else if (spec.InlinePreviewBitmap is not null)
         {
-            _previewBitmap = spec.InlinePreviewBitmap;
+            if (!ReferenceEquals(_previewBitmap, spec.InlinePreviewBitmap))
+            {
+                _previewBitmap?.Dispose();
+                _previewBitmap = spec.InlinePreviewBitmap;
+            }
             InlinePreviewHost.Visibility = Visibility.Visible;
-            InlinePreviewHost.Background = Theme.Brush(Color.FromArgb(0x12, 0xFF, 0xFF, 0xFF));
-            InlinePreviewHost.BorderBrush = Theme.Brush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF));
-            InlinePreviewHost.BorderThickness = new Thickness(1);
-            ConfigureInlinePreviewLayout(spec.InlinePreviewBitmap);
+            ConfigureInlineThumb();
             InlinePreviewImage.Source = ToBitmapSource(spec.InlinePreviewBitmap);
+            SetInlineBadge(spec.InlineIconId);
         }
         else if (!string.IsNullOrEmpty(spec.InlineIconId))
         {
-            // Brief status toasts (video/GIF recorded, saved, etc.) get a left-side glyph so the
-            // layout doesn't feel lopsided against the top-right action buttons. Rendered in the
-            // theme's accent color to match the captureRect motif used by the welcome toast.
+            // Brief status toasts (encoding wait, etc.) get a left-side glyph so the
+            // layout doesn't feel lopsided against the top-right action buttons.
+            HideInlineBadge();
             InlinePreviewHost.Visibility = Visibility.Visible;
             InlinePreviewHost.Background = Theme.Brush(Color.FromArgb(0x12, 0xFF, 0xFF, 0xFF));
             InlinePreviewHost.BorderBrush = Theme.Brush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF));
             InlinePreviewHost.BorderThickness = new Thickness(1);
             InlinePreviewHost.Width = 44;
             InlinePreviewHost.Height = 44;
+            InlinePreviewHost.Clip = null;
+            InlinePreviewClip.Clip = null;
             InlinePreviewImage.Margin = new System.Windows.Thickness(10);
+            InlinePreviewImage.Stretch = Stretch.Uniform;
             var accent = Theme.Accent;
             InlinePreviewImage.Source = FluentIcons.RenderWpf(
                 spec.InlineIconId,
@@ -378,7 +387,10 @@ public partial class ToastWindow : Window
         }
         else
         {
+            HideInlineBadge();
             InlinePreviewHost.Visibility = Visibility.Collapsed;
+            InlinePreviewHost.Clip = null;
+            InlinePreviewClip.Clip = null;
             InlinePreviewImage.Source = null;
         }
 
@@ -561,22 +573,48 @@ public partial class ToastWindow : Window
         return btn;
     }
 
-    private void ConfigureInlinePreviewLayout(Bitmap preview)
+    private void ConfigureInlineThumb()
     {
-        var aspect = preview.Height <= 0 ? 1d : preview.Width / (double)preview.Height;
-        if (aspect >= 1.8)
+        const double size = 48;
+        const double ring = 1;
+        const double inner = size - ring * 2;
+        const double radius = 7;
+
+        InlinePreviewHost.Width = size;
+        InlinePreviewHost.Height = size;
+        InlinePreviewHost.Background = Theme.Brush(Color.FromArgb(0x22, 0, 0, 0));
+        InlinePreviewHost.BorderBrush = Theme.Brush(Theme.IsDark
+            ? Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x55, 0, 0, 0));
+        InlinePreviewHost.BorderThickness = new Thickness(ring);
+        InlinePreviewHost.Clip = null;
+        InlinePreviewClip.Clip = new RectangleGeometry(new Rect(0, 0, inner, inner), radius, radius);
+        InlinePreviewImage.Margin = new Thickness(0);
+        InlinePreviewImage.Stretch = Stretch.UniformToFill;
+    }
+
+    private void SetInlineBadge(string? iconId)
+    {
+        if (string.IsNullOrEmpty(iconId))
         {
-            var width = Math.Clamp(preview.Width / 3d, 72d, 112d);
-            InlinePreviewHost.Width = width;
-            InlinePreviewHost.Height = 40;
-            InlinePreviewImage.Margin = new Thickness(6, 8, 6, 8);
+            HideInlineBadge();
+            return;
         }
-        else
-        {
-            InlinePreviewHost.Width = 44;
-            InlinePreviewHost.Height = 44;
-            InlinePreviewImage.Margin = new Thickness(4);
-        }
+
+        InlineIconBadgeCircle.Visibility = Visibility.Visible;
+        InlineBadgeIconPath.Visibility = Visibility.Visible;
+        var accent = Theme.Accent;
+        InlineBadgeIconPath.Fill = Theme.Brush(accent);
+        // Filled glyph + vector Path stays sharp at 16px; raster 13px looked muddy.
+        InlineBadgeIconPath.Data = FluentIcons.GetGeometry(iconId, active: true)
+            ?? FluentIcons.GetGeometry(iconId, active: false);
+    }
+
+    private void HideInlineBadge()
+    {
+        InlineIconBadgeCircle.Visibility = Visibility.Collapsed;
+        InlineBadgeIconPath.Visibility = Visibility.Collapsed;
+        InlineBadgeIconPath.Data = null;
     }
 
     private static readonly System.Drawing.Color IconWhite = System.Drawing.Color.FromArgb(230, 255, 255, 255);
@@ -2522,7 +2560,11 @@ public partial class ToastWindow : Window
         }
         RunOnClosedCleanup("toast.closed.dispose-preview", () => _previewBitmap?.Dispose());
         _previewBitmap = null;
-        RunOnClosedCleanup("toast.closed.clear-inline-source", () => InlinePreviewImage.Source = null);
+        RunOnClosedCleanup("toast.closed.clear-inline-source", () =>
+        {
+            InlinePreviewImage.Source = null;
+            InlineBadgeIconPath.Data = null;
+        });
         if (_deleteFileOnDismiss)
         {
             var path = _savedFilePath;

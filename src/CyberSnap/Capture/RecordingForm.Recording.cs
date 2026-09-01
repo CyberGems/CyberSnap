@@ -86,7 +86,9 @@ public sealed partial class RecordingForm
             try
             {
                 try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.ShowEncodingWait(LocalizationService.Translate("Recording"), LocalizationService.Translate("Encoding, please wait..."))); } catch { }
-                
+
+                // GIF temp frames are deleted at the end of StopAndEncode — grab a poster first.
+                firstFrame = gifRec?.GetFirstFrame();
                 gifRec?.StopAndEncode(_savePath);
                 vidRec?.StopAndEncode(_savePath);
 
@@ -98,15 +100,8 @@ public sealed partial class RecordingForm
                 _desktopAudioSoundSuppression = null;
                 SoundService.PlayRecordStopSound();
 
-                if (!_openTrimmerAfterCapture || gifRec == null)
-                {
-                    firstFrame = vidRec?.GetFirstFrame();
-                    firstFrame ??= TryCreateToastPreviewFrame(_savePath);
-                }
-                else
-                {
-                    firstFrame = vidRec?.GetFirstFrame();
-                }
+                firstFrame ??= vidRec?.GetFirstFrame();
+                firstFrame ??= TryCreateToastPreviewFrame(_savePath);
                 
                 RecordingCompleted?.Invoke(_savePath, firstFrame, _openTrimmerAfterCapture);
             }

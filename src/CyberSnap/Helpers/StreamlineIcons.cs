@@ -126,6 +126,19 @@ public static class StreamlineIcons
         return WpfCache.GetOrAdd(key, _ => RenderWpfUncached(id, color, size, active));
     }
 
+    /// <summary>Frozen 20×20 viewbox geometry. Bind to a Path with Stretch=Uniform for a sharp glyph.</summary>
+    public static Geometry? GetGeometry(string id, bool active = false)
+    {
+        if (!FluentIconData.Icons.TryGetValue(id, out var icon))
+            return null;
+
+        var pathData = active ? icon.Filled : icon.Regular;
+        if (string.IsNullOrWhiteSpace(pathData))
+            return null;
+
+        return GeometryCache.GetOrAdd($"{id}|{active}", _ => ParseGeometry(pathData));
+    }
+
     private static BitmapSource? RenderWpfUncached(string id, DrawingColor color, int size, bool active)
     {
         if (!FluentIconData.Icons.TryGetValue(id, out var icon))

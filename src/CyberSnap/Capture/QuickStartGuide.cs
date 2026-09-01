@@ -288,24 +288,26 @@ public sealed class QuickStartGuide : Form
 
         _steps =
         [
-            new StepDef(T("Drag to select the capture area")),
-            new StepDef(T("Press Enter to capture, or Esc to cancel")),
-            new StepDef(T("Use toolbar tools to annotate before capturing")),
+            new StepDef(T("Press your capture hotkey or click the floating widget")),
+            new StepDef(T("Drag to select the area, or click a window to capture it")),
+            new StepDef(T("Use the preview to save, edit, or share your capture")),
         ];
 
         _tips =
         [
-            new TipDef("position", T("Drag the toolbar or click ⇅ to reposition it")),
-            new TipDef("moreVertical", T("Opens hidden tools, preferences, and this help")),
-            new TipDef("select", T("Right-click a tool on the bar to hide it")),
+            new TipDef("position", T("The floating widget gives quick access to all capture modes")),
+            new TipDef("moreVertical", T("Right-click the widget to access settings and more options")),
+            new TipDef("select", T("After capturing, the preview offers save, edit, and share actions")),
         ];
 
         _shortcuts =
         [
-            new ShortcutDef("Enter", T("Capture")),
-            new ShortcutDef("Esc", T("Cancel")),
+            new ShortcutDef("Enter", T("Capture / Confirm")),
+            new ShortcutDef("Esc", T("Cancel / Close")),
             new ShortcutDef("Ctrl+Z", T("Undo")),
             new ShortcutDef("Ctrl+Y", T("Redo")),
+            new ShortcutDef("Ctrl+S", T("Save")),
+            new ShortcutDef("Ctrl+C", T("Copy to clipboard")),
         ];
     }
 
