@@ -270,6 +270,13 @@ public partial class AboutWindow : Window
 
     private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
     {
+        await RunUpdateCheckAsync();
+    }
+
+    /// <summary>Runs a manual update check and prompts the user with the result.
+    /// Shared by the About window's "Check Now" button and the "Check for Updates..." menu items.</summary>
+    public async Task RunUpdateCheckAsync()
+    {
         var result = await UpdateService.CheckForUpdatesAsync();
         if (result.IsUpdateAvailable)
         {
@@ -320,6 +327,12 @@ public partial class AboutWindow : Window
         OpenUrl($"{RepoUrl}/releases");
     }
 
+    private void AboutFooterDocs_Click(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        CyberSnap.Helpers.WikiLinks.Open(CyberSnap.Helpers.WikiLinks.HomePage);
+    }
+
     private void AboutFooterCopyright_MouseEnter(object sender, MouseEventArgs e)
     {
         AboutFooterCopyright.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
@@ -366,6 +379,10 @@ public partial class AboutWindow : Window
             AboutFooterTagBody.SetResourceReference(Shape.StrokeProperty, brushKey);
             AboutFooterTagDot.SetResourceReference(Shape.FillProperty, brushKey);
         }
+        else if (border == AboutFooterDocsBtn)
+        {
+            AboutFooterDocsBody.SetResourceReference(Shape.StrokeProperty, brushKey);
+        }
     }
 
     private void ResetFooterVisuals()
@@ -375,10 +392,12 @@ public partial class AboutWindow : Window
         AboutFooterGithubBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterIssuesBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterReleasesBtn.Background = System.Windows.Media.Brushes.Transparent;
+        AboutFooterDocsBtn.Background = System.Windows.Media.Brushes.Transparent;
         SetFooterIconAccent(AboutFooterWebsiteBtn, primary: false);
         SetFooterIconAccent(AboutFooterGithubBtn, primary: false);
         SetFooterIconAccent(AboutFooterIssuesBtn, primary: false);
         SetFooterIconAccent(AboutFooterReleasesBtn, primary: false);
+        SetFooterIconAccent(AboutFooterDocsBtn, primary: false);
     }
 
     private void SetFooterIconsEnabled(bool enabled)
@@ -387,11 +406,13 @@ public partial class AboutWindow : Window
         AboutFooterGithubBtn.IsEnabled = enabled;
         AboutFooterIssuesBtn.IsEnabled = enabled;
         AboutFooterReleasesBtn.IsEnabled = enabled;
+        AboutFooterDocsBtn.IsEnabled = enabled;
         AboutFooterCopyright.IsEnabled = enabled;
         AboutFooterWebsiteBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterGithubBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterIssuesBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterReleasesBtn.Opacity = enabled ? 1 : 0.45;
+        AboutFooterDocsBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterCopyright.Opacity = enabled ? 1 : 0.45;
     }
 

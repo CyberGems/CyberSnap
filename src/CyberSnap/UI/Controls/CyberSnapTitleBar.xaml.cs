@@ -237,6 +237,73 @@ public partial class CyberSnapTitleBar : UserControl
         return img;
     }
 
+    /// <summary>Builds the "Help" submenu: contextual wiki page, homepage, update check and About.</summary>
+    private MenuItem CreateHelpSubmenu(ContextMenu rootMenu, string wikiPage, string wikiHeaderKey, string wikiTooltipKey, System.Drawing.Color titleIcon)
+    {
+        var helpItem = new MenuItem
+        {
+            Header = LocalizationService.Translate("Help"),
+            Icon = CreateMenuIcon("question", titleIcon, 16),
+            ToolTip = LocalizationService.Translate("Online documentation, updates and about CyberSnap.")
+        };
+
+        var wikiItem = new MenuItem
+        {
+            Header = LocalizationService.Translate(wikiHeaderKey),
+            Icon = CreateMenuIcon("question", titleIcon, 16),
+            ToolTip = LocalizationService.Translate(wikiTooltipKey)
+        };
+        wikiItem.Click += (_, _) =>
+        {
+            rootMenu.IsOpen = false;
+            WikiLinks.Open(wikiPage);
+        };
+
+        var homepageItem = new MenuItem
+        {
+            Header = LocalizationService.Translate("CyberGems Website..."),
+            Icon = CreateMenuIcon("home", titleIcon, 16),
+            ToolTip = LocalizationService.Translate("Visit CyberGems website")
+        };
+        homepageItem.Click += (_, _) =>
+        {
+            rootMenu.IsOpen = false;
+            WikiLinks.OpenUrl(WikiLinks.HomepageUrl);
+        };
+
+        var updatesItem = new MenuItem
+        {
+            Header = LocalizationService.Translate("Check for Updates..."),
+            Icon = CreateMenuIcon("redo", titleIcon, 16),
+            ToolTip = LocalizationService.Translate("Check for the latest version")
+        };
+        updatesItem.Click += (_, _) =>
+        {
+            rootMenu.IsOpen = false;
+            ((App)Application.Current).ShowAboutAndCheckForUpdates();
+        };
+
+        var aboutItem = new MenuItem
+        {
+            Header = LocalizationService.Translate("About CyberSnap..."),
+            Icon = CreateMenuIcon("info", titleIcon, 16),
+            ToolTip = LocalizationService.Translate("Open About CyberSnap")
+        };
+        aboutItem.Click += (_, _) =>
+        {
+            rootMenu.IsOpen = false;
+            _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                () => ((App)Application.Current).ShowAbout());
+        };
+
+        helpItem.Items.Add(wikiItem);
+        helpItem.Items.Add(homepageItem);
+        helpItem.Items.Add(updatesItem);
+        helpItem.Items.Add(aboutItem);
+        return helpItem;
+    }
+
     private void InitializeActionBtn(System.Drawing.Color titleIcon)
     {
         if (OwnerWindow is SettingsWindow settingsWin)
@@ -318,21 +385,9 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(wizardItem);
 
-            // About CyberSnap
-            var aboutItem = new MenuItem
-            {
-                Header = LocalizationService.Translate("About CyberSnap..."),
-                Icon = CreateMenuIcon("info", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open About CyberSnap")
-            };
-            aboutItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowAbout());
-            };
-            menu.Items.Add(aboutItem);
+            // Help (wiki / homepage / updates / about)
+            menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.SettingsPage,
+                "Wiki: Settings...", "Open the Settings page in the CyberSnap wiki.", titleIcon));
 
             menu.Opened += (_, _) =>
             {
@@ -423,20 +478,8 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(achievementsItem);
 
-            var aboutItem = new MenuItem
-            {
-                Header = LocalizationService.Translate("About CyberSnap..."),
-                Icon = CreateMenuIcon("info", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open About CyberSnap")
-            };
-            aboutItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowAbout());
-            };
-            menu.Items.Add(aboutItem);
+            menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.GalleryAndHistoryPage,
+                "Wiki: Gallery & History...", "Open the Gallery & History page in the CyberSnap wiki.", titleIcon));
 
             menu.Closed += (_, _) =>
             {
@@ -513,20 +556,29 @@ public partial class CyberSnapTitleBar : UserControl
                 menu.Items.Add(achievementsItem);
             }
 
-            var aboutItem = new MenuItem
+            // Contextual wiki page per chrome window (defaults to the wiki home).
+            string wikiPage = OwnerWindow switch
             {
-                Header = LocalizationService.Translate("About CyberSnap..."),
-                Icon = CreateMenuIcon("info", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open About CyberSnap")
+                OcrResultWindow => WikiLinks.OcrAndTranslationPage,
+                VideoTrimmerWindow => WikiLinks.ScreenRecordingPage,
+                CapturePreviewDialog => WikiLinks.CapturePreviewPage,
+                _ => WikiLinks.HomePage
             };
-            aboutItem.Click += (_, _) =>
+            string wikiHeaderKey = OwnerWindow switch
             {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowAbout());
+                OcrResultWindow => "Wiki: OCR & Translation...",
+                VideoTrimmerWindow => "Wiki: Screen Recording...",
+                CapturePreviewDialog => "Wiki: Capture Preview...",
+                _ => "Wiki: CyberSnap Help..."
             };
-            menu.Items.Add(aboutItem);
+            string wikiTooltipKey = OwnerWindow switch
+            {
+                OcrResultWindow => "Open the OCR & Translation page in the CyberSnap wiki.",
+                VideoTrimmerWindow => "Open the Screen Recording page in the CyberSnap wiki.",
+                CapturePreviewDialog => "Open the Capture Preview page in the CyberSnap wiki.",
+                _ => "Open the CyberSnap wiki home page."
+            };
+            menu.Items.Add(CreateHelpSubmenu(menu, wikiPage, wikiHeaderKey, wikiTooltipKey, titleIcon));
 
             menu.Opened += (_, _) =>
             {

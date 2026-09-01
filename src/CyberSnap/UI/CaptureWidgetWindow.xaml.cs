@@ -1146,13 +1146,46 @@ public partial class CaptureWidgetWindow : Window
         };
         menu.Items.Add(settingsItem);
 
+        // ── Help submenu: wiki / homepage / updates / about ──
+        var helpSubmenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true);
+        helpSubmenu.Image = Helpers.FluentIcons.RenderBitmap("question",
+            System.Drawing.Color.FromArgb(215, Helpers.UiChrome.SurfaceTextSecondary.R, Helpers.UiChrome.SurfaceTextSecondary.G, Helpers.UiChrome.SurfaceTextSecondary.B),
+            20, false);
+
+        var wikiItem = Helpers.WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Wiki: Capture..."), iconId: "question");
+        wikiItem.ToolTipText = LocalizationService.Translate("Open the Capture page in the CyberSnap wiki.");
+        wikiItem.Click += (s, ev) =>
+        {
+            CollapseWidget();
+            WikiLinks.Open(WikiLinks.CapturePage);
+        };
+
+        var homepageItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("CyberGems Website..."), iconId: "home");
+        homepageItem.ToolTipText = LocalizationService.Translate("Visit CyberGems website");
+        homepageItem.Click += (s, ev) => WikiLinks.OpenUrl(WikiLinks.HomepageUrl);
+
+        var updatesItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Check for Updates..."), iconId: "redo");
+        updatesItem.ToolTipText = LocalizationService.Translate("Check for the latest version");
+        updatesItem.Click += (s, ev) =>
+        {
+            CollapseWidget();
+            ((App)System.Windows.Application.Current).ShowAboutAndCheckForUpdates();
+        };
+
         var aboutItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap"), iconId: "info");
         aboutItem.Click += (s, ev) =>
         {
             CollapseWidget();
             ((App)System.Windows.Application.Current).ShowAbout();
         };
-        menu.Items.Add(aboutItem);
+
+        helpSubmenu.DropDownItems.Add(wikiItem);
+        helpSubmenu.DropDownItems.Add(homepageItem);
+        helpSubmenu.DropDownItems.Add(updatesItem);
+        helpSubmenu.DropDownItems.Add(aboutItem);
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(helpSubmenu);
+        menu.Items.Add(helpSubmenu);
 
         Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 240);
 

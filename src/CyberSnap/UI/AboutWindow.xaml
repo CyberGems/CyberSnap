@@ -438,6 +438,23 @@
                             </Canvas>
                         </Viewbox>
                     </Border>
+                    <Border x:Name="AboutFooterDocsBtn"
+                            Style="{StaticResource AboutFooterIconButton}"
+                            ToolTip="Open the online documentation"
+                            Services:LocalizationService.SourceToolTip="Open the online documentation"
+                            MouseLeftButtonUp="AboutFooterDocs_Click"
+                            MouseEnter="AboutFooterIcon_MouseEnter"
+                            MouseLeave="AboutFooterIcon_MouseLeave">
+                        <Viewbox Width="14" Height="14" Stretch="Uniform">
+                            <Canvas Width="24" Height="24">
+                                <!-- Book glyph — links to the online wiki/documentation -->
+                                <Path x:Name="AboutFooterDocsBody"
+                                      Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="2"
+                                      StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
+                                      Data="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Border>
                 </StackPanel>
             </Grid>
         </Border>

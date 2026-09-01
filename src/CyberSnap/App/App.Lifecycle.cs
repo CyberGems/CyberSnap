@@ -157,6 +157,24 @@ public partial class App
         }, DispatcherPriority.Background);
     }
 
+    /// <summary>Opens the About window and runs a manual update check once it is visible.
+    /// Used by the "Check for Updates..." items in the burger Help submenus.</summary>
+    public void ShowAboutAndCheckForUpdates()
+    {
+        ShowAbout();
+        _ = Dispatcher.BeginInvoke(async () =>
+        {
+            for (int i = 0; i < 20; i++)
+            {
+                if (_aboutWindow is { IsVisible: true })
+                    break;
+                await Task.Delay(100);
+            }
+            if (_aboutWindow is { IsVisible: true })
+                await _aboutWindow.RunUpdateCheckAsync();
+        }, DispatcherPriority.Background);
+    }
+
     private void ShowAboutWindow()
     {
         var win = new AboutWindow(_settingsService!);
