@@ -79,5 +79,4 @@ services/cybersnap-share/storage/rate/
 ## Temporary build artifacts (scratch compilation outputs)
 src/CyberSnap/.tmp-build/
 
-## GitHub Wiki (local copy — wiki lives on GitHub Wiki)
-docs/wiki/
+

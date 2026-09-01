@@ -2065,7 +2065,43 @@ public sealed partial class EditorForm
         scrollbarsItem.ToolTipText = LocalizationService.Translate("Keep the scroll position indicators visible at all times.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
         var achievementsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Achievements..."), iconId: "trophy");
+
+        // ── Help submenu: wiki / homepage / updates / about ──
+        var helpSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true);
+        helpSubmenu.Image = FluentIcons.RenderBitmap("question",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
+
+        var wikiItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Wiki: Annotation Editor..."), iconId: "question");
+        wikiItem.ToolTipText = LocalizationService.Translate("Open the Annotation Editor page in the CyberSnap wiki.");
+        wikiItem.Click += (_, _) => WikiLinks.Open(WikiLinks.AnnotationEditorPage);
+
+        var homepageItem = WindowsMenuRenderer.Item(LocalizationService.Translate("CyberGems Website..."), iconId: "home");
+        homepageItem.ToolTipText = LocalizationService.Translate("Visit CyberGems website");
+        homepageItem.Click += (_, _) => WikiLinks.OpenUrl(WikiLinks.HomepageUrl);
+
+        var updatesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Check for Updates..."), iconId: "redo");
+        updatesItem.ToolTipText = LocalizationService.Translate("Check for the latest version");
+        updatesItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.ShowAboutAndCheckForUpdates();
+        };
+
         var aboutItem = WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap..."), iconId: "info");
+        aboutItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.ShowAbout();
+        };
+
+        helpSubmenu.DropDownItems.Add(wikiItem);
+        helpSubmenu.DropDownItems.Add(homepageItem);
+        helpSubmenu.DropDownItems.Add(updatesItem);
+        helpSubmenu.DropDownItems.Add(aboutItem);
+        WindowsMenuRenderer.NormalizeDropDownWidths(helpSubmenu);
+
         var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Close window"), iconId: "close", danger: true, dangerIconOnly: true);
         settingsItem.Click += (_, _) =>
         {
@@ -2076,11 +2112,6 @@ public sealed partial class EditorForm
         {
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.ShowAchievements();
-        };
-        aboutItem.Click += (_, _) =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.ShowAbout();
         };
         exitItem.Click += (_, _) => Close();
 
@@ -2227,7 +2258,7 @@ public sealed partial class EditorForm
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
         menu.Items.Add(achievementsItem);
-        menu.Items.Add(aboutItem);
+        menu.Items.Add(helpSubmenu);
         menu.Items.Add(exitItem);
 
         menu.Opened += (_, _) =>
