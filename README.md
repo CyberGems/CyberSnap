@@ -176,7 +176,7 @@ All capture actions are bound to **configurable hotkeys** in Settings:
 | Record GIF | Configurable |
 | OCR | Configurable |
 | Color picker | Configurable |
-| Barcode scan | Configurable |
+| QR & Barcode scan | Configurable |
 | Ruler | Configurable |
 
 Open the annotation editor directly: `CyberSnap.exe --editor`
@@ -187,7 +187,7 @@ Open the annotation editor directly: `CyberSnap.exe --editor`
 
 ### What capture modes does CyberSnap support?
 
-Area selection, active window, full screen, scroll capture (long pages stitched into one image), MP4 recording, and GIF recording.
+Area selection, active window, full screen, repeat area, scroll capture (long pages stitched into one image), MP4 recording, and GIF recording.
 
 ### How does OCR work?
 

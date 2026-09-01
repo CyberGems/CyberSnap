@@ -19,8 +19,7 @@
     <Border x:Name="OuterShell"
             Width="598" Height="58"
             CornerRadius="8"
-            Background="Transparent"
-            Cursor="SizeAll">
+            Background="Transparent">
         <Grid SnapsToDevicePixels="True" UseLayoutRounding="True">
 
             <!-- Shadow plate (receives the DropShadowEffect) -->
@@ -39,43 +38,36 @@
                 <!-- Root: main content area -->
                 <Border x:Name="Root"
                         CornerRadius="7"
-                        ClipToBounds="True"
-                        Cursor="SizeAll">
+                        ClipToBounds="True">
 
                     <Grid Margin="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
-                            <!-- Rec dot + phase label -->
+                            <!-- Format badge (also the recording indicator) -->
                             <ColumnDefinition Width="Auto"/>
                             <!-- FPS combo (ready only) -->
                             <ColumnDefinition Width="*"/>
-                            <!-- Status / timer -->
+                            <!-- Timer + size meter -->
                             <ColumnDefinition Width="Auto"/>
                             <!-- Action buttons -->
                         </Grid.ColumnDefinitions>
 
-                        <!-- ═══ Recording dot + phase label ═══ -->
-                        <StackPanel Grid.Column="0"
-                                    Orientation="Horizontal"
-                                    VerticalAlignment="Center"
-                                    Margin="10,0,0,0">
-                            <Border x:Name="RecDotGlow"
-                                    Width="18" Height="18"
-                                    CornerRadius="9"
-                                    Background="Transparent"
-                                    IsHitTestVisible="False">
-                                <Border x:Name="RecDot"
-                                        Width="10" Height="10"
-                                        CornerRadius="5"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock x:Name="PhaseLabel"
+                        <!-- ═══ Format badge — idle / live / paused / encoding ═══ -->
+                        <Border Grid.Column="0"
+                                x:Name="FormatBadge"
+                                Height="24"
+                                MinWidth="44"
+                                CornerRadius="12"
+                                Padding="10,0"
+                                VerticalAlignment="Center"
+                                Margin="12,0,0,0"
+                                IsHitTestVisible="False">
+                            <TextBlock x:Name="FormatBadgeText"
                                        VerticalAlignment="Center"
-                                       Margin="8,0,0,0"
-                                       FontSize="15"
+                                       HorizontalAlignment="Center"
+                                       FontSize="12"
                                        FontWeight="Bold"/>
-                        </StackPanel>
+                        </Border>
 
                         <!-- ═══ FPS selector (ready phase only) ═══ -->
                         <Border Grid.Column="1"
@@ -104,15 +96,23 @@
                             </Grid>
                         </Border>
 
-                        <!-- ═══ Status / timer text ═══ -->
-                        <TextBlock Grid.Column="2"
-                                   x:Name="StatusText"
-                                   VerticalAlignment="Center"
-                                   Margin="8,0,8,0"
-                                   FontSize="13"
-                                   FontWeight="Bold"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxWidth="220"/>
+                        <!-- ═══ Timer + compact size · free-disk meter ═══ -->
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Margin="8,0,8,0">
+                            <TextBlock x:Name="StatusText"
+                                       VerticalAlignment="Center"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="160"/>
+                            <TextBlock x:Name="StorageText"
+                                       VerticalAlignment="Center"
+                                       Margin="12,0,0,0"
+                                       FontSize="18"
+                                       FontWeight="Bold"/>
+                        </StackPanel>
 
                         <!-- ═══ Action buttons ═══ -->
                         <StackPanel Grid.Column="3"
@@ -120,30 +120,33 @@
                                     VerticalAlignment="Center"
                                     Margin="0,0,14,0">
 
-                            <!-- Primary action (Record ⇄ Pause ⇄ Resume). Fixed width 110 so it
-                                 NEVER resizes between modes — icon + text live inside, label swaps.
-                                 Always visible in both ready and recording phases. -->
+                            <!-- Primary action (Record ⇄ Pause ⇄ Resume). Pill shape; fixed
+                                 width so it NEVER resizes between modes — icon + text live
+                                 inside, label swaps. Always visible in both phases. -->
                             <Border x:Name="PrimaryBtn"
-                                    Width="110" Height="40"
-                                    CornerRadius="8"
+                                    Width="128" Height="40"
+                                    CornerRadius="20"
                                     Margin="10,0,0,0"
                                     Cursor="Hand"
                                     ClipToBounds="True"
                                     Visibility="Visible">
+                                <Border.Clip>
+                                    <RectangleGeometry RadiusX="20" RadiusY="20" Rect="0,0,128,40"/>
+                                </Border.Clip>
                                 <Grid ClipToBounds="True">
                                     <StackPanel Orientation="Horizontal"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
                                                 IsHitTestVisible="False">
                                         <Image x:Name="PrimaryIcon"
-                                               Width="14" Height="14"
+                                               Width="20" Height="20"
                                                Stretch="Uniform"
                                                RenderOptions.BitmapScalingMode="HighQuality"
                                                VerticalAlignment="Center"
-                                               Margin="0,0,7,0"/>
+                                               Margin="0,0,8,0"/>
                                         <TextBlock x:Name="PrimaryText"
                                                    VerticalAlignment="Center"
-                                                   FontSize="12"
+                                                   FontSize="15"
                                                    FontWeight="Bold"
                                                    Foreground="White"/>
                                     </StackPanel>
@@ -151,7 +154,7 @@
                                          expands the visual beyond the button bounds -->
                                     <Border x:Name="StartShine"
                                             Width="60"
-                                            CornerRadius="8"
+                                            CornerRadius="20"
                                             IsHitTestVisible="False"
                                             Opacity="0"
                                             HorizontalAlignment="Left"
@@ -172,18 +175,21 @@
                                 </Grid>
                             </Border>
 
-                            <!-- Stop button: ALWAYS visible (both ready and recording) with a red
-                                 square icon of accessible size. In ready phase it is disabled. -->
+                            <!-- Stop: 40×40 to match the primary pill height. Solid rounded
+                                 square (not the padded Fluent bitmap) so it reads as a
+                                 control, not a tiny glyph next to the scissors. -->
                             <Border x:Name="StopBtn"
-                                    Width="36" Height="36"
-                                    CornerRadius="8"
+                                    Width="40" Height="40"
+                                    CornerRadius="10"
                                     Margin="8,0,0,0"
                                     Cursor="Hand"
                                     Visibility="Visible">
-                                <Image x:Name="StopIcon"
-                                       Width="16" Height="16"
-                                       Stretch="Uniform"
-                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                <Border x:Name="StopGlyph"
+                                        Width="18" Height="18"
+                                        CornerRadius="3.5"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        IsHitTestVisible="False"/>
                             </Border>
 
                             <!-- Send-to-trimmer toggle -->
@@ -194,7 +200,7 @@
                                     Cursor="Hand"
                                     Visibility="Visible">
                                 <Image x:Name="TrimmerIcon"
-                                       Width="18" Height="18"
+                                       Width="20" Height="20"
                                        Stretch="Uniform"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Border>
