@@ -19,7 +19,8 @@
     <Border x:Name="OuterShell"
             Width="598" Height="58"
             CornerRadius="8"
-            Background="Transparent">
+            Background="Transparent"
+            Cursor="SizeAll">
         <Grid SnapsToDevicePixels="True" UseLayoutRounding="True">
 
             <!-- Shadow plate (receives the DropShadowEffect) -->
@@ -38,7 +39,8 @@
                 <!-- Root: main content area -->
                 <Border x:Name="Root"
                         CornerRadius="7"
-                        ClipToBounds="True">
+                        ClipToBounds="True"
+                        Cursor="SizeAll">
 
                     <Grid Margin="0">
                         <Grid.ColumnDefinitions>
