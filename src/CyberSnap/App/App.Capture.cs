@@ -185,7 +185,17 @@ public partial class App
 
                 form.Shown += (_, _) =>
                 {
-                    Dispatcher.BeginInvoke(() => _trayIcon?.UpdateRecordingState(true));
+                    Dispatcher.BeginInvoke(() => _trayIcon?.UpdateRecordingState(true, isPaused: true));
+                };
+
+                form.RecordingCaptureStarted += () =>
+                {
+                    Dispatcher.BeginInvoke(() => _trayIcon?.UpdateRecordingState(true, isPaused: false));
+                };
+
+                form.RecordingPauseChanged += paused =>
+                {
+                    Dispatcher.BeginInvoke(() => _trayIcon?.UpdateRecordingState(true, isPaused: paused));
                 };
 
                 form.RecordingCompleted += (path, firstFrame, openTrimmer) =>

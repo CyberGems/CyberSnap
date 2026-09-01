@@ -41,6 +41,28 @@ public sealed partial class RecordingForm
         }
 
         _controlBarWpf?.SetPaused(_isPaused);
+        RecordingPauseChanged?.Invoke(_isPaused);
+    }
+
+    private bool HandleRecordingHotkey(int vk)
+    {
+        if (vk == (int)User32.VK_SPACE)
+        {
+            if (_state == State.Recording)
+                TogglePause();
+            return true;
+        }
+
+        if (vk == (int)User32.VK_RETURN)
+        {
+            if (_state == State.PreRecording)
+                StartActualRecording();
+            else if (_state == State.Recording)
+                StopRecording();
+            return true;
+        }
+
+        return false;
     }
 
     private void StopRecording()
@@ -302,6 +324,7 @@ public sealed partial class RecordingForm
         };
         _tickTimer.Start();
         Invalidate();
+        RecordingCaptureStarted?.Invoke();
     }
 
     private void TransitionToRecordingSurface()

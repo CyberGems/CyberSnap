@@ -14,6 +14,7 @@ internal static partial class User32
     public const uint VK_SNAPSHOT = 0x2C;
     public const uint VK_ESCAPE = 0x1B;
     public const uint VK_SPACE = 0x20;
+    public const uint VK_RETURN = 0x0D;
     public const int VK_SHIFT = 0x10;
     public const int VK_CONTROL = 0x11;
     public const int VK_V = 0x56;
@@ -31,7 +32,9 @@ internal static partial class User32
     public const int SRCCOPY = 0x00CC0020;
     public const int WH_KEYBOARD_LL = 13;
     public const int WM_KEYDOWN = 0x0100;
+    public const int WM_KEYUP = 0x0101;
     public const int WM_SYSKEYDOWN = 0x0104;
+    public const int WM_SYSKEYUP = 0x0105;
 
     public const int SM_XVIRTUALSCREEN = 76;
     public const int SM_YVIRTUALSCREEN = 77;

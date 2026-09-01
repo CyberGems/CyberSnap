@@ -49,7 +49,7 @@ public sealed partial class RecordingControlBarWindow : Window
     private const long LowDiskWarnBytes = 200L * 1024 * 1024;
 
     // ── Bar dimensions (100% DPI baseline, scaled via UiScale.LayoutTransform) ──
-    private const double BarWidth = 598;
+    private const double BarWidth = 668;
     private const double BarHeight = 58;
 
     // ── State ──
@@ -124,7 +124,6 @@ public sealed partial class RecordingControlBarWindow : Window
 
         InitializeComponent();
 
-        Width = BarWidth;
         Height = BarHeight;
 
         // ── Chrome setup ──
@@ -503,6 +502,24 @@ public sealed partial class RecordingControlBarWindow : Window
             System.Drawing.Color.FromArgb(Theme.IsDark ? 18 : 12, _accent.R, _accent.G, _accent.B)));
 
         UpdateFormatBadge();
+        UpdateFpsDivider();
+    }
+
+    private void UpdateFpsDivider()
+    {
+        var c = Theme.TextMuted;
+        byte mid = Theme.IsDark ? (byte)72 : (byte)88;
+        var brush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0.5, 0),
+            EndPoint = new Point(0.5, 1)
+        };
+        brush.GradientStops.Add(new GradientStop(Color.FromArgb(0, c.R, c.G, c.B), 0));
+        brush.GradientStops.Add(new GradientStop(Color.FromArgb(mid, c.R, c.G, c.B), 0.22));
+        brush.GradientStops.Add(new GradientStop(Color.FromArgb(mid, c.R, c.G, c.B), 0.78));
+        brush.GradientStops.Add(new GradientStop(Color.FromArgb(0, c.R, c.G, c.B), 1));
+        brush.Freeze();
+        FpsDivider.Background = brush;
     }
 
     private static Color ToMediaColor(System.Drawing.Color color) =>
@@ -527,7 +544,7 @@ public sealed partial class RecordingControlBarWindow : Window
         var active = _sendToTrimmer;
         var c = active ? _accent : Theme.TextPrimary;
         var iconColor = System.Drawing.Color.FromArgb(active ? 255 : 200, c.R, c.G, c.B);
-        TrimmerIcon.Source = FluentIcons.RenderWpf("scissors", iconColor, 36, active);
+        TrimmerIcon.Source = FluentIcons.RenderWpf("scissors", iconColor, 44, active);
         // Active ring + accent wash so the ON state is unmistakable.
         TrimmerBtn.Background = active
             ? Theme.Brush(Color.FromArgb(38, _accent.R, _accent.G, _accent.B))
@@ -578,7 +595,7 @@ public sealed partial class RecordingControlBarWindow : Window
         {
             var c = _sendToTrimmer ? _accentHover : _accent;
             var iconColor = System.Drawing.Color.FromArgb(240, c.R, c.G, c.B);
-            TrimmerIcon.Source = FluentIcons.RenderWpf("scissors", iconColor, 36, _sendToTrimmer);
+            TrimmerIcon.Source = FluentIcons.RenderWpf("scissors", iconColor, 44, _sendToTrimmer);
             TrimmerBtn.Background = _sendToTrimmer
                 ? Theme.Brush(Color.FromArgb(50, _accent.R, _accent.G, _accent.B))
                 : Theme.Brush(Theme.AccentSubtle);
@@ -604,6 +621,8 @@ public sealed partial class RecordingControlBarWindow : Window
         // ── FPS combo hover ──
         FpsCombo.MouseEnter += (_, _) =>
         {
+            if (!FpsCombo.IsEnabled)
+                return;
             FpsCombo.Background = Theme.Brush(ToMediaColor(UiChrome.SurfaceHover));
             FpsComboLabel.Foreground = Theme.Brush(Theme.TextPrimary);
         };
@@ -634,7 +653,12 @@ public sealed partial class RecordingControlBarWindow : Window
                 StopClicked?.Invoke();
         };
         CancelBtn.MouseLeftButtonDown += (_, e) => { e.Handled = true; if (!_isEncoding) CancelClicked?.Invoke(); };
-        FpsCombo.MouseLeftButtonDown += (_, e) => { e.Handled = true; ShowFpsMenu(); };
+        FpsCombo.MouseLeftButtonDown += (_, e) =>
+        {
+            e.Handled = true;
+            if (FpsCombo.IsEnabled)
+                ShowFpsMenu();
+        };
 
         TrimmerBtn.MouseLeftButtonDown += (_, e) =>
         {
@@ -659,27 +683,28 @@ public sealed partial class RecordingControlBarWindow : Window
         {
             SetPrimaryEnabled(false);
             SetStopEnabled(false);
+            SetFpsEnabled(false);
             TrimmerBtn.IsEnabled = false;
             CancelBtn.IsEnabled = false;
-            FpsCombo.Visibility = Visibility.Collapsed;
         }
         else if (!_isRecording)
         {
             // Ready phase: Record enabled + FPS + Trimmer + Cancel (Stop disabled)
             SetPrimaryEnabled(true);
             SetStopEnabled(false);
+            SetFpsEnabled(true);
             TrimmerBtn.IsEnabled = true;
             CancelBtn.IsEnabled = true;
-            FpsCombo.Visibility = Visibility.Visible;
         }
         else
         {
-            // Recording phase: Pause/Resume enabled (MP4 only) + Stop + Trimmer + Cancel
+            // Recording phase: Pause/Resume enabled (MP4 only) + Stop + Trimmer + Cancel.
+            // FPS stays in the layout (disabled) so Stop/Trimmer/Cancel do not shift.
             SetPrimaryEnabled(_supportsPause);
             SetStopEnabled(true);
+            SetFpsEnabled(false);
             TrimmerBtn.IsEnabled = true;
             CancelBtn.IsEnabled = true;
-            FpsCombo.Visibility = Visibility.Collapsed;
         }
 
         UpdatePrimaryButtonVisual();
@@ -790,6 +815,16 @@ public sealed partial class RecordingControlBarWindow : Window
         FpsCombo.BorderBrush = Theme.Brush(ToMediaColor(UiChrome.SurfaceBorderSubtle));
         FpsCombo.BorderThickness = new Thickness(1);
         FpsChevron.Fill = Theme.Brush(_accent);
+    }
+
+    private void SetFpsEnabled(bool enabled)
+    {
+        FpsCombo.IsEnabled = enabled;
+        FpsCombo.Opacity = enabled ? 1.0 : 0.45;
+        FpsCombo.Cursor = enabled
+            ? System.Windows.Input.Cursors.Hand
+            : System.Windows.Input.Cursors.Arrow;
+        FpsCombo.Visibility = Visibility.Visible;
     }
 
     private void UpdateFormatBadge()

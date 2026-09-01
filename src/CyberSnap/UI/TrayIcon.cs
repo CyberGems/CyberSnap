@@ -4,6 +4,7 @@ using System.Drawing.Drawing2D;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
@@ -19,6 +20,9 @@ public sealed class TrayIcon : IDisposable
     private ContextMenuStrip? _menu;
     private ToolStripMenuItem? _recordItem;
     private bool _isShowingRecording;
+    private bool _isRecordingPaused;
+    private bool _blinkLedVisible = true;
+    private DispatcherTimer? _recordingBlinkTimer;
     private TrayContextMenuWindow? _activeWpfMenu;
     private IntPtr _foregroundWindowBeforeMenu;
 
@@ -98,21 +102,80 @@ public sealed class TrayIcon : IDisposable
         catch { }
     }
 
-    public void UpdateRecordingState(bool isRecording)
+    public void UpdateRecordingState(bool isRecording, bool isPaused = false)
     {
-        if (isRecording == _isShowingRecording) return;
+        if (!isRecording)
+            isPaused = false;
+
+        if (isRecording == _isShowingRecording && isPaused == _isRecordingPaused)
+            return;
+
         _isShowingRecording = isRecording;
+        _isRecordingPaused = isPaused;
+
         if (isRecording)
         {
             _recordingIcon ??= CreateRecordingIcon();
-            _notifyIcon.Icon = _recordingIcon;
             _notifyIcon.Text = T("CyberSnap recording - click to stop, right-click for menu");
+            ApplyRecordingLedVisual();
         }
         else
         {
+            StopRecordingBlink();
             _notifyIcon.Icon = _defaultIcon;
             _notifyIcon.Text = T("CyberSnap - Left-click to activate / Right-click for menu");
         }
+    }
+
+    private void ApplyRecordingLedVisual()
+    {
+        if (!_isShowingRecording)
+            return;
+
+        _recordingIcon ??= CreateRecordingIcon();
+
+        if (_isRecordingPaused)
+        {
+            StopRecordingBlink();
+            _blinkLedVisible = true;
+            _notifyIcon.Icon = _recordingIcon;
+            return;
+        }
+
+        _blinkLedVisible = true;
+        _notifyIcon.Icon = _recordingIcon;
+        EnsureRecordingBlinkTimer();
+        _recordingBlinkTimer!.Start();
+    }
+
+    private void EnsureRecordingBlinkTimer()
+    {
+        if (_recordingBlinkTimer != null)
+            return;
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+        _recordingBlinkTimer = new DispatcherTimer(DispatcherPriority.Background, dispatcher)
+        {
+            Interval = TimeSpan.FromMilliseconds(500)
+        };
+        _recordingBlinkTimer.Tick += OnRecordingBlinkTick;
+    }
+
+    private void OnRecordingBlinkTick(object? sender, EventArgs e)
+    {
+        if (!_isShowingRecording || _isRecordingPaused)
+            return;
+
+        _blinkLedVisible = !_blinkLedVisible;
+        _notifyIcon.Icon = _blinkLedVisible
+            ? (_recordingIcon ??= CreateRecordingIcon())
+            : _defaultIcon;
+    }
+
+    private void StopRecordingBlink()
+    {
+        _recordingBlinkTimer?.Stop();
+        _blinkLedVisible = true;
     }
 
     public void RefreshLocalization()
@@ -424,8 +487,9 @@ public sealed class TrayIcon : IDisposable
         g.CompositingQuality = CompositingQuality.HighQuality;
         g.DrawImage(baseBmp, 0, 0);
 
-        int d = Math.Max(6, (int)Math.Round(bmp.Width * 0.38));
-        int x = bmp.Width - d - 1, y = bmp.Height - d - 1;
+        int d = Math.Max(5, (int)Math.Round(Math.Min(bmp.Width, bmp.Height) * 0.34));
+        int x = (bmp.Width - d) / 2;
+        int y = (bmp.Height - d) / 2;
         using var white = new SolidBrush(Color.White);
         g.FillEllipse(white, x - 1, y - 1, d + 2, d + 2);
         using var red = new SolidBrush(Color.FromArgb(239, 68, 68));
@@ -451,8 +515,9 @@ public sealed class TrayIcon : IDisposable
         g.DrawLine(pen, half, half, half, size * 0.88f);
         if (recording)
         {
-            int d = Math.Max(6, (int)Math.Round(size * 0.38));
-            int x = size - d - 1, y = size - d - 1;
+            int d = Math.Max(5, (int)Math.Round(size * 0.34));
+            int x = (size - d) / 2;
+            int y = (size - d) / 2;
             using var halo = new SolidBrush(strokeColor);
             g.FillEllipse(halo, x - 1, y - 1, d + 2, d + 2);
             using var red = new SolidBrush(Color.FromArgb(239, 68, 68));
@@ -467,7 +532,10 @@ public sealed class TrayIcon : IDisposable
         _recordingIcon?.Dispose();
         _defaultIcon = CreateDefaultIcon();
         _recordingIcon = null;
-        _notifyIcon.Icon = _isShowingRecording ? (_recordingIcon = CreateRecordingIcon()) : _defaultIcon;
+        if (_isShowingRecording)
+            ApplyRecordingLedVisual();
+        else
+            _notifyIcon.Icon = _defaultIcon;
     }
 
     private static Icon CreateOwnedIcon(Bitmap bitmap)
@@ -514,6 +582,12 @@ public sealed class TrayIcon : IDisposable
 
     public void Dispose()
     {
+        StopRecordingBlink();
+        if (_recordingBlinkTimer != null)
+        {
+            _recordingBlinkTimer.Tick -= OnRecordingBlinkTick;
+            _recordingBlinkTimer = null;
+        }
         _notifyIcon.Visible = false;
         _notifyIcon.ContextMenuStrip = null;
         _menu?.Dispose();
