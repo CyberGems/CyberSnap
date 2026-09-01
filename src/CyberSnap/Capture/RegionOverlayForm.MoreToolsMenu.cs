@@ -42,9 +42,11 @@ public sealed partial class RegionOverlayForm
             anchorLocal.Height);
 
         // Bubble above the logo when the toolbar is at the bottom or side; below when docked top.
-        bool above = CaptureDockSide != CaptureDockSide.Top;
+        var tailDir = CaptureDockSide != CaptureDockSide.Top
+            ? QuickStartGuide.TailDirection.Down
+            : QuickStartGuide.TailDirection.Up;
 
-        _quickStartGuide.ShowNear(this, anchorScreen, above: above);
+        _quickStartGuide.ShowNear(this, anchorScreen, tailDir);
         _quickStartGuide.FormClosed -= OnQuickStartGuideClosed;
         _quickStartGuide.FormClosed += OnQuickStartGuideClosed;
         StartMenuActivatorPulse();

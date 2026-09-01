@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Windows.Forms;
+using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using CyberSnap.UI.Controls;
@@ -45,6 +46,7 @@ public sealed partial class EditorForm
     private EditorChromeButton? _minimizeButton;
     private EditorChromeButton? _donateButton;
     private EditorChromeButton? _menuButton;
+    private EditorChromeButton? _helpButton;
     private Panel? _brandPanel;
     private EditorCommandButton _galleryButton = null!;
     private EditorCommandButton _captureButton = null!;
@@ -654,6 +656,11 @@ public sealed partial class EditorForm
                 : ToolStripDropDownDirection.BelowRight);
         };
         windowActions.Controls.Add(_menuButton);
+
+        windowActions.Controls.Add(MakeSeparator());
+        _helpButton = MakeChromeButton("info", LocalizationService.Translate("Editor Quick Start"));
+        _helpButton.Click += (_, _) => ShowEditorQuickStartGuide();
+        windowActions.Controls.Add(_helpButton);
 
         windowActions.Controls.Add(MakeSeparator());
         _donateButton = MakeChromeButton("heart", LocalizationService.Translate("Donate"));
@@ -1863,6 +1870,39 @@ public sealed partial class EditorForm
     private static GraphicsPath RoundedRect(Rectangle rect, int radius)
     {
         return EditorPaint.RoundedRect(rect, radius);
+    }
+
+    private QuickStartGuide? _editorQuickStartGuide;
+
+    private void ShowEditorQuickStartGuide()
+    {
+        if (_editorQuickStartGuide != null && _editorQuickStartGuide.Visible)
+        {
+            _editorQuickStartGuide.Close();
+            return;
+        }
+
+        _editorQuickStartGuide ??= new QuickStartGuide();
+
+        // Anchor to the right edge of the vertical annotation toolbar
+        var anchor = _toolbarHost;
+        if (anchor == null || anchor.Width <= 0 || !anchor.IsHandleCreated)
+            return;
+
+        var screenBounds = anchor.RectangleToScreen(anchor.Bounds);
+
+        _editorQuickStartGuide.ShowNear(this, screenBounds, QuickStartGuide.TailDirection.Left, mode: QuickStartGuide.GuideMode.Annotation);
+        _editorQuickStartGuide.FormClosed -= OnEditorQuickStartGuideClosed;
+        _editorQuickStartGuide.FormClosed += OnEditorQuickStartGuideClosed;
+    }
+
+    private void OnEditorQuickStartGuideClosed(object? sender, FormClosedEventArgs e)
+    {
+        if (_editorQuickStartGuide != null)
+        {
+            _editorQuickStartGuide.FormClosed -= OnEditorQuickStartGuideClosed;
+            _editorQuickStartGuide = null;
+        }
     }
 
     private ContextMenuStrip BuildBurgerMenu()

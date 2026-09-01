@@ -12,9 +12,13 @@ namespace CyberSnap.Capture;
 /// </summary>
 public sealed class QuickStartGuide : Form
 {
-    private const int MaxWidth = 460;
-    private const int MinWidth = 380;
-    private const int PadX = 22;
+    public enum GuideMode { Capture, Annotation }
+
+    public enum TailDirection { Up, Down, Left, Right }
+
+    private const int MaxWidth = 480;
+    private const int MinWidth = 400;
+    private const int PadX = 28;
     private const int PadY = 20;
     private const int HeaderHeight = 30;
     private const int StepGap = 12;
@@ -65,9 +69,11 @@ public sealed class QuickStartGuide : Form
     private int[] _tipHeights = Array.Empty<int>();
     private Rectangle _closeRect;
     private bool _closeHovered;
-    private bool _tailPointsDown = true;
+    private TailDirection _tailDirection = TailDirection.Down;
     private float _tailCenterX;
+    private float _tailCenterY;
     private RectangleF _bodyRect;
+    private GuideMode _guideMode = GuideMode.Capture;
 
     // Soft fade-in only (Form.Opacity). Scale/slide caused a one-frame glitch with Region.
     private DateTime _enterStart;
@@ -159,11 +165,13 @@ public sealed class QuickStartGuide : Form
     }
 
     /// <summary>
-    /// Shows the guide as a talk bubble pointing at <paramref name="anchorScreenBounds"/> (logo).
-    /// When <paramref name="above"/> is true the bubble sits above the anchor with the tail down.
+    /// Shows the guide as a talk bubble pointing at <paramref name="anchorScreenBounds"/>.
+    /// The tail direction determines where the bubble appears relative to the anchor.
     /// </summary>
-    public void ShowNear(IWin32Window owner, Rectangle anchorScreenBounds, bool above)
+    public void ShowNear(IWin32Window owner, Rectangle anchorScreenBounds, TailDirection tailDirection, GuideMode mode = GuideMode.Capture)
     {
+        _guideMode = mode;
+        _tailDirection = tailDirection;
         CyberSnap.UI.Theme.Refresh();
         BackColor = UiChrome.SurfaceTier1;
         ForeColor = UiChrome.SurfaceTextPrimary;
@@ -180,33 +188,75 @@ public sealed class QuickStartGuide : Form
         MeasureLayout(g);
 
         int bodyH = _bodyHeight;
-        int totalH = bodyH + (int)Math.Ceiling(TailHeight);
-        int totalW = width;
+        int bodyW = width;
+        bool horizontalTail = tailDirection == TailDirection.Up || tailDirection == TailDirection.Down;
+        int totalH = bodyH + (horizontalTail ? (int)Math.Ceiling(TailHeight) : 0);
+        int totalW = bodyW + (horizontalTail ? 0 : (int)Math.Ceiling(TailHeight));
 
-        _tailPointsDown = above;
-        _bodyRect = above
-            ? new RectangleF(0, 0, totalW, bodyH)
-            : new RectangleF(0, TailHeight, totalW, bodyH);
+        // Position body rect based on tail direction
+        _bodyRect = tailDirection switch
+        {
+            TailDirection.Up => new RectangleF(0, TailHeight, bodyW, bodyH),
+            TailDirection.Down => new RectangleF(0, 0, bodyW, bodyH),
+            TailDirection.Left => new RectangleF(TailHeight, 0, bodyW, bodyH),
+            TailDirection.Right => new RectangleF(0, 0, bodyW, bodyH),
+            _ => new RectangleF(0, 0, bodyW, bodyH)
+        };
 
-        // Align bubble so the tail points at the logo center; prefer leftish placement
-        // so the bubble does not cover the whole toolbar.
-        int anchorCx = anchorScreenBounds.Left + anchorScreenBounds.Width / 2;
-        int preferredX = anchorCx - (int)(totalW * 0.22f);
         var screen = Screen.FromRectangle(anchorScreenBounds).WorkingArea;
-        int x = Math.Clamp(preferredX, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - totalW - 4));
-
-        // Keep the caret tip close to the logo without overlapping it.
+        int anchorCx = anchorScreenBounds.Left + anchorScreenBounds.Width / 2;
+        int anchorCy = anchorScreenBounds.Top + anchorScreenBounds.Height / 2;
         int gap = 2;
-        int y = above
-            ? anchorScreenBounds.Top - totalH - gap
-            : anchorScreenBounds.Bottom + gap;
-        y = Math.Clamp(y, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - totalH - 4));
+        int x, y;
 
-        // Tail tip X in local coords — clamp so it stays on the body edge
-        float localAnchorX = anchorCx - x;
-        float minTail = Corner + TailWidth / 2f + 4f;
-        float maxTail = totalW - Corner - TailWidth / 2f - 4f;
-        _tailCenterX = Math.Clamp(localAnchorX, minTail, maxTail);
+        switch (tailDirection)
+        {
+            case TailDirection.Up:
+                // Bubble below anchor, tail points up
+                x = Math.Clamp(anchorCx - (int)(totalW * 0.22f), screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - totalW - 4));
+                y = anchorScreenBounds.Bottom + gap;
+                y = Math.Clamp(y, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - totalH - 4));
+                break;
+            case TailDirection.Down:
+                // Bubble above anchor, tail points down
+                x = Math.Clamp(anchorCx - (int)(totalW * 0.22f), screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - totalW - 4));
+                y = anchorScreenBounds.Top - totalH - gap;
+                y = Math.Clamp(y, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - totalH - 4));
+                break;
+            case TailDirection.Left:
+                // Bubble to the right of anchor, tail points left
+                x = anchorScreenBounds.Right + gap;
+                x = Math.Clamp(x, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - totalW - 4));
+                y = Math.Clamp(anchorCy - (int)(totalH * 0.5f), screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - totalH - 4));
+                break;
+            case TailDirection.Right:
+                // Bubble to the left of anchor, tail points right
+                x = anchorScreenBounds.Left - totalW - gap;
+                x = Math.Clamp(x, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - totalW - 4));
+                y = Math.Clamp(anchorCy - (int)(totalH * 0.5f), screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - totalH - 4));
+                break;
+            default:
+                x = Math.Clamp(anchorCx - (int)(totalW * 0.22f), screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - totalW - 4));
+                y = anchorScreenBounds.Top - totalH - gap;
+                y = Math.Clamp(y, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - totalH - 4));
+                break;
+        }
+
+        // Set tail center in local coords
+        if (horizontalTail)
+        {
+            float localAnchorX = anchorCx - x;
+            float minTail = Corner + TailWidth / 2f + 4f;
+            float maxTail = totalW - Corner - TailWidth / 2f - 4f;
+            _tailCenterX = Math.Clamp(localAnchorX, minTail, maxTail);
+        }
+        else
+        {
+            float localAnchorY = anchorCy - y;
+            float minTail = Corner + TailWidth / 2f + 4f;
+            float maxTail = totalH - Corner - TailWidth / 2f - 4f;
+            _tailCenterY = Math.Clamp(localAnchorY, minTail, maxTail);
+        }
 
         Bounds = new Rectangle(x, y, totalW, totalH);
         ApplyBubbleRegion(totalW, totalH);
@@ -280,9 +330,21 @@ public sealed class QuickStartGuide : Form
     {
         string T(string key) => LocalizationService.Translate(key);
 
+        if (_guideMode == GuideMode.Annotation)
+        {
+            LoadAnnotationStrings(T);
+        }
+        else
+        {
+            LoadCaptureStrings(T);
+        }
+    }
+
+    private void LoadCaptureStrings(Func<string, string> T)
+    {
         _title = T("Quick Start");
         _stepsTitle = T("HOW TO CAPTURE");
-        _menuTitle = T("TOOLBAR MENU");
+        _menuTitle = T("CAPTURE BAR & MENU");
         _shortcutsTitle = T("KEYBOARD SHORTCUTS");
         _footerText = T("Click or Esc to close");
 
@@ -295,19 +357,52 @@ public sealed class QuickStartGuide : Form
 
         _tips =
         [
-            new TipDef("position", T("The floating widget gives quick access to all capture modes")),
-            new TipDef("moreVertical", T("Right-click the widget to access settings and more options")),
-            new TipDef("select", T("After capturing, the preview offers save, edit, and share actions")),
+            new TipDef("position", T("The capture bar offers area, window, scrolling, recording, OCR, and QR modes")),
+            new TipDef("moreVertical", T("Right-click the ⋮ menu for toolbar dock, hidden tools, and preferences")),
+            new TipDef("select", T("Annotation tools let you draw, add text, arrows, shapes, and more")),
         ];
 
         _shortcuts =
         [
-            new ShortcutDef("Enter", T("Capture / Confirm")),
-            new ShortcutDef("Esc", T("Cancel / Close")),
+            new ShortcutDef("Enter", T("Confirm capture")),
+            new ShortcutDef("Esc", T("Cancel")),
+            new ShortcutDef("Ctrl+Z", T("Undo")),
+            new ShortcutDef("Ctrl+Y", T("Redo")),
+            new ShortcutDef("[ ]", T("Stroke width")),
+            new ShortcutDef("Del", T("Delete annotation")),
+        ];
+    }
+
+    private void LoadAnnotationStrings(Func<string, string> T)
+    {
+        _title = T("Editor Quick Start");
+        _stepsTitle = T("HOW TO ANNOTATE");
+        _menuTitle = T("EDITOR TOOLS & SHORTCUTS");
+        _shortcutsTitle = T("KEYBOARD SHORTCUTS");
+        _footerText = T("Click or Esc to close");
+
+        _steps =
+        [
+            new StepDef(T("Open a capture in the editor to access annotation tools")),
+            new StepDef(T("Select a tool from the toolbar — draw, text, arrows, shapes, and more")),
+            new StepDef(T("Use color and stroke options to customize your annotations")),
+        ];
+
+        _tips =
+        [
+            new TipDef("position", T("F1-F12 keys quickly switch between annotation tools")),
+            new TipDef("moreVertical", T("Right-click objects to duplicate, delete, or transform them")),
+            new TipDef("select", T("Use the burger menu for save, export, view options, and more")),
+        ];
+
+        _shortcuts =
+        [
+            new ShortcutDef("F1-F12", T("Select tool")),
             new ShortcutDef("Ctrl+Z", T("Undo")),
             new ShortcutDef("Ctrl+Y", T("Redo")),
             new ShortcutDef("Ctrl+S", T("Save")),
             new ShortcutDef("Ctrl+C", T("Copy to clipboard")),
+            new ShortcutDef("Del", T("Delete object")),
         ];
     }
 
@@ -386,8 +481,9 @@ public sealed class QuickStartGuide : Form
     }
 
     /// <summary>
-    /// Classic talk-bubble silhouette: rounded rect + triangular caret pointing at the logo.
+    /// Classic talk-bubble silhouette: rounded rect + triangular caret pointing at the anchor.
     /// Tail base is slightly asymmetric so the tip reads as a comic speech pointer.
+    /// Supports all four directions (Up, Down, Left, Right).
     /// </summary>
     private GraphicsPath CreateBubblePath(float width, float height)
     {
@@ -396,45 +492,99 @@ public sealed class QuickStartGuide : Form
         float d = r * 2f;
         float tw = TailWidth;
         float th = TailHeight;
-        float tx = _tailCenterX;
-
-        // Classic bubble: wider base on the outer side, tip slightly biased toward logo.
-        float baseLeft = tx - tw * 0.55f;
-        float baseRight = tx + tw * 0.40f;
-        float tipX = tx - tw * 0.06f; // slight left lean like the reference
-
-        // Keep base fully on the flat bottom/top edge (inside corner radii).
-        float minBase = body.X + r + 2f;
-        float maxBase = body.Right - r - 2f;
-        baseLeft = Math.Clamp(baseLeft, minBase, maxBase - 8f);
-        baseRight = Math.Clamp(baseRight, baseLeft + 8f, maxBase);
-        tipX = Math.Clamp(tipX, baseLeft + 2f, baseRight - 2f);
 
         var path = new GraphicsPath();
 
-        if (_tailPointsDown)
+        switch (_tailDirection)
         {
-            // Clockwise: top-left → top-right → bottom-right → tail → bottom-left
-            path.AddArc(body.X, body.Y, d, d, 180, 90);
-            path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
-            path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
-            path.AddLine(body.Right - r, body.Bottom, baseRight, body.Bottom);
-            path.AddLine(baseRight, body.Bottom, tipX, body.Bottom + th);
-            path.AddLine(tipX, body.Bottom + th, baseLeft, body.Bottom);
-            path.AddLine(baseLeft, body.Bottom, body.X + r, body.Bottom);
-            path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
-        }
-        else
-        {
-            // Tail on top (toolbar docked at top)
-            path.AddArc(body.X, body.Y, d, d, 180, 90);
-            path.AddLine(body.X + r, body.Y, baseLeft, body.Y);
-            path.AddLine(baseLeft, body.Y, tipX, body.Y - th);
-            path.AddLine(tipX, body.Y - th, baseRight, body.Y);
-            path.AddLine(baseRight, body.Y, body.Right - r, body.Y);
-            path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
-            path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
-            path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
+            case TailDirection.Down:
+                // Tail on bottom edge
+                {
+                    float tx = _tailCenterX;
+                    float baseLeft = tx - tw * 0.55f;
+                    float baseRight = tx + tw * 0.40f;
+                    float tipX = tx - tw * 0.06f;
+                    float minBase = body.X + r + 2f;
+                    float maxBase = body.Right - r - 2f;
+                    baseLeft = Math.Clamp(baseLeft, minBase, maxBase - 8f);
+                    baseRight = Math.Clamp(baseRight, baseLeft + 8f, maxBase);
+                    tipX = Math.Clamp(tipX, baseLeft + 2f, baseRight - 2f);
+                    path.AddArc(body.X, body.Y, d, d, 180, 90);
+                    path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
+                    path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
+                    path.AddLine(body.Right - r, body.Bottom, baseRight, body.Bottom);
+                    path.AddLine(baseRight, body.Bottom, tipX, body.Bottom + th);
+                    path.AddLine(tipX, body.Bottom + th, baseLeft, body.Bottom);
+                    path.AddLine(baseLeft, body.Bottom, body.X + r, body.Bottom);
+                    path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
+                }
+                break;
+            case TailDirection.Up:
+                // Tail on top edge
+                {
+                    float tx = _tailCenterX;
+                    float baseLeft = tx - tw * 0.55f;
+                    float baseRight = tx + tw * 0.40f;
+                    float tipX = tx - tw * 0.06f;
+                    float minBase = body.X + r + 2f;
+                    float maxBase = body.Right - r - 2f;
+                    baseLeft = Math.Clamp(baseLeft, minBase, maxBase - 8f);
+                    baseRight = Math.Clamp(baseRight, baseLeft + 8f, maxBase);
+                    tipX = Math.Clamp(tipX, baseLeft + 2f, baseRight - 2f);
+                    path.AddArc(body.X, body.Y, d, d, 180, 90);
+                    path.AddLine(body.X + r, body.Y, baseLeft, body.Y);
+                    path.AddLine(baseLeft, body.Y, tipX, body.Y - th);
+                    path.AddLine(tipX, body.Y - th, baseRight, body.Y);
+                    path.AddLine(baseRight, body.Y, body.Right - r, body.Y);
+                    path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
+                    path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
+                    path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
+                }
+                break;
+            case TailDirection.Left:
+                // Tail on left edge (bubble to the right of anchor)
+                {
+                    float ty = _tailCenterY;
+                    float baseTop = ty - tw * 0.55f;
+                    float baseBottom = ty + tw * 0.40f;
+                    float tipY = ty - tw * 0.06f;
+                    float minBase = body.Y + r + 2f;
+                    float maxBase = body.Bottom - r - 2f;
+                    baseTop = Math.Clamp(baseTop, minBase, maxBase - 8f);
+                    baseBottom = Math.Clamp(baseBottom, baseTop + 8f, maxBase);
+                    tipY = Math.Clamp(tipY, baseTop + 2f, baseBottom - 2f);
+                    path.AddArc(body.X, body.Y, d, d, 180, 90);
+                    path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
+                    path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
+                    path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
+                    path.AddLine(body.X, body.Bottom - r, body.X, baseBottom);
+                    path.AddLine(body.X, baseBottom, body.X - th, tipY);
+                    path.AddLine(body.X - th, tipY, body.X, baseTop);
+                    path.AddLine(body.X, baseTop, body.X, body.Y + r);
+                }
+                break;
+            case TailDirection.Right:
+                // Tail on right edge (bubble to the left of anchor)
+                {
+                    float ty = _tailCenterY;
+                    float baseTop = ty - tw * 0.55f;
+                    float baseBottom = ty + tw * 0.40f;
+                    float tipY = ty - tw * 0.06f;
+                    float minBase = body.Y + r + 2f;
+                    float maxBase = body.Bottom - r - 2f;
+                    baseTop = Math.Clamp(baseTop, minBase, maxBase - 8f);
+                    baseBottom = Math.Clamp(baseBottom, baseTop + 8f, maxBase);
+                    tipY = Math.Clamp(tipY, baseTop + 2f, baseBottom - 2f);
+                    path.AddArc(body.X, body.Y, d, d, 180, 90);
+                    path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
+                    path.AddLine(body.Right - r, body.Y, body.Right, baseTop);
+                    path.AddLine(body.Right, baseTop, body.Right + th, tipY);
+                    path.AddLine(body.Right + th, tipY, body.Right, baseBottom);
+                    path.AddLine(body.Right, baseBottom, body.Right, body.Bottom - r);
+                    path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
+                    path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
+                }
+                break;
         }
 
         path.CloseFigure();
