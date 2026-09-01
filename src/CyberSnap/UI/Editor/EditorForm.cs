@@ -91,7 +91,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         if (_instance is not null && !_instance.IsDisposed)
         {
-            _instance.OpenDocumentInTab(captured, savedFilePath, autoMaximize: true, performanceWarning: eval.ShouldWarn);
+            _instance.OpenDocumentInTab(captured, savedFilePath, autoMaximize: true, performanceWarning: eval.ShouldWarn, source);
             _instance.RestoreAndActivate();
             App.NotifyFirstTimeTool("editor");
             return true;
@@ -105,7 +105,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 LocalizationService.Translate("Editor"),
                 WindowIconKind.Editor,
                 LocalizationService.Translate("Preparing the workspace…"));
-            _instance = new EditorForm(captured, savedFilePath);
+            _instance = new EditorForm(captured, savedFilePath, source);
             _instance._startupSplash = splash;
             splash = null; // ownership transferred — closed in RevealEditorWhenReady
             _instance.Show();
@@ -260,7 +260,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
 
         var blank = CreateBlankCheckerboard(Theme.IsDark);
-        ShowEditor(blank);
+        ShowEditor(blank, source: ImageOpenSource.UserImport);
         if (_instance is not null)
         {
             _instance._canvas.IsDefaultBlank = true;
@@ -340,7 +340,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         _canvas?.Focus();
     }
 
-    public EditorForm(Bitmap captured, string? savedFilePath = null)
+    public EditorForm(Bitmap captured, string? savedFilePath = null, ImageOpenSource source = ImageOpenSource.Capture)
     {
         if (captured is null) throw new ArgumentNullException(nameof(captured));
 
@@ -413,6 +413,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         WireTabStrip();
         BuildToolbar();
         BuildStatusBar();
+        ApplyEntryTool(source);
         // Build the burger menu during initialization so opening it does not incur
         // the cost of constructing and rendering every menu item on the first click.
         _burgerMenu = BuildBurgerMenu();
@@ -1540,7 +1541,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                             return;
                         }
 
-                        OpenDocumentInTab(captured, dlg.FileName, autoMaximize: true, performanceWarning: eval.ShouldWarn);
+                        OpenDocumentInTab(captured, dlg.FileName, autoMaximize: true, performanceWarning: eval.ShouldWarn, ImageOpenSource.UserImport);
                         captured.Dispose();
                         AddRecentFile(dlg.FileName);
                     }
@@ -2008,7 +2009,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     return;
                 }
 
-                OpenDocumentInTab(bmp, null, autoMaximize: false, performanceWarning: eval.ShouldWarn);
+                OpenDocumentInTab(bmp, null, autoMaximize: false, performanceWarning: eval.ShouldWarn, ImageOpenSource.Clipboard);
                 bmp.Dispose();
             }
         }
@@ -2906,7 +2907,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     return;
                 }
 
-                OpenDocumentInTab(captured, filePath, autoMaximize: false, performanceWarning: eval.ShouldWarn);
+                OpenDocumentInTab(captured, filePath, autoMaximize: false, performanceWarning: eval.ShouldWarn, ImageOpenSource.UserImport);
                 captured.Dispose();
                 AddRecentFile(filePath);
             }

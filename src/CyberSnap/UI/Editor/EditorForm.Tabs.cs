@@ -263,11 +263,28 @@ public sealed partial class EditorForm
             error: false);
     }
 
-    private void OpenDocumentInTab(Bitmap bitmap, string? savedFilePath, bool autoMaximize, bool performanceWarning)
+    private static AnnotationCanvas.CanvasTool EntryToolFor(ImageOpenSource source)
+        => source == ImageOpenSource.Capture
+            ? AnnotationCanvas.CanvasTool.Pan
+            : AnnotationCanvas.CanvasTool.Move;
+
+    private void ApplyEntryTool(ImageOpenSource source)
+    {
+        if (_canvas is { IsDisposed: false })
+            _canvas.ActiveTool = EntryToolFor(source);
+    }
+
+    private void OpenDocumentInTab(
+        Bitmap bitmap,
+        string? savedFilePath,
+        bool autoMaximize,
+        bool performanceWarning,
+        ImageOpenSource source = ImageOpenSource.FilePath)
     {
         if (ShouldReplaceActiveDocument)
         {
             LoadCapture(bitmap, savedFilePath, autoMaximize, showOpenedBanner: true, performanceWarning);
+            ApplyEntryTool(source);
             return;
         }
 
@@ -276,10 +293,11 @@ public sealed partial class EditorForm
         var doc = CreateDocument(clone, savedFilePath, _canvas);
         _documents.Add(doc);
         ActivateDocument(doc);
+        ApplyEntryTool(source);
         if (autoMaximize)
             MaybeAutoMaximizeForCapture();
         if (performanceWarning)
-            ShowLargeImagePerformanceBanner(ImageOpenPolicy.EvaluateBitmap(bitmap, ImageOpenSource.Capture));
+            ShowLargeImagePerformanceBanner(ImageOpenPolicy.EvaluateBitmap(bitmap, source));
         UpdateTabStripVisibility();
     }
 
