@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -43,6 +44,9 @@ public sealed partial class RecordingControlBarWindow : Window
                 (byte)Math.Min(255, UiChrome.AccentColor.B + 28))
             : Color.FromArgb(255, 0xD4, 0x82, 0x18);
     private static readonly Color CancelHoverColor = Color.FromArgb(255, 255, 80, 80);
+    private static readonly Color StopRed = Color.FromArgb(255, 229, 72, 77);
+    private static readonly Color StopRedHot = Color.FromArgb(255, 255, 96, 100);
+    private const long LowDiskWarnBytes = 200L * 1024 * 1024;
 
     // ── Bar dimensions (100% DPI baseline, scaled via UiScale.LayoutTransform) ──
     private const double BarWidth = 598;
@@ -61,9 +65,16 @@ public sealed partial class RecordingControlBarWindow : Window
     private bool _isEncoding;
     private TimeSpan _elapsed;
 
+    // ── Output path (size · free-disk meter; polled at 1 Hz, not the pulse timer) ──
+    private readonly string _outputPath;
+    private readonly DriveInfo? _outputDrive;
+
     // ── Timers ──
     private readonly DispatcherTimer _pulseTimer;
+    private readonly DispatcherTimer _storageTimer;
     private Storyboard? _shineStoryboard;
+    private long _lastUsedBytes = -1;
+    private long _lastFreeBytes = -1;
 
     // ── FPS menu ──
     private ContextMenu? _fpsMenu;
@@ -90,13 +101,16 @@ public sealed partial class RecordingControlBarWindow : Window
         System.Drawing.Rectangle captureRegion,
         Models.RecordingFormat format,
         int fps,
-        bool sendToTrimmer)
+        bool sendToTrimmer,
+        string outputPath)
     {
         Theme.Refresh();
         _format = format;
         _fps = NormalizeFps(format, fps);
         _sendToTrimmer = sendToTrimmer;
         _supportsPause = format != Models.RecordingFormat.GIF;
+        _outputPath = outputPath ?? "";
+        _outputDrive = TryGetDrive(_outputPath);
 
         // Accent: GIF keeps its format orange outside grayscale; MP4 follows the selection accent.
         _accent = format == Models.RecordingFormat.GIF
@@ -147,16 +161,26 @@ public sealed partial class RecordingControlBarWindow : Window
         // ── Start button shine animation ──
         SetupShineAnimation();
 
-        // ── Pulse timer for the recording dot ──
+        // ── Pulse timer for the format-badge live indicator ──
         _pulseTimer = new DispatcherTimer(DispatcherPriority.Render)
         {
             Interval = TimeSpan.FromMilliseconds(UiChrome.FrameIntervalMs)
         };
-        _pulseTimer.Tick += (_, _) => UpdateRecordingDot();
+        _pulseTimer.Tick += (_, _) => UpdateFormatBadge();
+
+        // ── Size · free-disk meter. Normal priority so the badge pulse (Render)
+        //     cannot starve it; 250 ms so ffmpeg/NTFS size jumps show up quickly. ──
+        _storageTimer = new DispatcherTimer(DispatcherPriority.Normal)
+        {
+            Interval = TimeSpan.FromMilliseconds(250)
+        };
+        _storageTimer.Tick += (_, _) => RefreshStorageMeter();
 
         // ── Initial layout ──
         _lastCaptureRegion = captureRegion;
         UpdateLayoutVisibility();
+        RefreshStorageMeter();
+        _storageTimer.Start();
 
         // Position after the HWND exists so SetWindowPos works (physical pixels,
         // correct per-monitor DPI). SourceInitialized fires before Loaded.
@@ -199,9 +223,9 @@ public sealed partial class RecordingControlBarWindow : Window
         if (!UI.Motion.Disabled)
             _pulseTimer.Start();
         UpdateLayoutVisibility();
-        UpdateRecordingDot();
-        UpdatePhaseLabel();
+        UpdateFormatBadge();
         UpdateStatusText();
+        RefreshStorageMeter();
     }
 
     public void TransitionToEncoding()
@@ -212,9 +236,9 @@ public sealed partial class RecordingControlBarWindow : Window
         StopShineAnimation();
         _pulseTimer.Stop();
         UpdateLayoutVisibility();
-        UpdateRecordingDot();
-        UpdatePhaseLabel();
+        UpdateFormatBadge();
         UpdateStatusText();
+        RefreshStorageMeter();
     }
 
     public void SetElapsed(TimeSpan elapsed)
@@ -222,7 +246,10 @@ public sealed partial class RecordingControlBarWindow : Window
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => SetElapsed(elapsed)); return; }
         _elapsed = elapsed;
         if (_isRecording && !_isEncoding)
+        {
             UpdateStatusText();
+            RefreshStorageMeter();
+        }
     }
 
     public void SetPaused(bool paused)
@@ -236,8 +263,7 @@ public sealed partial class RecordingControlBarWindow : Window
         else if (_isRecording && !_isEncoding && !UI.Motion.Disabled)
             _pulseTimer.Start();
 
-        UpdateRecordingDot();
-        UpdatePhaseLabel();
+        UpdateFormatBadge();
         UpdatePrimaryButtonVisual();
         UpdateStopButtonVisual();
     }
@@ -353,9 +379,6 @@ public sealed partial class RecordingControlBarWindow : Window
 
         _isBarDragging = true;
         CaptureMouse();
-        Cursor = System.Windows.Input.Cursors.SizeAll;
-        Mouse.OverrideCursor = System.Windows.Input.Cursors.SizeAll;
-        ForceCursor = true;
         e.Handled = true;
     }
 
@@ -412,9 +435,6 @@ public sealed partial class RecordingControlBarWindow : Window
         _isBarDragging = false;
         if (IsMouseCaptured)
             ReleaseMouseCapture();
-        ForceCursor = false;
-        Mouse.OverrideCursor = null;
-        Cursor = System.Windows.Input.Cursors.SizeAll;
     }
 
     private bool TryGetBarDragOrigin(out System.Drawing.Point cursor, out System.Drawing.Point window)
@@ -481,6 +501,8 @@ public sealed partial class RecordingControlBarWindow : Window
         // A restrained accent halo mirrors the capture dock's edge treatment.
         OuterShell.Background = Theme.Brush(ToMediaColor(
             System.Drawing.Color.FromArgb(Theme.IsDark ? 18 : 12, _accent.R, _accent.G, _accent.B)));
+
+        UpdateFormatBadge();
     }
 
     private static Color ToMediaColor(System.Drawing.Color color) =>
@@ -505,7 +527,7 @@ public sealed partial class RecordingControlBarWindow : Window
         var active = _sendToTrimmer;
         var c = active ? _accent : Theme.TextPrimary;
         var iconColor = System.Drawing.Color.FromArgb(active ? 255 : 200, c.R, c.G, c.B);
-        TrimmerIcon.Source = FluentIcons.RenderWpf("filmstrip", iconColor, 32, active);
+        TrimmerIcon.Source = FluentIcons.RenderWpf("scissors", iconColor, 36, active);
         // Active ring + accent wash so the ON state is unmistakable.
         TrimmerBtn.Background = active
             ? Theme.Brush(Color.FromArgb(38, _accent.R, _accent.G, _accent.B))
@@ -529,28 +551,26 @@ public sealed partial class RecordingControlBarWindow : Window
         PrimaryBtn.MouseEnter += (_, _) =>
         {
             if (PrimaryBtn.IsEnabled)
-                PrimaryBtn.Background = Theme.Brush(_accentHover);
+                PrimaryBtn.Background = Theme.Brush(Lighten(GetPrimaryFill(), 28));
         };
         PrimaryBtn.MouseLeave += (_, _) =>
         {
             if (PrimaryBtn.IsEnabled)
-                PrimaryBtn.Background = Theme.Brush(_accent);
+                PrimaryBtn.Background = Theme.Brush(GetPrimaryFill());
         };
 
-        // ── Stop button hover ──
+        // ── Stop button hover: reddish wash, glyph stays red (never orange + white) ──
         StopBtn.MouseEnter += (_, _) =>
         {
-            if (StopBtn.IsEnabled)
-            {
-                StopBtn.Background = Theme.Brush(DoneAccentHover);
-                var red = System.Drawing.Color.FromArgb(255, 255, 255, 255);
-                StopIcon.Source = FluentIcons.RenderWpf("stopSquare", red, 32, active: true);
-            }
+            if (!StopBtn.IsEnabled)
+                return;
+            StopBtn.Background = Theme.Brush(Color.FromArgb(80, StopRed.R, StopRed.G, StopRed.B));
+            StopGlyph.Background = Theme.Brush(StopRedHot);
         };
         StopBtn.MouseLeave += (_, _) =>
         {
             if (StopBtn.IsEnabled)
-                SetStopEnabled(true); // restores red icon + transparent bg
+                SetStopEnabled(true);
         };
 
         // ── Trimmer button hover ──
@@ -558,7 +578,7 @@ public sealed partial class RecordingControlBarWindow : Window
         {
             var c = _sendToTrimmer ? _accentHover : _accent;
             var iconColor = System.Drawing.Color.FromArgb(240, c.R, c.G, c.B);
-            TrimmerIcon.Source = FluentIcons.RenderWpf("filmstrip", iconColor, 32, _sendToTrimmer);
+            TrimmerIcon.Source = FluentIcons.RenderWpf("scissors", iconColor, 36, _sendToTrimmer);
             TrimmerBtn.Background = _sendToTrimmer
                 ? Theme.Brush(Color.FromArgb(50, _accent.R, _accent.G, _accent.B))
                 : Theme.Brush(Theme.AccentSubtle);
@@ -664,9 +684,9 @@ public sealed partial class RecordingControlBarWindow : Window
 
         UpdatePrimaryButtonVisual();
         UpdateStopButtonVisual();
-        UpdatePhaseLabel();
         UpdateStatusText();
         UpdateFpsComboVisual();
+        UpdateFormatBadge();
         UpdateTooltips();
     }
 
@@ -696,16 +716,37 @@ public sealed partial class RecordingControlBarWindow : Window
             iconId = "pause";
         }
 
+        var fill = GetPrimaryFill();
         PrimaryText.Text = label;
-        PrimaryBtn.Background = Theme.Brush(_accent);
-        var primaryContentColor = GetButtonTextColor(_accent);
+        PrimaryBtn.Background = Theme.Brush(fill);
+        var primaryContentColor = GetButtonTextColor(fill);
         PrimaryText.Foreground = Theme.Brush(primaryContentColor);
         PrimaryBtn.Cursor = _isEncoding ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand;
 
-        // Use a dark foreground when the accent is a light silver/cyan, keeping icon and label readable.
-        PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(primaryContentColor), 28);
+        // Use a dark foreground when the fill is a light silver/cyan, keeping icon and label readable.
+        PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(primaryContentColor), 40);
         PrimaryIcon.Visibility = Visibility.Visible;
+        UpdatePrimaryTooltip();
     }
+
+    /// <summary>
+    /// Ready → format accent. Recording/Pause → Stop's amber. Paused/Resume → green.
+    /// </summary>
+    private Color GetPrimaryFill()
+    {
+        if (!_isRecording)
+            return _accent;
+        if (_isPaused)
+            return Color.FromArgb(255, 22, 163, 116);
+        return DoneAccent;
+    }
+
+    private static Color Lighten(Color color, int amount) =>
+        Color.FromArgb(
+            255,
+            (byte)Math.Min(255, color.R + amount),
+            (byte)Math.Min(255, color.G + amount),
+            (byte)Math.Min(255, color.B + amount));
 
     private static Color GetButtonTextColor(Color fill)
     {
@@ -732,14 +773,13 @@ public sealed partial class RecordingControlBarWindow : Window
     private void SetStopEnabled(bool enabled)
     {
         StopBtn.IsEnabled = enabled;
-        StopBtn.Opacity = enabled ? 1.0 : 0.35;
-        StopBtn.Background = System.Windows.Media.Brushes.Transparent;
-
-        // Red square icon, bigger when enabled for accessibility
-        int renderSize = enabled ? 32 : 24;
-        int iconOpacity = enabled ? 255 : 140;
-        var red = System.Drawing.Color.FromArgb(iconOpacity, 229, 72, 77);
-        StopIcon.Source = FluentIcons.RenderWpf("stopSquare", red, renderSize, active: true);
+        StopBtn.Opacity = enabled ? 1.0 : 0.38;
+        // Faint red wash when armed so the 40×40 hit target reads as a button.
+        StopBtn.Background = enabled
+            ? Theme.Brush(Color.FromArgb(42, StopRed.R, StopRed.G, StopRed.B))
+            : System.Windows.Media.Brushes.Transparent;
+        StopGlyph.Background = Theme.Brush(
+            Color.FromArgb(enabled ? (byte)255 : (byte)170, StopRed.R, StopRed.G, StopRed.B));
     }
 
     private void UpdateFpsComboVisual()
@@ -752,64 +792,46 @@ public sealed partial class RecordingControlBarWindow : Window
         FpsChevron.Fill = Theme.Brush(_accent);
     }
 
-    private void UpdateRecordingDot()
+    private void UpdateFormatBadge()
     {
-        Color dotColor;
-        Color glowColor;
+        FormatBadgeText.Text = FormatLabel();
+
+        Color fill;
+        Color border;
+        Color text;
 
         if (_isEncoding)
         {
-            dotColor = Color.FromArgb(200, _accent.R, _accent.G, _accent.B);
-            glowColor = Color.FromArgb(40, _accent.R, _accent.G, _accent.B);
+            text = _accent;
+            fill = Color.FromArgb(70, _accent.R, _accent.G, _accent.B);
+            border = Color.FromArgb(150, _accent.R, _accent.G, _accent.B);
         }
         else if (!_isRecording)
         {
-            dotColor = Color.FromArgb(180, _accent.R, _accent.G, _accent.B);
-            glowColor = Color.FromArgb(30, _accent.R, _accent.G, _accent.B);
-        }
-        else
-        {
-            var baseColor = _isPaused ? Theme.TextMuted : _accent;
-            double pulse = _isPaused ? 0 : Math.Sin(Environment.TickCount / 250.0);
-            float pa = (float)((pulse + 1.0) / 2.0);
-            int dotAlpha = _isPaused ? 120 : (int)(200 + 55 * pa);
-            int glowAlpha = _isPaused ? 20 : (int)(30 + 40 * pa);
-            dotColor = Color.FromArgb((byte)dotAlpha, baseColor.R, baseColor.G, baseColor.B);
-            glowColor = Color.FromArgb((byte)glowAlpha, baseColor.R, baseColor.G, baseColor.B);
-        }
-
-        RecDot.Background = Theme.Brush(dotColor);
-        RecDotGlow.Background = Theme.Brush(glowColor);
-    }
-
-    private void UpdatePhaseLabel()
-    {
-        string label;
-        Color labelColor;
-
-        if (_isEncoding)
-        {
-            label = string.Empty; // no phase label during encoding
-            labelColor = Theme.TextMuted;
-        }
-        else if (!_isRecording)
-        {
-            label = LocalizationService.Translate("Recording ready");
-            labelColor = Color.FromArgb(220, _accent.R, _accent.G, _accent.B);
+            text = _accent;
+            fill = Color.FromArgb(40, _accent.R, _accent.G, _accent.B);
+            border = Color.FromArgb(90, _accent.R, _accent.G, _accent.B);
         }
         else if (_isPaused)
         {
-            label = LocalizationService.Translate("Recording paused");
-            labelColor = Color.FromArgb(220, Theme.TextMuted.R, Theme.TextMuted.G, Theme.TextMuted.B);
+            var muted = Theme.TextMuted;
+            text = muted;
+            fill = Color.FromArgb(36, muted.R, muted.G, muted.B);
+            border = Color.FromArgb(80, muted.R, muted.G, muted.B);
         }
         else
         {
-            label = LocalizationService.Translate("Recording active");
-            labelColor = Color.FromArgb(220, _accent.R, _accent.G, _accent.B);
+            double pulse = UI.Motion.Disabled ? 1 : Math.Sin(Environment.TickCount / 250.0);
+            float pa = (float)((pulse + 1.0) / 2.0);
+            text = _accent;
+            fill = Color.FromArgb((byte)(70 + 55 * pa), _accent.R, _accent.G, _accent.B);
+            border = Color.FromArgb((byte)(120 + 80 * pa), _accent.R, _accent.G, _accent.B);
         }
 
-        PhaseLabel.Text = label;
-        PhaseLabel.Foreground = Theme.Brush(labelColor);
+        FormatBadgeText.Foreground = Theme.Brush(text);
+        FormatBadge.Background = Theme.Brush(fill);
+        FormatBadge.BorderBrush = Theme.Brush(border);
+        FormatBadge.BorderThickness = new Thickness(1);
     }
 
     private void UpdateStatusText()
@@ -821,25 +843,118 @@ public sealed partial class RecordingControlBarWindow : Window
                 : LocalizationService.Translate("Saving...");
             StatusText.Foreground = Theme.Brush(Theme.TextMuted);
             StatusText.FontWeight = FontWeights.Normal;
-            StatusText.FontSize = 11;
-        }
-        else if (_isRecording)
-        {
-            StatusText.Text = $"{(int)_elapsed.TotalMinutes:D2}:{_elapsed.Seconds:D2}";
-            StatusText.Foreground = Theme.Brush(Theme.TextPrimary);
-            StatusText.FontWeight = FontWeights.Bold;
             StatusText.FontSize = 13;
         }
         else
         {
-            StatusText.Text = string.Format(
-                LocalizationService.Translate("Recording ready hint"),
-                FormatLabel(),
-                _fps);
-            StatusText.Foreground = Theme.Brush(Theme.TextMuted);
-            StatusText.FontWeight = FontWeights.Normal;
-            StatusText.FontSize = 11;
+            StatusText.Text = $"{(int)_elapsed.TotalMinutes:D2}:{_elapsed.Seconds:D2}";
+            StatusText.Foreground = Theme.Brush(_isRecording ? Theme.TextPrimary : Theme.TextMuted);
+            StatusText.FontWeight = FontWeights.Bold;
+            StatusText.FontSize = 18;
         }
+    }
+
+    private void RefreshStorageMeter()
+    {
+        long used = TryReadOutputLength();
+        if (used < 0)
+            used = _lastUsedBytes >= 0 ? _lastUsedBytes : 0;
+
+        long free = -1;
+        try
+        {
+            if (_outputDrive is { IsReady: true })
+                free = _outputDrive.AvailableFreeSpace;
+        }
+        catch
+        {
+            free = _lastFreeBytes;
+        }
+
+        // Free space jitters by kilobytes; snap so the label does not flicker.
+        long freeCmp = free < 0 ? -1 : free & ~((1L << 20) - 1);
+        if (used == _lastUsedBytes && freeCmp == _lastFreeBytes)
+            return;
+        _lastUsedBytes = used;
+        _lastFreeBytes = freeCmp;
+
+        // Size appears once the output file has bytes (MP4 grows live; GIF often 0 until encode).
+        bool showUsed = used > 0;
+        long freeDisplay = freeCmp < 0 ? -1 : freeCmp;
+        StorageText.Text = freeDisplay >= 0
+            ? (showUsed ? $"{FormatBytes(used)} · {FormatBytes(freeDisplay)}" : FormatBytes(freeDisplay))
+            : (showUsed ? FormatBytes(used) : "");
+
+        bool lowDisk = freeDisplay >= 0 && freeDisplay < LowDiskWarnBytes;
+        StorageText.Foreground = Theme.Brush(lowDisk ? StopRed : Theme.TextMuted);
+        StorageText.Opacity = 1.0;
+    }
+
+    /// <summary>
+    /// Size of a file another process is writing. FileShare.ReadWrite + handle Length
+    /// tracks the writer's EOF; FileInfo.Length can lag on an open ffmpeg output.
+    /// </summary>
+    private long TryReadOutputLength()
+    {
+        if (_outputPath.Length == 0)
+            return 0;
+        try
+        {
+            using var fs = new FileStream(
+                _outputPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            return fs.Length;
+        }
+        catch (FileNotFoundException)
+        {
+            return 0;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return 0;
+        }
+        catch
+        {
+            try
+            {
+                return new FileInfo(_outputPath).Length;
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+    }
+
+    private static DriveInfo? TryGetDrive(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+        try
+        {
+            var root = Path.GetPathRoot(Path.GetFullPath(path));
+            return string.IsNullOrEmpty(root) ? null : new DriveInfo(root);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024)
+            return $"{bytes} B";
+        double kb = bytes / 1024.0;
+        if (kb < 1024)
+            return $"{kb:0.0} KB";
+        double mb = kb / 1024.0;
+        if (mb < 1024)
+            return $"{mb:0.0} MB";
+        double gb = mb / 1024.0;
+        return gb < 10 ? $"{gb:0.00} GB" : $"{gb:0.0} GB";
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -937,7 +1052,6 @@ public sealed partial class RecordingControlBarWindow : Window
         _fps = fps;
         FpsChanged?.Invoke(fps);
         UpdateFpsComboVisual();
-        UpdateStatusText();
     }
 
     /// <summary>
@@ -971,6 +1085,8 @@ public sealed partial class RecordingControlBarWindow : Window
         // Stop
         StopBtn.ToolTip = LocalizationService.Translate("Recording stop tooltip");
 
+        StorageText.ToolTip = LocalizationService.Translate("Recording storage tooltip");
+
         // Trimmer
         UpdateTrimmerTooltip();
 
@@ -981,11 +1097,21 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void UpdatePrimaryTooltip()
     {
-        // Primary button tooltip reflects its current mode
-        PrimaryBtn.ToolTip = LocalizationService.Translate(
-            !_isRecording ? "Recording start tooltip"
-            : _isPaused ? "Recording resume tooltip"
-            : "Recording pause tooltip");
+        string key;
+        if (_isEncoding)
+            key = _format == Models.RecordingFormat.GIF ? "Encoding GIF..." : "Saving...";
+        else if (!_isRecording)
+            key = "Recording start tooltip";
+        else if (!_supportsPause)
+            key = "Recording gif no pause tooltip";
+        else if (_isPaused)
+            key = "Recording resume tooltip";
+        else
+            key = "Recording pause tooltip";
+
+        var text = LocalizationService.Translate(key);
+        ToolTipService.SetToolTip(PrimaryBtn, null);
+        ToolTipService.SetToolTip(PrimaryBtn, text);
     }
 
     private void UpdateTrimmerTooltip()
@@ -1020,12 +1146,13 @@ public sealed partial class RecordingControlBarWindow : Window
         Models.RecordingFormat format,
         int fps,
         bool sendToTrimmer,
-        System.Windows.Forms.Form ownerForm)
+        System.Windows.Forms.Form ownerForm,
+        string outputPath)
     {
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.CheckAccess())
         {
-            var w = new RecordingControlBarWindow(captureRegion, format, fps, sendToTrimmer);
+            var w = new RecordingControlBarWindow(captureRegion, format, fps, sendToTrimmer, outputPath);
             w.OwnerWinFormsForm = ownerForm;
             return w;
         }
@@ -1033,7 +1160,7 @@ public sealed partial class RecordingControlBarWindow : Window
         RecordingControlBarWindow? window = null;
         dispatcher.Invoke(() =>
         {
-            window = new RecordingControlBarWindow(captureRegion, format, fps, sendToTrimmer);
+            window = new RecordingControlBarWindow(captureRegion, format, fps, sendToTrimmer, outputPath);
             window.OwnerWinFormsForm = ownerForm;
         });
         return window!;
@@ -1068,6 +1195,7 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         StopShineAnimation();
         _pulseTimer.Stop();
+        _storageTimer.Stop();
         base.OnClosed(e);
     }
 }

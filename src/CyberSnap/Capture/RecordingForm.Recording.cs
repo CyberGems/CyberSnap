@@ -188,7 +188,7 @@ public sealed partial class RecordingForm
             _recordRegion.Height);
 
         // Own the bar by this overlay so it stays above it while dragging.
-        _controlBarWpf = RecordingControlBarWindow.Create(screenRegion, _format, _fps, _openTrimmerAfterCapture, this);
+        _controlBarWpf = RecordingControlBarWindow.Create(screenRegion, _format, _fps, _openTrimmerAfterCapture, this, _savePath);
         _controlBarWpf.FpsChanged += fps =>
         {
             _fps = fps;

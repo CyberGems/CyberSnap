@@ -541,6 +541,8 @@
   "Recording cancel tooltip": "Cancel recording  (Esc)\nDiscard and close without saving",
   "Recording discard tooltip": "Discard recording  (Esc)\nStop without saving",
   "Recording fps tooltip": "Recording frame rate (current: {0} FPS)",
+  "Recording storage tooltip": "Recording file size · free space on the destination disk",
+  "Recording gif no pause tooltip": "GIF recording in progress. Pause is not available.",
   "Encoding GIF...": "Encoding GIF...",
   "Saving...": "Saving...",
   "Encoding, please wait...": "Encoding, please wait...",
