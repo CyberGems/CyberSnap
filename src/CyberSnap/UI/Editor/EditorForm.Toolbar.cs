@@ -1642,14 +1642,16 @@ public sealed partial class EditorForm
     }
 
     private static bool ToolUsesColor(AnnotationCanvas.CanvasTool tool) => tool is
-        AnnotationCanvas.CanvasTool.Draw or AnnotationCanvas.CanvasTool.Arrow
+        AnnotationCanvas.CanvasTool.Pan or AnnotationCanvas.CanvasTool.Move
+        or AnnotationCanvas.CanvasTool.Draw or AnnotationCanvas.CanvasTool.Arrow
         or AnnotationCanvas.CanvasTool.CurvedArrow or AnnotationCanvas.CanvasTool.Line
         or AnnotationCanvas.CanvasTool.Rect or AnnotationCanvas.CanvasTool.Circle
         or AnnotationCanvas.CanvasTool.Highlight or AnnotationCanvas.CanvasTool.Text
         or AnnotationCanvas.CanvasTool.StepNumber;
 
     private static bool ToolUsesStroke(AnnotationCanvas.CanvasTool tool) => tool is
-        AnnotationCanvas.CanvasTool.Draw or AnnotationCanvas.CanvasTool.Arrow
+        AnnotationCanvas.CanvasTool.Pan or AnnotationCanvas.CanvasTool.Move
+        or AnnotationCanvas.CanvasTool.Draw or AnnotationCanvas.CanvasTool.Arrow
         or AnnotationCanvas.CanvasTool.CurvedArrow or AnnotationCanvas.CanvasTool.Line
         or AnnotationCanvas.CanvasTool.Rect or AnnotationCanvas.CanvasTool.Circle;
 
@@ -1952,7 +1954,7 @@ public sealed partial class EditorForm
                         ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
                         return;
                     }
-                    OpenDocumentInTab(bmp, null, autoMaximize: true, performanceWarning: eval.ShouldWarn);
+                    OpenDocumentInTab(bmp, null, autoMaximize: true, performanceWarning: eval.ShouldWarn, ImageOpenSource.Clipboard);
                     bmp.Dispose();
                     _canvas.ZoomFit();
                     _canvas.IsDefaultBlank = false;
