@@ -1891,7 +1891,7 @@ public sealed partial class EditorForm
         if (anchor == null || anchor.Width <= 0 || !anchor.IsHandleCreated)
             return;
 
-        var screenBounds = anchor.RectangleToScreen(anchor.Bounds);
+        var screenBounds = anchor.RectangleToScreen(anchor.ClientRectangle);
 
         _editorQuickStartGuide.ShowNear(this, screenBounds, QuickStartGuide.TailDirection.Left, mode: QuickStartGuide.GuideMode.Annotation);
         _editorQuickStartGuide.FormClosed -= OnEditorQuickStartGuideClosed;
