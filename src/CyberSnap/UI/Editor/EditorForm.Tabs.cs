@@ -483,7 +483,7 @@ public sealed partial class EditorForm
         bool canClose = _documents.Count > 1 || !(doc.Canvas.IsDefaultBlank && !doc.Canvas.IsDirty);
         if (canClose)
         {
-            var closeItem = WindowsMenuRenderer.Item("Close", iconId: "close");
+            var closeItem = WindowsMenuRenderer.Item("Close", iconId: "close", danger: true, dangerIconOnly: true);
             closeItem.Click += (_, _) =>
             {
                 int index = _documents.IndexOf(doc);
@@ -495,7 +495,7 @@ public sealed partial class EditorForm
 
         if (_documents.Count > 1)
         {
-            var closeAllItem = WindowsMenuRenderer.Item("Close all", iconId: "close");
+            var closeAllItem = WindowsMenuRenderer.Item("Close all", iconId: "close", danger: true, dangerIconOnly: true);
             closeAllItem.Click += (_, _) => CloseAllDocuments();
             menu.Items.Add(closeAllItem);
         }
@@ -543,33 +543,9 @@ public sealed partial class EditorForm
     {
         var doc = _activeDocument;
         int start = menu.Items.Count;
-        bool canClose = _documents.Count > 1 || !(doc.Canvas.IsDefaultBlank && !doc.Canvas.IsDirty);
-        if (canClose)
-        {
-            var closeItem = WindowsMenuRenderer.Item("Close", iconId: "close");
-            closeItem.Click += (_, _) => CloseActiveTab();
-            menu.Items.Add(closeItem);
-        }
-
-        if (_documents.Count > 1)
-        {
-            var closeAllItem = WindowsMenuRenderer.Item("Close all", iconId: "close");
-            closeAllItem.Click += (_, _) => CloseAllDocuments();
-            menu.Items.Add(closeAllItem);
-        }
-
-        if (_lastClosed is not null && !_lastClosed.Canvas.IsDisposed)
-        {
-            var reopenItem = WindowsMenuRenderer.Item("Reopen last closed tab", iconId: "undo");
-            reopenItem.Click += (_, _) => ReopenLastClosedTab();
-            menu.Items.Add(reopenItem);
-        }
-
         var savedPath = ExistingSavedPath(doc);
         if (savedPath is not null)
         {
-            if (menu.Items.Count > start)
-                menu.Items.Add(new ToolStripSeparator());
             if (!string.IsNullOrWhiteSpace(Path.GetDirectoryName(savedPath)))
             {
                 var copyLoc = WindowsMenuRenderer.Item("Copy location", iconId: "folder");
@@ -589,6 +565,25 @@ public sealed partial class EditorForm
 
         if (menu.Items.Count > start && start > 0)
             menu.Items.Insert(start, new ToolStripSeparator());
+    }
+
+    private void AppendDocumentCloseItems(ContextMenuStrip menu)
+    {
+        var doc = _activeDocument;
+        bool canClose = _documents.Count > 1 || !(doc.Canvas.IsDefaultBlank && !doc.Canvas.IsDirty);
+        if (canClose)
+        {
+            var closeItem = WindowsMenuRenderer.Item("Close document", shortcut: "Ctrl+W", iconId: "documentClose");
+            closeItem.Click += (_, _) => CloseActiveTab();
+            menu.Items.Add(closeItem);
+        }
+
+        if (_documents.Count > 1)
+        {
+            var closeAllItem = WindowsMenuRenderer.Item("Close all", iconId: "close", danger: true, dangerIconOnly: true);
+            closeAllItem.Click += (_, _) => CloseAllDocuments();
+            menu.Items.Add(closeAllItem);
+        }
     }
 
     private void ResetActiveToBlank()

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using CyberSnap.Helpers;
 using CyberSnap.Services;
 using UserControl = System.Windows.Controls.UserControl;
 using Cursors = System.Windows.Input.Cursors;
@@ -20,6 +21,8 @@ public readonly record struct PreviewTabInfo(string Title, bool Active);
 public sealed class PreviewTabStrip : UserControl
 {
     public const double PreferredHeight = 28;
+    private static readonly System.Drawing.Color CloseIconColor = System.Drawing.Color.FromArgb(239, 68, 68);
+    private static readonly System.Drawing.Color CloseIconHoverColor = System.Drawing.Color.FromArgb(255, 110, 110);
 
     private readonly ScrollViewer _scroller;
     private readonly StackPanel _host;
@@ -36,10 +39,14 @@ public sealed class PreviewTabStrip : UserControl
     {
         Height = PreferredHeight;
         Focusable = false;
+        // Transparent (not null) so empty bar space is hit-testable and right-click
+        // does not fall through the layered preview window.
+        Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 13, 15, 23));
         _host = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Margin = new Thickness(6, 2, 6, 2)
+            Margin = new Thickness(6, 2, 6, 2),
+            Background = Brushes.Transparent
         };
         _scroller = new ScrollViewer
         {
@@ -47,10 +54,12 @@ public sealed class PreviewTabStrip : UserControl
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             PanningMode = PanningMode.HorizontalOnly,
             Focusable = false,
+            Background = Brushes.Transparent,
             Content = _host
         };
         var edge = new Border
         {
+            Background = Brushes.Transparent,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = _scroller
         };
@@ -58,6 +67,7 @@ public sealed class PreviewTabStrip : UserControl
         Content = edge;
         PreviewMouseWheel += OnMouseWheel;
         MouseRightButtonUp += OnRightButtonUp;
+        _scroller.MouseRightButtonUp += OnRightButtonUp;
     }
 
     public void SetTabs(IReadOnlyList<PreviewTabInfo> tabs)
@@ -104,28 +114,25 @@ public sealed class PreviewTabStrip : UserControl
             TextBlock.ForegroundProperty,
             tab.Active ? "ThemeTextPrimaryBrush" : "ThemeTextSecondaryBrush");
 
-        var close = new TextBlock
+        var close = new System.Windows.Controls.Image
         {
-            Text = "×",
-            FontSize = 12,
-            FontWeight = FontWeights.Bold,
-            Width = 16,
-            Height = 16,
-            TextAlignment = TextAlignment.Center,
+            Source = FluentIcons.RenderWpf("close", CloseIconColor, 12, false),
+            Width = 12,
+            Height = 12,
+            Margin = new Thickness(2, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
             Cursor = Cursors.Hand
         };
-        close.SetResourceReference(TextBlock.ForegroundProperty, "ThemeMutedBrush");
         close.MouseEnter += (_, _) =>
         {
             _hoverCloseIndex = index;
-            close.SetResourceReference(TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
+            close.Source = FluentIcons.RenderWpf("close", CloseIconHoverColor, 12, false);
         };
         close.MouseLeave += (_, _) =>
         {
             if (_hoverCloseIndex == index)
                 _hoverCloseIndex = -1;
-            close.SetResourceReference(TextBlock.ForegroundProperty, "ThemeMutedBrush");
+            close.Source = FluentIcons.RenderWpf("close", CloseIconColor, 12, false);
         };
         close.MouseLeftButtonDown += (_, e) =>
         {

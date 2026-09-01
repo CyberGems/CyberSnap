@@ -15,6 +15,9 @@ internal readonly record struct EditorTabInfo(string Title, bool Dirty, bool Has
 internal sealed class EditorTabStrip : DoubleBufferedPanel
 {
     public const int PreferredHeight = 28;
+    private const int WmContextMenu = 0x007B;
+    private static readonly Color CloseIconColor = Color.FromArgb(239, 68, 68);
+    private static readonly Color CloseIconHoverColor = Color.FromArgb(255, 110, 110);
 
     private readonly List<EditorTabInfo> _tabs = new();
     private readonly List<Rectangle> _tabRects = new();
@@ -34,9 +37,9 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
     {
         Dock = DockStyle.Fill;
         TabStop = false;
-        SetStyle(ControlStyles.StandardDoubleClick, true);
+        SetStyle(ControlStyles.StandardDoubleClick | ControlStyles.UserMouse, true);
         BackColor = EditorColors.BgPrimary;
-        Cursor = Cursors.Hand;
+        Cursor = Cursors.Default;
     }
 
     public void SetTabs(IReadOnlyList<EditorTabInfo> tabs)
@@ -135,24 +138,45 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         return $"{tab.Title} — {status}";
     }
 
-    protected override void OnMouseDown(MouseEventArgs e)
+    protected override void WndProc(ref Message m)
     {
-        base.OnMouseDown(e);
-        if (e.Button == MouseButtons.Right)
+        if (m.Msg == WmContextMenu)
         {
-            int tab = HitTestTab(e.Location);
-            if (tab >= 0)
-            {
-                TabSelected?.Invoke(this, tab);
-                TabContextMenuRequested?.Invoke(this, tab);
-            }
+            Point client;
+            long lp = m.LParam.ToInt64();
+            if (lp == -1)
+                client = PointToClient(Cursor.Position);
             else
             {
-                BarContextMenuRequested?.Invoke(this, EventArgs.Empty);
+                int sx = unchecked((short)(lp & 0xFFFF));
+                int sy = unchecked((short)((lp >> 16) & 0xFFFF));
+                client = PointToClient(new Point(sx, sy));
             }
+            RaiseContextMenu(client);
+            m.Result = IntPtr.Zero;
             return;
         }
 
+        base.WndProc(ref m);
+    }
+
+    private void RaiseContextMenu(Point client)
+    {
+        int tab = HitTestTab(client);
+        if (tab >= 0)
+        {
+            TabSelected?.Invoke(this, tab);
+            TabContextMenuRequested?.Invoke(this, tab);
+        }
+        else
+        {
+            BarContextMenuRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
         if (e.Button != MouseButtons.Left) return;
 
         int close = HitTestClose(e.Location);
@@ -196,7 +220,6 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
             g.DrawLine(edge, 0, Height - 1, Width, Height - 1);
 
         using var titleFont = UiChrome.ChromeFont(8f, FontStyle.Bold);
-        using var closeFont = UiChrome.ChromeFont(7.5f, FontStyle.Bold);
 
         for (int i = 0; i < _tabs.Count; i++)
         {
@@ -239,14 +262,8 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
 
             bool closeHover = i == _hoverCloseIndex;
-            var closeColor = closeHover ? EditorColors.TextPrimary : EditorColors.TextMuted;
-            TextRenderer.DrawText(
-                g,
-                "×",
-                closeFont,
-                close,
-                closeColor,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+            var closeColor = closeHover ? CloseIconHoverColor : CloseIconColor;
+            FluentIcons.DrawIcon(g, "close", close, closeColor, iconInset: 2f);
         }
     }
 
