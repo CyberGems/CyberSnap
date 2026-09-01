@@ -27,6 +27,10 @@ public sealed partial class RecordingForm : Form
     public event Action<string, Bitmap?, bool>? RecordingCompleted;
     public event Action<Exception>? RecordingFailed;
     public event Action? RecordingCancelled;
+    /// <summary>Fired once the recorder is actually capturing (not the region-select overlay).</summary>
+    public event Action? RecordingCaptureStarted;
+    /// <summary>Fired when pause/resume changes. <c>true</c> means paused.</summary>
+    public event Action<bool>? RecordingPauseChanged;
 
     /// <summary>Static reference to the current recording form for external stop control.</summary>
     public static RecordingForm? Current { get; private set; }
@@ -189,7 +193,7 @@ public sealed partial class RecordingForm : Form
         User32.SetForegroundWindow(Handle);
         Activate();
         Focus();
-        _escapeHook = CaptureEscapeKeyHook.Install(this, CancelFromEscape);
+        _escapeHook = CaptureEscapeKeyHook.Install(this, CancelFromEscape, HandleRecordingHotkey);
         _selectionAdorner?.Show(this);
         _banner?.ShowFor(this);
 
@@ -221,9 +225,20 @@ public sealed partial class RecordingForm : Form
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
-        if ((keyData & Keys.KeyCode) == Keys.Escape)
+        var key = keyData & Keys.KeyCode;
+        if (key == Keys.Escape)
         {
             CancelFromEscape();
+            return true;
+        }
+        if (key == Keys.Space)
+        {
+            HandleRecordingHotkey((int)User32.VK_SPACE);
+            return true;
+        }
+        if (key == Keys.Enter || key == Keys.Return)
+        {
+            HandleRecordingHotkey((int)User32.VK_RETURN);
             return true;
         }
         return base.ProcessCmdKey(ref msg, keyData);
@@ -236,6 +251,20 @@ public sealed partial class RecordingForm : Form
             e.Handled = true;
             e.SuppressKeyPress = true;
             CancelFromEscape();
+            return;
+        }
+        if (e.KeyCode == Keys.Space)
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            HandleRecordingHotkey((int)User32.VK_SPACE);
+            return;
+        }
+        if (e.KeyCode is Keys.Enter or Keys.Return)
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            HandleRecordingHotkey((int)User32.VK_RETURN);
             return;
         }
 

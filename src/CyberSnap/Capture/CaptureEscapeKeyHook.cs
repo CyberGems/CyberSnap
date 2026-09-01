@@ -10,23 +10,30 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
 {
     private readonly Control _target;
     private readonly Action _onEscape;
+    private readonly Func<int, bool>? _tryHandleKey;
     private readonly User32.LowLevelKeyboardProc _proc;
     private IntPtr _hook;
     private int _posted;
+    private int _spaceHeld;
+    private int _enterHeld;
 
-    private CaptureEscapeKeyHook(Control target, Action onEscape)
+    private CaptureEscapeKeyHook(Control target, Action onEscape, Func<int, bool>? tryHandleKey)
     {
         _target = target;
         _onEscape = onEscape;
+        _tryHandleKey = tryHandleKey;
         _proc = HookProc;
     }
 
     public static CaptureEscapeKeyHook? Install(Control target, Action onEscape)
+        => Install(target, onEscape, tryHandleKey: null);
+
+    public static CaptureEscapeKeyHook? Install(Control target, Action onEscape, Func<int, bool>? tryHandleKey)
     {
         if (target.IsDisposed || !target.IsHandleCreated)
             return null;
 
-        var hook = new CaptureEscapeKeyHook(target, onEscape);
+        var hook = new CaptureEscapeKeyHook(target, onEscape, tryHandleKey);
         hook.Install();
         return hook._hook == IntPtr.Zero ? null : hook;
     }
@@ -50,13 +57,43 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
 
     private IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && (wParam == User32.WM_KEYDOWN || wParam == User32.WM_SYSKEYDOWN))
+        if (nCode >= 0)
         {
-            int vkCode = Marshal.ReadInt32(lParam);
-            if (vkCode == User32.VK_ESCAPE)
+            int msg = (int)wParam;
+            bool isDown = msg == User32.WM_KEYDOWN || msg == User32.WM_SYSKEYDOWN;
+            bool isUp = msg == User32.WM_KEYUP || msg == User32.WM_SYSKEYUP;
+
+            if (isDown || isUp)
             {
-                PostEscape();
-                return 1;
+                int vkCode = Marshal.ReadInt32(lParam);
+                if (isDown && vkCode == (int)User32.VK_ESCAPE)
+                {
+                    PostEscape();
+                    return 1;
+                }
+
+                if (_tryHandleKey != null &&
+                    (vkCode == (int)User32.VK_SPACE || vkCode == (int)User32.VK_RETURN))
+                {
+                    if (isDown)
+                    {
+                        bool firstPress = vkCode == (int)User32.VK_SPACE
+                            ? Interlocked.Exchange(ref _spaceHeld, 1) == 0
+                            : Interlocked.Exchange(ref _enterHeld, 1) == 0;
+                        if (firstPress)
+                            PostHotkey(vkCode);
+                    }
+                    else
+                    {
+                        if (vkCode == (int)User32.VK_SPACE)
+                            Volatile.Write(ref _spaceHeld, 0);
+                        else
+                            Volatile.Write(ref _enterHeld, 0);
+                    }
+
+                    // Swallow so the window under the capture region never sees the key.
+                    return 1;
+                }
             }
         }
 
@@ -89,6 +126,32 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
         catch
         {
             Volatile.Write(ref _posted, 0);
+        }
+    }
+
+    private void PostHotkey(int vkCode)
+    {
+        if (_tryHandleKey == null || _target.IsDisposed || _target.Disposing)
+            return;
+
+        try
+        {
+            _target.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    if (!_target.IsDisposed && !_target.Disposing)
+                        _tryHandleKey(vkCode);
+                }
+                catch
+                {
+                    // Hotkey handlers must not tear down the hook.
+                }
+            }));
+        }
+        catch
+        {
+            // Target may already be disposing.
         }
     }
 

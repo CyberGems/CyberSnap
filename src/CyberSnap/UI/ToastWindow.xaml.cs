@@ -600,6 +600,7 @@ public partial class ToastWindow : Window
         ApplyToastOverlayButtonVisual(EditBtn, EditIcon, "draw", active: false);
         ApplyTextCloseVisual(active: false);
         ApplyTextSettingsVisual(active: false);
+        ApplyTextFolderVisual(active: false);
 
         HookOverlayHover(CloseBtn, CloseIcon, "close");
         HookOverlayHover(PinBtn, PinIcon, "pin");
@@ -613,6 +614,8 @@ public partial class ToastWindow : Window
         TextCloseBtn.MouseLeave += (_, _) => ApplyTextCloseVisual(active: false);
         TextSettingsBtn.MouseEnter += (_, _) => ApplyTextSettingsVisual(active: true);
         TextSettingsBtn.MouseLeave += (_, _) => ApplyTextSettingsVisual(active: false);
+        TextFolderBtn.MouseEnter += (_, _) => ApplyTextFolderVisual(active: true);
+        TextFolderBtn.MouseLeave += (_, _) => ApplyTextFolderVisual(active: false);
     }
 
     private void ApplyTextSettingsVisual(bool active)
@@ -623,6 +626,18 @@ public partial class ToastWindow : Window
         TextSettingsIcon.Source = FluentIcons.RenderWpf("gear", iconColor, 14);
         TextSettingsIcon.Opacity = active ? 1.0 : 0.78;
         TextSettingsBtn.Background = active
+            ? Theme.Brush(Theme.IsDark ? Color.FromArgb(48, 255, 255, 255) : Color.FromArgb(38, 0, 0, 0))
+            : System.Windows.Media.Brushes.Transparent;
+    }
+
+    private void ApplyTextFolderVisual(bool active)
+    {
+        var iconColor = Theme.IsDark
+            ? System.Drawing.Color.FromArgb(active ? 255 : 200, 255, 255, 255)
+            : System.Drawing.Color.FromArgb(active ? 255 : 180, 24, 24, 24);
+        TextFolderIcon.Source = FluentIcons.RenderWpf("folder", iconColor, 16);
+        TextFolderIcon.Opacity = active ? 1.0 : 0.78;
+        TextFolderBtn.Background = active
             ? Theme.Brush(Theme.IsDark ? Color.FromArgb(48, 255, 255, 255) : Color.FromArgb(38, 0, 0, 0))
             : System.Windows.Media.Brushes.Transparent;
     }
@@ -705,11 +720,13 @@ public partial class ToastWindow : Window
         EditBtn.MouseLeftButtonDown -= EditBtn_MouseLeftButtonDown;
         TextCloseBtn.MouseLeftButtonDown -= CloseBtn_MouseLeftButtonDown;
         TextSettingsBtn.MouseLeftButtonDown -= SettingsBtn_MouseLeftButtonDown;
+        TextFolderBtn.MouseLeftButtonDown -= FolderBtn_MouseLeftButtonDown;
 
         // Text-only toasts (no preview bitmap) always get an X — independent of ShowOverlayButtons.
         TextCloseBtn.MouseLeftButtonDown += CloseBtn_MouseLeftButtonDown;
         // Same for the settings gear: always available regardless of ShowOverlayButtons.
         TextSettingsBtn.MouseLeftButtonDown += SettingsBtn_MouseLeftButtonDown;
+        TextFolderBtn.MouseLeftButtonDown += FolderBtn_MouseLeftButtonDown;
 
         if (_previewBitmap is null || !_spec.ShowOverlayButtons)
             return;
@@ -751,6 +768,18 @@ public partial class ToastWindow : Window
         TextCloseBtn.Visibility = Visibility.Visible;
         SetToastElementAccessibility(TextSettingsBtn, LocalizationService.Translate("Notification settings"), LocalizationService.Translate("Open notification settings."));
         TextSettingsBtn.Visibility = Visibility.Visible;
+
+        bool showFolder = !string.IsNullOrWhiteSpace(_spec.FilePath);
+        TextFolderBtn.Visibility = showFolder ? Visibility.Visible : Visibility.Collapsed;
+        if (showFolder)
+        {
+            SetToastElementAccessibility(
+                TextFolderBtn,
+                LocalizationService.Translate("Show in folder"),
+                LocalizationService.Translate("Toast show in folder help"));
+            ApplyTextFolderVisual(active: false);
+        }
+
         ApplyTextCloseVisual(active: false);
     }
 
@@ -937,6 +966,27 @@ public partial class ToastWindow : Window
             AppDiagnostics.LogWarning("toast.open-settings", ex.Message, ex);
         }
         CloseToast();
+    }
+
+    private void FolderBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        e.Handled = true;
+        OpenFileLocation(_savedFilePath);
+    }
+
+    private void FolderBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
+            return;
+
+        e.Handled = true;
+        OpenFileLocation(_savedFilePath);
     }
 
     private void PinBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -2080,7 +2130,8 @@ public partial class ToastWindow : Window
         IsChildOf(source, HistoryBtn) ||
         IsChildOf(source, EditBtn) ||
         IsChildOf(source, TextCloseBtn) ||
-        IsChildOf(source, TextSettingsBtn);
+        IsChildOf(source, TextSettingsBtn) ||
+        IsChildOf(source, TextFolderBtn);
 
     private string? GetDragFilePath()
     {

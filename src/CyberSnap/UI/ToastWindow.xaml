@@ -195,7 +195,7 @@
                         <Image x:Name="InlinePreviewImage" Stretch="Uniform" Margin="4"
                                RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,56,0">
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,84,0">
                         <TextBlock x:Name="TitleText" FontSize="12.75" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"
                                    TextAlignment="Center"
@@ -217,41 +217,52 @@
                 <StackPanel x:Name="StatusLinesPanel" Grid.Row="2"
                             Margin="14,0,14,11" Visibility="Collapsed"/>
 
-                <!-- Top-right settings button (always visible, opens app settings) -->
-                <Border x:Name="TextSettingsBtn" Width="24" Height="24" CornerRadius="7"
-                        Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                        ToolTip="Notification settings"
-                        AutomationProperties.Name="Notification settings"
-                        AutomationProperties.HelpText="Open notification settings."
-                        Cursor="Hand"
-                        Focusable="True"
-                        KeyDown="SettingsBtn_KeyDown"
-                        Grid.RowSpan="4"
-                        HorizontalAlignment="Right" VerticalAlignment="Top"
-                        Margin="0,7,35,0"
-                        Panel.ZIndex="10">
-                    <Image x:Name="TextSettingsIcon" Width="11" Height="11" Stretch="Uniform" Opacity="0.65"
-                           RenderOptions.BitmapScalingMode="HighQuality"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-
-                <!-- Top-right close button (always visible) -->
-                <Border x:Name="TextCloseBtn" Width="24" Height="24" CornerRadius="7"
-                        Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                        ToolTip="Close notification"
-                        AutomationProperties.Name="Close notification"
-                        AutomationProperties.HelpText="Close this notification."
-                        Cursor="Hand"
-                        Focusable="True"
-                        KeyDown="CloseBtn_KeyDown"
-                        Grid.RowSpan="4"
-                        HorizontalAlignment="Right" VerticalAlignment="Top"
-                        Margin="0,7,7,0"
-                        Panel.ZIndex="10">
-                    <Image x:Name="TextCloseIcon" Width="10" Height="10" Stretch="Uniform" Opacity="0.65"
-                           RenderOptions.BitmapScalingMode="HighQuality"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
+                <!-- Top-right text-toast actions: folder (when a file exists) · settings · close -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Margin="0,7,7,0"
+                            Grid.RowSpan="4"
+                            Panel.ZIndex="10">
+                    <Border x:Name="TextFolderBtn" Width="24" Height="24" CornerRadius="7"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            ToolTip="Show in folder"
+                            AutomationProperties.Name="Show in folder"
+                            AutomationProperties.HelpText="Open File Explorer with this file selected."
+                            Cursor="Hand"
+                            Focusable="True"
+                            KeyDown="FolderBtn_KeyDown"
+                            Margin="0,0,4,0"
+                            Visibility="Collapsed">
+                        <Image x:Name="TextFolderIcon" Width="12" Height="12" Stretch="Uniform" Opacity="0.65"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border x:Name="TextSettingsBtn" Width="24" Height="24" CornerRadius="7"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            ToolTip="Notification settings"
+                            AutomationProperties.Name="Notification settings"
+                            AutomationProperties.HelpText="Open notification settings."
+                            Cursor="Hand"
+                            Focusable="True"
+                            KeyDown="SettingsBtn_KeyDown"
+                            Margin="0,0,4,0">
+                        <Image x:Name="TextSettingsIcon" Width="11" Height="11" Stretch="Uniform" Opacity="0.65"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border x:Name="TextCloseBtn" Width="24" Height="24" CornerRadius="7"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            ToolTip="Close notification"
+                            AutomationProperties.Name="Close notification"
+                            AutomationProperties.HelpText="Close this notification."
+                            Cursor="Hand"
+                            Focusable="True"
+                            KeyDown="CloseBtn_KeyDown">
+                        <Image x:Name="TextCloseIcon" Width="10" Height="10" Stretch="Uniform" Opacity="0.65"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </StackPanel>
             </Grid>
 
             <Grid x:Name="ProgressHost" Grid.Row="2" ClipToBounds="True">
