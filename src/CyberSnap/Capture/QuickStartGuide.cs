@@ -16,27 +16,27 @@ public sealed class QuickStartGuide : Form
 
     public enum TailDirection { Up, Down, Left, Right }
 
-    private const int MaxWidth = 480;
-    private const int MinWidth = 400;
+    private const int MaxWidth = 540;
+    private const int MinWidth = 440;
     private const int PadX = 28;
-    private const int PadY = 20;
+    private const int PadY = 24;
     private const int HeaderHeight = 30;
-    private const int StepGap = 12;
-    private const int StepCircle = 24;
-    private const int StepTextGap = 14;
-    private const int SectionGap = 16;
-    private const int SectionLabelHeight = 22;
-    private const int ShortcutRowHeight = 36;
-    private const int KbdPadH = 10;
-    private const int KbdPadV = 4;
-    private const int KbdLabelGap = 10;
-    private const int ShortcutColGap = 16;
-    private const int TipRowMinHeight = 28;
-    private const int TipRowGap = 8;
-    private const int TipIconSize = 18;
-    private const int IconColWidth = 24;
+    private const int StepGap = 14;
+    private const int StepCircle = 26;
+    private const int StepTextGap = 12;
+    private const int SectionGap = 18;
+    private const int SectionLabelHeight = 24;
+    private const int ShortcutRowHeight = 34;
+    private const int KbdPadH = 8;
+    private const int KbdLabelGap = 8;
+    private const int ShortcutColGap = 20;
+    private const int TipRowMinHeight = 32;
+    private const int TipRowGap = 12;
+    private const int TipIconSize = 28;
+    private const int IconColWidth = 36;
     private const int IconTextGap = 12;
-    private const int FooterHeight = 24;
+    private const int FooterHeight = 28;
+    private const int TextOverhang = 6;
     // Classic comic-style talk bubble (see artifacts/2026-07-18_04-09-35.png).
     private const float Corner = 18f;
     private const float TailWidth = 28f;
@@ -46,7 +46,7 @@ public sealed class QuickStartGuide : Form
     private readonly Font _headerFont = UiChrome.ChromeFont(13f, FontStyle.Bold);
     private readonly Font _sectionFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
     private readonly Font _bodyFont = UiChrome.ChromeFont(11f);
-    private readonly Font _stepNumFont = UiChrome.ChromeFont(10f, FontStyle.Bold);
+    private readonly Font _stepNumFont = UiChrome.ChromeFont(11.5f, FontStyle.Bold);
     private readonly Font _keyFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
     private readonly Font _footerFont = UiChrome.ChromeFont(9f);
 
@@ -62,6 +62,7 @@ public sealed class QuickStartGuide : Form
     private string _menuTitle = "";
     private string _shortcutsTitle = "";
     private string _footerText = "";
+    private int _contentLeft;
     private int _contentWidth;
     private int _bodyHeight;
     private int _shortcutColWidth;
@@ -377,7 +378,7 @@ public sealed class QuickStartGuide : Form
     {
         _title = T("Editor Quick Start");
         _stepsTitle = T("HOW TO ANNOTATE");
-        _menuTitle = T("EDITOR TOOLS & SHORTCUTS");
+        _menuTitle = T("TIPS");
         _shortcutsTitle = T("KEYBOARD SHORTCUTS");
         _footerText = T("Click or Esc to close");
 
@@ -390,28 +391,24 @@ public sealed class QuickStartGuide : Form
 
         _tips =
         [
-            new TipDef("position", T("F1-F12 keys quickly switch between annotation tools")),
-            new TipDef("moreVertical", T("Right-click objects to duplicate, delete, or transform them")),
-            new TipDef("select", T("Use the burger menu for save, export, view options, and more")),
+            new TipDef("draw", T("F1-F12 keys quickly switch between annotation tools")),
+            new TipDef("select", T("Right-click objects to duplicate, delete, or transform them")),
+            new TipDef("menu", T("Use the burger menu for save, export, view options, and more")),
         ];
 
         _shortcuts =
         [
-            new ShortcutDef("F1-F12", T("Select tool")),
+            new ShortcutDef("F1–F12", T("Select tool")),
             new ShortcutDef("Ctrl+Z", T("Undo")),
             new ShortcutDef("Ctrl+Y", T("Redo")),
             new ShortcutDef("Ctrl+S", T("Save")),
-            new ShortcutDef("Ctrl+C", T("Copy to clipboard")),
+            new ShortcutDef("Ctrl+C", T("Copy")),
             new ShortcutDef("Del", T("Delete object")),
         ];
     }
 
     private void MeasureLayout(Graphics g)
     {
-        int maxShortcutCellW = 0;
-        foreach (var sc in _shortcuts)
-            maxShortcutCellW = Math.Max(maxShortcutCellW, MeasureShortcutCell(g, sc));
-
         int stepsTextCol = Math.Max(160, (_contentWidth > 0 ? _contentWidth : MinWidth - PadX * 2) - StepCircle - StepTextGap);
         _stepHeights = new int[_steps.Length];
         int stepsBlock = 0;
@@ -420,7 +417,7 @@ public sealed class QuickStartGuide : Form
             var size = TextRenderer.MeasureText(g, _steps[i].Text, _bodyFont,
                 new Size(stepsTextCol, 0),
                 TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-            _stepHeights[i] = Math.Max(StepCircle, size.Height + 2);
+            _stepHeights[i] = Math.Max(StepCircle, size.Height + TextOverhang);
             stepsBlock += _stepHeights[i];
             if (i < _steps.Length - 1)
                 stepsBlock += StepGap;
@@ -433,7 +430,7 @@ public sealed class QuickStartGuide : Form
         {
             using var format = StringFormat.GenericTypographic;
             var size = g.MeasureString(_tips[i].Text, _bodyFont, tipTextW, format);
-            _tipHeights[i] = Math.Max(TipRowMinHeight, (int)Math.Ceiling(size.Height) + 4);
+            _tipHeights[i] = Math.Max(TipRowMinHeight, (int)Math.Ceiling(size.Height) + TextOverhang);
             tipsBlock += _tipHeights[i];
             if (i < _tips.Length - 1)
                 tipsBlock += TipRowGap;
@@ -455,10 +452,10 @@ public sealed class QuickStartGuide : Form
             tipLineMax = Math.Max(tipLineMax, IconColWidth + IconTextGap + tw);
         }
 
-        int needed = Math.Max(titleW, Math.Max(stepLineMax, Math.Max(tipLineMax, maxShortcutCellW * 2 + ShortcutColGap)));
+        int needed = Math.Max(titleW, Math.Max(stepLineMax, tipLineMax));
         if (_contentWidth <= 0)
             _contentWidth = Math.Max(MinWidth - PadX * 2, Math.Min(MaxWidth - PadX * 2, needed + 8));
-        _shortcutColWidth = maxShortcutCellW;
+        _shortcutColWidth = Math.Max(120, (_contentWidth - ShortcutColGap) / 2);
 
         int y = PadY;
         y += HeaderHeight + SectionGap;
@@ -469,7 +466,7 @@ public sealed class QuickStartGuide : Form
         y += SectionLabelHeight + 10;
         int shortcutRows = (_shortcuts.Length + 1) / 2;
         y += shortcutRows * ShortcutRowHeight + 10;
-        y += 1 + 8 + FooterHeight + PadY;
+        y += 1 + 10 + FooterHeight + PadY;
         _bodyHeight = y;
     }
 
@@ -631,12 +628,13 @@ public sealed class QuickStartGuide : Form
         }
 
         int originY = (int)Math.Round(_bodyRect.Y);
+        _contentLeft = (int)Math.Round(_bodyRect.X) + PadX;
         int curY = originY + PadY;
 
         // Header
         const int closeBtnSize = 16;
         _closeRect = new Rectangle(
-            Width - PadX - closeBtnSize - 8,
+            _contentLeft + _contentWidth - closeBtnSize - 10,
             originY + PadY - 4,
             closeBtnSize + 12,
             closeBtnSize + 12);
@@ -649,12 +647,12 @@ public sealed class QuickStartGuide : Form
         }
 
         FluentIcons.DrawIcon(g, "info",
-            new RectangleF(PadX, curY + 4, 18, 18), accent, iconInset: 1f);
+            new RectangleF(_contentLeft, curY + 5, 18, 18), accent, iconInset: 1f);
 
-        var headerRect = new Rectangle(PadX + 26, curY, _contentWidth - closeBtnSize - 36, HeaderHeight);
+        var headerRect = new Rectangle(_contentLeft + 24, curY, _contentWidth - closeBtnSize - 36, HeaderHeight);
         TextRenderer.DrawText(g, _title, _headerFont, headerRect,
             UiChrome.SurfaceTextPrimary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
 
         var closeColor = _closeHovered
             ? UiChrome.SurfaceTextPrimary
@@ -668,7 +666,7 @@ public sealed class QuickStartGuide : Form
         curY = PaintSectionLabel(g, _stepsTitle, curY) + 8;
         curY = PaintSteps(g, curY, accent) + SectionGap;
 
-        // Toolbar menu tips
+        // Tips
         curY = PaintSectionLabel(g, _menuTitle, curY) + 8;
         curY = PaintTips(g, curY) + SectionGap;
 
@@ -676,23 +674,23 @@ public sealed class QuickStartGuide : Form
         curY = PaintSectionLabel(g, _shortcutsTitle, curY) + 10;
         curY = PaintShortcutGrid(g, curY);
 
-        // Footer
-        int footerY = originY + (int)_bodyRect.Height - PadY - FooterHeight - 4;
+        // Footer — keep it above the rounded corner so descenders are not clipped by Region.
+        int footerY = originY + (int)_bodyRect.Height - PadY - FooterHeight;
         using (var sep = new Pen(UiChrome.SurfaceBorderSubtle, 1f))
-            g.DrawLine(sep, PadX, footerY, Width - PadX, footerY);
+            g.DrawLine(sep, _contentLeft, footerY, _contentLeft + _contentWidth, footerY);
 
-        var footerRect = new Rectangle(PadX, footerY + 6, _contentWidth, FooterHeight);
+        var footerRect = new Rectangle(_contentLeft, footerY + 4, _contentWidth, FooterHeight - 2);
         TextRenderer.DrawText(g, _footerText, _footerFont, footerRect,
             UiChrome.SurfaceTextMuted,
-            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
     }
 
     private int PaintSectionLabel(Graphics g, string text, int y)
     {
-        var rect = new Rectangle(PadX, y, _contentWidth, SectionLabelHeight);
+        var rect = new Rectangle(_contentLeft, y, _contentWidth, SectionLabelHeight);
         TextRenderer.DrawText(g, text, _sectionFont, rect,
             Color.FromArgb(UiChrome.IsDark ? 170 : 140, UiChrome.SurfaceTextSecondary),
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
         return y + SectionLabelHeight;
     }
 
@@ -702,27 +700,38 @@ public sealed class QuickStartGuide : Form
         for (int i = 0; i < _steps.Length; i++)
         {
             int rowH = i < _stepHeights.Length ? _stepHeights[i] : StepCircle;
-            float cy = curY + rowH / 2f;
 
-            // Number circle
-            var circle = new RectangleF(PadX, cy - StepCircle / 2f, StepCircle, StepCircle);
+            // Align the badge with the first line, not the middle of a wrapped block.
+            var circle = new RectangleF(_contentLeft, curY, StepCircle, StepCircle);
             using (var fill = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 40 : 30, accent)))
                 g.FillEllipse(fill, circle);
             using (var ring = new Pen(Color.FromArgb(UiChrome.IsDark ? 140 : 110, accent), 1.2f))
                 g.DrawEllipse(ring, circle);
 
             string num = (i + 1).ToString();
-            TextRenderer.DrawText(g, num, _stepNumFont,
-                Rectangle.Round(circle),
-                accent,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            var numState = g.Save();
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            using (var numBrush = new SolidBrush(accent))
+            using (var numFormat = new StringFormat(StringFormat.GenericTypographic)
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center,
+            })
+            {
+                // Optical nudge: GDI+ centers on cell metrics and reads high in a circle.
+                var numRect = circle;
+                numRect.Offset(0.4f, 1.1f);
+                g.DrawString(num, _stepNumFont, numBrush, numRect, numFormat);
+            }
+            g.Restore(numState);
 
-            int textX = PadX + StepCircle + StepTextGap;
+            int textX = _contentLeft + StepCircle + StepTextGap;
             int textW = _contentWidth - StepCircle - StepTextGap;
             var textRect = new Rectangle(textX, curY, textW, rowH);
             TextRenderer.DrawText(g, _steps[i].Text, _bodyFont, textRect,
                 UiChrome.SurfaceTextPrimary,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+                TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
 
             curY += rowH;
             if (i < _steps.Length - 1)
@@ -742,18 +751,18 @@ public sealed class QuickStartGuide : Form
             var tip = _tips[i];
             int rowH = i < _tipHeights.Length ? _tipHeights[i] : TipRowMinHeight;
 
-            float iconY = curY + (rowH - TipIconSize) / 2f;
-            var iconRect = new RectangleF(PadX + 2, iconY, TipIconSize, TipIconSize);
+            float iconY = curY + Math.Max(0, (rowH - TipIconSize) / 2f);
+            var iconRect = new RectangleF(_contentLeft, iconY, TipIconSize, TipIconSize);
 
             if (tip.IconId != null && FluentIcons.HasIcon(tip.IconId))
                 FluentIcons.DrawIcon(g, tip.IconId, iconRect, iconColor, iconInset: 0f);
             else
             {
                 using var dot = new SolidBrush(Color.FromArgb(180, iconColor));
-                g.FillEllipse(dot, PadX + IconColWidth / 2f - 3f, curY + rowH / 2f - 3f, 6f, 6f);
+                g.FillEllipse(dot, _contentLeft + IconColWidth / 2f - 3f, curY + rowH / 2f - 3f, 6f, 6f);
             }
 
-            var tipTextRect = new RectangleF(PadX + IconColWidth + IconTextGap, curY, tipTextWidth, rowH);
+            var tipTextRect = new RectangleF(_contentLeft + IconColWidth + IconTextGap, curY, tipTextWidth, rowH);
             using var textBrush = new SolidBrush(UiChrome.SurfaceTextSecondary);
             using var format = new StringFormat(StringFormat.GenericTypographic)
             {
@@ -777,7 +786,7 @@ public sealed class QuickStartGuide : Form
         {
             int col = i % 2;
             int row = i / 2;
-            int cellX = PadX + col * (_shortcutColWidth + ShortcutColGap);
+            int cellX = _contentLeft + col * (_shortcutColWidth + ShortcutColGap);
             int cellY = startY + row * ShortcutRowHeight;
             PaintShortcutCell(g, _shortcuts[i], cellX, cellY, accent);
         }
@@ -789,10 +798,8 @@ public sealed class QuickStartGuide : Form
     {
         int keyW = TextRenderer.MeasureText(g, sc.Key, _keyFont,
             new Size(0, 0), TextFormatFlags.NoPadding).Width;
-        int labelW = TextRenderer.MeasureText(g, sc.Label, _bodyFont,
-            new Size(0, 0), TextFormatFlags.NoPadding).Width;
 
-        int kbdW = Math.Max(48, keyW + KbdPadH * 2 + 6);
+        int kbdW = Math.Min(_shortcutColWidth - 48, Math.Max(44, keyW + KbdPadH * 2 + 4));
         int kbdH = ShortcutRowHeight - 8;
         var kbdRect = new RectangleF(x, y + 4, kbdW, kbdH);
 
@@ -809,20 +816,12 @@ public sealed class QuickStartGuide : Form
             accent,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
+        int labelX = x + kbdW + KbdLabelGap;
+        int labelW = Math.Max(8, _shortcutColWidth - kbdW - KbdLabelGap);
         TextRenderer.DrawText(g, sc.Label, _bodyFont,
-            new Rectangle(x + kbdW + KbdLabelGap, y + 4, labelW + 12, kbdH),
+            new Rectangle(labelX, y + 4, labelW, kbdH),
             UiChrome.SurfaceTextSecondary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-    }
-
-    private int MeasureShortcutCell(Graphics g, ShortcutDef sc)
-    {
-        int keyW = TextRenderer.MeasureText(g, sc.Key, _keyFont,
-            new Size(0, 0), TextFormatFlags.NoPadding).Width;
-        int labelW = TextRenderer.MeasureText(g, sc.Label, _bodyFont,
-            new Size(0, 0), TextFormatFlags.NoPadding).Width;
-        int kbdW = Math.Max(48, keyW + KbdPadH * 2 + 6);
-        return kbdW + KbdLabelGap + labelW + 8;
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
