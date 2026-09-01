@@ -15,6 +15,106 @@ namespace CyberSnap;
 public partial class App
 {
     /// <summary>
+    /// Opens the capture preview, or appends a tab if it is already showing.
+    /// Releases the capture slot once the window is up so a follow-up capture can stack.
+    /// </summary>
+    private void PresentCapturePreview(
+        Bitmap bitmap,
+        System.Drawing.Point? monitorPoint,
+        string? earlySavePath,
+        bool copiedEarly,
+        CaptureKind captureKind = CaptureKind.Screenshot)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(() =>
+                PresentCapturePreview(bitmap, monitorPoint, earlySavePath, copiedEarly, captureKind));
+            return;
+        }
+
+        try
+        {
+            if (_activePreviewDialog is { } existing && existing.CanAcceptSessions)
+            {
+                _previewHiddenForCapture = false;
+                existing.AddSession(bitmap, earlySavePath, copiedEarly, captureKind);
+                existing.RestoreAfterCapture();
+                ResetCapturing();
+                return;
+            }
+
+            var dialog = new CapturePreviewDialog(
+                bitmap,
+                _settingsService!,
+                monitorPoint,
+                earlySavePath,
+                copiedEarly,
+                captureKind);
+            dialog.SessionCompleted += CompletePreviewSession;
+            ShowCapturePreviewDialog(dialog);
+            _previewHiddenForCapture = false;
+            ResetCapturing();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("capture.preview-dispatch", ex);
+            try { bitmap.Dispose(); } catch { }
+            ResetCapturing();
+        }
+    }
+
+    private void CompletePreviewSession(PreviewSession session, bool committed)
+    {
+        bool isScaled = session.IsScaled;
+        var original = session.Bitmap;
+        var effective = session.EffectiveBitmap;
+        string? effectiveSavePath = ResolvePreviewCommitSavePath(
+            session.SavedFilePath, session.EarlySavePath, isScaled);
+        bool effectiveCopied = isScaled ? false : session.ClipboardAlreadyCopied;
+        var kind = session.CaptureKind;
+
+        if (committed)
+        {
+            if (isScaled && !string.IsNullOrEmpty(session.EarlySavePath) && File.Exists(session.EarlySavePath))
+            {
+                try { File.Delete(session.EarlySavePath); } catch { }
+            }
+
+            HandleCaptureResult(
+                effective,
+                session.SelectedAction,
+                effectiveSavePath,
+                effectiveCopied,
+                isExplicitScaled: isScaled,
+                captureKind: kind);
+
+            if (isScaled)
+            {
+                try { original.Dispose(); } catch { }
+            }
+
+            if (kind == CaptureKind.ScrollCapture)
+            {
+                var settings = _settingsService!.Settings;
+                MarkFirstTime(
+                    settings.HasFirstScrollingCapture,
+                    () => settings.HasFirstScrollingCapture = true,
+                    "First scrolling capture",
+                    "scrollCapture",
+                    d => settings.FirstScrollCaptureAt = d);
+            }
+        }
+        else
+        {
+            try { effective.Dispose(); } catch { }
+            if (isScaled)
+            {
+                try { original.Dispose(); } catch { }
+            }
+        }
+    }
+
+    /// <summary>
     /// Routes a completed scrolling capture through the same optional preview used by
     /// regular image captures. The preview is opened on the WPF dispatcher, while the
     /// scrolling form remains responsible only for producing the bitmap.
@@ -44,7 +144,6 @@ public partial class App
             return;
         }
 
-        bool previewOpened = false;
         try
         {
             bool copiedEarly = false;
@@ -52,69 +151,16 @@ public partial class App
                 copiedEarly = TryCopyCaptureOutputToClipboard(capture, null);
 
             string? earlySavePath = TrySaveCaptureFileEarly(capture, settings);
-            var dialog = new UI.CapturePreviewDialog(
+            PresentCapturePreview(
                 capture,
-                _settingsService,
-                targetMonitorPoint: null,
-                savedFilePath: earlySavePath,
-                clipboardAlreadyCopied: copiedEarly);
-
-            ShowCapturePreviewDialog(dialog, result =>
-            {
-                bool isScaled = dialog.ScaleFactor != 1;
-                var effective = isScaled ? dialog.EffectiveBitmap : capture;
-                string? effectiveSavePath =
-                    ResolvePreviewCommitSavePath(dialog.SavedFilePath, earlySavePath, isScaled);
-                bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
-
-                if (result == true)
-                {
-                    if (isScaled && !string.IsNullOrEmpty(earlySavePath) && File.Exists(earlySavePath))
-                    {
-                        try { File.Delete(earlySavePath); } catch { }
-                    }
-
-                    HandleCaptureResult(
-                        effective,
-                        dialog.SelectedAction,
-                        effectiveSavePath,
-                        effectiveCopied,
-                        isExplicitScaled: isScaled,
-                        captureKind: CaptureKind.ScrollCapture);
-                    MarkFirstTime(
-                        settings.HasFirstScrollingCapture,
-                        () => settings.HasFirstScrollingCapture = true,
-                        "First scrolling capture",
-                        "scrollCapture",
-                        d => settings.FirstScrollCaptureAt = d);
-
-                    if (isScaled)
-                    {
-                        try { capture.Dispose(); } catch { }
-                    }
-                }
-                else
-                {
-                    try { effective.Dispose(); } catch { }
-                    if (isScaled)
-                    {
-                        try { capture.Dispose(); } catch { }
-                    }
-
-                    // null means the preview was replaced by a newer capture; that new
-                    // session owns the busy slot and will perform its own cleanup.
-                    if (result == false)
-                        ResetCapturing();
-                }
-            });
-            previewOpened = true;
+                monitorPoint: null,
+                earlySavePath,
+                copiedEarly,
+                CaptureKind.ScrollCapture);
         }
         catch (Exception ex)
         {
-            if (!previewOpened)
-            {
-                try { capture.Dispose(); } catch { }
-            }
+            try { capture.Dispose(); } catch { }
 
             AppDiagnostics.LogError("capture.scroll-preview", ex);
             ResetCapturing();

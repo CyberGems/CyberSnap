@@ -19,6 +19,7 @@ public partial class App
     {
         Volatile.Write(ref _isCapturing, 0);
         RestoreSettingsAfterCapture();
+        RestorePreviewAfterCapture();
         NotifySessionBecameIdleIfQuiet();
     }
 
@@ -370,6 +371,11 @@ public partial class App
 
     private void LaunchScrollingCapture(Rectangle? preSelectedRegion = null)
     {
+        RunAfterPreviewChromeHidden(() => LaunchScrollingCaptureCore(preSelectedRegion));
+    }
+
+    private void LaunchScrollingCaptureCore(Rectangle? preSelectedRegion)
+    {
         var thread = new Thread(() =>
         {
             // The caller already owns _isCapturing. Keep that ownership while the
@@ -614,7 +620,7 @@ public partial class App
             return;
         }
 
-        LaunchWithDelay(() => LaunchOverlayNow(initialMode));
+        RunAfterPreviewChromeHidden(() => LaunchWithDelay(() => LaunchOverlayNow(initialMode)));
     }
 
     private void LaunchOverlayNow(CaptureMode initialMode)
@@ -622,10 +628,8 @@ public partial class App
         var thread = new Thread(() =>
         {
             Bitmap? screenshot = null;
-            // Set when RegionSelected delegates to the Preview dialog. The Preview then owns
-            // the capture session (and calls ResetCapturing when it closes), so the overlay's
-            // FormClosed handler skips its default ResetCapturing to avoid prematurely
-            // re-arming the hotkey while the Preview is still open.
+            // Set when RegionSelected delegates to the Preview dialog. FormClosed skips
+            // ResetCapturing so the slot stays claimed until PresentCapturePreview releases it.
             bool outcomeDelegatedToPreview = false;
             bool handoffScrolling = false;
             try
@@ -807,42 +811,7 @@ public partial class App
 
                                 // Save is immediate when the path is known (same timing as auto-copy).
                                 string? earlySavePath = TrySaveCaptureFileEarly(cropped, settings);
-
-                                var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint, earlySavePath, copiedEarly);
-                                // Show() (non-modal) instead of ShowDialog(): modal loops disable every
-                                // other top-level HWND in this thread via EnableWindow(false), which
-                                // locked the floating widget and made Windows beep on click. With a single
-                                // active preview managed via App.ShowCapturePreviewDialog + CommittedResult,
-                                // the widget stays responsive and a follow-up capture replaces this dialog.
-                                ShowCapturePreviewDialog(dialog, result =>
-                                {
-                                    bool isScaled = dialog.ScaleFactor != 1;
-                                    var effective = isScaled ? dialog.EffectiveBitmap : cropped;
-                                    string? effectiveSavePath = ResolvePreviewCommitSavePath(dialog.SavedFilePath, earlySavePath, isScaled);
-                                    bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
-                                    if (result == true)
-                                    {
-                                        if (isScaled && !string.IsNullOrEmpty(earlySavePath) && File.Exists(earlySavePath))
-                                        {
-                                            try { File.Delete(earlySavePath); } catch { }
-                                        }
-                                        HandleCaptureResult(effective, dialog.SelectedAction, effectiveSavePath, effectiveCopied, isExplicitScaled: isScaled);
-                                        if (isScaled)
-                                        {
-                                            try { cropped.Dispose(); } catch { }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        try { effective.Dispose(); } catch { }
-                                        if (isScaled)
-                                        {
-                                            try { cropped.Dispose(); } catch { }
-                                        }
-                                        if (result == false)
-                                            ResetCapturing();
-                                    }
-                                });
+                                PresentCapturePreview(cropped, monitorPoint, earlySavePath, copiedEarly);
                             }
                             else
                             {
@@ -1062,9 +1031,9 @@ public partial class App
                         });
                     }
 
-                    // The Preview now owns the session and will call ResetCapturing itself
-                    // once the user commits or cancels. Skipping here keeps _isCapturing=1
-                    // so the hotkey guard blocks parallel captures while Preview is open.
+                    // PresentCapturePreview releases _isCapturing once the preview is showing
+                    // so a follow-up capture can stack as another tab. Skipping here avoids
+                    // re-arming the hotkey before that handoff finishes.
                     if (outcomeDelegatedToPreview || handoffScrolling)
                         return;
 
@@ -1130,36 +1099,7 @@ public partial class App
                 copiedEarly = TryCopyCaptureOutputToClipboard(bmp, null);
 
             string? earlySavePath = TrySaveCaptureFileEarly(bmp, settings);
-            var dialog = new UI.CapturePreviewDialog(bmp, _settingsService, monitorPoint, earlySavePath, copiedEarly);
-            ShowCapturePreviewDialog(dialog, result =>
-            {
-                bool isScaled = dialog.ScaleFactor != 1;
-                var effective = isScaled ? dialog.EffectiveBitmap : bmp;
-                string? effectiveSavePath = ResolvePreviewCommitSavePath(dialog.SavedFilePath, earlySavePath, isScaled);
-                bool effectiveCopied = isScaled ? false : dialog.ClipboardAlreadyCopied;
-                if (result == true)
-                {
-                    if (isScaled && !string.IsNullOrEmpty(earlySavePath) && File.Exists(earlySavePath))
-                    {
-                        try { File.Delete(earlySavePath); } catch { }
-                    }
-                    HandleCaptureResult(effective, dialog.SelectedAction, effectiveSavePath, effectiveCopied, isExplicitScaled: isScaled);
-                    if (isScaled)
-                    {
-                        try { bmp.Dispose(); } catch { }
-                    }
-                }
-                else
-                {
-                    try { effective.Dispose(); } catch { }
-                    if (isScaled)
-                    {
-                        try { bmp.Dispose(); } catch { }
-                    }
-                    if (result == false)
-                        ResetCapturing();
-                }
-            });
+            PresentCapturePreview(bmp, monitorPoint, earlySavePath, copiedEarly);
         }
         catch (Exception ex)
         {

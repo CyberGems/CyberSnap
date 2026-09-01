@@ -26,10 +26,10 @@ public partial class App : Application
     private AboutWindow? _aboutWindow;
     private AchievementsWindow? _achievementsWindow;
     private CaptureWidgetWindow? _widgetWindow;
-    /// <summary>Currently open capture-preview dialog. At most one is allowed at a time;
-    /// when a new capture wants to show its preview while another is open, the older
-    /// one is closed (its bitmap disposed) and the newest capture replaces it.</summary>
+    /// <summary>Currently open capture-preview dialog. One window can stack multiple
+    /// captures as tabs; a new capture while it is open is appended instead of replacing it.</summary>
     private UI.CapturePreviewDialog? _activePreviewDialog;
+    private bool _previewHiddenForCapture;
     private DispatcherTimer? _idleTrimTimer;
     private int _isCapturing;
     /// <summary>Standalone tools (OCR/picker/ruler/scan) that run outside the capture overlay.</summary>
@@ -56,67 +56,79 @@ public partial class App : Application
 
     /// <summary>
     /// Attempts to claim the capture slot (<see cref="_isCapturing"/>) for a new capture.
-    /// If the slot is held ONLY because an existing Preview is still open (no live capture
-    /// overlay), the preview is closed via <see cref="UI.CapturePreviewDialog.CloseFromReplace"/>
-    /// and the slot is reused for the new capture; the method reports the slot as claimed.
+    /// An open preview no longer holds this slot, so a follow-up capture can run while
+    /// previous captures stay stacked in the preview. The preview is hidden first so it
+    /// is not included in the new screenshot.
     /// Returns false only when another capture is genuinely in flight (overlay / recording).
     /// </summary>
     internal bool TryClaimCaptureSlotAllowingPreviewReplace()
     {
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) == 0)
-            return true;
-
-        // Slot is taken. If it's a stale preview (no overlay actually running), close it
-        // and take over. Otherwise the capture tool is genuinely busy — bail out.
-        if (_activePreviewDialog is not { } preview)
+        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0)
             return false;
 
-        try { preview.CloseFromReplace(); }
-        catch (Exception ex) { AppDiagnostics.LogWarning("preview.replace-on-hotkey", ex.Message, ex); }
-
-        // _isCapturing is already 1 — keep it. The preview's Closed handler skips its own
-        // ResetCapturing() because CloseFromReplace marks it as a replace, so the slot stays
-        // claimed for the new capture.
+        HideActivePreviewForCapture();
         return true;
     }
 
-    /// <summary>
-    /// Shows <paramref name="dialog"/> as the single active capture preview.
-    /// If another preview is already open, it is closed (acting as if the user explicitly
-    /// cancelled it) and its bitmap is disposed by App.Capture before being replaced.
-    /// The dialog is shown non-modal via Show() so the floating widget remains responsive
-    /// (ShowDialog() disabled every other top-level window through Win32, locking the peek).
-    /// </summary>
-    /// <param name="dialog">The preview to show. This call takes ownership of clearing the
-    /// active-slot reference when the dialog closes.</param>
-    /// <param name="closed">Callback invoked when the preview closes. The single argument is
-    /// the value that would have been the DialogResult in a ShowDialog flow (true = commit,
-    /// false/null = cancel).</param>
-    internal void ShowCapturePreviewDialog(UI.CapturePreviewDialog dialog, Action<bool?> closed)
+    private void HideActivePreviewForCapture()
     {
-        if (!Dispatcher.CheckAccess())
+        if (_activePreviewDialog is not { } preview || !preview.CanAcceptSessions)
+            return;
+        if (!preview.IsVisible && preview.Opacity <= 0)
+            return;
+
+        try { preview.HideForCapture(); }
+        catch (Exception ex) { AppDiagnostics.LogWarning("preview.hide-for-capture", ex.Message, ex); }
+        _previewHiddenForCapture = true;
+    }
+
+    private void RestorePreviewAfterCapture()
+    {
+        if (!_previewHiddenForCapture)
+            return;
+        _previewHiddenForCapture = false;
+        if (_activePreviewDialog is not { } preview || !preview.CanAcceptSessions)
+            return;
+        try { preview.RestoreAfterCapture(); }
+        catch (Exception ex) { AppDiagnostics.LogWarning("preview.restore-after-capture", ex.Message, ex); }
+    }
+
+    private void RunAfterPreviewChromeHidden(Action action)
+    {
+        if (!_previewHiddenForCapture)
         {
-            _ = Dispatcher.BeginInvoke(() => ShowCapturePreviewDialog(dialog, closed));
+            action();
             return;
         }
 
-        // Replace any open preview (user pressed the hotkey again mid-preview).
-        // Suppress fresh input on the new preview while the old one's closing completes.
-        if (_activePreviewDialog is { } previous)
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        timer.Tick += (_, _) =>
         {
-            _activePreviewDialog = null;
-            try { previous.CloseFromReplace(); }
-            catch (Exception ex) { AppDiagnostics.LogWarning("preview.replace-close", ex.Message, ex); }
+            timer.Stop();
+            action();
+        };
+        timer.Start();
+    }
+
+    /// <summary>
+    /// Shows <paramref name="dialog"/> as the active capture preview.
+    /// The dialog is shown non-modal via Show() so the floating widget remains responsive
+    /// (ShowDialog() disabled every other top-level window through Win32, locking the peek).
+    /// Follow-up captures are appended via <see cref="PresentCapturePreview"/>.
+    /// </summary>
+    internal void ShowCapturePreviewDialog(UI.CapturePreviewDialog dialog)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(() => ShowCapturePreviewDialog(dialog));
+            return;
         }
 
         _activePreviewDialog = dialog;
         dialog.Closed += (_, _) =>
         {
-            // Only the dialog still holding the active slot clears it (a replaced preview
-            // does not clobber the new active reference).
             if (ReferenceEquals(_activePreviewDialog, dialog))
                 _activePreviewDialog = null;
-            closed(dialog.CommittedResult);
         };
 
         dialog.Show();
@@ -299,6 +311,16 @@ public partial class App : Application
         _settingsService.Settings.UploadSuppressThirdPartyConfirm = suppress;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("upload.persist-suppress-third-party-confirm", ex); }
+    }
+
+    /// <summary>Persists whether the stacked-preview close confirmation was suppressed.</summary>
+    public void PersistPreviewSuppressCloseAllConfirm(bool suppress)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.PreviewSuppressCloseAllConfirm == suppress) return;
+        _settingsService.Settings.PreviewSuppressCloseAllConfirm = suppress;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("preview.persist-suppress-close-all-confirm", ex); }
     }
 
     /// <summary>Persists the video trimmer preview volume and export-mute preference.</summary>

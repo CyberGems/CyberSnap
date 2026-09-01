@@ -1,4 +1,7 @@
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
@@ -12,6 +15,7 @@ public sealed partial class EditorForm
     private const int SoftTabLimit = 8;
     private readonly List<EditorDocument> _documents = new();
     private EditorDocument _activeDocument = null!;
+    private EditorDocument? _lastClosed;
     private Panel _canvasInner = null!;
     private EditorTabStrip _tabStrip = null!;
     private bool _tabLimitWarned;
@@ -181,6 +185,13 @@ public sealed partial class EditorForm
                 ActivateDocument(_documents[index]);
         };
         _tabStrip.TabCloseRequested += (_, index) => CloseDocumentAt(index);
+        _tabStrip.TabContextMenuRequested += (_, index) =>
+        {
+            if (index >= 0 && index < _documents.Count)
+                ShowDocumentTabMenu(_documents[index], _tabStrip);
+        };
+        _tabStrip.BarContextMenuRequested += (_, _) =>
+            ShowDocumentTabMenu(_activeDocument, _tabStrip);
         _tabStrip.EmptyAreaDoubleClicked += (_, _) => DoNewCanvas();
         RegisterHoverTooltip(
             _tabStrip,
@@ -324,9 +335,11 @@ public sealed partial class EditorForm
     {
         if (_documents.Count <= 1)
         {
+            if (_canvas.IsDefaultBlank && !_canvas.IsDirty)
+                return true;
             if (_activeDocument.IsDirty && !PromptSaveChanges())
                 return false;
-            ResetActiveToBlank();
+            ReplaceLastDocumentWithBlank();
             return true;
         }
 
@@ -341,9 +354,241 @@ public sealed partial class EditorForm
 
         ActivateDocument(nextDoc);
         _documents.Remove(closing);
-        closing.Dispose();
+        ParkClosedDocument(closing);
         UpdateTabStripVisibility();
         return true;
+    }
+
+    private bool CloseAllDocuments()
+    {
+        if (_documents.Count <= 1)
+            return CloseActiveTab();
+        if (!PromptSaveAllDirtyDocuments())
+            return false;
+
+        var active = _activeDocument;
+        foreach (var doc in _documents.Where(d => !ReferenceEquals(d, active)).ToList())
+        {
+            _documents.Remove(doc);
+            try { doc.Dispose(); } catch { /* closing extras */ }
+        }
+        return CloseActiveTab();
+    }
+
+    private void ReplaceLastDocumentWithBlank()
+    {
+        var closing = _activeDocument;
+        var blankBitmap = CreateBlankCheckerboard(EditorColors.IsDark);
+        var blank = CreateDocument(blankBitmap, null, closing.Canvas);
+        blank.Canvas.IsDefaultBlank = true;
+        blank.Canvas.IsBlankCanvas = true;
+        _documents.Clear();
+        _documents.Add(blank);
+        ActivateDocument(blank);
+        ParkClosedDocument(closing);
+        blank.Canvas.ZoomFit();
+        blank.Canvas.DismissWelcomeOverlay();
+        UpdateTabStripVisibility();
+    }
+
+    private void ParkClosedDocument(EditorDocument doc)
+    {
+        if (_lastClosed != null && !ReferenceEquals(_lastClosed, doc))
+        {
+            try { _lastClosed.Dispose(); } catch { /* previous stash */ }
+        }
+
+        if (!doc.Canvas.IsDisposed)
+        {
+            try { _canvasInner?.Controls.Remove(doc.Canvas); } catch { /* already removed */ }
+            doc.Canvas.Visible = false;
+        }
+
+        _lastClosed = doc;
+    }
+
+    private void ReopenLastClosedTab()
+    {
+        var doc = _lastClosed;
+        if (doc is null || doc.Canvas.IsDisposed)
+            return;
+
+        _lastClosed = null;
+        if (ShouldReplaceActiveDocument)
+        {
+            var blank = _activeDocument;
+            _documents.Add(doc);
+            ActivateDocument(doc);
+            _documents.Remove(blank);
+            try { blank.Dispose(); } catch { /* replaced blank */ }
+        }
+        else
+        {
+            WarnIfManyTabs();
+            _documents.Add(doc);
+            ActivateDocument(doc);
+        }
+        UpdateTabStripVisibility();
+    }
+
+    private static string? ExistingSavedPath(EditorDocument doc)
+    {
+        if (string.IsNullOrWhiteSpace(doc.SavedFilePath) || !File.Exists(doc.SavedFilePath))
+            return null;
+        return Path.GetFullPath(doc.SavedFilePath);
+    }
+
+    private void CopyDocumentLocation(EditorDocument doc)
+    {
+        var path = ExistingSavedPath(doc);
+        if (path is null)
+            return;
+        var folder = Path.GetDirectoryName(path);
+        if (string.IsNullOrWhiteSpace(folder))
+            return;
+        ClipboardService.CopyTextToClipboard(folder);
+        ToastWindow.Show(LocalizationService.Translate("Copied"), folder);
+    }
+
+    private void CopyDocumentFullName(EditorDocument doc)
+    {
+        var path = ExistingSavedPath(doc);
+        if (path is null)
+            return;
+        ClipboardService.CopyTextToClipboard(path);
+        ToastWindow.Show(LocalizationService.Translate("Copied"), path);
+    }
+
+    private void OpenDocumentInFolder(EditorDocument doc)
+    {
+        var path = ExistingSavedPath(doc);
+        if (path is null)
+            return;
+        try
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Error", ex.Message, error: true);
+        }
+    }
+
+    private void ShowDocumentTabMenu(EditorDocument doc, Control host)
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        bool canClose = _documents.Count > 1 || !(doc.Canvas.IsDefaultBlank && !doc.Canvas.IsDirty);
+        if (canClose)
+        {
+            var closeItem = WindowsMenuRenderer.Item("Close", iconId: "close");
+            closeItem.Click += (_, _) =>
+            {
+                int index = _documents.IndexOf(doc);
+                if (index >= 0)
+                    CloseDocumentAt(index);
+            };
+            menu.Items.Add(closeItem);
+        }
+
+        if (_documents.Count > 1)
+        {
+            var closeAllItem = WindowsMenuRenderer.Item("Close all", iconId: "close");
+            closeAllItem.Click += (_, _) => CloseAllDocuments();
+            menu.Items.Add(closeAllItem);
+        }
+
+        if (_lastClosed is not null && !_lastClosed.Canvas.IsDisposed)
+        {
+            var reopenItem = WindowsMenuRenderer.Item("Reopen last closed tab", iconId: "undo");
+            reopenItem.Click += (_, _) => ReopenLastClosedTab();
+            menu.Items.Add(reopenItem);
+        }
+
+        var savedPath = ExistingSavedPath(doc);
+        if (savedPath is not null)
+        {
+            if (menu.Items.Count > 0)
+                menu.Items.Add(new ToolStripSeparator());
+
+            if (!string.IsNullOrWhiteSpace(Path.GetDirectoryName(savedPath)))
+            {
+                var copyLoc = WindowsMenuRenderer.Item("Copy location", iconId: "folder");
+                copyLoc.Click += (_, _) => CopyDocumentLocation(doc);
+                menu.Items.Add(copyLoc);
+            }
+
+            var copyName = WindowsMenuRenderer.Item("Copy full name", iconId: "copy");
+            copyName.Click += (_, _) => CopyDocumentFullName(doc);
+            menu.Items.Add(copyName);
+
+            var openFolder = WindowsMenuRenderer.Item("Open in folder", iconId: "folder");
+            openFolder.Click += (_, _) => OpenDocumentInFolder(doc);
+            menu.Items.Add(openFolder);
+        }
+
+        if (menu.Items.Count == 0)
+        {
+            menu.Dispose();
+            return;
+        }
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220);
+        menu.Show(host, host.PointToClient(Cursor.Position));
+    }
+
+    private void AppendDocumentChromeMenuItems(ContextMenuStrip menu, bool includeOpenInFolder = false)
+    {
+        var doc = _activeDocument;
+        int start = menu.Items.Count;
+        bool canClose = _documents.Count > 1 || !(doc.Canvas.IsDefaultBlank && !doc.Canvas.IsDirty);
+        if (canClose)
+        {
+            var closeItem = WindowsMenuRenderer.Item("Close", iconId: "close");
+            closeItem.Click += (_, _) => CloseActiveTab();
+            menu.Items.Add(closeItem);
+        }
+
+        if (_documents.Count > 1)
+        {
+            var closeAllItem = WindowsMenuRenderer.Item("Close all", iconId: "close");
+            closeAllItem.Click += (_, _) => CloseAllDocuments();
+            menu.Items.Add(closeAllItem);
+        }
+
+        if (_lastClosed is not null && !_lastClosed.Canvas.IsDisposed)
+        {
+            var reopenItem = WindowsMenuRenderer.Item("Reopen last closed tab", iconId: "undo");
+            reopenItem.Click += (_, _) => ReopenLastClosedTab();
+            menu.Items.Add(reopenItem);
+        }
+
+        var savedPath = ExistingSavedPath(doc);
+        if (savedPath is not null)
+        {
+            if (menu.Items.Count > start)
+                menu.Items.Add(new ToolStripSeparator());
+            if (!string.IsNullOrWhiteSpace(Path.GetDirectoryName(savedPath)))
+            {
+                var copyLoc = WindowsMenuRenderer.Item("Copy location", iconId: "folder");
+                copyLoc.Click += (_, _) => CopyDocumentLocation(doc);
+                menu.Items.Add(copyLoc);
+            }
+            var copyName = WindowsMenuRenderer.Item("Copy full name", iconId: "copy");
+            copyName.Click += (_, _) => CopyDocumentFullName(doc);
+            menu.Items.Add(copyName);
+            if (includeOpenInFolder)
+            {
+                var openFolder = WindowsMenuRenderer.Item("Open in folder", iconId: "folder");
+                openFolder.Click += (_, _) => OpenDocumentInFolder(doc);
+                menu.Items.Add(openFolder);
+            }
+        }
+
+        if (menu.Items.Count > start && start > 0)
+            menu.Items.Insert(start, new ToolStripSeparator());
     }
 
     private void ResetActiveToBlank()
@@ -448,5 +693,10 @@ public sealed partial class EditorForm
             try { doc.Dispose(); } catch { /* closing */ }
         }
         _documents.Clear();
+        if (_lastClosed != null)
+        {
+            try { _lastClosed.Dispose(); } catch { /* closing */ }
+            _lastClosed = null;
+        }
     }
 }

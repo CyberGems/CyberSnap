@@ -219,6 +219,12 @@ public sealed class AppSettings
     /// </summary>
     public int CapturePreviewTimeoutSeconds { get; set; } = 20;
 
+    /// <summary>
+    /// When true, the "Don't show again" checkbox was checked on the stacked-preview
+    /// close confirmation, so closing multiple captures no longer asks.
+    /// </summary>
+    public bool PreviewSuppressCloseAllConfirm { get; set; }
+
     public bool AllowHotkeyOverride { get; set; }
 
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;

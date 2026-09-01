@@ -38,9 +38,7 @@ namespace CyberSnap.UI
         private const int PillSimWorkMs = 1000;
 
         private readonly SettingsService _settingsService;
-        private readonly Bitmap _capturedBitmap;
         private readonly System.Drawing.Point _targetMonitorPoint;
-        private string? _savedFilePath;
         private bool _isPinned = false;
         /// <summary>True while the countdown is paused because the cursor is moving over the window.</summary>
         private bool _countdownPausedForMotion;
@@ -70,9 +68,6 @@ namespace CyberSnap.UI
         private const double ZoomMin = 0.1;
         private const double ZoomMax = 8.0;
         private const double ZoomStep = 1.2;
-        private double _currentZoom = 1.0;
-        private bool _zoomToFit;
-        private bool _didInitialContain;
         private bool _isPanning;
         private System.Windows.Point _panStart;
         private double _panStartHorizontalOffset;
@@ -80,12 +75,9 @@ namespace CyberSnap.UI
         private bool _zoomPointerInside;
         private DispatcherTimer? _zoomHideTimer;
 
-        private Bitmap? _scaledBitmap;
-        private int _scaleFactor = 1;
-
-        public Bitmap EffectiveBitmap => _scaledBitmap ?? _capturedBitmap;
-        public int ScaleFactor => _scaleFactor;
-        public bool IsScaled => _scaleFactor != 1;
+        public Bitmap EffectiveBitmap => _active.EffectiveBitmap;
+        public int ScaleFactor => _active.ScaleFactor;
+        public bool IsScaled => _active.IsScaled;
 
         private static readonly System.Drawing.Color PillDoneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
         private static readonly System.Drawing.Color PillPendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
@@ -126,7 +118,11 @@ namespace CyberSnap.UI
             public required AfterCapturePillTiming FinalTiming { get; init; }
         }
 
-        public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; private set; } = RegionOverlayForm.ConfirmCommitAction.Default;
+        public RegionOverlayForm.ConfirmCommitAction SelectedAction
+        {
+            get => _active.SelectedAction;
+            private set => _active.SelectedAction = value;
+        }
 
         /// <summary>Path written by Save / Save as... in this preview, if any.</summary>
         public string? SavedFilePath => _savedFilePath;
@@ -156,6 +152,7 @@ namespace CyberSnap.UI
             _isClosing = true;
             _replaced = true;
             CommittedResult = null;
+            FinalizeSessions(commit: false);
             Close();
         }
 
@@ -165,13 +162,14 @@ namespace CyberSnap.UI
                 return;
             _isClosing = true;
             CommittedResult = result;
+            FinalizeSessions(result);
             Close();
         }
 
         /// <summary>True when the caller already wrote this capture to the clipboard
         /// (eager copy fired before the preview opened). Lets the owner skip a
         /// duplicate copy when the preview commits.</summary>
-        public bool ClipboardAlreadyCopied { get; }
+        public bool ClipboardAlreadyCopied => _active.ClipboardAlreadyCopied;
 
         public bool IsAutoCloseEnabled =>
             _settingsService.Settings.CapturePreviewTimeoutSeconds > 0;
@@ -192,12 +190,12 @@ namespace CyberSnap.UI
             SettingsService settingsService,
             System.Drawing.Point? targetMonitorPoint = null,
             string? savedFilePath = null,
-            bool clipboardAlreadyCopied = false)
+            bool clipboardAlreadyCopied = false,
+            CaptureKind captureKind = CaptureKind.Screenshot)
         {
-            _capturedBitmap = bitmap;
             _settingsService = settingsService;
-            _savedFilePath = string.IsNullOrWhiteSpace(savedFilePath) ? null : savedFilePath;
-            ClipboardAlreadyCopied = clipboardAlreadyCopied;
+            _active = CreateSession(bitmap, savedFilePath, clipboardAlreadyCopied, captureKind);
+            _sessions.Add(_active);
             // Own the capture-monitor anchor immediately. The static hint is easy to consume
             // (toast / GetCurrentWorkArea) before our deferred center runs — that sent the
             // dialog to the primary monitor when capturing on a secondary.
@@ -215,13 +213,13 @@ namespace CyberSnap.UI
             ContentRendered += CapturePreviewDialog_ContentRendered;
             Activated += CapturePreviewDialog_Activated;
             SettingsService.SettingsChanged += SettingsService_SettingsChanged;
-            Closing += (_, _) =>
+            Closing += (_, e) =>
             {
-                // Any close path that did not go through CommitAndClose (Alt+F4, system X,
-                // taskbar close) counts as discard — never run deferred outcomes. A replace-
-                // close keeps CommittedResult null so App doesn't run a redundant reset.
+                // Alt+F4 / taskbar close: same as title-bar X (discard one, confirm-and-commit
+                // all). Paths that already finalized sessions skip this.
                 if (!_replaced)
                     CommittedResult ??= false;
+                HandleSystemClosing(e);
             };
             Closed += (_, _) =>
             {
@@ -232,6 +230,7 @@ namespace CyberSnap.UI
                 CancelZoomHideTimer();
                 StopPrimaryButtonSpin();
                 StopCtaBorderPulse();
+                DiscardStashedSession();
             };
             // Pause auto-close only while the cursor is moving over this window; when it
             // stops (or leaves), the countdown resumes from the preserved remaining time.
@@ -243,6 +242,7 @@ namespace CyberSnap.UI
             CancelBtn.MouseLeave += (_, _) => OnPrimaryButtonMouseLeave();
             CancelBtn.SizeChanged += (_, _) => UpdateSheenClip();
 
+            InitTabStrip();
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
             UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
@@ -255,7 +255,8 @@ namespace CyberSnap.UI
             ApplyLocalizedLabels();
             UpdateIcons();
 
-            PreviewImage.Source = BitmapPerf.ToBitmapSource(bitmap);
+            _active.PreviewSource = BitmapPerf.ToBitmapSource(bitmap);
+            PreviewImage.Source = _active.PreviewSource;
             UpdateScaleControls();
             ApplyZoom();
             TryApplyInitialContain();
@@ -554,6 +555,14 @@ namespace CyberSnap.UI
             StopAutoCloseCountdown(resetProgress: true);
 
             int timeoutSec = _settingsService.Settings.CapturePreviewTimeoutSeconds;
+            // Stacked captures: freeze the timer the same way pointer motion does.
+            if (HasMultipleSessions)
+            {
+                SetCountdownRingShown(false, keepLayoutSlot: false);
+                ResetCountdownRingVisual();
+                return;
+            }
+
             // While the pill simulation runs, the button reads "Processing" — a visible
             // countdown would contradict it. OnPillSimulationStepCompleted re-arms us.
             if (timeoutSec <= 0 || _isPinned || _pillSimRunning)
@@ -939,9 +948,7 @@ namespace CyberSnap.UI
 
         private void CommitOrDismissFromPrimaryButton()
         {
-            if (_isClosing)
-                return;
-            CommitAndClose(ResolvePrimaryButtonCommit());
+            RequestPrimaryClose();
         }
 
         private void EditAfterCaptureSettingsBtn_Click(object sender, RoutedEventArgs e)
@@ -1586,7 +1593,7 @@ namespace CyberSnap.UI
             // Row: [pill]  status — status glyph stays outside the chip.
             var row = new DockPanel
             {
-                Margin = new Thickness(0, 0, 0, 6),
+                Margin = new Thickness(0, 0, 0, 4),
                 LastChildFill = true
             };
 
@@ -1606,7 +1613,7 @@ namespace CyberSnap.UI
             var border = new Border
             {
                 CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(10, 6, 12, 6),
+                Padding = new Thickness(10, 4, 12, 4),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
                 BorderThickness = new Thickness(1),
                 SnapsToDevicePixels = true
@@ -2124,6 +2131,14 @@ namespace CyberSnap.UI
             e.Handled = true;
         }
 
+        private void PreviewFrame_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is System.Windows.Controls.Button)
+                return;
+            e.Handled = true;
+            ShowCaptureContextMenu(_active);
+        }
+
         private void ZoomViewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             // Pan only when zoomed in past "fit" (i.e., image larger than viewport).
@@ -2227,6 +2242,7 @@ namespace CyberSnap.UI
                 }
                 _scaleFactor = 1;
                 PreviewImage.Source = BitmapPerf.ToBitmapSource(_capturedBitmap);
+                _active.PreviewSource = PreviewImage.Source;
             }
             else
             {
@@ -2240,6 +2256,7 @@ namespace CyberSnap.UI
                 _scaledBitmap = scaled;
                 _scaleFactor = factor;
                 PreviewImage.Source = BitmapPerf.ToBitmapSource(scaled);
+                _active.PreviewSource = PreviewImage.Source;
             }
             UpdateScaleControls();
             if (factor != 1)
@@ -2322,9 +2339,9 @@ namespace CyberSnap.UI
             CancelIcon.Source = FluentIcons.RenderWpf("enter", enterColor, 32, active: false);
             CancelIcon.Visibility = Visibility.Visible;
 
+            CancelText.Text = LocalizationService.Translate("Close");
             if (continuesToSurface)
             {
-                CancelText.Text = LocalizationService.Translate("Continue");
                 if (editorOn)
                 {
                     ViewerHintBadge.Text = LocalizationService.Translate("The annotation editor opens when this window closes.");
@@ -2334,18 +2351,17 @@ namespace CyberSnap.UI
                     ViewerHintBadge.Text = LocalizationService.Translate("The system viewer opens when this window closes.");
                 }
                 ViewerHintBadge.Visibility = Visibility.Visible;
-                CancelBtn.ToolTip = WithHotkeyHint(
-                    LocalizationService.Translate("Close this preview and continue with pending actions."),
-                    "Enter");
             }
             else
             {
-                CancelText.Text = LocalizationService.Translate("Close");
                 ViewerHintBadge.Visibility = Visibility.Collapsed;
-                CancelBtn.ToolTip = WithHotkeyHint(
-                    LocalizationService.Translate("Close this preview and continue with pending actions."),
-                    "Enter");
             }
+
+            CancelBtn.ToolTip = WithHotkeyHint(
+                HasMultipleSessions
+                    ? LocalizationService.Translate("Close and continue with pending actions for each capture")
+                    : LocalizationService.Translate("Close and continue with pending actions"),
+                "Enter");
 
             // Re-apply invite nudge if the cursor is already over Done (e.g. after
             // fast-forwarding "Processing" → Done while still hovered).
@@ -2361,7 +2377,6 @@ namespace CyberSnap.UI
 
             // Hide duplicates of automatic actions instead of leaving disabled ghosts.
             bool saveAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.Save);
-            bool copyAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.Clipboard);
             bool editAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.Editor);
             bool viewerAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.SystemViewer);
 
@@ -2372,7 +2387,9 @@ namespace CyberSnap.UI
             OpenViewerBtn.Visibility = viewerAuto ? Visibility.Collapsed : Visibility.Visible;
 
             SaveBtn.IsEnabled = !saveAuto;
-            CopyBtn.IsEnabled = IsScaled || !copyAuto;
+            // Stay enabled even when auto-copy already ran: stacked tabs are not
+            // the capture currently on the clipboard, and the user may need to recopy.
+            CopyBtn.IsEnabled = true;
             EditBtn.IsEnabled = !editAuto;
             OpenViewerBtn.IsEnabled = !viewerAuto;
 
@@ -2398,7 +2415,7 @@ namespace CyberSnap.UI
 
         private void TitleBar_CloseRequested(object sender, EventArgs e)
         {
-            CommitAndClose(false);
+            RequestChromeClose();
         }
 
         private void TitleBar_PinRequested(object sender, EventArgs e) => TogglePinned();
@@ -2428,7 +2445,7 @@ namespace CyberSnap.UI
             if (_isClosing)
                 return;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
-            CommitAndClose(true);
+            CommitActiveSession();
         }
 
         private void SaveAsBtn_Click(object sender, RoutedEventArgs e)
@@ -2477,6 +2494,7 @@ namespace CyberSnap.UI
                 };
                 CaptureOutputService.SaveBitmap(source, dialog.FileName, chosenFormat, settings.JpegQuality);
                 _savedFilePath = dialog.FileName;
+                UpdateTabStrip();
                 UpdateOptionalActionsAvailability();
                 ToastWindow.Show(
                     LocalizationService.Translate("Image saved"),
@@ -2517,7 +2535,7 @@ namespace CyberSnap.UI
             if (_isClosing)
                 return;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Edit;
-            CommitAndClose(true);
+            CommitActiveSession();
         }
 
         private void OpenViewerBtn_Click(object sender, RoutedEventArgs e)
@@ -2586,7 +2604,7 @@ namespace CyberSnap.UI
             if (_isClosing)
                 return;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.History;
-            CommitAndClose(true);
+            CommitActiveSession();
         }
 
         private void PrintBtn_Click(object sender, RoutedEventArgs e)
@@ -2668,9 +2686,9 @@ namespace CyberSnap.UI
             }
 
             ToastWindow.Show(LocalizationService.Translate("Capture deleted"));
-            // Discard: close without committing so deferred outcomes (save/share/viewer)
-            // don't run against the file we just removed.
-            CommitAndClose(false);
+            // Discard this capture only so deferred outcomes don't run against the
+            // file we just removed. Other stacked captures stay open.
+            DiscardActiveSession();
         }
 
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
@@ -2684,10 +2702,13 @@ namespace CyberSnap.UI
             {
                 if (_isClosing)
                     return;
-                CommitAndClose(false);
+                RequestChromeClose();
                 e.Handled = true;
                 return;
             }
+
+            if (TryHandleTabHotkeys(e))
+                return;
 
             var mods = Keyboard.Modifiers;
 

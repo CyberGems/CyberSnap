@@ -75,7 +75,7 @@ public partial class App
         if (TrySwitchActiveOverlay(_settingsService!.Settings.DefaultCaptureMode))
             return;
 
-        // Replace any stale Preview window — the user clearly wants a fresh capture.
+        // Hide an open Preview so it is not in the new screenshot; captures stack as tabs.
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchOverlay(_settingsService!.Settings.DefaultCaptureMode);
