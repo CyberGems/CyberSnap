@@ -4,7 +4,9 @@ namespace CyberSnap.Native;
 
 internal static partial class Dwm
 {
+    public const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+    public const int DWMWA_CLOAK = 13;
     public const int DWMWA_CLOAKED = 14;
     public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
@@ -45,6 +47,26 @@ internal static partial class Dwm
 
         int value = enabled ? 1 : 0;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref value, sizeof(int));
+    }
+
+    /// <summary>
+    /// Disables DWM minimize/restore morphing. Borderless WinForms chrome otherwise
+    /// animates an empty HWND, then paints children on top ("rebuild" flash).
+    /// </summary>
+    public static void TrySetTransitionsForcedDisabled(IntPtr hwnd, bool disabled)
+    {
+        int value = disabled ? 1 : 0;
+        DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, ref value, sizeof(int));
+    }
+
+    /// <summary>
+    /// Cloaks the HWND so DWM keeps composing it but does not present frames.
+    /// Used to hide layout/paint until the editor is complete, then uncloak atomically.
+    /// </summary>
+    public static void TrySetCloaked(IntPtr hwnd, bool cloaked)
+    {
+        int value = cloaked ? 1 : 0;
+        DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, ref value, sizeof(int));
     }
 
     [LibraryImport("dwmapi.dll")]

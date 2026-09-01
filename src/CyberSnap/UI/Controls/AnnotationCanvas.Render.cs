@@ -854,16 +854,15 @@ public sealed partial class AnnotationCanvas
         // Vector icon + text
         float iconW = 14f;
         float gap = 6f;
-        var textSz = TextRenderer.MeasureText(g, label, font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+        var textSz = g.MeasureString(label, font);
         float totalContentW = iconW + gap + textSz.Width;
         float startX = rect.X + (rect.Width - totalContentW) / 2f;
         float iconCy = rect.Y + rect.Height / 2f;
 
         DrawChipIcon(g, chipType, startX + iconW / 2f, iconCy, iconCol);
 
-        var textRect = new Rectangle((int)Math.Round(startX + iconW + gap), (int)Math.Round(rect.Y + (rect.Height - textSz.Height) / 2f), textSz.Width + 2, textSz.Height);
-        var flags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
-        TextRenderer.DrawText(g, label, font, textRect, fg, flags);
+        using var textBrush = new SolidBrush(fg);
+        g.DrawString(label, font, textBrush, startX + iconW + gap, rect.Y + (rect.Height - textSz.Height) / 2f);
     }
 
     private static void DrawChipIcon(Graphics g, int chipType, float cx, float cy, Color color)
@@ -953,14 +952,8 @@ public sealed partial class AnnotationCanvas
         }
     }
 
-    private void RenderWelcomeText(Graphics g)
+    private void RenderWelcomeText(Graphics target)
     {
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-        g.TextContrast = 12;
-
-        // Slightly larger, high-contrast title; body uses ClearType via TextRenderer.
         using var titleFont = UiChrome.ChromeFont(15f, FontStyle.Bold);
         using var subFont = UiChrome.ChromeFont(9.5f, FontStyle.Regular);
         using var chipFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
@@ -972,10 +965,9 @@ public sealed partial class AnnotationCanvas
         var pasteLabel = LocalizationService.Translate("Paste");
         var captureLabel = LocalizationService.Translate("Capture");
 
-        var titleSize = TextRenderer.MeasureText(g, titleText, titleFont, new Size(int.MaxValue, int.MaxValue),
-            TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
-        var hintSize = TextRenderer.MeasureText(g, hintText, subFont, new Size(int.MaxValue, int.MaxValue),
-            TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+        var measureFlags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
+        var titleSize = TextRenderer.MeasureText(titleText, titleFont, new Size(int.MaxValue, int.MaxValue), measureFlags);
+        var hintSize = TextRenderer.MeasureText(hintText, subFont, new Size(int.MaxValue, int.MaxValue), measureFlags);
 
         float paddingH = 28;
         float paddingV = 24;
@@ -985,10 +977,10 @@ public sealed partial class AnnotationCanvas
         float chipGap = 8;
         float chipMinW = 84;
 
-        float newW = Math.Max(chipMinW, TextRenderer.MeasureText(g, newLabel, chipFont).Width + 34);
-        float openW = Math.Max(chipMinW, TextRenderer.MeasureText(g, openLabel, chipFont).Width + 34);
-        float pasteW = Math.Max(chipMinW, TextRenderer.MeasureText(g, pasteLabel, chipFont).Width + 34);
-        float captureW = Math.Max(chipMinW, TextRenderer.MeasureText(g, captureLabel, chipFont).Width + 34);
+        float newW = Math.Max(chipMinW, TextRenderer.MeasureText(newLabel, chipFont).Width + 34);
+        float openW = Math.Max(chipMinW, TextRenderer.MeasureText(openLabel, chipFont).Width + 34);
+        float pasteW = Math.Max(chipMinW, TextRenderer.MeasureText(pasteLabel, chipFont).Width + 34);
+        float captureW = Math.Max(chipMinW, TextRenderer.MeasureText(captureLabel, chipFont).Width + 34);
         float chipsRowW = newW + openW + pasteW + captureW + chipGap * 3;
 
         float contentW = Math.Max(titleSize.Width, Math.Max(hintSize.Width, chipsRowW));
@@ -996,8 +988,76 @@ public sealed partial class AnnotationCanvas
         float height = paddingV * 2 + iconSize + spacing + titleSize.Height + spacing
             + hintSize.Height + spacing + 6 + chipH;
 
-        float x = (ClientSize.Width - width) / 2f;
-        float y = (ClientSize.Height - height) / 2f;
+        float destX = (ClientSize.Width - width) / 2f;
+        float destY = (ClientSize.Height - height) / 2f;
+
+        // TextRenderer is GDI and bypasses WS_EX_COMPOSITED, so maximize/restore
+        // ghosted this overlay. Paint it off-screen, then blit with GDI+.
+        const int shadowPad = 12;
+        int bmpW = Math.Max(1, (int)Math.Ceiling(width) + shadowPad * 2);
+        int bmpH = Math.Max(1, (int)Math.Ceiling(height) + shadowPad * 2);
+        float x = shadowPad;
+        float y = shadowPad;
+
+        using var bmp = new Bitmap(bmpW, bmpH, PixelFormat.Format32bppPArgb);
+        using (var g = Graphics.FromImage(bmp))
+        {
+            g.Clear(Color.Transparent);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+
+            PaintWelcomeCard(
+                g, x, y, width, height, paddingV, spacing, iconSize, chipH, chipGap,
+                newW, openW, pasteW, captureW, chipsRowW,
+                titleText, hintText, newLabel, openLabel, pasteLabel, captureLabel,
+                titleFont, subFont, chipFont, titleSize, hintSize);
+        }
+
+        var oldInterp = target.InterpolationMode;
+        var oldOffset = target.PixelOffsetMode;
+        target.InterpolationMode = InterpolationMode.NearestNeighbor;
+        target.PixelOffsetMode = PixelOffsetMode.Half;
+        target.DrawImageUnscaled(bmp, (int)Math.Round(destX) - shadowPad, (int)Math.Round(destY) - shadowPad);
+        target.InterpolationMode = oldInterp;
+        target.PixelOffsetMode = oldOffset;
+
+        float hitDx = destX - x;
+        float hitDy = destY - y;
+        _welcomeCardRect.Offset(hitDx, hitDy);
+        _welcomeIconRect.Offset(hitDx, hitDy);
+        for (int i = 0; i < _welcomeChipRects.Length; i++)
+            _welcomeChipRects[i].Offset(hitDx, hitDy);
+    }
+
+    private void PaintWelcomeCard(
+        Graphics g,
+        float x,
+        float y,
+        float width,
+        float height,
+        float paddingV,
+        float spacing,
+        float iconSize,
+        float chipH,
+        float chipGap,
+        float newW,
+        float openW,
+        float pasteW,
+        float captureW,
+        float chipsRowW,
+        string titleText,
+        string hintText,
+        string newLabel,
+        string openLabel,
+        string pasteLabel,
+        string captureLabel,
+        Font titleFont,
+        Font subFont,
+        Font chipFont,
+        Size titleSize,
+        Size hintSize)
+    {
         _welcomeCardRect = new RectangleF(x, y, width, height);
 
         Color titleColor = EditorColors.IsDark
@@ -1051,15 +1111,21 @@ public sealed partial class AnnotationCanvas
         DrawWelcomeIcon(g, iconCx, iconCy, iconSize, accent, _welcomeDragOver, _welcomeHoverIcon, _welcomePressedIcon);
         curY += iconSize + spacing;
 
-        var titleFlags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
-            | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding;
-        var titleRect = new Rectangle((int)x, (int)curY, (int)width, titleSize.Height + 2);
-        TextRenderer.DrawText(g, titleText, titleFont, titleRect, titleColor, titleFlags);
+        using var titleBrush = new SolidBrush(titleColor);
+        using var hintBrush = new SolidBrush(subColor);
+        using var titleFormat = new StringFormat
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoWrap,
+            Trimming = StringTrimming.EllipsisCharacter
+        };
+        var titleRect = new RectangleF(x, curY, width, titleSize.Height + 2);
+        g.DrawString(titleText, titleFont, titleBrush, titleRect, titleFormat);
         curY += titleSize.Height + spacing;
 
-        // Plain hint
-        var hintRect = new Rectangle((int)x, (int)curY, (int)width, hintSize.Height + 2);
-        TextRenderer.DrawText(g, hintText, subFont, hintRect, subColor, titleFlags);
+        var hintRect = new RectangleF(x, curY, width, hintSize.Height + 2);
+        g.DrawString(hintText, subFont, hintBrush, hintRect, titleFormat);
         curY += hintSize.Height + spacing + 6;
 
         // Action chips
