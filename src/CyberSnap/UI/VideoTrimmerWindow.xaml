@@ -26,10 +26,67 @@
         <SolidColorBrush x:Key="ThemeInputBorderBrush" Color="#15FFFFFF"/>
         <SolidColorBrush x:Key="ThemeWindowBorderBrush" Color="#12FFFFFF"/>
         <SolidColorBrush x:Key="ThemeAccentBrush" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="ThemeAccentHoverBrush" Color="#22FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeAccentSubtleBrush" Color="#15FFFFFF"/>
         <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
 
         <Geometry x:Key="PlayIconGeometry">M 6,4 L 18,12 L 6,20 Z</Geometry>
         <Geometry x:Key="PauseIconGeometry">M 5,4 L 8,4 L 8,20 L 5,20 M 13,4 L 16,4 L 16,20 L 13,20</Geometry>
+
+        <Style x:Key="PreviewIconButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PreviewZoomPercentButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="MinWidth" Value="42"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style x:Key="TrimmerContextMenuStyle" TargetType="ContextMenu">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
@@ -612,8 +669,15 @@
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" Background="#FF000000" Margin="12,4,12,8"
-                  ContextMenuOpening="PreviewArea_ContextMenuOpening">
+            <Grid x:Name="PreviewFrame" Grid.Row="1" Background="#FF000000" Margin="12,4,12,8"
+                  ClipToBounds="True"
+                  ContextMenuOpening="PreviewArea_ContextMenuOpening"
+                  PreviewMouseWheel="ZoomViewport_PreviewMouseWheel"
+                  MouseLeftButtonDown="ZoomViewport_MouseLeftButtonDown"
+                  MouseLeftButtonUp="ZoomViewport_MouseLeftButtonUp"
+                  MouseMove="ZoomViewport_MouseMove"
+                  MouseEnter="ZoomViewport_MouseEnter"
+                  MouseLeave="ZoomViewport_MouseLeave">
                 <Grid.ContextMenu>
                     <ContextMenu x:Name="PreviewContextMenu" Style="{StaticResource TrimmerContextMenuStyle}">
                         <MenuItem x:Name="MenuShowInFolder"
@@ -662,13 +726,83 @@
                         </MenuItem>
                     </ContextMenu>
                 </Grid.ContextMenu>
-                <Image x:Name="GifPreviewImage" Visibility="Collapsed" Stretch="Uniform"
-                       ContextMenu="{Binding ElementName=PreviewContextMenu}"/>
+                <ScrollViewer x:Name="ZoomViewport"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Hidden"
+                              PanningMode="None"
+                              Focusable="False"
+                              Background="Transparent">
+                    <Grid x:Name="ZoomCanvas" Background="Transparent">
+                        <Image x:Name="GifPreviewImage" Visibility="Collapsed" Stretch="Uniform"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               ContextMenu="{Binding ElementName=PreviewContextMenu}"/>
+                    </Grid>
+                </ScrollViewer>
                 <MediaElement x:Name="MediaPlayer" LoadedBehavior="Manual" UnloadedBehavior="Manual" ScrubbingEnabled="True"
                               Stretch="Uniform" Visibility="Collapsed"
                               MediaOpened="MediaPlayer_MediaOpened" MediaEnded="MediaPlayer_MediaEnded"
                               MediaFailed="MediaPlayer_MediaFailed"
                               ContextMenu="{Binding ElementName=PreviewContextMenu}"/>
+                <Border x:Name="ZoomControlsOverlay"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,10,10"
+                        Padding="8,5"
+                        CornerRadius="8"
+                        Background="{DynamicResource ThemeCardBrush}"
+                        BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
+                        BorderThickness="1"
+                        Cursor="Arrow"
+                        Opacity="0"
+                        IsHitTestVisible="False">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="ZoomOutBtn" Style="{StaticResource PreviewIconButton}"
+                                Click="ZoomOutBtn_Click"
+                                Width="24" Height="24"
+                                MinWidth="24" MinHeight="24"
+                                Padding="0"
+                                ToolTip="{x:Null}"
+                                AutomationProperties.Name="Zoom out">
+                            <Image x:Name="ZoomOutIcon" Width="12" Height="12"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button x:Name="ZoomLevelBtn" Style="{StaticResource PreviewZoomPercentButton}"
+                                Click="ZoomLevelBtn_Click"
+                                Margin="4,0"
+                                ToolTip="{x:Null}"
+                                AutomationProperties.Name="Reset zoom to actual size">
+                            <TextBlock x:Name="ZoomLevelText"
+                                       Text="100%"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Center"/>
+                        </Button>
+                        <Button x:Name="ZoomInBtn" Style="{StaticResource PreviewIconButton}"
+                                Click="ZoomInBtn_Click"
+                                Width="24" Height="24"
+                                MinWidth="24" MinHeight="24"
+                                Padding="0"
+                                ToolTip="{x:Null}"
+                                AutomationProperties.Name="Zoom in">
+                            <Image x:Name="ZoomInIcon" Width="12" Height="12"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button x:Name="ZoomFitBtn" Style="{StaticResource PreviewIconButton}"
+                                Click="ZoomFitBtn_Click"
+                                Width="24" Height="24"
+                                MinWidth="24" MinHeight="24"
+                                Padding="0"
+                                Margin="4,0,0,0"
+                                ToolTip="{x:Null}"
+                                AutomationProperties.Name="Fit to window">
+                            <Image x:Name="ZoomFitIcon" Width="12" Height="12"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
+                </Border>
                 <!-- Loading / Exporting Overlay -->
                 <Grid x:Name="ProgressOverlay" Background="#B0000000" Visibility="Collapsed">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
