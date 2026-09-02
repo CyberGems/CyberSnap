@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Drawing;
 using System.IO;
 using System.Windows;
@@ -131,6 +132,7 @@ public sealed partial class RecordingControlBarWindow : Window
         LoadIcons();
         HookHoverEffects();
         HookClickHandlers();
+        SetupMini();
 
         // ── Rounded corners + no-activate + owner-window for z-order ──
         CyberSnapWindowChrome.ApplyRoundedCorners(this, UiChrome.ToolbarCornerRadius);
@@ -225,6 +227,8 @@ public sealed partial class RecordingControlBarWindow : Window
         UpdateFormatBadge();
         UpdateStatusText();
         RefreshStorageMeter();
+        if (_isMini)
+            StartMiniShine();
     }
 
     public void TransitionToEncoding()
@@ -265,6 +269,8 @@ public sealed partial class RecordingControlBarWindow : Window
         UpdateFormatBadge();
         UpdatePrimaryButtonVisual();
         UpdateStopButtonVisual();
+        if (_isMini)
+            ApplyMiniSurface(true);
     }
 
     public void Reposition(System.Drawing.Rectangle captureRegion)
@@ -503,6 +509,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
         UpdateFormatBadge();
         UpdateFpsDivider();
+        EnsureStorageSlotWidth();
     }
 
     private void UpdateFpsDivider()
@@ -646,12 +653,6 @@ public sealed partial class RecordingControlBarWindow : Window
             else
                 StartClicked?.Invoke();
         };
-        StopBtn.MouseLeftButtonDown += (_, e) =>
-        {
-            e.Handled = true;
-            if (StopBtn.IsEnabled)
-                StopClicked?.Invoke();
-        };
         CancelBtn.MouseLeftButtonDown += (_, e) => { e.Handled = true; if (!_isEncoding) CancelClicked?.Invoke(); };
         FpsCombo.MouseLeftButtonDown += (_, e) =>
         {
@@ -689,7 +690,8 @@ public sealed partial class RecordingControlBarWindow : Window
         }
         else if (!_isRecording)
         {
-            // Ready phase: Record enabled + FPS + Trimmer + Cancel (Stop disabled)
+            // Ready phase: Record enabled + FPS + Trimmer + Cancel (Stop disabled).
+            // Mini mode is allowed here so recording can start already compact.
             SetPrimaryEnabled(true);
             SetStopEnabled(false);
             SetFpsEnabled(true);
@@ -713,6 +715,7 @@ public sealed partial class RecordingControlBarWindow : Window
         UpdateFpsComboVisual();
         UpdateFormatBadge();
         UpdateTooltips();
+        ApplyModeChrome();
     }
 
     // ── Primary button: Record ⇄ Pause ⇄ Resume (icon + label swap, NEVER resizes) ──
@@ -920,12 +923,13 @@ public sealed partial class RecordingControlBarWindow : Window
             StatusText.Text = $"{(int)_elapsed.TotalMinutes:D2}:{_elapsed.Seconds:D2}";
             StatusText.Foreground = Theme.Brush(_isRecording ? Theme.TextPrimary : Theme.TextMuted);
             StatusText.FontWeight = FontWeights.Bold;
-            StatusText.FontSize = 18;
+            StatusText.FontSize = _isMini ? 15 : 18;
         }
     }
 
     private void RefreshStorageMeter()
     {
+        EnsureStorageSlotWidth();
         long used = TryReadOutputLength();
         if (used < 0)
             used = _lastUsedBytes >= 0 ? _lastUsedBytes : 0;
@@ -1012,6 +1016,27 @@ public sealed partial class RecordingControlBarWindow : Window
         }
     }
 
+    private void EnsureStorageSlotWidth()
+    {
+        if (StorageText.MinWidth > 1)
+            return;
+
+        double dpi = 1;
+        try { dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip; }
+        catch { /* visual not connected yet */ }
+
+        var ft = new FormattedText(
+            "999.9 GB · 999.9 GB",
+            CultureInfo.CurrentCulture,
+            System.Windows.FlowDirection.LeftToRight,
+            new Typeface(StorageText.FontFamily, StorageText.FontStyle, FontWeights.SemiBold, StorageText.FontStretch),
+            12,
+            Theme.Brush(Theme.TextMuted),
+            dpi);
+        StorageText.MinWidth = Math.Ceiling(ft.Width) + 4;
+        StorageText.TextAlignment = TextAlignment.Right;
+    }
+
     private static string FormatBytes(long bytes)
     {
         if (bytes < 1024)
@@ -1023,7 +1048,7 @@ public sealed partial class RecordingControlBarWindow : Window
         if (mb < 1024)
             return $"{mb:0.0} MB";
         double gb = mb / 1024.0;
-        return gb < 10 ? $"{gb:0.00} GB" : $"{gb:0.0} GB";
+        return $"{gb:0.0} GB";
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1164,6 +1189,8 @@ public sealed partial class RecordingControlBarWindow : Window
         // Cancel
         CancelBtn.ToolTip = LocalizationService.Translate(
             _isRecording ? "Recording discard tooltip" : "Recording cancel tooltip");
+
+        UpdateMiniTooltips();
     }
 
     private void UpdatePrimaryTooltip()
@@ -1265,6 +1292,7 @@ public sealed partial class RecordingControlBarWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         StopShineAnimation();
+        TeardownMini();
         _pulseTimer.Stop();
         _storageTimer.Stop();
         base.OnClosed(e);

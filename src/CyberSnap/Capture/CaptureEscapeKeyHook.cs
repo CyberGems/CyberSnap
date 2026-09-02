@@ -11,17 +11,23 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
     private readonly Control _target;
     private readonly Action _onEscape;
     private readonly Func<int, bool>? _tryHandleKey;
+    private readonly Func<bool>? _consumeTransportKeys;
     private readonly User32.LowLevelKeyboardProc _proc;
     private IntPtr _hook;
     private int _posted;
     private int _spaceHeld;
     private int _enterHeld;
 
-    private CaptureEscapeKeyHook(Control target, Action onEscape, Func<int, bool>? tryHandleKey)
+    private CaptureEscapeKeyHook(
+        Control target,
+        Action onEscape,
+        Func<int, bool>? tryHandleKey,
+        Func<bool>? consumeTransportKeys)
     {
         _target = target;
         _onEscape = onEscape;
         _tryHandleKey = tryHandleKey;
+        _consumeTransportKeys = consumeTransportKeys;
         _proc = HookProc;
     }
 
@@ -29,11 +35,18 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
         => Install(target, onEscape, tryHandleKey: null);
 
     public static CaptureEscapeKeyHook? Install(Control target, Action onEscape, Func<int, bool>? tryHandleKey)
+        => Install(target, onEscape, tryHandleKey, consumeTransportKeys: null);
+
+    public static CaptureEscapeKeyHook? Install(
+        Control target,
+        Action onEscape,
+        Func<int, bool>? tryHandleKey,
+        Func<bool>? consumeTransportKeys)
     {
         if (target.IsDisposed || !target.IsHandleCreated)
             return null;
 
-        var hook = new CaptureEscapeKeyHook(target, onEscape, tryHandleKey);
+        var hook = new CaptureEscapeKeyHook(target, onEscape, tryHandleKey, consumeTransportKeys);
         hook.Install();
         return hook._hook == IntPtr.Zero ? null : hook;
     }
@@ -55,6 +68,20 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
         _hook = User32.SetWindowsHookEx(User32.WH_KEYBOARD_LL, _proc, moduleHandle, 0);
     }
 
+    private bool ShouldConsumeTransportKeys()
+    {
+        if (_tryHandleKey == null)
+            return false;
+        try
+        {
+            return _consumeTransportKeys?.Invoke() ?? true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode >= 0)
@@ -72,7 +99,7 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
                     return 1;
                 }
 
-                if (_tryHandleKey != null &&
+                if (ShouldConsumeTransportKeys() &&
                     (vkCode == (int)User32.VK_SPACE || vkCode == (int)User32.VK_RETURN))
                 {
                     if (isDown)
@@ -91,7 +118,9 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
                             Volatile.Write(ref _enterHeld, 0);
                     }
 
-                    // Swallow so the window under the capture region never sees the key.
+                    // Swallow so the window under the capture overlay never sees the key.
+                    // During recording the overlay is hollow and the user is working in other
+                    // apps — consumeTransportKeys is false then so Space/Enter type normally.
                     return 1;
                 }
             }
