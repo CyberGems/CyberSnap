@@ -287,7 +287,7 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Reposition(captureRegion)); return; }
         _lastCaptureRegion = captureRegion;
-        if (_userPositioned || _isBarDragging)
+        if (_userPositioned || _isBarDragging || _isMini)
             return;
         PositionAboveRegion(captureRegion);
     }
@@ -1074,37 +1074,46 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void StartShineAnimation()
     {
-        if (UI.Motion.Disabled) return;
+        if (UI.Motion.Disabled || _isMini || _isRecording || _isEncoding) return;
 
         StopShineAnimation();
 
-        // The shine is a 60px-wide gradient band inside the PrimaryBtn's clipped grid.
-        // We sweep its TranslateTransform.X from fully off-screen left to fully off-screen right.
-        StartShine.Opacity = 1;
-        StartShineTransform.X = -80;
+        StartShineTransform.X = -90;
+        StartShine.Opacity = 0;
 
-        var animation = new DoubleAnimation
+        var slide = new DoubleAnimationUsingKeyFrames
         {
-            From = -80.0,
-            To = 100.0,
-            Duration = TimeSpan.FromMilliseconds(2600),
-            RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            Duration = TimeSpan.FromMilliseconds(2800),
+            RepeatBehavior = RepeatBehavior.Forever
         };
+        slide.KeyFrames.Add(new LinearDoubleKeyFrame(-90, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        slide.KeyFrames.Add(new LinearDoubleKeyFrame(150, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1200))));
+        slide.KeyFrames.Add(new DiscreteDoubleKeyFrame(-90, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1201))));
+        slide.KeyFrames.Add(new DiscreteDoubleKeyFrame(-90, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2800))));
 
-        _shineStoryboard = new Storyboard();
-        _shineStoryboard.Children.Add(animation);
-        Storyboard.SetTarget(animation, StartShineTransform);
-        Storyboard.SetTargetProperty(animation, new PropertyPath("X"));
-        _shineStoryboard.Begin();
+        var fade = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromMilliseconds(2800),
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0.95, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(160))));
+        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0.85, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1000))));
+        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1200))));
+        fade.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2800))));
+
+        StartShineTransform.BeginAnimation(TranslateTransform.XProperty, slide);
+        StartShine.BeginAnimation(UIElement.OpacityProperty, fade);
     }
 
     private void StopShineAnimation()
     {
         _shineStoryboard?.Stop();
         _shineStoryboard = null;
+        StartShineTransform.BeginAnimation(TranslateTransform.XProperty, null);
+        StartShine.BeginAnimation(UIElement.OpacityProperty, null);
         StartShine.Opacity = 0;
-        StartShineTransform.X = -80;
+        StartShineTransform.X = -90;
     }
 
     // ══════════════════════════════════════════════════════════════

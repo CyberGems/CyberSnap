@@ -19,6 +19,8 @@ public sealed partial class RecordingControlBarWindow
     private const double MiniBarHeight = 36;
     private const double MiniButtonSize = 32;
     private const double MiniCornerRadius = 18;
+    private const double MiniModeButtonWidth = 36;
+    private const double FullModeButtonWidth = 40;
     private const double FullPrimaryWidth = 128;
     private const double FullPrimaryHeight = 40;
     private const int MiniHoverExpandMs = 140;
@@ -32,7 +34,6 @@ public sealed partial class RecordingControlBarWindow
     private bool _suppressMiniHover;
     private DispatcherTimer? _miniHoverDelayTimer;
     private DispatcherTimer? _stopHoldTimer;
-    private Storyboard? _miniShineStoryboard;
     private bool _stopHoldArmed;
     private bool _stopHoldFired;
 
@@ -198,9 +199,6 @@ public sealed partial class RecordingControlBarWindow
             return;
 
         var fromRect = GetPhysicalRect();
-        var fromCenter = new System.Drawing.Point(
-            fromRect.Left + fromRect.Width / 2,
-            fromRect.Top + fromRect.Height / 2);
 
         _isMini = mini;
         _miniHoverExpanded = false;
@@ -211,21 +209,24 @@ public sealed partial class RecordingControlBarWindow
         ApplyModeChrome(setSlideSizes: true);
         UpdateLayout();
 
-        if (_userPositioned)
-        {
-            var toSize = GetPhysicalRect();
-            var toRect = CenteredPhysicalRect(fromCenter, toSize.Width, toSize.Height);
-            MoveBarToPhysical(toRect.Left, toRect.Top);
-        }
-        else
-        {
-            PositionAboveRegion(_lastCaptureRegion);
-        }
+        // Keep the chevron side planted: shrink/grow to the right so << / >> match
+        // the motion. Do not re-center on the capture region.
+        var toSize = GetPhysicalRect();
+        int x = fromRect.Left;
+        int y = fromRect.Top + (fromRect.Height - toSize.Height) / 2;
+        ClampToVirtualScreen(ref x, ref y, toSize.Width, toSize.Height);
+        MoveBarToPhysical(x, y);
+        _userPositioned = true;
 
         if (_isMini && _isRecording)
             StartMiniShine();
         else
             StopMiniShine();
+
+        if (_isMini)
+            StopShineAnimation();
+        else if (!_isRecording && !_isEncoding)
+            StartShineAnimation();
 
         UpdateTooltips();
         UpdateModeChevronVisual();
@@ -273,7 +274,8 @@ public sealed partial class RecordingControlBarWindow
         ShadowPlate.CornerRadius = new CornerRadius(radius);
         EdgeRing.CornerRadius = new CornerRadius(radius);
         Root.CornerRadius = new CornerRadius(Math.Max(0, radius - 1));
-        MiniShineRing.CornerRadius = new CornerRadius(radius);
+        MiniShineRing.RadiusX = radius;
+        MiniShineRing.RadiusY = radius;
         MiniShineRing.Visibility = mini && _isRecording && !UI.Motion.Disabled ? Visibility.Visible : Visibility.Collapsed;
         OuterShell.Cursor = mini ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Arrow;
         LeadingCluster.Margin = mini
@@ -336,7 +338,7 @@ public sealed partial class RecordingControlBarWindow
         bool show = full || slide;
         ModeBtn.Visibility = Visibility.Visible;
         ModeBtn.IsHitTestVisible = show;
-        double w = show ? 28 : 0;
+        double w = show ? (mini ? MiniModeButtonWidth : FullModeButtonWidth) : 0;
         ModeBtn.Height = mini ? MiniButtonSize : 36;
         ModeBtn.Margin = w <= 0 ? new Thickness(0) : new Thickness(0, 0, 2, 0);
         if (setSize)
@@ -369,7 +371,7 @@ public sealed partial class RecordingControlBarWindow
         OuterShell.Background = Theme.Brush(wash);
         EdgeRing.Background = Theme.Brush(Color.FromArgb(
             _isPaused ? (byte)70 : (byte)160, _accent.R, _accent.G, _accent.B));
-        MiniShineCore.Color = Color.FromArgb(210, 255, 255, 255);
+        MiniShineRing.Stroke = Theme.Brush(Color.FromArgb(230, 255, 255, 255));
     }
 
     private void AnimateMiniSlide()
@@ -380,7 +382,7 @@ public sealed partial class RecordingControlBarWindow
 
         AnimateWidth(PrimaryBtn, showPrimary ? MiniButtonSize : 0, ms);
         AnimateWidth(StopBtn, slide && _isRecording ? MiniButtonSize : 0, ms);
-        AnimateWidth(ModeBtn, slide ? 28 : 0, ms);
+        AnimateWidth(ModeBtn, slide ? MiniModeButtonWidth : 0, ms);
         AnimateOpacity(PrimaryBtn, showPrimary ? 1 : 0, ms);
         AnimateOpacity(StopBtn, slide && _isRecording ? 1 : 0, ms);
         AnimateOpacity(ModeBtn, slide ? 1 : 0, ms);
@@ -430,45 +432,26 @@ public sealed partial class RecordingControlBarWindow
         return new Native.User32.RECT { Left = 0, Top = 0, Right = 1, Bottom = 1 };
     }
 
-    private Native.User32.RECT CenteredPhysicalRect(System.Drawing.Point center, int width, int height)
-    {
-        int tx = center.X - width / 2;
-        int ty = center.Y - height / 2;
-        ClampToVirtualScreen(ref tx, ref ty, width, height);
-        return new Native.User32.RECT
-        {
-            Left = tx,
-            Top = ty,
-            Right = tx + width,
-            Bottom = ty + height
-        };
-    }
-
     private void StartMiniShine()
     {
         StopMiniShine();
         if (UI.Motion.Disabled || !_isMini || !_isRecording) return;
 
         MiniShineRing.Visibility = Visibility.Visible;
-        var spin = new DoubleAnimation
+        MiniShineRing.Stroke = Theme.Brush(Color.FromArgb(230, 255, 255, 255));
+        var travel = new DoubleAnimation
         {
             From = 0,
-            To = 360,
-            Duration = TimeSpan.FromSeconds(4),
+            To = 100,
+            Duration = TimeSpan.FromSeconds(2.2),
             RepeatBehavior = RepeatBehavior.Forever
         };
-        _miniShineStoryboard = new Storyboard();
-        _miniShineStoryboard.Children.Add(spin);
-        Storyboard.SetTarget(spin, MiniShineRotate);
-        Storyboard.SetTargetProperty(spin, new PropertyPath(RotateTransform.AngleProperty));
-        _miniShineStoryboard.Begin();
+        MiniShineRing.BeginAnimation(Shape.StrokeDashOffsetProperty, travel);
     }
 
     private void StopMiniShine()
     {
-        _miniShineStoryboard?.Stop();
-        _miniShineStoryboard = null;
-        MiniShineRotate.Angle = 0;
+        MiniShineRing.BeginAnimation(Shape.StrokeDashOffsetProperty, null);
         MiniShineRing.Visibility = Visibility.Collapsed;
     }
 

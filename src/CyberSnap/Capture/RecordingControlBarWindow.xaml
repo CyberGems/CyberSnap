@@ -84,15 +84,15 @@
                             </Border>
 
                             <Border x:Name="ModeBtn"
-                                    Width="28" Height="36"
+                                    Width="40" Height="36"
                                     CornerRadius="8"
                                     Margin="0,0,2,0"
                                     Cursor="Hand"
                                     Background="Transparent">
                                 <Path x:Name="ModeChevron"
-                                      Width="14" Height="12"
+                                      Width="28" Height="24"
                                       Stretch="Uniform"
-                                      StrokeThickness="1.6"
+                                      StrokeThickness="2.2"
                                       StrokeStartLineCap="Round"
                                       StrokeEndLineCap="Round"
                                       StrokeLineJoin="Round"
@@ -183,22 +183,22 @@
                                     <!-- Shine sweep overlay: inside the clipped grid so it never
                                          expands the visual beyond the button bounds -->
                                     <Border x:Name="StartShine"
-                                            Width="60"
+                                            Width="72"
                                             CornerRadius="20"
                                             IsHitTestVisible="False"
                                             Opacity="0"
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Stretch">
                                         <Border.RenderTransform>
-                                            <TranslateTransform x:Name="StartShineTransform" X="-80" Y="0"/>
+                                            <TranslateTransform x:Name="StartShineTransform" X="-90" Y="0"/>
                                         </Border.RenderTransform>
                                         <Border.Background>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                <GradientStop Color="#00A8AEB8" Offset="0"/>
-                                                <GradientStop Color="#66A8AEB8" Offset="0.35"/>
-                                                <GradientStop Color="#AAD2D7DE" Offset="0.5"/>
-                                                <GradientStop Color="#66A8AEB8" Offset="0.65"/>
-                                                <GradientStop Color="#00A8AEB8" Offset="1"/>
+                                                <GradientStop Color="#00FFFFFF" Offset="0"/>
+                                                <GradientStop Color="#55FFFFFF" Offset="0.4"/>
+                                                <GradientStop Color="#CCFFFFFF" Offset="0.5"/>
+                                                <GradientStop Color="#55FFFFFF" Offset="0.6"/>
+                                                <GradientStop Color="#00FFFFFF" Offset="1"/>
                                             </LinearGradientBrush>
                                         </Border.Background>
                                     </Border>
@@ -295,24 +295,16 @@
                 </Border>
             </Border>
 
-            <!-- Mini pill border shine: rotating highlight on the ring. Hit-test off. -->
-            <Border x:Name="MiniShineRing"
-                    CornerRadius="18"
-                    BorderThickness="1.5"
-                    Background="Transparent"
-                    IsHitTestVisible="False"
-                    Visibility="Collapsed">
-                <Border.BorderBrush>
-                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                        <GradientStop Color="#00FFFFFF" Offset="0"/>
-                        <GradientStop x:Name="MiniShineCore" Color="#AAFFFFFF" Offset="0.5"/>
-                        <GradientStop Color="#00FFFFFF" Offset="1"/>
-                        <LinearGradientBrush.RelativeTransform>
-                            <RotateTransform x:Name="MiniShineRotate" CenterX="0.5" CenterY="0.5" Angle="0"/>
-                        </LinearGradientBrush.RelativeTransform>
-                    </LinearGradientBrush>
-                </Border.BorderBrush>
-            </Border>
+            <!-- Mini pill border shine: traveling dash on the ring. Hit-test off. -->
+            <Rectangle x:Name="MiniShineRing"
+                       RadiusX="18" RadiusY="18"
+                       Fill="Transparent"
+                       StrokeThickness="2.2"
+                       IsHitTestVisible="False"
+                       Visibility="Collapsed"
+                       StrokeDashArray="20 80"
+                       StrokeDashCap="Round"
+                       Stroke="#CCFFFFFF"/>
         </Grid>
     </Border>
 </Window>
