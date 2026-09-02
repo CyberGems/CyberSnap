@@ -217,25 +217,32 @@ public sealed partial class EditorForm
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 4,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         EnableDoubleBuffering(layout);
-        // Colors get a reserved row so restored-window height cannot overlap them
-        // with the last tool labels. Tools fill whatever is left; the inner grid
-        // stays Dock.Top / AutoSize so maximized leftover space does not stretch buttons.
-        var colorSection = BuildColorSection();
-        int colorRowHeight = Math.Max(colorSection.MinimumSize.Height, ColorStackReservedHeight);
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, colorRowHeight));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        // Tools keep their natural height at the top. Remaining column height is split
+        // above and below the color/stroke block so that cluster sits in the leftover space
+        // instead of hugging the status bar when the editor is maximized.
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
 
         var toolSection = BuildToolSection();
-        toolSection.AutoSize = false;
+        toolSection.AutoSize = true;
         toolSection.Dock = DockStyle.Fill;
-        colorSection.AutoSize = false;
+        var colorSection = BuildColorSection();
+        colorSection.AutoSize = true;
         colorSection.Dock = DockStyle.Fill;
+
+        var spacerTop = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+        var spacerBottom = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
         layout.Controls.Add(toolSection, 0, 0);
-        layout.Controls.Add(colorSection, 0, 1);
+        layout.Controls.Add(spacerTop, 0, 1);
+        layout.Controls.Add(colorSection, 0, 2);
+        layout.Controls.Add(spacerBottom, 0, 3);
 
         _toolbarPanel.Controls.Add(layout);
     }
@@ -1257,10 +1264,6 @@ public sealed partial class EditorForm
 
     private static int SwatchButtonSize => (int)Math.Round(28 * 1.35);
     private static int StrokeButtonSize => (int)Math.Round(32 * 1.35);
-
-    /// <summary>Palette (2 rows) + stroke row + section padding. Reserved as an Absolute layout row so restored height cannot steal color-stack space.</summary>
-    private static int ColorStackReservedHeight =>
-        (SwatchButtonSize + 8) * 2 + (StrokeButtonSize + 8) + 8;
 
     private void AddToolButton(
         TableLayoutPanel parent,
