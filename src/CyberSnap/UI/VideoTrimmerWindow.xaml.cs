@@ -98,6 +98,7 @@ namespace CyberSnap.UI
             UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
             
             ApplyTheme();
+            SetupPreviewZoom();
             
             LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
             LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
@@ -149,6 +150,7 @@ namespace CyberSnap.UI
                     GifPreviewImage.Source = BitmapPerf.ToBitmapSource(posterFrame);
                     GifPreviewImage.Visibility = Visibility.Visible;
                     posterFrame.Dispose();
+                    NotifyPreviewFrameReady();
                 }
 
                 ShowProgressOverlay(LocalizationService.Translate(
@@ -195,6 +197,7 @@ namespace CyberSnap.UI
             }
 
             TrimmerTitleBar.RefreshIcons();
+            InitZoomIcons();
         }
 
         private void TitleBar_DragWindow(object sender, MouseButtonEventArgs e)
@@ -280,11 +283,13 @@ namespace CyberSnap.UI
         {
             ProgressText.Text = message;
             ProgressOverlay.Visibility = Visibility.Visible;
+            UpdateZoomControlsVisibility();
         }
 
         private void HideProgressOverlay()
         {
             ProgressOverlay.Visibility = Visibility.Collapsed;
+            UpdateZoomControlsVisibility();
         }
 
         private void DisposeMp4Sequence()
@@ -344,6 +349,7 @@ namespace CyberSnap.UI
 
             DisposeMp4Sequence();
             _mp4Sequence = sequence;
+            ResetPreviewZoom();
 
             MediaPlayer.Visibility = Visibility.Collapsed;
             GifPreviewImage.Visibility = Visibility.Visible;
@@ -452,6 +458,7 @@ namespace CyberSnap.UI
 
             DisposeGifSequence();
             _gifSequence = sequence;
+            ResetPreviewZoom();
 
             MediaPlayer.Visibility = Visibility.Collapsed;
             GifPreviewImage.Visibility = Visibility.Visible;
@@ -519,6 +526,22 @@ namespace CyberSnap.UI
 
             GifPreviewImage.Source = source;
             _gifDisplayedFrameIndex = frameIndex;
+            NotifyPreviewFrameReady();
+        }
+
+        private void NotifyPreviewFrameReady()
+        {
+            if (GifPreviewImage.Source is not BitmapSource bmp)
+                return;
+
+            bool sizeChanged = bmp.PixelWidth != _previewPixelW || bmp.PixelHeight != _previewPixelH;
+            if (!_didInitialContain || sizeChanged)
+            {
+                _previewPixelW = bmp.PixelWidth;
+                _previewPixelH = bmp.PixelHeight;
+                ApplyZoom();
+                TryApplyInitialContain();
+            }
         }
 
         private void RestartPreviewLoop()
@@ -1611,6 +1634,7 @@ namespace CyberSnap.UI
             CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the media file to the clipboard");
             SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file");
             UpdateLoopTooltip();
+            InitZoomIcons();
         }
 
         // --- Time Input Editing ---
@@ -1779,6 +1803,9 @@ namespace CyberSnap.UI
             if (e.OriginalSource is System.Windows.Controls.TextBox)
                 return;
 
+            if (TryHandleZoomHotkey(e))
+                return;
+
             switch (e.Key)
             {
                 case Key.Escape:
@@ -1850,6 +1877,7 @@ namespace CyberSnap.UI
             }
 
             CompositionTarget.Rendering -= OnRendering;
+            CancelZoomHideTimer();
             _audioPersistTimer.Stop();
             Interlocked.Increment(ref _gifLoadVersion);
             Interlocked.Increment(ref _mp4LoadVersion);
