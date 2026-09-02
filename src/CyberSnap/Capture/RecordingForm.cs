@@ -193,7 +193,14 @@ public sealed partial class RecordingForm : Form
         User32.SetForegroundWindow(Handle);
         Activate();
         Focus();
-        _escapeHook = CaptureEscapeKeyHook.Install(this, CancelFromEscape, HandleRecordingHotkey);
+        // Space/Enter are overlay keys (start/pause/stop) only while the fullscreen
+        // chrome owns the session. Once recording starts the overlay is hollow and
+        // the user is working in other apps — a global hook would steal typing.
+        _escapeHook = CaptureEscapeKeyHook.Install(
+            this,
+            CancelFromEscape,
+            HandleRecordingHotkey,
+            consumeTransportKeys: () => _state != State.Recording);
         _selectionAdorner?.Show(this);
         _banner?.ShowFor(this);
 

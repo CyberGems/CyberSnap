@@ -11,7 +11,9 @@
         UseLayoutRounding="True"
         Focusable="False"
         ShowActivated="False"
-        Height="58">
+        Height="58"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave">
 
     <!-- Outer shell: rounded-corner chrome with shadow.
          Width hugs content so the timer sits next to Pause with no dead gap.
@@ -44,6 +46,8 @@
                     <Grid Margin="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
+                            <!-- Grip + chevron -->
+                            <ColumnDefinition Width="Auto"/>
                             <!-- Format badge -->
                             <ColumnDefinition Width="Auto"/>
                             <!-- Timer + size meter -->
@@ -51,15 +55,63 @@
                             <!-- Action buttons -->
                         </Grid.ColumnDefinitions>
 
+                        <!-- ═══ Leading: grip then chevron, same order as the other docks ═══ -->
+                        <StackPanel Grid.Column="0"
+                                    x:Name="LeadingCluster"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0">
+
+                            <Border x:Name="GripBtn"
+                                    Width="18" Height="40"
+                                    Cursor="SizeAll"
+                                    Background="Transparent">
+                                <UniformGrid x:Name="GripDots"
+                                             Columns="2" Rows="3"
+                                             Width="12" Height="18"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             IsHitTestVisible="False"
+                                             SnapsToDevicePixels="True">
+                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                                </UniformGrid>
+                            </Border>
+
+                            <Border x:Name="ModeBtn"
+                                    Width="28" Height="36"
+                                    CornerRadius="8"
+                                    Margin="0,0,2,0"
+                                    Cursor="Hand"
+                                    Background="Transparent">
+                                <Path x:Name="ModeChevron"
+                                      Width="14" Height="12"
+                                      Stretch="Uniform"
+                                      StrokeThickness="1.6"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Fill="Transparent"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      IsHitTestVisible="False"
+                                      Data="M8,1 L2,6 L8,11 M13,1 L7,6 L13,11"/>
+                            </Border>
+                        </StackPanel>
+
                         <!-- ═══ Format badge — idle / live / paused / encoding ═══ -->
-                        <Border Grid.Column="0"
+                        <Border Grid.Column="1"
                                 x:Name="FormatBadge"
                                 Height="24"
                                 MinWidth="44"
                                 CornerRadius="12"
                                 Padding="10,0"
                                 VerticalAlignment="Center"
-                                Margin="12,0,0,0">
+                                Margin="6,0,0,0">
                             <TextBlock x:Name="FormatBadgeText"
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Center"
@@ -68,7 +120,8 @@
                         </Border>
 
                         <!-- ═══ Timer (dominant) + quieter size · free-disk meter ═══ -->
-                        <StackPanel Grid.Column="1"
+                        <StackPanel Grid.Column="2"
+                                    x:Name="TimerCluster"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center"
                                     Margin="10,0,8,0">
@@ -82,18 +135,20 @@
                                        VerticalAlignment="Center"
                                        Margin="10,0,0,0"
                                        FontSize="12"
-                                       FontWeight="SemiBold"/>
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Right"/>
                         </StackPanel>
 
                         <!-- ═══ Action buttons ═══ -->
-                        <StackPanel Grid.Column="2"
+                        <StackPanel Grid.Column="3"
+                                    x:Name="ActionsPanel"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center"
-                                    Margin="0,0,14,0">
+                                    Margin="0,0,10,0">
 
                             <!-- Primary action (Record ⇄ Pause ⇄ Resume). Pill shape; fixed
-                                 width so it NEVER resizes between modes — icon + text live
-                                 inside, label swaps. Always visible in both phases. -->
+                                 width so it NEVER resizes between ready/recording — icon + text
+                                 live inside, label swaps. Compact icon-only in mini hover. -->
                             <Border x:Name="PrimaryBtn"
                                     Width="128" Height="40"
                                     CornerRadius="20"
@@ -102,10 +157,13 @@
                                     ClipToBounds="True"
                                     Visibility="Visible">
                                 <Border.Clip>
-                                    <RectangleGeometry RadiusX="20" RadiusY="20" Rect="0,0,128,40"/>
+                                    <RectangleGeometry x:Name="PrimaryClip"
+                                                       RadiusX="20" RadiusY="20"
+                                                       Rect="0,0,128,40"/>
                                 </Border.Clip>
                                 <Grid ClipToBounds="True">
-                                    <StackPanel Orientation="Horizontal"
+                                    <StackPanel x:Name="PrimaryContent"
+                                                Orientation="Horizontal"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
                                                 IsHitTestVisible="False">
@@ -154,13 +212,21 @@
                                     CornerRadius="10"
                                     Margin="8,0,0,0"
                                     Cursor="Hand"
+                                    ClipToBounds="True"
                                     Visibility="Visible">
-                                <Border x:Name="StopGlyph"
-                                        Width="18" Height="18"
-                                        CornerRadius="3.5"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        IsHitTestVisible="False"/>
+                                <Grid>
+                                    <Border x:Name="StopHoldFill"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Bottom"
+                                            Height="0"
+                                            IsHitTestVisible="False"/>
+                                    <Border x:Name="StopGlyph"
+                                            Width="18" Height="18"
+                                            CornerRadius="3.5"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            IsHitTestVisible="False"/>
+                                </Grid>
                             </Border>
 
                             <!-- Quiet fade-cap divider between Stop (transport) and FPS (setup). -->
@@ -214,7 +280,7 @@
                             <Border x:Name="CancelBtn"
                                     Width="36" Height="36"
                                     CornerRadius="8"
-                                    Margin="8,0,0,0"
+                                    Margin="8,0,10,0"
                                     Cursor="Hand"
                                     Visibility="Visible">
                                 <Image x:Name="CancelIcon"
@@ -226,6 +292,25 @@
                         </StackPanel>
                     </Grid>
                 </Border>
+            </Border>
+
+            <!-- Mini pill border shine: rotating highlight on the ring. Hit-test off. -->
+            <Border x:Name="MiniShineRing"
+                    CornerRadius="18"
+                    BorderThickness="1.5"
+                    Background="Transparent"
+                    IsHitTestVisible="False"
+                    Visibility="Collapsed">
+                <Border.BorderBrush>
+                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                        <GradientStop Color="#00FFFFFF" Offset="0"/>
+                        <GradientStop x:Name="MiniShineCore" Color="#AAFFFFFF" Offset="0.5"/>
+                        <GradientStop Color="#00FFFFFF" Offset="1"/>
+                        <LinearGradientBrush.RelativeTransform>
+                            <RotateTransform x:Name="MiniShineRotate" CenterX="0.5" CenterY="0.5" Angle="0"/>
+                        </LinearGradientBrush.RelativeTransform>
+                    </LinearGradientBrush>
+                </Border.BorderBrush>
             </Border>
         </Grid>
     </Border>
