@@ -320,6 +320,11 @@ public sealed partial class RecordingForm
         _tickTimer.Start();
         Invalidate();
         RecordingCaptureStarted?.Invoke();
+        // Clicking Record (or punching the hollow region) hands focus to the
+        // window in the hole. Starting with Enter keeps the overlay focused.
+        // Reclaim after layout so Space/Enter stay on the bar until the user
+        // clicks another app.
+        BeginInvoke(new Action(ReclaimTransportHotkeys));
     }
 
     private void TransitionToRecordingSurface()

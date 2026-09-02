@@ -152,6 +152,12 @@ public sealed partial class RecordingControlBarWindow
         ArmMiniHover(expand: true, MiniHoverExpandDelayMs);
     }
 
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (OwnerWinFormsForm is RecordingForm form && !form.IsDisposed)
+            form.ReclaimTransportHotkeys();
+    }
+
     private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
         if (_suppressMiniHover)
