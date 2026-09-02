@@ -20,7 +20,7 @@ public sealed class QuickStartGuide : Form
     private const int MinWidth = 440;
     private const int PadX = 28;
     private const int PadY = 24;
-    private const int HeaderHeight = 30;
+    private const int HeaderHeight = 40;
     private const int StepGap = 14;
     private const int StepCircle = 26;
     private const int StepTextGap = 12;
@@ -80,6 +80,9 @@ public sealed class QuickStartGuide : Form
     private DateTime _enterStart;
     private System.Windows.Forms.Timer? _enterTimer;
     private bool _entering;
+    private Form? _focusOwner;
+    private DateTime _shownAtUtc;
+    private AppDeactivateFilter? _appDeactivateFilter;
 
     public QuickStartGuide()
     {
@@ -266,6 +269,9 @@ public sealed class QuickStartGuide : Form
         try { Opacity = animate ? 0.01 : 1.0; } catch { Opacity = 1.0; }
 
         Show(owner);
+        EnsureShownAboveOwner();
+        BindCloseOnFocusLoss(owner);
+        _shownAtUtc = DateTime.UtcNow;
 
         try
         {
@@ -282,6 +288,88 @@ public sealed class QuickStartGuide : Form
             BeginInvoke(new Action(StartEnterAnimation));
         else
             try { Opacity = 1.0; } catch { }
+    }
+
+    private void BindCloseOnFocusLoss(IWin32Window owner)
+    {
+        UnbindCloseOnFocusLoss();
+        if (_guideMode != GuideMode.Annotation || owner is not Form form)
+            return;
+
+        _focusOwner = form;
+        form.Deactivate += OnFocusOwnerDeactivated;
+
+        _appDeactivateFilter = new AppDeactivateFilter(this);
+        System.Windows.Forms.Application.AddMessageFilter(_appDeactivateFilter);
+    }
+
+    private void UnbindCloseOnFocusLoss()
+    {
+        if (_appDeactivateFilter != null)
+        {
+            System.Windows.Forms.Application.RemoveMessageFilter(_appDeactivateFilter);
+            _appDeactivateFilter = null;
+        }
+        if (_focusOwner == null)
+            return;
+        _focusOwner.Deactivate -= OnFocusOwnerDeactivated;
+        _focusOwner = null;
+    }
+
+    private void OnFocusOwnerDeactivated(object? sender, EventArgs e) => CloseIfOwnerLostFocus();
+
+    private void CloseIfOwnerLostFocus()
+    {
+        if (IsDisposed || Disposing || !Visible || _guideMode != GuideMode.Annotation)
+            return;
+        if ((DateTime.UtcNow - _shownAtUtc).TotalMilliseconds < 250)
+            return;
+
+        void CloseNow()
+        {
+            if (IsDisposed || Disposing || !Visible)
+                return;
+            var fg = Native.User32.GetForegroundWindow();
+            if (fg == Handle || (_focusOwner != null && fg == _focusOwner.Handle))
+                return;
+            Close();
+        }
+
+        if (IsHandleCreated)
+            BeginInvoke(new Action(CloseNow));
+        else
+            CloseNow();
+    }
+
+    private void EnsureShownAboveOwner()
+    {
+        TopMost = true;
+        if (!IsHandleCreated)
+            return;
+        try
+        {
+            Native.User32.SetWindowPos(
+                Handle,
+                Native.User32.HWND_TOPMOST,
+                0, 0, 0, 0,
+                Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_SHOWWINDOW);
+        }
+        catch { }
+    }
+
+    private sealed class AppDeactivateFilter : IMessageFilter
+    {
+        private const int WmActivateApp = 0x001C;
+        private readonly QuickStartGuide _guide;
+
+        public AppDeactivateFilter(QuickStartGuide guide) => _guide = guide;
+
+        public bool PreFilterMessage(ref Message m)
+        {
+            if (m.Msg == WmActivateApp && m.WParam == IntPtr.Zero)
+                _guide.CloseIfOwnerLostFocus();
+            return false;
+        }
     }
 
     private void StartEnterAnimation()
@@ -384,7 +472,7 @@ public sealed class QuickStartGuide : Form
 
         _steps =
         [
-            new StepDef(T("Open a capture in the editor to access annotation tools")),
+            new StepDef(T("Start with a capture, an opened file, or a blank canvas")),
             new StepDef(T("Select a tool from the toolbar — draw, text, arrows, shapes, and more")),
             new StepDef(T("Use color and stroke options to customize your annotations")),
         ];
@@ -437,7 +525,7 @@ public sealed class QuickStartGuide : Form
         }
 
         int titleW = TextRenderer.MeasureText(g, _title, _headerFont, Size.Empty,
-            TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width + 28 + 28;
+            TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width + 34 + 28;
         int stepLineMax = 0;
         for (int i = 0; i < _steps.Length; i++)
         {
@@ -647,12 +735,22 @@ public sealed class QuickStartGuide : Form
         }
 
         FluentIcons.DrawIcon(g, "info",
-            new RectangleF(_contentLeft, curY + 5, 18, 18), accent, iconInset: 1f);
+            new RectangleF(_contentLeft, curY + (HeaderHeight - 26) / 2f, 26, 26), accent, iconInset: 0f);
 
-        var headerRect = new Rectangle(_contentLeft + 24, curY, _contentWidth - closeBtnSize - 36, HeaderHeight);
-        TextRenderer.DrawText(g, _title, _headerFont, headerRect,
-            UiChrome.SurfaceTextPrimary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+        var headerRect = new RectangleF(_contentLeft + 34, curY, _contentWidth - closeBtnSize - 46, HeaderHeight);
+        var titleState = g.Save();
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        using (var titleBrush = new SolidBrush(UiChrome.SurfaceTextPrimary))
+        using (var titleFormat = new StringFormat(StringFormat.GenericDefault)
+        {
+            Alignment = StringAlignment.Near,
+            LineAlignment = StringAlignment.Center,
+            Trimming = StringTrimming.EllipsisCharacter,
+            FormatFlags = StringFormatFlags.NoClip | StringFormatFlags.NoWrap,
+        })
+            g.DrawString(_title, _headerFont, titleBrush, headerRect, titleFormat);
+        g.Restore(titleState);
 
         var closeColor = _closeHovered
             ? UiChrome.SurfaceTextPrimary
@@ -694,6 +792,32 @@ public sealed class QuickStartGuide : Form
         return y + SectionLabelHeight;
     }
 
+    /// <summary>
+    /// Centers the ink of <paramref name="text"/> in <paramref name="bounds"/>.
+    /// Font cell metrics leave digits high and left; glyph-path bounds do not.
+    /// </summary>
+    private static void DrawCenteredGlyph(Graphics g, string text, Font font, Brush brush, RectangleF bounds)
+    {
+        float em = font.SizeInPoints * g.DpiY / 72f;
+        using var path = new GraphicsPath();
+        path.AddString(text, font.FontFamily, (int)font.Style, em, PointF.Empty, StringFormat.GenericTypographic);
+        var ink = path.GetBounds();
+        if (ink.Width < 0.1f || ink.Height < 0.1f)
+            return;
+
+        using var matrix = new Matrix();
+        matrix.Translate(
+            bounds.X + (bounds.Width - ink.Width) / 2f - ink.X,
+            bounds.Y + (bounds.Height - ink.Height) / 2f - ink.Y);
+        path.Transform(matrix);
+
+        var state = g.Save();
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.FillPath(brush, path);
+        g.Restore(state);
+    }
+
     private int PaintSteps(Graphics g, int startY, Color accent)
     {
         int curY = startY;
@@ -709,22 +833,8 @@ public sealed class QuickStartGuide : Form
                 g.DrawEllipse(ring, circle);
 
             string num = (i + 1).ToString();
-            var numState = g.Save();
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             using (var numBrush = new SolidBrush(accent))
-            using (var numFormat = new StringFormat(StringFormat.GenericTypographic)
-            {
-                Alignment = StringAlignment.Center,
-                LineAlignment = StringAlignment.Center,
-            })
-            {
-                // Optical nudge: GDI+ centers on cell metrics and reads high in a circle.
-                var numRect = circle;
-                numRect.Offset(0.4f, 1.1f);
-                g.DrawString(num, _stepNumFont, numBrush, numRect, numFormat);
-            }
-            g.Restore(numState);
+                DrawCenteredGlyph(g, num, _stepNumFont, numBrush, circle);
 
             int textX = _contentLeft + StepCircle + StepTextGap;
             int textW = _contentWidth - StepCircle - StepTextGap;
@@ -826,6 +936,7 @@ public sealed class QuickStartGuide : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
+        UnbindCloseOnFocusLoss();
         StopEnterAnimation();
         base.OnFormClosed(e);
         Dispose();
@@ -835,6 +946,7 @@ public sealed class QuickStartGuide : Form
     {
         if (disposing)
         {
+            UnbindCloseOnFocusLoss();
             StopEnterAnimation();
             if (_enterTimer != null)
             {
