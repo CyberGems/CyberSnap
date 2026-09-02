@@ -143,6 +143,12 @@ internal static partial class User32
     [LibraryImport("user32.dll")]
     public static partial IntPtr GetForegroundWindow();
 
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetFocus();
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr SetFocus(IntPtr hWnd);
+
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
     public static partial int GetWindowTextW(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
 

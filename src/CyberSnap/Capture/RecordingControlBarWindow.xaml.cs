@@ -86,6 +86,16 @@ public sealed partial class RecordingControlBarWindow : Window
     /// <summary>The WinForms RecordingForm that owns this bar; keeps the bar above the overlay.</summary>
     public System.Windows.Forms.Form? OwnerWinFormsForm { get; set; }
 
+    /// <summary>Native HWND, or zero before the window source exists.</summary>
+    public IntPtr Hwnd
+    {
+        get
+        {
+            try { return new WindowInteropHelper(this).Handle; }
+            catch { return IntPtr.Zero; }
+        }
+    }
+
     /// <summary>True while the user is dragging/resizing the selection; bar hides to not obstruct.</summary>
     private bool _isDragInProgress;
 

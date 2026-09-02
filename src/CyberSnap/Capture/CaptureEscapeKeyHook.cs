@@ -119,8 +119,8 @@ internal sealed class CaptureEscapeKeyHook : IDisposable
                     }
 
                     // Swallow so the window under the capture overlay never sees the key.
-                    // During recording the overlay is hollow and the user is working in other
-                    // apps — consumeTransportKeys is false then so Space/Enter type normally.
+                    // During recording this is true only while the bar/overlay is focused,
+                    // so typing in other apps still works.
                     return 1;
                 }
             }

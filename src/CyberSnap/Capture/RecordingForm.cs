@@ -193,14 +193,15 @@ public sealed partial class RecordingForm : Form
         User32.SetForegroundWindow(Handle);
         Activate();
         Focus();
-        // Space/Enter are overlay keys (start/pause/stop) only while the fullscreen
-        // chrome owns the session. Once recording starts the overlay is hollow and
-        // the user is working in other apps — a global hook would steal typing.
+        // Space/Enter pause or stop only while our recording chrome is the
+        // foreground window. During capture the overlay is hollow and the bar
+        // is WS_EX_NOACTIVATE so typing in other apps is unaffected; clicking
+        // the bar claims focus and re-arms the shortcuts until focus leaves.
         _escapeHook = CaptureEscapeKeyHook.Install(
             this,
             CancelFromEscape,
             HandleRecordingHotkey,
-            consumeTransportKeys: () => _state != State.Recording);
+            consumeTransportKeys: ShouldConsumeTransportKeys);
         _selectionAdorner?.Show(this);
         _banner?.ShowFor(this);
 
@@ -249,6 +250,84 @@ public sealed partial class RecordingForm : Form
             return true;
         }
         return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    private bool ShouldConsumeTransportKeys()
+    {
+        if (_state == State.Encoding)
+            return false;
+        if (_state != State.Recording)
+            return true;
+        return IsRecordingChromeForeground();
+    }
+
+    private bool IsRecordingChromeForeground()
+    {
+        try
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return false;
+            if (ContainsFocus || Focused)
+                return true;
+
+            IntPtr fg = User32.GetForegroundWindow();
+            IntPtr focus = User32.GetFocus();
+            return IsOurChromeHwnd(fg) || IsOurChromeHwnd(focus);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsOurChromeHwnd(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || !IsHandleCreated)
+            return false;
+        if (hwnd == Handle)
+            return true;
+        IntPtr bar = IntPtr.Zero;
+        try { bar = _controlBarWpf?.Hwnd ?? IntPtr.Zero; }
+        catch { bar = IntPtr.Zero; }
+        if (bar != IntPtr.Zero && hwnd == bar)
+            return true;
+        IntPtr root = User32.GetAncestor(hwnd, User32.GA_ROOT);
+        if (root == Handle || (bar != IntPtr.Zero && root == bar))
+            return true;
+        IntPtr owner = User32.GetAncestor(hwnd, User32.GA_ROOTOWNER);
+        return owner == Handle || (bar != IntPtr.Zero && owner == bar);
+    }
+
+    /// <summary>
+    /// Put Space/Enter back on the overlay. The WPF bar is WS_EX_NOACTIVATE and
+    /// never takes keyboard focus; the hollow overlay is what already works when
+    /// recording is started with Enter.
+    /// </summary>
+    internal void ReclaimTransportHotkeys()
+    {
+        if (IsDisposed || Disposing || !IsHandleCreated)
+            return;
+
+        IntPtr hwnd = Handle;
+        IntPtr fg = User32.GetForegroundWindow();
+        uint fgThread = fg != IntPtr.Zero ? User32.GetWindowThreadProcessId(fg, out _) : 0;
+        uint thisThread = Kernel32.GetCurrentThreadId();
+        bool attached = false;
+        try
+        {
+            if (fgThread != 0 && fgThread != thisThread)
+                attached = User32.AttachThreadInput(fgThread, thisThread, true);
+            User32.SetForegroundWindow(hwnd);
+            User32.BringWindowToTop(hwnd);
+            Activate();
+            Focus();
+            User32.SetFocus(hwnd);
+        }
+        finally
+        {
+            if (attached)
+                User32.AttachThreadInput(fgThread, thisThread, false);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

@@ -13,7 +13,8 @@
         ShowActivated="False"
         Height="58"
         MouseEnter="Window_MouseEnter"
-        MouseLeave="Window_MouseLeave">
+        MouseLeave="Window_MouseLeave"
+        PreviewMouseDown="Window_PreviewMouseDown">
 
     <!-- Outer shell: rounded-corner chrome with shadow.
          Width hugs content so the timer sits next to Pause with no dead gap.
