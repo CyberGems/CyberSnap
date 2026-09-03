@@ -280,7 +280,10 @@ public sealed partial class RecordingControlBarWindow : Window
         UpdatePrimaryButtonVisual();
         UpdateStopButtonVisual();
         if (_isMini)
+        {
             ApplyMiniSurface(true);
+            StartMiniShine();
+        }
     }
 
     public void Reposition(System.Drawing.Rectangle captureRegion)
