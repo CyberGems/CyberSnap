@@ -269,6 +269,9 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => SetPaused(paused)); return; }
         if (_isPaused == paused) return;
+        double? miniShineOffset = _isMini && MiniShineRing.Visibility == Visibility.Visible
+            ? MiniShineRing.StrokeDashOffset
+            : null;
         _isPaused = paused;
 
         if (_isPaused)
@@ -282,7 +285,7 @@ public sealed partial class RecordingControlBarWindow : Window
         if (_isMini)
         {
             ApplyMiniSurface(true);
-            StartMiniShine();
+            StartMiniShine(miniShineOffset);
         }
     }
 

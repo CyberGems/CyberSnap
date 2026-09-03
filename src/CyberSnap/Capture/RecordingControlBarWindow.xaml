@@ -299,7 +299,7 @@
                        IsHitTestVisible="False"
                        Visibility="Collapsed"
                        StrokeDashArray="48 110"
-                       StrokeDashCap="Round"
+                       StrokeDashCap="Flat"
                        Stroke="Transparent"/>
         </Grid>
     </Border>

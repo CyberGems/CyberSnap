@@ -92,6 +92,9 @@ public sealed partial class RecordingForm : Form
     private DateTime? _pauseStartTime;
     private TimeSpan _totalPausedDuration;
 
+    private static readonly Color RecordingLiveAccent = Color.FromArgb(239, 68, 68);
+    private static readonly Color RecordingPausedAccent = Color.FromArgb(245, 158, 11);
+
     // TransparencyKey color - any color that won't appear in UI
     private static readonly Color TransKey = Color.FromArgb(1, 2, 3);
 
@@ -699,8 +702,11 @@ public sealed partial class RecordingForm : Form
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
         var accentColor = _format == Models.RecordingFormat.GIF ? UiChrome.GifAccentColor : UiChrome.AccentColor;
+        var frameAccent = _state == State.Recording
+            ? (_isPaused ? RecordingPausedAccent : RecordingLiveAccent)
+            : accentColor;
 
-        DrawRecordingFrame(g, _recordRegion, accentColor);
+        DrawRecordingFrame(g, _recordRegion, frameAccent);
 
         // Draw circular resize handles during PreRecording (before START is clicked)
         if (_state == State.PreRecording)
