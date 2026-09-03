@@ -11,7 +11,7 @@ namespace CyberSnap.Capture;
 
 /// <summary>
 /// Captures screen frames at a target FPS and encodes them to GIF.
-/// Pure engine â€” no UI. Create, Start, Stop/Discard.
+/// Pure engine â€” no UI. Create, Start, Pause/Resume, Stop/Discard.
 /// </summary>
 public sealed class GifRecorder : IDisposable
 {
@@ -34,12 +34,17 @@ public sealed class GifRecorder : IDisposable
     private long _activeStartTicks;
     private TimeSpan _recordedDuration;
     private volatile bool _captureClockStarted;
+    private volatile bool _isPaused;
+    private long _pausedTicksTotal;
+    private long _pauseStartedTicks;
+    private readonly object _pauseLock = new();
     private bool _disposed;
     private int _initialCaptureDelayMs = DefaultInitialCaptureDelayMs;
 
     public int FrameCount => _frameCount;
     public TimeSpan Elapsed => DateTime.UtcNow - _startTime;
     public bool IsRecording => _captureThread?.IsAlive == true;
+    public bool IsPaused => _isPaused;
 
     public GifRecorder(Rectangle region, int fps = 15, int maxDurationSeconds = 30, bool showCursor = false)
     {
@@ -79,8 +84,14 @@ public sealed class GifRecorder : IDisposable
             catch (ThreadInterruptedException) { return; }
         }
 
-        _activeStartTicks = Stopwatch.GetTimestamp();
-        _captureClockStarted = true;
+        lock (_pauseLock)
+        {
+            _activeStartTicks = Stopwatch.GetTimestamp();
+            _pausedTicksTotal = 0;
+            if (_isPaused)
+                _pauseStartedTicks = _activeStartTicks;
+            _captureClockStarted = true;
+        }
 
         try
         {
@@ -89,9 +100,14 @@ public sealed class GifRecorder : IDisposable
                 if (GetActiveElapsed().TotalMilliseconds >= _maxDurationMs)
                     break;
 
+                if (!WaitWhilePaused(ct))
+                    break;
+
                 WaitForNextFrameSlot(ct);
                 if (ct.IsCancellationRequested)
                     break;
+                if (_isPaused)
+                    continue;
 
                 Bitmap? frameToEnqueue = null;
                 try
@@ -134,12 +150,59 @@ public sealed class GifRecorder : IDisposable
         }
     }
 
+    public void Pause() => SetPausedState(true);
+
+    public void Resume() => SetPausedState(false);
+
+    private void SetPausedState(bool paused)
+    {
+        lock (_pauseLock)
+        {
+            if (paused)
+            {
+                if (_isPaused) return;
+                _isPaused = true;
+                _pauseStartedTicks = Stopwatch.GetTimestamp();
+                return;
+            }
+
+            if (_isPaused && _pauseStartedTicks != 0)
+                _pausedTicksTotal += Stopwatch.GetTimestamp() - _pauseStartedTicks;
+            _pauseStartedTicks = 0;
+            _isPaused = false;
+            Monitor.PulseAll(_pauseLock);
+        }
+    }
+
     private TimeSpan GetActiveElapsed()
-        => _captureClockStarted ? Stopwatch.GetElapsedTime(_activeStartTicks) : TimeSpan.Zero;
+    {
+        if (!_captureClockStarted)
+            return TimeSpan.Zero;
+
+        long pausedTicks = Interlocked.Read(ref _pausedTicksTotal);
+        long pauseStart = Interlocked.Read(ref _pauseStartedTicks);
+        if (_isPaused && pauseStart != 0)
+            pausedTicks += Stopwatch.GetTimestamp() - pauseStart;
+
+        long endTicks = Stopwatch.GetTimestamp() - pausedTicks;
+        if (endTicks < _activeStartTicks)
+            endTicks = _activeStartTicks;
+        return Stopwatch.GetElapsedTime(_activeStartTicks, endTicks);
+    }
+
+    private bool WaitWhilePaused(CancellationToken ct)
+    {
+        lock (_pauseLock)
+        {
+            while (_isPaused && !ct.IsCancellationRequested)
+                Monitor.Wait(_pauseLock, 100);
+            return !ct.IsCancellationRequested;
+        }
+    }
 
     private void WaitForNextFrameSlot(CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested)
+        while (!ct.IsCancellationRequested && !_isPaused)
         {
             double nextDueSeconds = (double)_frameCount / _fps;
             double waitSeconds = nextDueSeconds - GetActiveElapsed().TotalSeconds;
@@ -244,6 +307,7 @@ public sealed class GifRecorder : IDisposable
     public string StopAndEncode(string outputPath)
     {
         _cts.Cancel();
+        SetPausedState(false);
         // Ensure the consumer can drain and exit promptly.
         try { _frameQueue.CompleteAdding(); } catch { }
 
@@ -480,6 +544,7 @@ public sealed class GifRecorder : IDisposable
     public void Discard()
     {
         _cts.Cancel();
+        SetPausedState(false);
         try { _frameQueue.CompleteAdding(); } catch { }
         _captureThread?.Join(10_000);
         _writerThread?.Join(10_000);
@@ -496,6 +561,7 @@ public sealed class GifRecorder : IDisposable
         if (_disposed) return;
         _disposed = true;
         _cts.Cancel();
+        SetPausedState(false);
         while (_frameQueue.TryTake(out var pending))
             pending.frame.Dispose();
         _frameQueue.Dispose();

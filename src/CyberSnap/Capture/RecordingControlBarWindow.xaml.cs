@@ -119,7 +119,7 @@ public sealed partial class RecordingControlBarWindow : Window
         _format = format;
         _fps = NormalizeFps(format, fps);
         _sendToTrimmer = sendToTrimmer;
-        _supportsPause = format != Models.RecordingFormat.GIF;
+        _supportsPause = true;
         _outputPath = outputPath ?? "";
         _outputDrive = TryGetDrive(_outputPath);
 
@@ -601,12 +601,22 @@ public sealed partial class RecordingControlBarWindow : Window
         PrimaryBtn.MouseEnter += (_, _) =>
         {
             if (PrimaryBtn.IsEnabled)
-                PrimaryBtn.Background = Theme.Brush(Lighten(GetPrimaryFill(), 28));
+            {
+                if (_isMini)
+                {
+                    PrimaryBtn.Background = System.Windows.Media.Brushes.Transparent;
+                    UpdatePrimaryIcon(Lighten(GetPrimaryFill(), 28));
+                }
+                else
+                {
+                    PrimaryBtn.Background = Theme.Brush(Lighten(GetPrimaryFill(), 28));
+                }
+            }
         };
         PrimaryBtn.MouseLeave += (_, _) =>
         {
             if (PrimaryBtn.IsEnabled)
-                PrimaryBtn.Background = Theme.Brush(GetPrimaryFill());
+                UpdatePrimaryButtonVisual();
         };
 
         // ── Stop button hover: reddish wash, glyph stays red (never orange + white) ──
@@ -614,7 +624,9 @@ public sealed partial class RecordingControlBarWindow : Window
         {
             if (!StopBtn.IsEnabled)
                 return;
-            StopBtn.Background = Theme.Brush(Color.FromArgb(80, StopRed.R, StopRed.G, StopRed.B));
+            StopBtn.Background = _isMini
+                ? System.Windows.Media.Brushes.Transparent
+                : Theme.Brush(Color.FromArgb(80, StopRed.R, StopRed.G, StopRed.B));
             StopGlyph.Background = Theme.Brush(StopRedHot);
         };
         StopBtn.MouseLeave += (_, _) =>
@@ -748,6 +760,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void UpdatePrimaryButtonVisual()
     {
+        bool mini = _isMini && !_isEncoding;
         string label;
         string iconId;
 
@@ -772,16 +785,23 @@ public sealed partial class RecordingControlBarWindow : Window
 
         var fill = GetPrimaryFill();
         PrimaryText.Text = label;
-        PrimaryBtn.Background = Theme.Brush(fill);
+        PrimaryBtn.Background = mini
+            ? System.Windows.Media.Brushes.Transparent
+            : Theme.Brush(fill);
         var primaryContentColor = GetButtonTextColor(fill);
         PrimaryText.Foreground = Theme.Brush(primaryContentColor);
         PrimaryBtn.Cursor = _isEncoding ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand;
 
-        // Use a dark foreground when the fill is a light silver/cyan, keeping icon and label readable.
-        PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(primaryContentColor), 40);
+        UpdatePrimaryIcon(mini ? fill : primaryContentColor, iconId);
         PrimaryIcon.Visibility = Visibility.Visible;
-        ApplyPrimaryIconLayout(_isMini);
+        ApplyPrimaryIconLayout(mini);
         UpdatePrimaryTooltip();
+    }
+
+    private void UpdatePrimaryIcon(Color color, string? iconId = null)
+    {
+        iconId ??= !_isRecording || _isPaused ? "play" : "pause";
+        PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(color), 40);
     }
 
     /// <summary>
@@ -829,8 +849,8 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         StopBtn.IsEnabled = enabled;
         StopBtn.Opacity = enabled ? 1.0 : 0.38;
-        // Faint red wash when armed so the 40×40 hit target reads as a button.
-        StopBtn.Background = enabled
+        // Mini mode keeps the full hit target but presents only the transport glyph.
+        StopBtn.Background = enabled && !(_isMini && !_isEncoding)
             ? Theme.Brush(Color.FromArgb(42, StopRed.R, StopRed.G, StopRed.B))
             : System.Windows.Media.Brushes.Transparent;
         StopGlyph.Background = Theme.Brush(

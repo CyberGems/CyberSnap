@@ -22,17 +22,19 @@ public sealed partial class RecordingForm
     private void TogglePause()
     {
         if (_state != State.Recording) return;
-        if (_videoRecorder == null) return;
+        if (_videoRecorder == null && _recorder == null) return;
 
         _isPaused = !_isPaused;
         if (_isPaused)
         {
-            _videoRecorder.Pause();
+            _videoRecorder?.Pause();
+            _recorder?.Pause();
             _pauseStartTime = DateTime.UtcNow;
         }
         else
         {
-            _videoRecorder.Resume();
+            _videoRecorder?.Resume();
+            _recorder?.Resume();
             if (_pauseStartTime.HasValue)
             {
                 _totalPausedDuration += DateTime.UtcNow - _pauseStartTime.Value;
