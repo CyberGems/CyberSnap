@@ -28,7 +28,6 @@ public sealed partial class RecordingControlBarWindow
     private const int MiniHoverExpandDelayMs = 70;
     private const int MiniHoverCollapseDelayMs = 380;
     private const int LongPressCancelMs = 700;
-    private const int MiniShineLapMs = 3100;
     private const double MiniShineLength = 56;
 
     private bool _isMini;
@@ -55,9 +54,9 @@ public sealed partial class RecordingControlBarWindow
         _stopHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(LongPressCancelMs) };
         _stopHoldTimer.Tick += StopHoldTimer_Tick;
 
-        TintGrip(80);
-        GripBtn.MouseEnter += (_, _) => TintGrip(170);
-        GripBtn.MouseLeave += (_, _) => TintGrip(80);
+        TintGrip(GripBaseAlpha);
+        GripBtn.MouseEnter += (_, _) => TintGrip(150);
+        GripBtn.MouseLeave += (_, _) => TintGrip(GripBaseAlpha);
 
         ModeBtn.MouseEnter += (_, _) =>
         {
@@ -428,7 +427,7 @@ public sealed partial class RecordingControlBarWindow
             // includes most of the optical whitespace needed by the play triangle.
             PrimaryIcon.Margin = new Thickness(0);
             PrimaryIcon.RenderTransform = playGlyph
-                ? new TranslateTransform(-1, 0)
+                ? new TranslateTransform(-1, -1)
                 : Transform.Identity;
         }
         else
@@ -539,18 +538,18 @@ public sealed partial class RecordingControlBarWindow
 
         MiniShineRing.Visibility = Visibility.Visible;
         MiniShineRing.Stroke = Theme.Brush(MiniShineStrokeColor());
-        double dashPeriod = ConfigureMiniShineDash();
+        var (dashPeriod, lapDuration) = ConfigureMiniShine();
         var travel = new DoubleAnimation
         {
             From = 0,
             To = dashPeriod,
-            Duration = TimeSpan.FromMilliseconds(MiniShineLapMs),
+            Duration = lapDuration,
             RepeatBehavior = RepeatBehavior.Forever
         };
         MiniShineRing.BeginAnimation(Shape.StrokeDashOffsetProperty, travel);
     }
 
-    private double ConfigureMiniShineDash()
+    private (double DashPeriod, TimeSpan LapDuration) ConfigureMiniShine()
     {
         double stroke = Math.Max(0.1, MiniShineRing.StrokeThickness);
         double width = Math.Max(stroke, MiniShineRing.ActualWidth - stroke);
@@ -563,7 +562,12 @@ public sealed partial class RecordingControlBarWindow
         double period = Math.Max(2, perimeter / stroke);
         double dash = Math.Min(MiniShineLength / stroke, period - 1);
         MiniShineRing.StrokeDashArray = new DoubleCollection { dash, period - dash };
-        return period;
+
+        // Normal: travel half the current pill width per second.
+        // Paused: cover that same distance every two seconds.
+        double secondsPerHalfWidth = _isPaused ? 2 : 1;
+        double lapSeconds = secondsPerHalfWidth * 2 * perimeter / width;
+        return (period, TimeSpan.FromSeconds(lapSeconds));
     }
 
     private void ScheduleMiniShineRefresh(int delayMs)
@@ -593,10 +597,13 @@ public sealed partial class RecordingControlBarWindow
         ModeChevron.Stroke = Theme.Brush(Theme.TextPrimary);
     }
 
+    private static byte GripBaseAlpha => Theme.IsDark ? (byte)71 : (byte)82;
+
     private void TintGrip(byte alpha)
     {
+        var gripColor = ToMediaColor(UiChrome.SurfaceTextPrimary);
         var brush = Theme.Brush(Color.FromArgb(
-            alpha, Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B));
+            alpha, gripColor.R, gripColor.G, gripColor.B));
         foreach (var child in GripDots.Children)
         {
             if (child is Ellipse dot)
