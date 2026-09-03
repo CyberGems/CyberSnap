@@ -318,9 +318,6 @@ public sealed partial class RecordingForm : Form
             if (fgThread != 0 && fgThread != thisThread)
                 attached = User32.AttachThreadInput(fgThread, thisThread, true);
             User32.SetForegroundWindow(hwnd);
-            User32.BringWindowToTop(hwnd);
-            Activate();
-            Focus();
             User32.SetFocus(hwnd);
         }
         finally
@@ -328,6 +325,8 @@ public sealed partial class RecordingForm : Form
             if (attached)
                 User32.AttachThreadInput(fgThread, thisThread, false);
         }
+
+        _controlBarWpf?.AssertBarTopmost();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -357,7 +356,10 @@ public sealed partial class RecordingForm : Form
         base.OnKeyDown(e);
     }
 
-    private void ShowEmptyAreaContextMenu(Point clickLocation)
+    internal void ShowEmptyAreaContextMenuAtScreen(Point screenPoint)
+        => ShowEmptyAreaContextMenu(screenPoint, locationIsScreen: true);
+
+    private void ShowEmptyAreaContextMenu(Point clickLocation, bool locationIsScreen = false)
     {
         if (!Services.SettingsService.LoadStatic()?.ConfirmBeforeExit ?? true)
         {
@@ -368,27 +370,45 @@ public sealed partial class RecordingForm : Form
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
         menu.Font = UiChrome.ChromeFont(11.0f);
 
-        var isSpanish = string.Equals(
-            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
-            "es", StringComparison.OrdinalIgnoreCase);
         bool isMp4 = _format == Models.RecordingFormat.MP4;
+        var continueItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Continue"), iconId: "undo", iconSize: 24);
+        continueItem.Click += (_, _) => menu.Close();
+        menu.Items.Add(continueItem);
 
-        var cancelLabel = isMp4
-            ? (isSpanish ? "Cancelar captura MP4" : "Cancel MP4 capture")
-            : (isSpanish ? "Cancelar captura GIF" : "Cancel GIF capture");
+        menu.Items.Add(new ToolStripSeparator());
+
+        var cancelLabel = LocalizationService.Translate(
+            isMp4 ? "Cancel MP4 capture" : "Cancel GIF capture");
         var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
         cancelItem.Click += (_, _) => CancelFromEscape();
         menu.Items.Add(cancelItem);
 
-        menu.Items.Add(new ToolStripSeparator());
-
-        var closeLabel = isSpanish ? "Continuar editando" : "Continue editing";
-        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "undo", iconSize: 24);
-        closeItem.Click += (_, _) => menu.Close();
-        menu.Items.Add(closeItem);
-
         WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
-        menu.Show(PointToScreen(clickLocation));
+
+        void keepBarVisible()
+        {
+            _controlBarWpf?.AssertBarTopmost();
+            // Bar is HWND_TOPMOST; putting it above the overlay must not cover the menu.
+            if (menu.IsHandleCreated)
+            {
+                User32.SetWindowPos(menu.Handle, User32.HWND_TOPMOST, 0, 0, 0, 0,
+                    User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE);
+            }
+        }
+
+        menu.Opening += (_, _) => keepBarVisible();
+        menu.Opened += (_, _) => keepBarVisible();
+        menu.Closed += (_, _) =>
+        {
+            _controlBarWpf?.AssertBarTopmost();
+            _controlBarWpf?.Dispatcher.BeginInvoke(_controlBarWpf.AssertBarTopmost);
+        };
+
+        var screen = locationIsScreen ? clickLocation : PointToScreen(clickLocation);
+        menu.Show(screen);
+        keepBarVisible();
+        _controlBarWpf?.Dispatcher.BeginInvoke(keepBarVisible);
     }
 
     private void CancelFromEscape()

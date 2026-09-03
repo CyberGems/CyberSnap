@@ -162,7 +162,7 @@
                                                        RadiusX="20" RadiusY="20"
                                                        Rect="0,0,128,40"/>
                                 </Border.Clip>
-                                <Grid ClipToBounds="True">
+                                <Grid>
                                     <StackPanel x:Name="PrimaryContent"
                                                 Orientation="Horizontal"
                                                 HorizontalAlignment="Center"
@@ -180,28 +180,16 @@
                                                    FontWeight="Bold"
                                                    Foreground="White"/>
                                     </StackPanel>
-                                    <!-- Shine sweep overlay: inside the clipped grid so it never
-                                         expands the visual beyond the button bounds -->
-                                    <Border x:Name="StartShine"
-                                            Width="72"
-                                            CornerRadius="20"
-                                            IsHitTestVisible="False"
-                                            Opacity="0"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Stretch">
-                                        <Border.RenderTransform>
-                                            <TranslateTransform x:Name="StartShineTransform" X="-90" Y="0"/>
-                                        </Border.RenderTransform>
-                                        <Border.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                <GradientStop Color="#00FFFFFF" Offset="0"/>
-                                                <GradientStop Color="#55FFFFFF" Offset="0.4"/>
-                                                <GradientStop Color="#CCFFFFFF" Offset="0.5"/>
-                                                <GradientStop Color="#55FFFFFF" Offset="0.6"/>
-                                                <GradientStop Color="#00FFFFFF" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Border.Background>
-                                    </Border>
+                                    <!-- Confirm-dock comet: traveling glint on the pill rim. -->
+                                    <Rectangle x:Name="StartShine"
+                                               RadiusX="20" RadiusY="20"
+                                               Fill="Transparent"
+                                               StrokeThickness="1.6"
+                                               StrokeDashArray="60 128"
+                                               StrokeDashCap="Round"
+                                               Stroke="Transparent"
+                                               IsHitTestVisible="False"
+                                               Visibility="Collapsed"/>
                                 </Grid>
                             </Border>
 
@@ -214,7 +202,8 @@
                                     Margin="8,0,0,0"
                                     Cursor="Hand"
                                     ClipToBounds="True"
-                                    Visibility="Visible">
+                                    Visibility="Visible"
+                                    ToolTipService.ShowOnDisabled="True">
                                 <Grid>
                                     <Border x:Name="StopHoldFill"
                                             HorizontalAlignment="Stretch"
@@ -295,16 +284,16 @@
                 </Border>
             </Border>
 
-            <!-- Mini pill border shine: traveling dash on the ring. Hit-test off. -->
+            <!-- Mini pill border shine: confirm-dock comet on the ring. -->
             <Rectangle x:Name="MiniShineRing"
                        RadiusX="18" RadiusY="18"
                        Fill="Transparent"
-                       StrokeThickness="2.2"
+                       StrokeThickness="1.6"
                        IsHitTestVisible="False"
                        Visibility="Collapsed"
-                       StrokeDashArray="20 80"
+                       StrokeDashArray="48 110"
                        StrokeDashCap="Round"
-                       Stroke="#CCFFFFFF"/>
+                       Stroke="Transparent"/>
         </Grid>
     </Border>
 </Window>
