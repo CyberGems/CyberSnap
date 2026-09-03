@@ -468,7 +468,7 @@ public sealed partial class RecordingControlBarWindow
     private Color MiniShineStrokeColor()
     {
         if (_isPaused)
-            return Color.FromArgb(190, 210, 215, 222);
+            return Color.FromArgb(170, 210, 215, 222);
         return Color.FromArgb(150, _accent.R, _accent.G, _accent.B);
     }
 
@@ -531,7 +531,7 @@ public sealed partial class RecordingControlBarWindow
         return new Native.User32.RECT { Left = 0, Top = 0, Right = 1, Bottom = 1 };
     }
 
-    private void StartMiniShine()
+    private void StartMiniShine(double? preservedOffset = null)
     {
         StopMiniShine();
         if (UI.Motion.Disabled || !_isMini || !_isRecording || _isEncoding) return;
@@ -539,14 +539,23 @@ public sealed partial class RecordingControlBarWindow
         MiniShineRing.Visibility = Visibility.Visible;
         MiniShineRing.Stroke = Theme.Brush(MiniShineStrokeColor());
         var (dashPeriod, lapDuration) = ConfigureMiniShine();
+        double startOffset = preservedOffset.HasValue
+            ? NormalizeDashOffset(preservedOffset.Value, dashPeriod)
+            : 0;
         var travel = new DoubleAnimation
         {
-            From = 0,
-            To = dashPeriod,
+            From = startOffset,
+            To = startOffset + dashPeriod,
             Duration = lapDuration,
             RepeatBehavior = RepeatBehavior.Forever
         };
         MiniShineRing.BeginAnimation(Shape.StrokeDashOffsetProperty, travel);
+    }
+
+    private static double NormalizeDashOffset(double offset, double period)
+    {
+        double normalized = offset % period;
+        return normalized < 0 ? normalized + period : normalized;
     }
 
     private (double DashPeriod, TimeSpan LapDuration) ConfigureMiniShine()

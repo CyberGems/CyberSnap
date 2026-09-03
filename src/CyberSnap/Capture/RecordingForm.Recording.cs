@@ -43,6 +43,7 @@ public sealed partial class RecordingForm
         }
 
         _controlBarWpf?.SetPaused(_isPaused);
+        Invalidate();
         RecordingPauseChanged?.Invoke(_isPaused);
     }
 
