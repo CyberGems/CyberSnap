@@ -10,6 +10,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$defaultLocale = 'en'
+$translationReferenceLocale = 'es'
 
 if ([string]::IsNullOrWhiteSpace($SourceDirectory)) {
     $SourceDirectory = Join-Path $PSScriptRoot '..\src\CyberSnap'
@@ -204,10 +206,22 @@ else {
     $baselineError = "Protected-key baseline not found: $BaselinePath"
 }
 
-$catalog = New-StringSet
-foreach ($key in $explicitKeys) { [void]$catalog.Add($key) }
-if ($locales.Contains('en')) {
-    foreach ($key in $locales['en'].Keys) { [void]$catalog.Add($key) }
+if (-not $locales.Contains($defaultLocale)) {
+    throw "Default locale file is required: $defaultLocale.json"
+}
+if (-not $locales.Contains($translationReferenceLocale)) {
+    throw "Translation reference locale file is required: $translationReferenceLocale.json"
+}
+
+$requiredBilingualCatalog = New-StringSet
+foreach ($key in $explicitKeys) { [void]$requiredBilingualCatalog.Add($key) }
+if ($locales.Contains($defaultLocale)) {
+    foreach ($key in $locales[$defaultLocale].Keys) { [void]$requiredBilingualCatalog.Add($key) }
+}
+
+$translationReferenceCatalog = New-StringSet
+if ($locales.Contains($translationReferenceLocale)) {
+    foreach ($key in $locales[$translationReferenceLocale].Keys) { [void]$translationReferenceCatalog.Add($key) }
 }
 
 $coverage = [Collections.Generic.List[object]]::new()
@@ -218,10 +232,12 @@ $unverifiedKeys = [ordered]@{}
 
 foreach ($localeName in $locales.Keys) {
     $values = $locales[$localeName]
-    $missing = @($catalog | Where-Object { -not $values.ContainsKey($_) } | Sort-Object)
-    $unverified = @($values.Keys | Where-Object { -not $catalog.Contains($_) } | Sort-Object)
+    $isCoreLocale = $localeName -in $defaultLocale, $translationReferenceLocale
+    $coverageCatalog = if ($isCoreLocale) { $requiredBilingualCatalog } else { $translationReferenceCatalog }
+    $missing = @($coverageCatalog | Where-Object { -not $values.ContainsKey($_) } | Sort-Object)
+    $unverified = @($values.Keys | Where-Object { -not $coverageCatalog.Contains($_) } | Sort-Object)
     $unverifiedKeys[$localeName] = $unverified
-    if ($localeName -in 'en', 'es') {
+    if ($isCoreLocale) {
         foreach ($missingKey in $missing) {
             $requiredMissingKeys.Add([pscustomobject]@{ Locale = $localeName; Key = $missingKey })
         }
@@ -232,8 +248,11 @@ foreach ($localeName in $locales.Keys) {
             $blankValues.Add([pscustomobject]@{ Locale = $localeName; Key = $entry.Key })
         }
 
-        $referenceText = if ($locales.Contains('en') -and $locales['en'].ContainsKey($entry.Key)) {
-            $locales['en'][$entry.Key]
+        $referenceText = if (-not $isCoreLocale -and $locales.Contains($translationReferenceLocale) -and $locales[$translationReferenceLocale].ContainsKey($entry.Key)) {
+            $locales[$translationReferenceLocale][$entry.Key]
+        }
+        elseif ($locales.Contains($defaultLocale) -and $locales[$defaultLocale].ContainsKey($entry.Key)) {
+            $locales[$defaultLocale][$entry.Key]
         }
         else {
             $entry.Key
@@ -255,7 +274,8 @@ foreach ($localeName in $locales.Keys) {
         Keys = $values.Count
         Missing = $missing.Count
         Unverified = $unverified.Count
-        Coverage = if ($catalog.Count -eq 0) { '100.0%' } else { '{0:N1}%' -f ((($catalog.Count - $missing.Count) / $catalog.Count) * 100) }
+        Basis = if ($isCoreLocale) { 'EN/ES core' } else { 'Spanish' }
+        Coverage = if ($coverageCatalog.Count -eq 0) { '100.0%' } else { '{0:N1}%' -f ((($coverageCatalog.Count - $missing.Count) / $coverageCatalog.Count) * 100) }
     })
 }
 
@@ -263,7 +283,10 @@ Write-Host "Localization audit (read-only)"
 Write-Host "Source:  $SourceDirectory"
 Write-Host "Locales: $LocalizationDirectory"
 Write-Host "Protected-key baseline: $BaselinePath"
-Write-Host "Audit catalog: $($catalog.Count) ($($explicitKeys.Count) explicit source keys plus English catalog entries)"
+Write-Host "Runtime default locale: $defaultLocale"
+Write-Host "Translation reference locale: $translationReferenceLocale"
+Write-Host "Required EN/ES core: $($requiredBilingualCatalog.Count) keys ($($explicitKeys.Count) explicit source keys plus English catalog entries)"
+Write-Host "Spanish translation reference: $($translationReferenceCatalog.Count) keys"
 Write-Host "Implicit XAML candidates tracked separately: $($implicitXamlKeys.Count)"
 Write-Host ''
 $coverage | Format-Table -AutoSize
@@ -308,7 +331,7 @@ if ($Detailed) {
 foreach ($localeName in @('en', 'es')) {
     if (-not $locales.Contains($localeName)) { continue }
 
-    $missing = @($catalog | Where-Object { -not $locales[$localeName].ContainsKey($_) } | Sort-Object)
+    $missing = @($requiredBilingualCatalog | Where-Object { -not $locales[$localeName].ContainsKey($_) } | Sort-Object)
     if ($missing.Count -gt 0) {
         Write-Host "`n$localeName missing catalog candidates ($($missing.Count)):" -ForegroundColor Yellow
         $missing | ForEach-Object { Write-Host "  $_" }
@@ -326,9 +349,9 @@ foreach ($localeName in @('en', 'es')) {
 $baselineFailureCount = if ($null -eq $baselineError) { 0 } else { 1 }
 $hardFailureCount = $invalidFiles.Count + $duplicateKeys.Count + $blankValues.Count + $placeholderProblems.Count + $requiredMissingKeys.Count + $removedProtectedKeys.Count + $baselineFailureCount
 if ($Strict -and $hardFailureCount -gt 0) {
-    Write-Error "Localization audit found $hardFailureCount structural error(s). Missing and unverified keys are warnings only."
+    Write-Error "Localization audit found $hardFailureCount structural error(s). Missing EN/ES keys are errors; incomplete secondary locales and retained/unverified keys are warnings."
     exit 1
 }
 
 Write-Host "`nStructural errors: $hardFailureCount"
-Write-Host 'Missing keys and retained/unverified keys are warnings; neither category authorizes deletion.'
+Write-Host 'Missing EN/ES keys are errors. Incomplete secondary locales and retained/unverified keys are warnings; no category authorizes deletion.'
