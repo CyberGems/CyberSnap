@@ -990,9 +990,21 @@ public sealed partial class RegionOverlayForm
             TextAnnotation ta => GetTextBounds(ta).Contains(pt),
             StepNumberAnnotation sn => Distance(sn.Pos, pt) <= tol * 3,
             EmojiAnnotation em => InflateRect(GetAnnotationBounds(em), tol, tol).Contains(pt),
-            MagnifierAnnotation mg => Distance(mg.Pos, pt) <= tol * 4,
+            MagnifierAnnotation mg => IsInsideMagnifierLens(mg, pt, tol),
             _ => false,
         };
+    }
+
+    private bool IsInsideMagnifierLens(MagnifierAnnotation magnifier, Point point, float tolerance)
+    {
+        var bounds = GetMagnifierVisualBounds(magnifier);
+        float rx = bounds.Width / 2f + tolerance;
+        float ry = bounds.Height / 2f + tolerance;
+        float cx = bounds.Left + bounds.Width / 2f;
+        float cy = bounds.Top + bounds.Height / 2f;
+        float dx = (point.X - cx) / rx;
+        float dy = (point.Y - cy) / ry;
+        return dx * dx + dy * dy <= 1f;
     }
 
     /// <summary>Moves an annotation by a delta. Returns a new annotation with updated position.</summary>
@@ -1010,7 +1022,11 @@ public sealed partial class RegionOverlayForm
         EraserFill ef => ef with { Rect = OffsetRect(ef.Rect, dx, dy) },
         StepNumberAnnotation sn => sn with { Pos = Offset(sn.Pos, dx, dy) },
         EmojiAnnotation em => em with { Pos = Offset(em.Pos, dx, dy) },
-        MagnifierAnnotation mg => mg with { Pos = Offset(mg.Pos, dx, dy) },
+        MagnifierAnnotation mg => mg with
+        {
+            Pos = Offset(mg.Pos, dx, dy),
+            SrcRect = OffsetRect(mg.SrcRect, dx, dy)
+        },
         TextAnnotation ta => ta with { Pos = Offset(ta.Pos, dx, dy) },
         _ => a
     };
@@ -1068,7 +1084,7 @@ public sealed partial class RegionOverlayForm
 
     /// <summary>Whether an annotation supports resizing. Fixed-size badges (step numbers) can
     /// only be repositioned, so they expose a move-only control box (no resize handles).</summary>
-    private static bool IsResizable(Annotation a) => a is not StepNumberAnnotation;
+    private static bool IsResizable(Annotation a) => a is not StepNumberAnnotation and not MagnifierAnnotation;
 
     private int GetSelectHandle(Point p, int annotationIndex)
     {

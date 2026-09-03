@@ -3031,13 +3031,25 @@ public sealed partial class AnnotationCanvas
             TextAnnotation ta => TextAnnotationPainter.Measure(ta).Contains(pt),
             StepNumberAnnotation sn => Distance(sn.Pos, pt) <= tol * 3,
             EmojiAnnotation em => InflateRect(GetAnnotationBounds(em), tol, tol).Contains(pt),
-            MagnifierAnnotation mg => Distance(mg.Pos, pt) <= tol * 4,
+            MagnifierAnnotation mg => IsInsideMagnifierLens(mg, pt, tol),
             _ => false,
         };
     }
 
     private static Rectangle InflateRect(Rectangle r, int x, int y) =>
         Rectangle.Inflate(r, x, y);
+
+    private bool IsInsideMagnifierLens(MagnifierAnnotation magnifier, Point point, float tolerance)
+    {
+        var bounds = GetMagnifierLensBounds(magnifier.Pos, magnifier.SrcRect);
+        float rx = bounds.Width / 2f + tolerance;
+        float ry = bounds.Height / 2f + tolerance;
+        float cx = bounds.Left + bounds.Width / 2f;
+        float cy = bounds.Top + bounds.Height / 2f;
+        float dx = (point.X - cx) / rx;
+        float dy = (point.Y - cy) / ry;
+        return dx * dx + dy * dy <= 1f;
+    }
 
     // Hit tolerance (px) added on each side of a hollow shape's stroke so its thin outline
     // is still comfortable to hover.
@@ -3366,7 +3378,7 @@ public sealed partial class AnnotationCanvas
             TextAnnotation ta => TextAnnotationPainter.Measure(ta),
             StepNumberAnnotation sn => new RectangleF(sn.Pos.X - 16, sn.Pos.Y - 16, 32, 32),
             EmojiAnnotation em => new RectangleF(em.Pos.X - em.Size / 2f, em.Pos.Y - em.Size / 2f, em.Size, em.Size),
-            MagnifierAnnotation mg => new RectangleF(mg.Pos.X - 60, mg.Pos.Y - 60, 120, 120),
+            MagnifierAnnotation mg => GetMagnifierLensBounds(mg.Pos, mg.SrcRect),
             _ => RectangleF.Empty,
         };
     }
