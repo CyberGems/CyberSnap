@@ -28,11 +28,14 @@ public sealed partial class RecordingControlBarWindow
     private const int MiniHoverExpandDelayMs = 70;
     private const int MiniHoverCollapseDelayMs = 380;
     private const int LongPressCancelMs = 700;
+    private const int MiniShineLapMs = 3100;
+    private const double MiniShineLength = 56;
 
     private bool _isMini;
     private bool _miniHoverExpanded;
     private bool _suppressMiniHover;
     private DispatcherTimer? _miniHoverDelayTimer;
+    private DispatcherTimer? _miniShineLayoutTimer;
     private DispatcherTimer? _stopHoldTimer;
     private bool _stopHoldArmed;
     private bool _stopHoldFired;
@@ -41,6 +44,13 @@ public sealed partial class RecordingControlBarWindow
     {
         _miniHoverDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(MiniHoverExpandDelayMs) };
         _miniHoverDelayTimer.Tick += MiniHoverDelayTick;
+
+        _miniShineLayoutTimer = new DispatcherTimer(DispatcherPriority.Render);
+        _miniShineLayoutTimer.Tick += (_, _) =>
+        {
+            _miniShineLayoutTimer?.Stop();
+            StartMiniShine();
+        };
 
         _stopHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(LongPressCancelMs) };
         _stopHoldTimer.Tick += StopHoldTimer_Tick;
@@ -239,6 +249,8 @@ public sealed partial class RecordingControlBarWindow
         EndStopHold();
 
         ApplyModeChrome(setSlideSizes: true);
+        UpdatePrimaryButtonVisual();
+        UpdateStopButtonVisual();
         UpdateLayout();
 
         // Keep the chevron side planted: shrink/grow to the right so << / >> match
@@ -356,9 +368,9 @@ public sealed partial class RecordingControlBarWindow
         StopBtn.Height = h;
         StopBtn.CornerRadius = new CornerRadius(mini ? 6 : 10);
         StopBtn.Margin = w <= 0 ? new Thickness(0) : new Thickness(mini ? 4 : 8, 0, 0, 0);
-        StopGlyph.Width = mini ? 10 : 18;
-        StopGlyph.Height = mini ? 10 : 18;
-        StopGlyph.CornerRadius = new CornerRadius(mini ? 2 : 3.5);
+        StopGlyph.Width = mini ? 12 : 18;
+        StopGlyph.Height = mini ? 12 : 18;
+        StopGlyph.CornerRadius = new CornerRadius(mini ? 2.5 : 3.5);
         if (setSize)
         {
             StopBtn.Width = w;
@@ -405,18 +417,17 @@ public sealed partial class RecordingControlBarWindow
     {
         bool playGlyph = !_isRecording || _isPaused;
         double icon = mini
-            ? (playGlyph ? 22 : 16)
+            ? (playGlyph ? 22 : 20)
             : 20;
         PrimaryIcon.Width = icon;
         PrimaryIcon.Height = icon;
         if (mini)
         {
-            // Translate, not Margin: a left margin is absorbed by the centered
-            // StackPanel and only shifts the glyph by half. Play triangles also
-            // need a true optical nudge toward the tip.
+            // Keep the bitmap box geometrically centered. The Fluent asset already
+            // includes most of the optical whitespace needed by the play triangle.
             PrimaryIcon.Margin = new Thickness(0);
             PrimaryIcon.RenderTransform = playGlyph
-                ? new TranslateTransform(2.0, -0.5)
+                ? new TranslateTransform(1, 0)
                 : Transform.Identity;
         }
         else
@@ -473,6 +484,7 @@ public sealed partial class RecordingControlBarWindow
         AnimateOpacity(PrimaryBtn, showPrimary ? 1 : 0, ms);
         AnimateOpacity(StopBtn, slide && _isRecording ? 1 : 0, ms);
         AnimateOpacity(ModeBtn, slide ? 1 : 0, ms);
+        ScheduleMiniShineRefresh(ms + 24);
     }
 
     private static void AnimateWidth(FrameworkElement element, double to, int ms)
@@ -522,22 +534,50 @@ public sealed partial class RecordingControlBarWindow
     private void StartMiniShine()
     {
         StopMiniShine();
-        if (UI.Motion.Disabled || !_isMini || !_isRecording) return;
+        if (UI.Motion.Disabled || !_isMini || !_isRecording || _isEncoding) return;
 
         MiniShineRing.Visibility = Visibility.Visible;
         MiniShineRing.Stroke = Theme.Brush(MiniShineStrokeColor());
+        double dashPeriod = ConfigureMiniShineDash();
         var travel = new DoubleAnimation
         {
             From = 0,
-            To = 158,
-            Duration = TimeSpan.FromMilliseconds(2600),
+            To = dashPeriod,
+            Duration = TimeSpan.FromMilliseconds(MiniShineLapMs),
             RepeatBehavior = RepeatBehavior.Forever
         };
         MiniShineRing.BeginAnimation(Shape.StrokeDashOffsetProperty, travel);
     }
 
+    private double ConfigureMiniShineDash()
+    {
+        double stroke = Math.Max(0.1, MiniShineRing.StrokeThickness);
+        double width = Math.Max(stroke, MiniShineRing.ActualWidth - stroke);
+        double height = Math.Max(stroke, MiniShineRing.ActualHeight - stroke);
+        double radius = Math.Clamp(
+            Math.Min(MiniShineRing.RadiusX, MiniShineRing.RadiusY) - stroke / 2,
+            0,
+            Math.Min(width, height) / 2);
+        double perimeter = 2 * (width + height - 4 * radius) + 2 * Math.PI * radius;
+        double period = Math.Max(2, perimeter / stroke);
+        double dash = Math.Min(MiniShineLength / stroke, period - 1);
+        MiniShineRing.StrokeDashArray = new DoubleCollection { dash, period - dash };
+        return period;
+    }
+
+    private void ScheduleMiniShineRefresh(int delayMs)
+    {
+        if (_miniShineLayoutTimer is null || !_isMini || !_isRecording || UI.Motion.Disabled)
+            return;
+
+        _miniShineLayoutTimer.Stop();
+        _miniShineLayoutTimer.Interval = TimeSpan.FromMilliseconds(delayMs);
+        _miniShineLayoutTimer.Start();
+    }
+
     private void StopMiniShine()
     {
+        _miniShineLayoutTimer?.Stop();
         MiniShineRing.BeginAnimation(Shape.StrokeDashOffsetProperty, null);
         MiniShineRing.Visibility = Visibility.Collapsed;
     }
@@ -578,6 +618,7 @@ public sealed partial class RecordingControlBarWindow
     private void TeardownMini()
     {
         _miniHoverDelayTimer?.Stop();
+        _miniShineLayoutTimer?.Stop();
         _stopHoldTimer?.Stop();
         StopMiniShine();
         EndStopHold();
