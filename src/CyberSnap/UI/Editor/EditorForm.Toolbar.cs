@@ -1783,13 +1783,13 @@ public sealed partial class EditorForm
 
             return _canvas.SelectedCount > 1
                 ? LocalizationService.Translate("Drag to move group · Del deletes · Ctrl+D duplicates · Esc deselects")
-                : LocalizationService.Translate("Drag to move · Resize with handles · Del deletes · Ctrl+D duplicates · Esc deselects");
+                : LocalizationService.Translate("Drag to move · Resize with handles · Click again for rotation · Del deletes · Ctrl+D duplicates · Esc deselects");
         }
 
         return tool switch
         {
             AnnotationCanvas.CanvasTool.Move =>
-                LocalizationService.Translate("Click to select · Drag to move · Ctrl+click multi-select · Double-click text to edit · Double-click empty to select all"),
+                LocalizationService.Translate("Click to select · Drag to move · Ctrl+click multi-select · Click selected again for rotation · Double-click text to edit · Double-click empty to select all"),
 
             AnnotationCanvas.CanvasTool.Text =>
                 LocalizationService.Translate("Click to place · Click text to re-edit · Enter confirms · Shift+Enter new line"),

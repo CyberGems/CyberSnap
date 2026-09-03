@@ -13,6 +13,7 @@ namespace CyberSnap.Capture;
 
 public sealed partial class RegionOverlayForm
 {
+    private const int AnnotationSelectionHandleGapPx = 8;
     public CaptureMode CurrentMode => _mode;
     public void SetShowToolNumberBadges(bool show)
     {
@@ -1052,11 +1053,12 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Hover/select chrome around existing annotations. Stamp tools (Emoji) skip it so
+    /// Hover/select chrome around existing annotations. Stamp tools skip it so
     /// a click places a new glyph instead of wrapping whatever sits under the cursor.
     /// </summary>
     private bool ShowsAnnotationHoverChrome(CaptureMode mode)
-        => IsDrawingOrMoveMode(mode) && mode != CaptureMode.Emoji;
+        => IsDrawingOrMoveMode(mode)
+           && mode is not CaptureMode.Emoji and not CaptureMode.Magnifier and not CaptureMode.StepNumber;
 
     /// <summary>Returns the handle index (0=TL,1=TR,2=BL,3=BR,4=T,5=L,6=R,7=B,8=center plus) at point, or -1.</summary>
     private int GetSelectHandle(Point p)
@@ -1094,7 +1096,7 @@ public sealed partial class RegionOverlayForm
         }
 
         var bounds = GetAnnotationBounds(selected);
-        var selRect = Rectangle.Inflate(bounds, 4, 4);
+        var selRect = Rectangle.Inflate(bounds, AnnotationSelectionHandleGapPx, AnnotationSelectionHandleGapPx);
         bool isActiveSelection = annotationIndex == _selectedAnnotationIndex
             || _multiSelectedIndices.Contains(annotationIndex);
 
@@ -1175,6 +1177,8 @@ public sealed partial class RegionOverlayForm
         if (!AnnotationTransforms.CanRotate(_undoStack[_selectedAnnotationIndex]))
             return;
         _isRotateMode = !_isRotateMode;
+        if (_isRotateMode)
+            ShowToolBanner(LocalizationService.Translate("Rotation mode"));
         Invalidate();
     }
 
