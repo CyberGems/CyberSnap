@@ -507,6 +507,8 @@
   "Restore every setting to its original defaults.": "Restore every setting to its original defaults.",
   "Move": "Move",
   "Pick": "Pick",
+  "Rotation mode": "Rotation mode",
+  "Drag a rotation handle to rotate · Click the selected object to exit rotation · Esc cancels": "Drag a rotation handle to rotate · Click the selected object to exit rotation · Esc cancels",
   "Move & Resize": "Move & Resize",
   "Hold Space to pan": "Hold Space to pan",
   "Resizing canvas: {0} × {1} px · {2}": "Resizing canvas: {0} × {1} px · {2}",

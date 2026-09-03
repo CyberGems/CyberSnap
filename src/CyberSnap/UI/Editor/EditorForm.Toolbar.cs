@@ -1778,6 +1778,9 @@ public sealed partial class EditorForm
         // Pick with an active selection: show edit shortcuts for the current selection.
         if (tool == AnnotationCanvas.CanvasTool.Move && _canvas.SelectedCount > 0)
         {
+            if (_canvas.IsRotateMode)
+                return LocalizationService.Translate("Drag a rotation handle to rotate · Click the selected object to exit rotation · Esc cancels");
+
             return _canvas.SelectedCount > 1
                 ? LocalizationService.Translate("Drag to move group · Del deletes · Ctrl+D duplicates · Esc deselects")
                 : LocalizationService.Translate("Drag to move · Resize with handles · Del deletes · Ctrl+D duplicates · Esc deselects");
@@ -4290,4 +4293,3 @@ internal sealed class EditorToggleSwitch : Control
             (int)(a.B + t * (b.B - a.B)));
     }
 }
-

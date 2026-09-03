@@ -14,6 +14,10 @@ namespace CyberSnap.UI.Controls;
 
 public sealed partial class AnnotationCanvas
 {
+    // Keep selected-object handles clear of the artwork, matching common vector editors.
+    // This is expressed in screen pixels so the gap remains stable at every zoom level.
+    private const int SelectionHandleGapPx = 8;
+
     // ── In-progress tool state ─────────────────────────────────────────────
 
     private bool _isDragging;
@@ -1046,9 +1050,14 @@ public sealed partial class AnnotationCanvas
              _activeTool == CanvasTool.StepNumber ||
              (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji))))
         {
+            var previousHover = _hoverImg;
+            bool hadPreviousHover = _hoverImgValid;
             _hoverImg = ScreenToImage(e.Location);
             _hoverImgValid = true;
-            Invalidate();
+            if (_activeTool == CanvasTool.StepNumber)
+                InvalidateStepNumberGhost(previousHover, hadPreviousHover, _hoverImg);
+            else
+                Invalidate();
             return;
         }
 
@@ -1643,6 +1652,28 @@ public sealed partial class AnnotationCanvas
             Invalidate();
 
         UpdateCursor();
+    }
+
+    private void InvalidateStepNumberGhost(Point previous, bool hadPrevious, Point current)
+    {
+        Rectangle DirtyRect(Point imagePoint)
+        {
+            var center = ImageToScreenF(imagePoint);
+            int halfWidth = (int)Math.Ceiling(48f * _zoom) + 4;
+            int halfHeight = (int)Math.Ceiling(24f * _zoom) + 4;
+            return Rectangle.FromLTRB(
+                (int)Math.Floor(center.X) - halfWidth,
+                (int)Math.Floor(center.Y) - halfHeight,
+                (int)Math.Ceiling(center.X) + halfWidth,
+                (int)Math.Ceiling(center.Y) + halfHeight);
+        }
+
+        var dirty = DirtyRect(current);
+        if (hadPrevious)
+            dirty = Rectangle.Union(dirty, DirtyRect(previous));
+        dirty.Intersect(ClientRectangle);
+        if (dirty.Width > 0 && dirty.Height > 0)
+            Invalidate(dirty);
     }
 
     /// <summary>
@@ -3280,12 +3311,13 @@ public sealed partial class AnnotationCanvas
     }
 
     /// <summary>
-    /// Hover/select chrome around existing annotations. Stamp tools (Emoji) skip it so
+    /// Hover/select chrome around existing annotations. Stamp tools skip it so
     /// a click places a new glyph instead of wrapping whatever sits under the cursor.
     /// Pick still shows the box.
     /// </summary>
     private bool ShowsAnnotationHoverChrome(CanvasTool tool)
-        => IsDrawingOrMoveTool(tool) && tool != CanvasTool.Emoji;
+        => IsDrawingOrMoveTool(tool)
+           && tool is not CanvasTool.Emoji and not CanvasTool.Magnifier and not CanvasTool.StepNumber;
 
     /// <summary>Grows or shrinks the pending emoji size. Returns false when the Emoji tool is not active.</summary>
     public bool TryNudgeEmojiPlaceSize(int direction)
@@ -3389,7 +3421,7 @@ public sealed partial class AnnotationCanvas
         }
         var bounds = GetAnnotationVisualBounds(selected);
         var screenRect = Rectangle.Round(ImageToScreenRect(bounds));
-        var selRect = Rectangle.Inflate(screenRect, 4, 4);
+        var selRect = Rectangle.Inflate(screenRect, SelectionHandleGapPx, SelectionHandleGapPx);
         bool isActiveSelection = annotationIndex == _selectedAnnotationIndex
             || _multiSelectedIndices.Contains(annotationIndex);
         // Non-resizable items expose only the center move knob (handle 8), never a resize handle.
@@ -3471,7 +3503,10 @@ public sealed partial class AnnotationCanvas
         if (!AnnotationTransforms.CanRotate(_annotations[_selectedAnnotationIndex]))
             return;
         _isRotateMode = !_isRotateMode;
+        if (_isRotateMode)
+            ShowToolBanner(LocalizationService.Translate("Rotation mode"));
         Invalidate();
+        OnStateChanged();
     }
 
     private void CancelRotateToggleTimer()
