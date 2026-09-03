@@ -927,6 +927,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         ? _multiSelectedIndices.Count
         : (_selectedAnnotationIndex >= 0 ? 1 : 0);
 
+    /// <summary>True while the selected annotation exposes rotation controls.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool IsRotateMode => _isRotateMode;
+
     /// <summary>True while Space is held for temporary pan (previous tool stored).</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool IsTemporarySpacePan => _preSpaceTool is not null;

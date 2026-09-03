@@ -237,7 +237,7 @@ public sealed partial class AnnotationCanvas
             && !(_isDragging && !IsManipulatingExistingAnnotation))
         {
             var hovered = _annotations[_moveHoverIndex];
-            var bounds = GetAnnotationBounds(hovered);
+            var bounds = GetAnnotationVisualBounds(hovered);
             DrawMoveHandles(g, bounds, isSelected: false, moveOnly: !IsResizable(hovered), hovered);
         }
 
@@ -250,7 +250,7 @@ public sealed partial class AnnotationCanvas
                 if (idx >= 0 && idx < _annotations.Count)
                 {
                     var ann = _annotations[idx];
-                    var bounds = GetAnnotationBounds(ann);
+                    var bounds = GetAnnotationVisualBounds(ann);
                     DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann), ann);
                 }
             }
@@ -262,7 +262,7 @@ public sealed partial class AnnotationCanvas
             && _selectedAnnotationIndex != _renderSkipAnnotationIndex)
         {
             var selected = _annotations[_selectedAnnotationIndex];
-            var bounds = GetAnnotationBounds(selected);
+            var bounds = GetAnnotationVisualBounds(selected);
             DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected), selected);
         }
 
@@ -275,7 +275,7 @@ public sealed partial class AnnotationCanvas
                 if (idx >= 0 && idx < _annotations.Count)
                 {
                     var ann = _annotations[idx];
-                    var bounds = GetAnnotationBounds(ann);
+                    var bounds = GetAnnotationVisualBounds(ann);
                     DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann), ann);
                 }
             }
@@ -287,12 +287,12 @@ public sealed partial class AnnotationCanvas
             && _selectedAnnotationIndex != _renderSkipAnnotationIndex)
         {
             var selected = _annotations[_selectedAnnotationIndex];
-            var bounds = GetAnnotationBounds(selected);
+            var bounds = GetAnnotationVisualBounds(selected);
             DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected), selected);
         }
     }
 
-    private void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected, bool moveOnly = false, Annotation? source = null)
+    private void DrawMoveHandles(Graphics g, RectangleF bounds, bool isSelected, bool moveOnly = false, Annotation? source = null)
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
@@ -310,7 +310,7 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
-        float offset = 3f / z;
+        float offset = (isSelected ? SelectionHandleGapPx : 3f) / z;
         var rect = new RectangleF(
             bounds.X - offset,
             bounds.Y - offset,
