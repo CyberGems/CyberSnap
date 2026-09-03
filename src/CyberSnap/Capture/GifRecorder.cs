@@ -143,7 +143,7 @@ public sealed class GifRecorder : IDisposable
         finally
         {
             if (_captureClockStarted)
-                _recordedDuration = Stopwatch.GetElapsedTime(_activeStartTicks);
+                _recordedDuration = GetActiveElapsed();
 
             lastFrame?.Dispose();
             try { _frameQueue.CompleteAdding(); } catch (InvalidOperationException) { }

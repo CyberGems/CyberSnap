@@ -534,11 +534,11 @@ public sealed partial class RecordingControlBarWindow : Window
             System.Drawing.Color.FromArgb(Theme.IsDark ? 18 : 12, _accent.R, _accent.G, _accent.B)));
 
         UpdateFormatBadge();
-        UpdateFpsDivider();
+        UpdateDividers();
         EnsureStorageSlotWidth();
     }
 
-    private void UpdateFpsDivider()
+    private void UpdateDividers()
     {
         var c = Theme.TextMuted;
         byte mid = Theme.IsDark ? (byte)72 : (byte)88;
@@ -552,6 +552,7 @@ public sealed partial class RecordingControlBarWindow : Window
         brush.GradientStops.Add(new GradientStop(Color.FromArgb(mid, c.R, c.G, c.B), 0.78));
         brush.GradientStops.Add(new GradientStop(Color.FromArgb(0, c.R, c.G, c.B), 1));
         brush.Freeze();
+        StorageDivider.Background = brush;
         FpsDivider.Background = brush;
     }
 

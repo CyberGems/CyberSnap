@@ -69,17 +69,17 @@
                                     Background="Transparent">
                                 <UniformGrid x:Name="GripDots"
                                              Columns="2" Rows="3"
-                                             Width="12" Height="18"
+                                             Width="8.4" Height="12.6"
                                              HorizontalAlignment="Center"
                                              VerticalAlignment="Center"
                                              IsHitTestVisible="False"
                                              SnapsToDevicePixels="True">
-                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
-                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
-                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
-                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
-                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
-                                    <Ellipse Width="3" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                                    <Ellipse Width="2.4" Height="2.4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse Width="2.4" Height="2.4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse Width="2.4" Height="2.4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse Width="2.4" Height="2.4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse Width="2.4" Height="2.4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse Width="2.4" Height="2.4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </UniformGrid>
                             </Border>
 
@@ -146,6 +146,14 @@
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center"
                                     Margin="0,0,10,0">
+
+                            <!-- Separates recording status/storage from transport actions. -->
+                            <Border x:Name="StorageDivider"
+                                    Width="1" Height="24"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,8,0"
+                                    CornerRadius="1"
+                                    IsHitTestVisible="False"/>
 
                             <!-- Primary action (Record ⇄ Pause ⇄ Resume). Pill shape; fixed
                                  width so it NEVER resizes between ready/recording — icon + text
