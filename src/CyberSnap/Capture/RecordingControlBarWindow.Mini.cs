@@ -299,6 +299,7 @@ public sealed partial class RecordingControlBarWindow
 
         FormatBadge.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
         StorageText.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
+        StorageDivider.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
         FpsDivider.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
         FpsCombo.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
         TrimmerBtn.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
@@ -427,7 +428,7 @@ public sealed partial class RecordingControlBarWindow
             // includes most of the optical whitespace needed by the play triangle.
             PrimaryIcon.Margin = new Thickness(0);
             PrimaryIcon.RenderTransform = playGlyph
-                ? new TranslateTransform(1, 0)
+                ? new TranslateTransform(-1, 0)
                 : Transform.Identity;
         }
         else
