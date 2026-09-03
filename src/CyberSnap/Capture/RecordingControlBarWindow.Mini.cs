@@ -17,9 +17,9 @@ namespace CyberSnap.Capture;
 public sealed partial class RecordingControlBarWindow
 {
     private const double MiniBarHeight = 36;
-    private const double MiniButtonSize = 32;
+    private const double MiniButtonSize = 28;
     private const double MiniCornerRadius = 18;
-    private const double MiniModeButtonWidth = 36;
+    private const double MiniModeButtonWidth = 32;
     private const double FullModeButtonWidth = 40;
     private const double FullPrimaryWidth = 128;
     private const double FullPrimaryHeight = 40;
@@ -83,6 +83,7 @@ public sealed partial class RecordingControlBarWindow
 
         if (_isMini)
         {
+            StopBtn.CaptureMouse();
             BeginStopHold();
             return;
         }
@@ -96,6 +97,8 @@ public sealed partial class RecordingControlBarWindow
             return;
         e.Handled = true;
         bool fired = _stopHoldFired;
+        if (StopBtn.IsMouseCaptured)
+            StopBtn.ReleaseMouseCapture();
         EndStopHold();
         if (!fired && StopBtn.IsEnabled)
             StopClicked?.Invoke();
@@ -103,7 +106,9 @@ public sealed partial class RecordingControlBarWindow
 
     private void StopBtn_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (_stopHoldArmed)
+        // Keep the click/hold alive while we own capture; overlay z-order
+        // flashes used to fire Leave and swallow the Stop click.
+        if (_stopHoldArmed && !StopBtn.IsMouseCaptured)
             EndStopHold();
     }
 
@@ -155,8 +160,35 @@ public sealed partial class RecordingControlBarWindow
 
     private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (OwnerWinFormsForm is RecordingForm form && !form.IsDisposed)
-            form.ReclaimTransportHotkeys();
+        if (e.ChangedButton == MouseButton.Right)
+        {
+            e.Handled = true;
+            ShowRecordingContextMenu(e);
+            return;
+        }
+
+        // Keep the bar on top, but do not steal this click by activating the
+        // overlay mid-down (that dropped Stop/Pause MouseUp).
+        AssertBarTopmost();
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (OwnerWinFormsForm is RecordingForm form && !form.IsDisposed)
+                form.ReclaimTransportHotkeys();
+            AssertBarTopmost();
+        }, DispatcherPriority.Background);
+    }
+
+    private void ShowRecordingContextMenu(MouseButtonEventArgs e)
+    {
+        if (_isEncoding)
+            return;
+        if (OwnerWinFormsForm is not RecordingForm form || form.IsDisposed)
+            return;
+
+        var wpf = PointToScreen(e.GetPosition(this));
+        form.ShowEmptyAreaContextMenuAtScreen(new System.Drawing.Point(
+            (int)Math.Round(wpf.X),
+            (int)Math.Round(wpf.Y)));
     }
 
     private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
@@ -296,7 +328,7 @@ public sealed partial class RecordingControlBarWindow
         PrimaryBtn.Visibility = Visibility.Visible;
         PrimaryBtn.IsHitTestVisible = show;
         PrimaryText.Visibility = mini ? Visibility.Collapsed : Visibility.Visible;
-        PrimaryIcon.Margin = mini ? new Thickness(0) : new Thickness(0, 0, 8, 0);
+        ApplyPrimaryIconLayout(mini);
 
         double w = !show ? 0 : mini ? MiniButtonSize : FullPrimaryWidth;
         double h = mini ? MiniButtonSize : FullPrimaryHeight;
@@ -322,10 +354,11 @@ public sealed partial class RecordingControlBarWindow
         StopBtn.Visibility = Visibility.Visible;
         StopBtn.IsHitTestVisible = show;
         StopBtn.Height = h;
-        StopBtn.CornerRadius = new CornerRadius(mini ? 8 : 10);
+        StopBtn.CornerRadius = new CornerRadius(mini ? 6 : 10);
         StopBtn.Margin = w <= 0 ? new Thickness(0) : new Thickness(mini ? 4 : 8, 0, 0, 0);
-        StopGlyph.Width = mini ? 14 : 18;
-        StopGlyph.Height = mini ? 14 : 18;
+        StopGlyph.Width = mini ? 10 : 18;
+        StopGlyph.Height = mini ? 10 : 18;
+        StopGlyph.CornerRadius = new CornerRadius(mini ? 2 : 3.5);
         if (setSize)
         {
             StopBtn.Width = w;
@@ -341,10 +374,57 @@ public sealed partial class RecordingControlBarWindow
         double w = show ? (mini ? MiniModeButtonWidth : FullModeButtonWidth) : 0;
         ModeBtn.Height = mini ? MiniButtonSize : 36;
         ModeBtn.Margin = w <= 0 ? new Thickness(0) : new Thickness(0, 0, 2, 0);
+        ApplyModeChevronMetrics(mini);
         if (setSize)
         {
             ModeBtn.Width = w;
             ModeBtn.Opacity = show ? 1 : 0;
+        }
+    }
+
+    private void ApplyModeChevronMetrics(bool mini)
+    {
+        if (mini)
+        {
+            // Match the timer cap-height (~15px) instead of filling the 28px well.
+            ModeChevron.Width = 14;
+            ModeChevron.Height = 11;
+            ModeChevron.StrokeThickness = 1.7;
+            ModeChevron.Margin = new Thickness(0, 1.5, 0, 0);
+        }
+        else
+        {
+            ModeChevron.Width = 28;
+            ModeChevron.Height = 24;
+            ModeChevron.StrokeThickness = 2.2;
+            ModeChevron.Margin = new Thickness(0);
+        }
+    }
+
+    private void ApplyPrimaryIconLayout(bool mini)
+    {
+        bool playGlyph = !_isRecording || _isPaused;
+        double icon = mini
+            ? (playGlyph ? 22 : 16)
+            : 20;
+        PrimaryIcon.Width = icon;
+        PrimaryIcon.Height = icon;
+        if (mini)
+        {
+            // Translate, not Margin: a left margin is absorbed by the centered
+            // StackPanel and only shifts the glyph by half. Play triangles also
+            // need a true optical nudge toward the tip.
+            PrimaryIcon.Margin = new Thickness(0);
+            PrimaryIcon.RenderTransform = playGlyph
+                ? new TranslateTransform(2.0, -0.5)
+                : Transform.Identity;
+        }
+        else
+        {
+            PrimaryIcon.RenderTransform = playGlyph
+                ? new TranslateTransform(1.2, 0)
+                : Transform.Identity;
+            PrimaryIcon.Margin = new Thickness(0, 0, 8, 0);
         }
     }
 
@@ -371,7 +451,14 @@ public sealed partial class RecordingControlBarWindow
         OuterShell.Background = Theme.Brush(wash);
         EdgeRing.Background = Theme.Brush(Color.FromArgb(
             _isPaused ? (byte)70 : (byte)160, _accent.R, _accent.G, _accent.B));
-        MiniShineRing.Stroke = Theme.Brush(Color.FromArgb(230, 255, 255, 255));
+        MiniShineRing.Stroke = Theme.Brush(MiniShineStrokeColor());
+    }
+
+    private Color MiniShineStrokeColor()
+    {
+        if (_isPaused)
+            return Color.FromArgb(190, 210, 215, 222);
+        return Color.FromArgb(150, _accent.R, _accent.G, _accent.B);
     }
 
     private void AnimateMiniSlide()
@@ -438,12 +525,12 @@ public sealed partial class RecordingControlBarWindow
         if (UI.Motion.Disabled || !_isMini || !_isRecording) return;
 
         MiniShineRing.Visibility = Visibility.Visible;
-        MiniShineRing.Stroke = Theme.Brush(Color.FromArgb(230, 255, 255, 255));
+        MiniShineRing.Stroke = Theme.Brush(MiniShineStrokeColor());
         var travel = new DoubleAnimation
         {
             From = 0,
-            To = 100,
-            Duration = TimeSpan.FromSeconds(2.2),
+            To = 158,
+            Duration = TimeSpan.FromMilliseconds(2600),
             RepeatBehavior = RepeatBehavior.Forever
         };
         MiniShineRing.BeginAnimation(Shape.StrokeDashOffsetProperty, travel);

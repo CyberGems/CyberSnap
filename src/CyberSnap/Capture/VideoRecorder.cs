@@ -46,7 +46,10 @@ public sealed class VideoRecorder : IDisposable
     private int _droppedFrameCount;
     private DateTime _startTime;
     private TimeSpan _recordedDuration = TimeSpan.Zero;
-    private bool _isPaused;
+    private volatile bool _isPaused;
+    private volatile bool _stdinBroken;
+    private long _pausedTicksTotal;
+    private long _pauseStartedTicks;
     private bool _disposed;
     private readonly object _pauseLock = new();
     private int _initialCaptureDelayMs = DefaultInitialCaptureDelayMs;
@@ -236,6 +239,7 @@ public sealed class VideoRecorder : IDisposable
                 _desktopWriter = new WaveFileWriter(_desktopWavPath, _desktopCapture.WaveFormat);
                 _desktopCapture.DataAvailable += (s, e) =>
                 {
+                    if (_isPaused) return;
                     try { _desktopWriter?.Write(e.Buffer, 0, e.BytesRecorded); } catch { }
                 };
                 _desktopCapture.StartRecording();
@@ -257,6 +261,7 @@ public sealed class VideoRecorder : IDisposable
                 _micWriter = new WaveFileWriter(_micWavPath, _micCapture.WaveFormat);
                 _micCapture.DataAvailable += (s, e) =>
                 {
+                    if (_isPaused) return;
                     try { _micWriter?.Write(e.Buffer, 0, e.BytesRecorded); } catch { }
                 };
                 _micCapture.StartRecording();
@@ -277,18 +282,41 @@ public sealed class VideoRecorder : IDisposable
         return 0;
     }
 
-    public void Pause()
-    {
-        lock (_pauseLock) _isPaused = true;
-    }
+    public void Pause() => SetPausedState(true);
 
-    public void Resume()
+    public void Resume() => SetPausedState(false);
+
+    private void SetPausedState(bool paused)
     {
         lock (_pauseLock)
         {
+            if (paused)
+            {
+                if (_isPaused) return;
+                _isPaused = true;
+                _pauseStartedTicks = Stopwatch.GetTimestamp();
+                return;
+            }
+
+            if (_isPaused && _pauseStartedTicks != 0)
+                _pausedTicksTotal += Stopwatch.GetTimestamp() - _pauseStartedTicks;
+            _pauseStartedTicks = 0;
             _isPaused = false;
             Monitor.PulseAll(_pauseLock);
         }
+    }
+
+    private TimeSpan GetActiveElapsed(long startTicks)
+    {
+        long pausedTicks = Interlocked.Read(ref _pausedTicksTotal);
+        long pauseStart = Interlocked.Read(ref _pauseStartedTicks);
+        if (_isPaused && pauseStart != 0)
+            pausedTicks += Stopwatch.GetTimestamp() - pauseStart;
+
+        long endTicks = Stopwatch.GetTimestamp() - pausedTicks;
+        if (endTicks < startTicks)
+            endTicks = startTicks;
+        return Stopwatch.GetElapsedTime(startTicks, endTicks);
     }
 
     private void CaptureLoop()
@@ -307,23 +335,20 @@ public sealed class VideoRecorder : IDisposable
         }
 
         long activeStartTicks = Stopwatch.GetTimestamp();
-        while (!ct.IsCancellationRequested)
+        while (!ct.IsCancellationRequested && !_stdinBroken)
         {
-            var activeElapsed = Stopwatch.GetElapsedTime(activeStartTicks);
+            var activeElapsed = GetActiveElapsed(activeStartTicks);
             if (activeElapsed.TotalMilliseconds >= _maxDurationMs)
                 break;
 
-            // Pause support
-            lock (_pauseLock)
-            {
-                while (_isPaused && !ct.IsCancellationRequested)
-                    Monitor.Wait(_pauseLock, 100);
-            }
-            if (ct.IsCancellationRequested) break;
+            if (!WaitWhilePaused(ct))
+                break;
 
             WaitForNextFrameSlot(activeStartTicks, frameIntervalTicks, ct);
-            if (ct.IsCancellationRequested)
+            if (ct.IsCancellationRequested || _stdinBroken)
                 break;
+            if (_isPaused)
+                continue;
 
             bool capturedFrame = false;
             try
@@ -342,31 +367,54 @@ public sealed class VideoRecorder : IDisposable
                 Interlocked.Increment(ref _capturedFrameCount);
             }
             catch (OperationCanceledException) { break; }
+            catch (IOException)
+            {
+                _stdinBroken = true;
+                break;
+            }
             catch
             {
                 Interlocked.Increment(ref _droppedFrameCount);
             }
 
+            if (_stdinBroken)
+                break;
             if (!capturedFrame && lastFrameBuffer == null)
                 continue;
 
-            int targetFrameCount = GetExpectedFrameCount(Stopwatch.GetElapsedTime(activeStartTicks), _fps);
+            int targetFrameCount = GetExpectedFrameCount(GetActiveElapsed(activeStartTicks), _fps);
             DuplicateLastFrameUntil(lastFrameBuffer, lastFrameByteCount, targetFrameCount);
         }
 
-        _recordedDuration = Stopwatch.GetElapsedTime(activeStartTicks);
-        if (lastFrameBuffer != null && lastFrameByteCount > 0)
+        _recordedDuration = GetActiveElapsed(activeStartTicks);
+        if (!_stdinBroken && lastFrameBuffer != null && lastFrameByteCount > 0)
         {
             int targetFrameCount = GetExpectedFrameCount(_recordedDuration, _fps);
             DuplicateLastFrameUntil(lastFrameBuffer, lastFrameByteCount, targetFrameCount);
         }
     }
 
+    /// <summary>
+    /// Freeze the capture clock while paused so we do not duplicate the last
+    /// frame (or keep writing audio) for the pause duration.
+    /// </summary>
+    private bool WaitWhilePaused(CancellationToken ct)
+    {
+        lock (_pauseLock)
+        {
+            while (_isPaused && !ct.IsCancellationRequested)
+                Monitor.Wait(_pauseLock, 100);
+            return !ct.IsCancellationRequested;
+        }
+    }
+
     private void WaitForNextFrameSlot(long activeStartTicks, double frameIntervalTicks, CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested)
+        while (!ct.IsCancellationRequested && !_isPaused)
         {
-            long nextDueTicks = activeStartTicks + (long)Math.Round(_frameCount * frameIntervalTicks);
+            long nextDueTicks = activeStartTicks
+                + Interlocked.Read(ref _pausedTicksTotal)
+                + (long)Math.Round(_frameCount * frameIntervalTicks);
             long nowTicks = Stopwatch.GetTimestamp();
             long remainingTicks = nextDueTicks - nowTicks;
             if (remainingTicks <= 0)
@@ -389,8 +437,9 @@ public sealed class VideoRecorder : IDisposable
     {
         _cts.Cancel();
         try { _delayedAudioStartThread?.Join(5_000); } catch { }
-        // Unpause if paused so capture thread can exit
-        lock (_pauseLock) { _isPaused = false; Monitor.PulseAll(_pauseLock); }
+        // End pause (and fold it into the active clock) so the capture thread can exit
+        // without dumping freeze-frames for the time spent paused.
+        SetPausedState(false);
         _captureThread?.Join(10_000);
 
         // Stop audio capture
@@ -649,7 +698,7 @@ public sealed class VideoRecorder : IDisposable
     {
         _cts.Cancel();
         try { _delayedAudioStartThread?.Join(3_000); } catch { }
-        lock (_pauseLock) { _isPaused = false; Monitor.PulseAll(_pauseLock); }
+        SetPausedState(false);
         _captureThread?.Join(3000);
         StopAudioCapture();
         try { _ffmpegStdin?.Close(); } catch { }
@@ -664,7 +713,7 @@ public sealed class VideoRecorder : IDisposable
         if (_disposed) return;
         _disposed = true;
         _cts.Cancel();
-        lock (_pauseLock) { _isPaused = false; Monitor.PulseAll(_pauseLock); }
+        SetPausedState(false);
         try { _delayedAudioStartThread?.Join(3_000); } catch { }
         StopAudioCapture();
         try { _ffmpegBufferedStdin?.Dispose(); } catch { }
@@ -692,18 +741,35 @@ public sealed class VideoRecorder : IDisposable
 
     private void WriteFrame(byte[] frame, int byteCount)
     {
-        _ffmpegBufferedStdin?.Write(frame, 0, byteCount);
-        Interlocked.Increment(ref _frameCount);
+        if (_stdinBroken || byteCount <= 0)
+            return;
+
+        try
+        {
+            _ffmpegBufferedStdin?.Write(frame, 0, byteCount);
+            Interlocked.Increment(ref _frameCount);
+        }
+        catch (IOException)
+        {
+            _stdinBroken = true;
+        }
+        catch (ObjectDisposedException)
+        {
+            _stdinBroken = true;
+        }
     }
 
     private void DuplicateLastFrameUntil(byte[]? lastFrameBuffer, int byteCount, int targetFrameCount)
     {
-        if (lastFrameBuffer == null || byteCount <= 0)
+        if (lastFrameBuffer == null || byteCount <= 0 || _stdinBroken)
             return;
 
-        while (_frameCount < targetFrameCount)
+        while (_frameCount < targetFrameCount && !_stdinBroken && !_cts.IsCancellationRequested)
         {
+            int before = _frameCount;
             WriteFrame(lastFrameBuffer, byteCount);
+            if (_frameCount == before)
+                break;
             Interlocked.Increment(ref _duplicatedFrameCount);
         }
     }

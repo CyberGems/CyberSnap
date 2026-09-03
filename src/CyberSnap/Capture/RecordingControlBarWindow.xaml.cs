@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 using CyberSnap.Helpers;
 using CyberSnap.Native;
@@ -73,7 +74,6 @@ public sealed partial class RecordingControlBarWindow : Window
     // ── Timers ──
     private readonly DispatcherTimer _pulseTimer;
     private readonly DispatcherTimer _storageTimer;
-    private Storyboard? _shineStoryboard;
     private long _lastUsedBytes = -1;
     private long _lastFreeBytes = -1;
 
@@ -450,6 +450,22 @@ public sealed partial class RecordingControlBarWindow : Window
         _isBarDragging = false;
         if (IsMouseCaptured)
             ReleaseMouseCapture();
+        AssertBarTopmost();
+    }
+
+    /// <summary>Keep the bar above the fullscreen overlay without ShowWindow flash.</summary>
+    internal void AssertBarTopmost()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(AssertBarTopmost);
+            return;
+        }
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+        User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, 0, 0, 0, 0,
+            User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE);
     }
 
     private bool TryGetBarDragOrigin(out System.Drawing.Point cursor, out System.Drawing.Point window)
@@ -764,6 +780,7 @@ public sealed partial class RecordingControlBarWindow : Window
         // Use a dark foreground when the fill is a light silver/cyan, keeping icon and label readable.
         PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(primaryContentColor), 40);
         PrimaryIcon.Visibility = Visibility.Visible;
+        ApplyPrimaryIconLayout(_isMini);
         UpdatePrimaryTooltip();
     }
 
@@ -1017,7 +1034,7 @@ public sealed partial class RecordingControlBarWindow : Window
             return null;
         try
         {
-            var root = Path.GetPathRoot(Path.GetFullPath(path));
+            var root = System.IO.Path.GetPathRoot(System.IO.Path.GetFullPath(path));
             return string.IsNullOrEmpty(root) ? null : new DriveInfo(root);
         }
         catch
@@ -1067,10 +1084,11 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void SetupShineAnimation()
     {
-        // The shine is a TranslateTransform sweeping from left to right.
-        // The gradient on StartShine is the visual; the transform animates its position.
-        // The Border is wider than the button so it slides across cleanly.
+        // StartShine is a rim comet (same language as the image-capture confirm dock).
     }
+
+    // Confirm dock: one lap ≈ FrameInterval/2200 * 0.85 → ~2.6s. Same comet, not a face sweep.
+    private const int ConfirmDockShineLapMs = 2600;
 
     private void StartShineAnimation()
     {
@@ -1078,42 +1096,22 @@ public sealed partial class RecordingControlBarWindow : Window
 
         StopShineAnimation();
 
-        StartShineTransform.X = -90;
-        StartShine.Opacity = 0;
-
-        var slide = new DoubleAnimationUsingKeyFrames
+        StartShine.Stroke = Theme.Brush(Color.FromArgb(150, _accent.R, _accent.G, _accent.B));
+        StartShine.Visibility = Visibility.Visible;
+        var travel = new DoubleAnimation
         {
-            Duration = TimeSpan.FromMilliseconds(2800),
+            From = 0,
+            To = 188,
+            Duration = TimeSpan.FromMilliseconds(ConfirmDockShineLapMs),
             RepeatBehavior = RepeatBehavior.Forever
         };
-        slide.KeyFrames.Add(new LinearDoubleKeyFrame(-90, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-        slide.KeyFrames.Add(new LinearDoubleKeyFrame(150, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1200))));
-        slide.KeyFrames.Add(new DiscreteDoubleKeyFrame(-90, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1201))));
-        slide.KeyFrames.Add(new DiscreteDoubleKeyFrame(-90, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2800))));
-
-        var fade = new DoubleAnimationUsingKeyFrames
-        {
-            Duration = TimeSpan.FromMilliseconds(2800),
-            RepeatBehavior = RepeatBehavior.Forever
-        };
-        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0.95, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(160))));
-        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0.85, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1000))));
-        fade.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1200))));
-        fade.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2800))));
-
-        StartShineTransform.BeginAnimation(TranslateTransform.XProperty, slide);
-        StartShine.BeginAnimation(UIElement.OpacityProperty, fade);
+        StartShine.BeginAnimation(Shape.StrokeDashOffsetProperty, travel);
     }
 
     private void StopShineAnimation()
     {
-        _shineStoryboard?.Stop();
-        _shineStoryboard = null;
-        StartShineTransform.BeginAnimation(TranslateTransform.XProperty, null);
-        StartShine.BeginAnimation(UIElement.OpacityProperty, null);
-        StartShine.Opacity = 0;
-        StartShineTransform.X = -90;
+        StartShine.BeginAnimation(Shape.StrokeDashOffsetProperty, null);
+        StartShine.Visibility = Visibility.Collapsed;
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1197,6 +1195,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
         // Stop
         StopBtn.ToolTip = LocalizationService.Translate("Recording stop tooltip");
+        ToolTipService.SetShowOnDisabled(StopBtn, true);
 
         StorageText.ToolTip = LocalizationService.Translate("Recording storage tooltip");
         _lastBadgeTipKey = null;
