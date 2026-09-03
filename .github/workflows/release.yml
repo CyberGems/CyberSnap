@@ -28,6 +28,10 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore CyberSnap.sln
 
+      - name: Validate Localization
+        shell: pwsh
+        run: ./scripts/Test-Localization.ps1 -Strict
+
       - name: Build Solution
         run: dotnet build CyberSnap.sln --configuration Release --no-restore
 
