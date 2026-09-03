@@ -137,7 +137,7 @@ public sealed partial class AnnotationCanvas
         int py = pos.Y + 20;
         if (px + dstSize + 6 > _baseBitmap.Width) px = pos.X - 20 - dstSize;
         if (py + dstSize + 6 > _baseBitmap.Height) py = pos.Y - 20 - dstSize;
-        return new Rectangle(px - 6, py - 6, dstSize + 12, dstSize + 12);
+        return new Rectangle(px - 2, py - 2, dstSize + 4, dstSize + 4);
     }
 
     private void PaintMagnifier(Graphics g, Point pos, Rectangle srcRect, float opacity = 1f)

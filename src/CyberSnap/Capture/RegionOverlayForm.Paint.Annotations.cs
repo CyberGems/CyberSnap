@@ -498,7 +498,7 @@ public sealed partial class RegionOverlayForm
         int py = mg.Pos.Y + 20;
         if (px + dstSize + 6 > ClientSize.Width) px = mg.Pos.X - 20 - dstSize;
         if (py + dstSize + 6 > ClientSize.Height) py = mg.Pos.Y - 20 - dstSize;
-        return new Rectangle(px - 6, py - 6, dstSize + 12, dstSize + 12);
+        return new Rectangle(px - 2, py - 2, dstSize + 4, dstSize + 4);
     }
 
     private static Rectangle GetMagnifierPaintBounds(Point pos, Rectangle srcRect, Size clientSize)
