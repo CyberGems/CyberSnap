@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.Drawing.Text;
 using CyberSnap.Capture;
 using CyberSnap.Helpers;
+using CyberSnap.Models;
 
 namespace CyberSnap.UI.Controls;
 
@@ -166,7 +167,8 @@ public sealed partial class AnnotationCanvas
             g.SetClip(clipPath);
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
             g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.DrawImage(_baseBitmap, dstRect, srcRect, GraphicsUnit.Pixel);
+            using (var sample = BuildMagnifierSample(srcRect))
+                g.DrawImage(sample, dstRect, new Rectangle(Point.Empty, sample.Size), GraphicsUnit.Pixel);
 
             int ccx = px + dstSize / 2, ccy = py + dstSize / 2;
             var crossPen = SketchRenderer.GetRoundCapPen(Color.FromArgb((int)(180 * opacity), UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 1f);
@@ -182,6 +184,38 @@ public sealed partial class AnnotationCanvas
         {
             g.Restore(state);
         }
+    }
+
+    /// <summary>Builds the small source tile seen through a lens, including committed
+    /// annotations. Magnifier annotations are excluded to prevent recursive lenses.</summary>
+    private Bitmap BuildMagnifierSample(Rectangle srcRect)
+    {
+        var sample = new Bitmap(srcRect.Width, srcRect.Height, PixelFormat.Format32bppPArgb);
+        using var sg = Graphics.FromImage(sample);
+        sg.CompositingMode = CompositingMode.SourceCopy;
+        sg.DrawImage(_baseBitmap, new Rectangle(Point.Empty, sample.Size), srcRect, GraphicsUnit.Pixel);
+        sg.CompositingMode = CompositingMode.SourceOver;
+        sg.TranslateTransform(-srcRect.X, -srcRect.Y);
+
+        float previousViewScale = _annotationViewScale;
+        _annotationViewScale = 1f;
+        try
+        {
+            for (int i = 0; i < _annotations.Count; i++)
+            {
+                var annotation = _annotations[i];
+                if (i == _renderSkipAnnotationIndex || annotation is MagnifierAnnotation
+                    || !GetAnnotationVisualBounds(annotation).IntersectsWith(srcRect))
+                    continue;
+                RenderAnnotation(sg, annotation);
+            }
+        }
+        finally
+        {
+            _annotationViewScale = previousViewScale;
+        }
+
+        return sample;
     }
 
     // ── Emoji ────────────────────────────────────────────────────────────────

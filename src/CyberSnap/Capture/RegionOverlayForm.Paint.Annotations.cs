@@ -552,7 +552,8 @@ public sealed partial class RegionOverlayForm
             g.SetClip(clipPath);
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-            g.DrawImage(_screenshot, dstRect, srcRect, GraphicsUnit.Pixel);
+            using (var sample = BuildMagnifierAnnotationSample(srcRect))
+                g.DrawImage(sample, dstRect, new Rectangle(Point.Empty, sample.Size), GraphicsUnit.Pixel);
 
             int ccx = px + dstSize / 2, ccy = py + dstSize / 2;
             var crossPen = SketchRenderer.GetRoundCapPen(Color.FromArgb((int)(180 * opacity), UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 1f);
@@ -567,6 +568,29 @@ public sealed partial class RegionOverlayForm
         {
             g.Restore(state);
         }
+    }
+
+    /// <summary>Builds the small source tile seen through an annotation magnifier,
+    /// including existing shapes while excluding other magnifiers to avoid recursion.</summary>
+    private Bitmap BuildMagnifierAnnotationSample(Rectangle srcRect)
+    {
+        var sample = new Bitmap(srcRect.Width, srcRect.Height, PixelFormat.Format32bppPArgb);
+        using var sg = Graphics.FromImage(sample);
+        sg.CompositingMode = CompositingMode.SourceCopy;
+        sg.DrawImage(_screenshot, new Rectangle(Point.Empty, sample.Size), srcRect, GraphicsUnit.Pixel);
+        sg.CompositingMode = CompositingMode.SourceOver;
+        sg.TranslateTransform(-srcRect.X, -srcRect.Y);
+
+        for (int i = 0; i < _undoStack.Count; i++)
+        {
+            var annotation = _undoStack[i];
+            if (i == _renderSkipIndex || annotation is MagnifierAnnotation
+                || !GetAnnotationBounds(annotation).IntersectsWith(srcRect))
+                continue;
+            RenderAnnotationTo(sg, annotation);
+        }
+
+        return sample;
     }
 
     [ThreadStatic] private static System.Drawing.Imaging.ImageAttributes? _emojiOpacityAttr;

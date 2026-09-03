@@ -1025,7 +1025,7 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        const float offset = 3f; // offset outside bounds
+        float offset = isSelected ? AnnotationSelectionHandleGapPx : 3f;
         var rect = new RectangleF(
             bounds.X - offset,
             bounds.Y - offset,
