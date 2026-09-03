@@ -67,6 +67,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private PointF _pan; // pixel offset of image-space origin relative to control client
     private bool _zoomInteracting;       // user is mid zoom gesture: draw fast, refine on settle
     private System.Windows.Forms.Timer? _zoomSettleTimer;
+    private System.Windows.Forms.Timer? _deferredZoomStateTimer;
     private bool _viewFitsWindow = true; // image auto-fits the canvas until the user zooms
     private bool _userPanned;            // user has manually dragged the image
     private bool _welcomeDismissed;      // welcome overlay hidden after first meaningful interaction
@@ -1509,6 +1510,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     public void ZoomReset()
     {
+        FlushDeferredZoomState();
         _zoom = 1.0;
         _viewFitsWindow = false;
         _userPanned = false;
@@ -1520,6 +1522,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     public void ZoomFit()
     {
+        FlushDeferredZoomState();
         if (ClientSize.Width <= 0 || ClientSize.Height <= 0) return;
         double sx = (double)ClientSize.Width / _baseBitmap.Width;
         double sy = (double)ClientSize.Height / _baseBitmap.Height;
@@ -1541,9 +1544,18 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     public void ZoomTo(double zoom, Point screenAnchor)
     {
+        FlushDeferredZoomState();
+        ZoomToCore(zoom, screenAnchor, forceDraft: false, notifyState: true);
+    }
+
+    private void ZoomToCore(double zoom, Point screenAnchor, bool forceDraft, bool notifyState)
+    {
         var oldZoom = _zoom;
         var newZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
         if (Math.Abs(newZoom - oldZoom) < 1e-6) return;
+
+        if (IsDefaultBlank)
+            DismissWelcomeOverlay();
 
         var imageAnchor = ScreenToImage(screenAnchor);
         _zoom = newZoom;
@@ -1552,10 +1564,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _pan = new PointF(
             screenAnchor.X - (float)(imageAnchor.X * _zoom),
             screenAnchor.Y - (float)(imageAnchor.Y * _zoom));
-        BeginZoomInteraction();
+        BeginZoomInteraction(forceDraft);
         NotifyScrollbarActivity();
         Invalidate();
-        OnStateChanged();
+        if (notifyState)
+            OnStateChanged();
     }
 
     /// <summary>
@@ -1564,12 +1577,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// pre-scaled cache on every wheel tick. A one-shot timer clears the flag shortly
     /// after the last zoom step and forces one final high-quality repaint.
     /// </summary>
-    private void BeginZoomInteraction()
+    private void BeginZoomInteraction(bool forceDraft = false)
     {
         // Small images rebuild the crisp cache cheaply enough every frame; engaging the
         // draft path would only add a perceptible blur and a snap back to sharp. Reserve
         // it for large bitmaps where the per-frame bicubic rescale is the actual cost.
-        if ((long)_baseBitmap.Width * _baseBitmap.Height < DraftZoomPixelThreshold)
+        if (!forceDraft && (long)_baseBitmap.Width * _baseBitmap.Height < DraftZoomPixelThreshold)
             return;
 
         _zoomInteracting = true;
@@ -1587,8 +1600,48 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _zoomSettleTimer.Start();
     }
 
+    /// <summary>
+    /// Applies wheel zoom immediately. Delta is preserved for high-resolution wheels and
+    /// touchpads, while a smaller per-notch factor provides finer framing than the old 15% jump.
+    /// Expensive listeners are refreshed once the wheel burst settles instead of on every tick.
+    /// </summary>
+    private void ApplyWheelZoom(int delta, Point screenAnchor)
+    {
+        if (delta == 0) return;
+
+        double targetZoom = _zoom * Math.Pow(1.08, delta / 120.0);
+        ZoomToCore(targetZoom, screenAnchor, forceDraft: true, notifyState: false);
+
+        ScheduleDeferredZoomState();
+    }
+
+    private void ScheduleDeferredZoomState()
+    {
+        if (_deferredZoomStateTimer is null)
+        {
+            _deferredZoomStateTimer = new System.Windows.Forms.Timer { Interval = 90 };
+            _deferredZoomStateTimer.Tick += (_, _) => FlushDeferredZoomState();
+        }
+        _deferredZoomStateTimer.Stop();
+        _deferredZoomStateTimer.Start();
+    }
+
+    private void FlushDeferredZoomState()
+    {
+        if (_deferredZoomStateTimer?.Enabled != true) return;
+        _deferredZoomStateTimer.Stop();
+        OnStateChanged();
+    }
+
     public void ZoomToPercent(int percent)
-        => ZoomTo(percent / 100.0, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
+    {
+        ZoomToCore(
+            percent / 100.0,
+            new Point(ClientSize.Width / 2, ClientSize.Height / 2),
+            forceDraft: false,
+            notifyState: false);
+        ScheduleDeferredZoomState();
+    }
 
     private void CenterImage()
     {
@@ -1939,6 +1992,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _bannerTimer?.Dispose();
             _zoomSettleTimer?.Stop();
             _zoomSettleTimer?.Dispose();
+            _deferredZoomStateTimer?.Stop();
+            _deferredZoomStateTimer?.Dispose();
             DiscardPendingHistory();
             _historyRevealTimer?.Dispose();
             _historyRevealTimer = null;

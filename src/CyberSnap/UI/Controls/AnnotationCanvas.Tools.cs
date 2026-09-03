@@ -1700,8 +1700,7 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
-        const double step = 1.15;
-        ZoomBy(e.Delta > 0 ? step : 1.0 / step, e.Location);
+        ApplyWheelZoom(e.Delta, e.Location);
     }
 
     protected override bool IsInputKey(Keys keyData) => true;
