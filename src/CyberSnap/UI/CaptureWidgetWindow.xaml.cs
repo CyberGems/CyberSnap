@@ -37,7 +37,9 @@ public partial class CaptureWidgetWindow : Window
 
     // Hide → launch → re-show lifecycle (capture overlay or standalone tool)
     private DispatcherTimer? _hideLaunchTimer;
+    private readonly DispatcherTimer _sessionRestorePollTimer;
     private bool _awaitingSessionRestore;
+    private bool _sessionRestoreInProgress;
 
     // Layout constants
     private const double PanelWidth = 196;
@@ -83,6 +85,16 @@ public partial class CaptureWidgetWindow : Window
         {
             _postDragGraceTimer.Stop();
             _suppressHoverExpand = false;
+        };
+
+        // The idle event is the fast path. Polling is a safety net for a narrow race where
+        // the session can become idle while the widget's restore callback is being rewired.
+        _sessionRestorePollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        _sessionRestorePollTimer.Tick += (_, _) =>
+        {
+            if (!_awaitingSessionRestore) return;
+            if (System.Windows.Application.Current is App app && !app.IsSessionBusy())
+                FinishSessionRestore();
         };
 
         Loaded += OnLoaded;
@@ -1540,7 +1552,18 @@ public partial class CaptureWidgetWindow : Window
 
             var app = (App)System.Windows.Application.Current;
             BeginSessionRestore(app);
-            launch(app);
+            try
+            {
+                launch(app);
+            }
+            catch (Exception ex)
+            {
+                // The widget is already hidden at this point. Always restore it even when a
+                // capture entry point fails before its normal cleanup path is established.
+                AppDiagnostics.LogError("widget.capture-launch", ex);
+                FinishSessionRestore();
+                return;
+            }
 
             // If the launch did not open a session (e.g. busy gate rejected it), re-show now.
             if (!app.IsSessionBusy())
@@ -1561,11 +1584,14 @@ public partial class CaptureWidgetWindow : Window
         CancelSessionRestore();
         _awaitingSessionRestore = true;
         app.SessionBecameIdle += OnAppSessionBecameIdleAction;
+        _sessionRestorePollTimer.Start();
     }
 
     private void CancelSessionRestore()
     {
         _awaitingSessionRestore = false;
+        _sessionRestoreInProgress = false;
+        _sessionRestorePollTimer.Stop();
         if (System.Windows.Application.Current is App app)
             app.SessionBecameIdle -= OnAppSessionBecameIdleAction;
     }
@@ -1582,25 +1608,51 @@ public partial class CaptureWidgetWindow : Window
 
     private void FinishSessionRestore()
     {
-        if (!_awaitingSessionRestore) return;
-        CancelSessionRestore();
+        if (!_awaitingSessionRestore || _sessionRestoreInProgress) return;
+        _sessionRestoreInProgress = true;
 
         _hoverDelayTimer.Stop();
         _collapseTimer.Stop();
 
-        // Still Hidden + Opacity 0: lock peek geometry before the first composed frame.
-        CollapseImmediately();
-        Show();
-        // After Show, DPI/work-area math is definitive — snap again, then reveal on the
-        // next render pass so layout has flushed (avoids a one-frame expanded ghost).
-        CollapseImmediately();
-        BeginPostDragGrace(); // cursor may rest on the peek; don't auto-expand for a beat
+        try
+        {
+            // Still Hidden + Opacity 0: lock peek geometry before the first composed frame.
+            CollapseImmediately();
+            if (!IsVisible)
+                Show();
+            // After Show, DPI/work-area math is definitive — snap again, then reveal on the
+            // next render pass so layout has flushed (avoids a one-frame expanded ghost).
+            CollapseImmediately();
+            BeginPostDragGrace(); // cursor may rest on the peek; don't auto-expand for a beat
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("widget.restore-prepare", ex.Message, ex);
+        }
 
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (!IsLoaded) return;
-            PositionWindow();
-            Opacity = 1;
+            try
+            {
+                if (!IsVisible)
+                    Show();
+                if (IsLoaded)
+                    PositionWindow();
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("widget.restore-position", ex.Message, ex);
+            }
+            finally
+            {
+                // Visibility is more important than perfect placement. Never let a transient
+                // DPI/work-area failure leave a live widget permanently transparent.
+                Opacity = 1;
+                if (IsVisible)
+                    CancelSessionRestore();
+                else
+                    _sessionRestoreInProgress = false; // polling will retry
+            }
         }), DispatcherPriority.Render);
     }
 
