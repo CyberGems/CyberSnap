@@ -21,7 +21,7 @@ public sealed partial class RecordingControlBarWindow
     private const double MiniCornerRadius = 18;
     private const double MiniModeButtonWidth = 32;
     private const double FullModeButtonWidth = 40;
-    private const double FullPrimaryWidth = 128;
+    private const double FullPrimaryWidth = 40;
     private const double FullPrimaryHeight = 40;
     private const int MiniHoverExpandMs = 140;
     private const int MiniHoverCollapseMs = 110;
@@ -246,6 +246,7 @@ public sealed partial class RecordingControlBarWindow
         _suppressMiniHover = mini;
         _miniHoverDelayTimer?.Stop();
         EndStopHold();
+        StopPrimaryScaleAnimation(reset: true);
 
         ApplyModeChrome(setSlideSizes: true);
         UpdatePrimaryButtonVisual();
@@ -266,11 +267,6 @@ public sealed partial class RecordingControlBarWindow
         else
             StopMiniShine();
 
-        if (_isMini)
-            StopShineAnimation();
-        else if (!_isRecording && !_isEncoding)
-            StartShineAnimation();
-
         UpdateTooltips();
         UpdateModeChevronVisual();
     }
@@ -288,6 +284,8 @@ public sealed partial class RecordingControlBarWindow
         ClampPhysicalPosition();
         UpdateModeChevronVisual();
         UpdateTooltips();
+        if (expanded && !_isRecording && !_isEncoding)
+            PlayReadyPulse(miniPresentation: true);
     }
 
     private void ApplyModeChrome(bool setSlideSizes = true)
@@ -339,7 +337,6 @@ public sealed partial class RecordingControlBarWindow
         bool show = !mini || (slide && (!_isRecording || _supportsPause));
         PrimaryBtn.Visibility = Visibility.Visible;
         PrimaryBtn.IsHitTestVisible = show;
-        PrimaryText.Visibility = mini ? Visibility.Collapsed : Visibility.Visible;
         ApplyPrimaryIconLayout(mini);
 
         double w = !show ? 0 : mini ? MiniButtonSize : FullPrimaryWidth;
@@ -348,13 +345,10 @@ public sealed partial class RecordingControlBarWindow
         PrimaryBtn.Height = h;
         PrimaryBtn.CornerRadius = new CornerRadius(cr);
         PrimaryBtn.Margin = w <= 0 ? new Thickness(0) : new Thickness(mini ? 2 : 4, 0, 0, 0);
-        PrimaryClip.RadiusX = cr;
-        PrimaryClip.RadiusY = cr;
-        PrimaryClip.Rect = new Rect(0, 0, Math.Max(mini ? MiniButtonSize : FullPrimaryWidth, 1), h);
         if (setSize)
         {
             PrimaryBtn.Width = w;
-            PrimaryBtn.Opacity = show ? 1 : 0;
+            PrimaryBtn.Opacity = show ? (PrimaryBtn.IsEnabled ? 1 : 0.45) : 0;
         }
     }
 
@@ -374,7 +368,7 @@ public sealed partial class RecordingControlBarWindow
         if (setSize)
         {
             StopBtn.Width = w;
-            StopBtn.Opacity = show ? 1 : 0;
+            StopBtn.Opacity = show ? (StopBtn.IsEnabled ? 1 : 0.62) : 0;
         }
     }
 
@@ -415,10 +409,16 @@ public sealed partial class RecordingControlBarWindow
 
     private void ApplyPrimaryIconLayout(bool mini)
     {
-        bool playGlyph = !_isRecording || _isPaused;
+        bool playGlyph = _isPaused;
         double icon = mini
             ? (playGlyph ? 22 : 20)
             : 20;
+        double recordIcon = mini ? 21 : 26;
+        double recordDot = mini ? 9 : 11;
+        RecordGlyph.Width = recordIcon;
+        RecordGlyph.Height = recordIcon;
+        RecordDot.Width = recordDot;
+        RecordDot.Height = recordDot;
         PrimaryIcon.Width = icon;
         PrimaryIcon.Height = icon;
         if (mini)
@@ -435,7 +435,7 @@ public sealed partial class RecordingControlBarWindow
             PrimaryIcon.RenderTransform = playGlyph
                 ? new TranslateTransform(1.2, 0)
                 : Transform.Identity;
-            PrimaryIcon.Margin = new Thickness(0, 0, 8, 0);
+            PrimaryIcon.Margin = new Thickness(0);
         }
     }
 

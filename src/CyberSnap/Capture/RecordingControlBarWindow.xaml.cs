@@ -7,7 +7,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using CyberSnap.Helpers;
 using CyberSnap.Native;
@@ -33,26 +32,16 @@ public sealed partial class RecordingControlBarWindow : Window
     public event Action<bool>? SendToTrimmerChanged;
 
     // ── Accent colors ──
-    private static Color DoneAccent =>
-        UiChrome.IsGray
-            ? ToMediaColor(UiChrome.AccentColor)
-            : Color.FromArgb(255, 0xBD, 0x70, 0x11);
-    private static Color DoneAccentHover =>
-        UiChrome.IsGray
-            ? Color.FromArgb(
-                255,
-                (byte)Math.Min(255, UiChrome.AccentColor.R + 28),
-                (byte)Math.Min(255, UiChrome.AccentColor.G + 28),
-                (byte)Math.Min(255, UiChrome.AccentColor.B + 28))
-            : Color.FromArgb(255, 0xD4, 0x82, 0x18);
     private static readonly Color CancelHoverColor = Color.FromArgb(255, 255, 80, 80);
-    private static readonly Color StopRed = Color.FromArgb(255, 229, 72, 77);
+    private static readonly Color StopRed = Color.FromArgb(255, 239, 68, 68);
     private static readonly Color StopRedHot = Color.FromArgb(255, 255, 96, 100);
     private const long LowDiskWarnBytes = 200L * 1024 * 1024;
 
     // ── Bar dimensions (100% DPI baseline, scaled via UiScale.LayoutTransform) ──
-    private const double BarWidth = 668;
+    private const double BarWidth = 580;
     private const double BarHeight = 58;
+    private const int ReadyPulseDurationMs = 520;
+    private const double PrimaryHoverScale = 1.08;
 
     // ── State ──
     private readonly Models.RecordingFormat _format;
@@ -66,6 +55,9 @@ public sealed partial class RecordingControlBarWindow : Window
     private bool _isPaused;
     private bool _isEncoding;
     private TimeSpan _elapsed;
+    private bool _fullReadyPulsePlayed;
+    private bool _miniReadyPulsePlayed;
+    private bool _primaryHoverActive;
 
     // ── Output path (size · free-disk meter; polled at 1 Hz, not the pulse timer) ──
     private readonly string _outputPath;
@@ -169,9 +161,6 @@ public sealed partial class RecordingControlBarWindow : Window
         // ── UI scale ──
         UiScale.ApplyToWindow(this, OuterShell, scaleWindowBounds: false);
 
-        // ── Start button shine animation ──
-        SetupShineAnimation();
-
         // ── Pulse timer for the format-badge live indicator ──
         _pulseTimer = new DispatcherTimer(DispatcherPriority.Render)
         {
@@ -197,11 +186,11 @@ public sealed partial class RecordingControlBarWindow : Window
         // correct per-monitor DPI). SourceInitialized fires before Loaded.
         SourceInitialized += (_, _) => PositionAboveRegion(captureRegion);
 
-        // Start shine when handle is created
+        // Briefly introduce the ready control once the final layout is visible.
         Loaded += (_, _) =>
         {
             if (!UI.Motion.Disabled && !_isRecording && !_isEncoding)
-                StartShineAnimation();
+                PlayReadyPulse(miniPresentation: false);
         };
     }
 
@@ -230,7 +219,7 @@ public sealed partial class RecordingControlBarWindow : Window
         _isPaused = false;
         _isEncoding = false;
         _elapsed = TimeSpan.Zero;
-        StopShineAnimation();
+        StopPrimaryScaleAnimation(reset: true);
         if (!UI.Motion.Disabled)
             _pulseTimer.Start();
         UpdateLayoutVisibility();
@@ -246,7 +235,7 @@ public sealed partial class RecordingControlBarWindow : Window
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(TransitionToEncoding); return; }
         _isEncoding = true;
         _isPaused = false;
-        StopShineAnimation();
+        StopPrimaryScaleAnimation(reset: true);
         _pulseTimer.Stop();
         UpdateLayoutVisibility();
         UpdateFormatBadge();
@@ -604,36 +593,26 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void HookHoverEffects()
     {
-        // ── Primary button (Record / Pause / Resume) hover ──
+        // ── Primary transport: one restrained scale-up per pointer entry ──
         PrimaryBtn.MouseEnter += (_, _) =>
         {
-            if (PrimaryBtn.IsEnabled)
-            {
-                if (_isMini)
-                {
-                    PrimaryBtn.Background = System.Windows.Media.Brushes.Transparent;
-                    UpdatePrimaryIcon(Lighten(GetPrimaryFill(), 28));
-                }
-                else
-                {
-                    PrimaryBtn.Background = Theme.Brush(Lighten(GetPrimaryFill(), 28));
-                }
-            }
+            if (!PrimaryBtn.IsEnabled || _primaryHoverActive) return;
+            _primaryHoverActive = true;
+            AnimatePrimaryScale(PrimaryHoverScale, 100);
         };
         PrimaryBtn.MouseLeave += (_, _) =>
         {
-            if (PrimaryBtn.IsEnabled)
-                UpdatePrimaryButtonVisual();
+            if (!_primaryHoverActive) return;
+            _primaryHoverActive = false;
+            AnimatePrimaryScale(1, 90);
         };
 
-        // ── Stop button hover: reddish wash, glyph stays red (never orange + white) ──
+        // ── Stop button hover: icon brightens without adding a container ──
         StopBtn.MouseEnter += (_, _) =>
         {
             if (!StopBtn.IsEnabled)
                 return;
-            StopBtn.Background = _isMini
-                ? System.Windows.Media.Brushes.Transparent
-                : Theme.Brush(Color.FromArgb(80, StopRed.R, StopRed.G, StopRed.B));
+            StopBtn.Background = System.Windows.Media.Brushes.Transparent;
             StopGlyph.Background = Theme.Brush(StopRedHot);
         };
         StopBtn.MouseLeave += (_, _) =>
@@ -763,79 +742,31 @@ public sealed partial class RecordingControlBarWindow : Window
         ApplyModeChrome();
     }
 
-    // ── Primary button: Record ⇄ Pause ⇄ Resume (icon + label swap, NEVER resizes) ──
+    // ── Primary button: Record ⇄ Pause ⇄ Resume, icon-only with a stable hit target ──
 
     private void UpdatePrimaryButtonVisual()
     {
         bool mini = _isMini && !_isEncoding;
-        string label;
-        string iconId;
+        bool ready = !_isRecording && !_isEncoding;
+        string iconId = _isPaused ? "play" : "pause";
 
-        if (!_isRecording)
-        {
-            // Ready: "Record" with the classic play icon
-            label = LocalizationService.Translate("Record");
-            iconId = "play";
-        }
-        else if (_isPaused)
-        {
-            // Paused: "Resume" with play icon
-            label = LocalizationService.Translate("Resume");
-            iconId = "play";
-        }
-        else
-        {
-            // Recording: "Pause" with pause bars icon
-            label = LocalizationService.Translate("Pause");
-            iconId = "pause";
-        }
-
-        var fill = GetPrimaryFill();
-        PrimaryText.Text = label;
-        PrimaryBtn.Background = mini
-            ? System.Windows.Media.Brushes.Transparent
-            : Theme.Brush(fill);
-        var primaryContentColor = GetButtonTextColor(fill);
-        PrimaryText.Foreground = Theme.Brush(primaryContentColor);
+        PrimaryBtn.Background = System.Windows.Media.Brushes.Transparent;
         PrimaryBtn.Cursor = _isEncoding ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand;
 
-        UpdatePrimaryIcon(mini ? fill : primaryContentColor, iconId);
-        PrimaryIcon.Visibility = Visibility.Visible;
+        var neutral = Theme.TextPrimary;
+        RecordRing.Stroke = Theme.Brush(StopRed);
+        RecordDot.Fill = Theme.Brush(StopRed);
+        RecordGlyph.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
+        PrimaryIcon.Visibility = ready ? Visibility.Collapsed : Visibility.Visible;
+        if (!ready)
+            UpdatePrimaryIcon(neutral, iconId);
         ApplyPrimaryIconLayout(mini);
         UpdatePrimaryTooltip();
     }
 
-    private void UpdatePrimaryIcon(Color color, string? iconId = null)
+    private void UpdatePrimaryIcon(Color color, string iconId)
     {
-        iconId ??= !_isRecording || _isPaused ? "play" : "pause";
         PrimaryIcon.Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(color), 40);
-    }
-
-    /// <summary>
-    /// Ready → format accent. Recording/Pause → Stop's amber. Paused/Resume → green.
-    /// </summary>
-    private Color GetPrimaryFill()
-    {
-        if (!_isRecording)
-            return _accent;
-        if (_isPaused)
-            return Color.FromArgb(255, 22, 163, 116);
-        return DoneAccent;
-    }
-
-    private static Color Lighten(Color color, int amount) =>
-        Color.FromArgb(
-            255,
-            (byte)Math.Min(255, color.R + amount),
-            (byte)Math.Min(255, color.G + amount),
-            (byte)Math.Min(255, color.B + amount));
-
-    private static Color GetButtonTextColor(Color fill)
-    {
-        double luminance = (0.299 * fill.R + 0.587 * fill.G + 0.114 * fill.B) / 255.0;
-        return luminance >= 0.58
-            ? Color.FromRgb(7, 18, 28)
-            : Colors.White;
     }
 
     private void SetPrimaryEnabled(bool enabled)
@@ -844,7 +775,7 @@ public sealed partial class RecordingControlBarWindow : Window
         PrimaryBtn.Opacity = enabled ? 1.0 : 0.45;
     }
 
-    // ── Stop button: always visible; red square icon; disabled in ready phase ──
+    // ── Stop button: neutral while unavailable, red throughout an active recording ──
 
     private void UpdateStopButtonVisual()
     {
@@ -855,13 +786,11 @@ public sealed partial class RecordingControlBarWindow : Window
     private void SetStopEnabled(bool enabled)
     {
         StopBtn.IsEnabled = enabled;
-        StopBtn.Opacity = enabled ? 1.0 : 0.38;
-        // Mini mode keeps the full hit target but presents only the transport glyph.
-        StopBtn.Background = enabled && !(_isMini && !_isEncoding)
-            ? Theme.Brush(Color.FromArgb(42, StopRed.R, StopRed.G, StopRed.B))
-            : System.Windows.Media.Brushes.Transparent;
-        StopGlyph.Background = Theme.Brush(
-            Color.FromArgb(enabled ? (byte)255 : (byte)170, StopRed.R, StopRed.G, StopRed.B));
+        StopBtn.Opacity = enabled ? 1.0 : 0.62;
+        StopBtn.Background = System.Windows.Media.Brushes.Transparent;
+        StopGlyph.Background = enabled
+            ? Theme.Brush(StopRed)
+            : Theme.Brush(Theme.TextMuted);
     }
 
     private void UpdateFpsComboVisual()
@@ -1106,39 +1035,92 @@ public sealed partial class RecordingControlBarWindow : Window
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  Shine Animation (Start button)
+    //  Primary transport micro-interactions
     // ══════════════════════════════════════════════════════════════
 
-    private void SetupShineAnimation()
+    private void PlayReadyPulse(bool miniPresentation)
     {
-        // StartShine is a rim comet (same language as the image-capture confirm dock).
-    }
+        if (_isRecording || _isEncoding)
+            return;
 
-    // Confirm dock: one lap ≈ FrameInterval/2200 * 0.85 → ~2.6s. Same comet, not a face sweep.
-    private const int ConfirmDockShineLapMs = 2600;
-
-    private void StartShineAnimation()
-    {
-        if (UI.Motion.Disabled || _isMini || _isRecording || _isEncoding) return;
-
-        StopShineAnimation();
-
-        StartShine.Stroke = Theme.Brush(Color.FromArgb(150, _accent.R, _accent.G, _accent.B));
-        StartShine.Visibility = Visibility.Visible;
-        var travel = new DoubleAnimation
+        if (miniPresentation)
         {
-            From = 0,
-            To = 188,
-            Duration = TimeSpan.FromMilliseconds(ConfirmDockShineLapMs),
-            RepeatBehavior = RepeatBehavior.Forever
+            if (_miniReadyPulsePlayed) return;
+            _miniReadyPulsePlayed = true;
+        }
+        else
+        {
+            if (_fullReadyPulsePlayed) return;
+            _fullReadyPulsePlayed = true;
+        }
+
+        if (UI.Motion.Disabled)
+            return;
+
+        _primaryHoverActive = false;
+        StopPrimaryScaleAnimation(reset: true);
+        var pulse = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromMilliseconds(ReadyPulseDurationMs),
+            FillBehavior = FillBehavior.Stop
         };
-        StartShine.BeginAnimation(Shape.StrokeDashOffsetProperty, travel);
+        AddPulseFrame(pulse, 1.0, 0);
+        AddPulseFrame(pulse, PrimaryHoverScale, 130);
+        AddPulseFrame(pulse, 1.0, 260);
+        AddPulseFrame(pulse, PrimaryHoverScale, 390);
+        AddPulseFrame(pulse, 1.0, ReadyPulseDurationMs);
+        pulse.Completed += (_, _) =>
+        {
+            PrimaryScale.ScaleX = _primaryHoverActive ? PrimaryHoverScale : 1;
+            PrimaryScale.ScaleY = _primaryHoverActive ? PrimaryHoverScale : 1;
+        };
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleXProperty, pulse);
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse.Clone());
     }
 
-    private void StopShineAnimation()
+    private static void AddPulseFrame(DoubleAnimationUsingKeyFrames animation, double value, int milliseconds)
     {
-        StartShine.BeginAnimation(Shape.StrokeDashOffsetProperty, null);
-        StartShine.Visibility = Visibility.Collapsed;
+        animation.KeyFrames.Add(new EasingDoubleKeyFrame
+        {
+            Value = value,
+            KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(milliseconds)),
+            EasingFunction = Motion.Ease(Motion.SmoothInOut)
+        });
+    }
+
+    private void AnimatePrimaryScale(double target, int milliseconds)
+    {
+        double fromX = PrimaryScale.ScaleX;
+        double fromY = PrimaryScale.ScaleY;
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        if (UI.Motion.Disabled)
+        {
+            PrimaryScale.ScaleX = 1;
+            PrimaryScale.ScaleY = 1;
+            return;
+        }
+
+        PrimaryScale.ScaleX = fromX;
+        PrimaryScale.ScaleY = fromY;
+        var x = Motion.FromTo(fromX, target, milliseconds, Motion.SoftOut);
+        var y = Motion.FromTo(fromY, target, milliseconds, Motion.SoftOut);
+        x.FillBehavior = FillBehavior.Stop;
+        y.FillBehavior = FillBehavior.Stop;
+        x.Completed += (_, _) => PrimaryScale.ScaleX = target;
+        y.Completed += (_, _) => PrimaryScale.ScaleY = target;
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleXProperty, x);
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleYProperty, y);
+    }
+
+    private void StopPrimaryScaleAnimation(bool reset)
+    {
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        PrimaryScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        _primaryHoverActive = false;
+        if (!reset) return;
+        PrimaryScale.ScaleX = 1;
+        PrimaryScale.ScaleY = 1;
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1336,7 +1318,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        StopShineAnimation();
+        StopPrimaryScaleAnimation(reset: true);
         TeardownMini();
         _pulseTimer.Stop();
         _storageTimer.Stop();

@@ -332,7 +332,9 @@ namespace CyberSnap.UI
                 sequence?.Dispose();
                 HideProgressOverlay();
                 AppDiagnostics.LogError("trimmer.mp4-load", loadError);
-                ToastWindow.ShowError("Media load failed", loadError.Message);
+                ToastWindow.ShowError(
+                    LocalizationService.Translate(lang, "Media load failed"),
+                    LocalizationService.Translate(lang, loadError.Message));
                 return;
             }
 
@@ -441,7 +443,9 @@ namespace CyberSnap.UI
                 sequence?.Dispose();
                 HideProgressOverlay();
                 AppDiagnostics.LogError("trimmer.gif-load", loadError);
-                ToastWindow.ShowError("Media load failed", loadError.Message);
+                ToastWindow.ShowError(
+                    LocalizationService.Translate(lang, "Media load failed"),
+                    LocalizationService.Translate(lang, loadError.Message));
                 return;
             }
 
@@ -828,9 +832,11 @@ namespace CyberSnap.UI
 
         private void MediaPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
         {
-            var msg = e.ErrorException?.Message ?? "Unknown error";
+            var msg = e.ErrorException?.Message ?? LocalizationService.Translate("Unknown error");
             AppDiagnostics.LogError("trimmer.media-failed", e.ErrorException ?? new Exception(msg));
-            ToastWindow.ShowError("Media load failed", msg);
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Media load failed"),
+                LocalizationService.Translate(msg));
         }
         
         private void PlayPauseBtn_Click(object sender, RoutedEventArgs e)
