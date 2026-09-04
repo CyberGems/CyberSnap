@@ -16,9 +16,7 @@
         MouseLeave="Window_MouseLeave"
         PreviewMouseDown="Window_PreviewMouseDown">
 
-    <!-- Outer shell: rounded-corner chrome with shadow.
-         Width hugs content so the timer sits next to Pause with no dead gap.
-         PrimaryBtn is a fixed 128px pill so Start↔Pause does not resize the bar. -->
+    <!-- Outer shell: rounded-corner chrome with shadow. -->
     <Border x:Name="OuterShell"
             Height="58"
             HorizontalAlignment="Left"
@@ -154,55 +152,44 @@
                                     CornerRadius="1"
                                     IsHitTestVisible="False"/>
 
-                            <!-- Primary action (Record ⇄ Pause ⇄ Resume). Pill shape; fixed
-                                 width so it NEVER resizes between ready/recording — icon + text
-                                 live inside, label swaps. Compact icon-only in mini hover. -->
+                            <!-- Primary action (Record ⇄ Pause ⇄ Resume). The 40px hit target
+                                 stays stable while the visible control is icon-only. -->
                             <Border x:Name="PrimaryBtn"
-                                    Width="128" Height="40"
+                                    Width="40" Height="40"
                                     CornerRadius="20"
                                     Margin="4,0,0,0"
                                     Cursor="Hand"
-                                    ClipToBounds="True"
+                                    Background="Transparent"
                                     Visibility="Visible">
-                                <Border.Clip>
-                                    <RectangleGeometry x:Name="PrimaryClip"
-                                                       RadiusX="20" RadiusY="20"
-                                                       Rect="0,0,128,40"/>
-                                </Border.Clip>
-                                <Grid>
-                                    <StackPanel x:Name="PrimaryContent"
-                                                Orientation="Horizontal"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                IsHitTestVisible="False">
-                                        <Image x:Name="PrimaryIcon"
-                                               Width="20" Height="20"
-                                               Stretch="Uniform"
-                                               RenderOptions.BitmapScalingMode="HighQuality"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,0"/>
-                                        <TextBlock x:Name="PrimaryText"
-                                                   VerticalAlignment="Center"
-                                                   FontSize="15"
-                                                   FontWeight="Bold"
-                                                   Foreground="White"/>
-                                    </StackPanel>
-                                    <!-- Confirm-dock comet: traveling glint on the pill rim. -->
-                                    <Rectangle x:Name="StartShine"
-                                               RadiusX="20" RadiusY="20"
-                                               Fill="Transparent"
-                                               StrokeThickness="1.6"
-                                               StrokeDashArray="60 128"
-                                               StrokeDashCap="Round"
-                                               Stroke="Transparent"
-                                               IsHitTestVisible="False"
-                                               Visibility="Collapsed"/>
+                                <Grid x:Name="PrimaryContent"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5"
+                                      IsHitTestVisible="False">
+                                    <Grid.RenderTransform>
+                                        <ScaleTransform x:Name="PrimaryScale" ScaleX="1" ScaleY="1"/>
+                                    </Grid.RenderTransform>
+                                    <!-- Classic record mark: ring + centered dot. -->
+                                    <Grid x:Name="RecordGlyph" Width="26" Height="26">
+                                        <Ellipse x:Name="RecordRing"
+                                                 Margin="1"
+                                                 StrokeThickness="2.2"
+                                                 Fill="Transparent"/>
+                                        <Ellipse x:Name="RecordDot"
+                                                 Width="11" Height="11"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Image x:Name="PrimaryIcon"
+                                           Width="20" Height="20"
+                                           Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
 
-                            <!-- Stop: 40×40 to match the primary pill height. Solid rounded
-                                 square (not the padded Fluent bitmap) so it reads as a
-                                 control, not a tiny glyph next to the scissors. -->
+                            <!-- Stop: stable 40px hit target, icon-only presentation. -->
                             <Border x:Name="StopBtn"
                                     Width="40" Height="40"
                                     CornerRadius="10"
