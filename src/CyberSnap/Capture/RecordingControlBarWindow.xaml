@@ -169,17 +169,28 @@
                                     <Grid.RenderTransform>
                                         <ScaleTransform x:Name="PrimaryScale" ScaleX="1" ScaleY="1"/>
                                     </Grid.RenderTransform>
-                                    <!-- Classic record mark: ring + centered dot. -->
-                                    <Grid x:Name="RecordGlyph" Width="26" Height="26">
-                                        <Ellipse x:Name="RecordRing"
-                                                 Margin="1"
-                                                 StrokeThickness="2.2"
-                                                 Fill="Transparent"/>
-                                        <Ellipse x:Name="RecordDot"
-                                                 Width="11" Height="11"
-                                                 HorizontalAlignment="Center"
-                                                 VerticalAlignment="Center"/>
-                                    </Grid>
+                                    <!-- A single compound path keeps the ring and dot perfectly
+                                         concentric while the glyph scales for pulse and hover. -->
+                                    <Path x:Name="RecordGlyph"
+                                          Width="26" Height="26"
+                                          Stretch="Uniform"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          SnapsToDevicePixels="True">
+                                        <Path.Data>
+                                            <GeometryGroup FillRule="Nonzero">
+                                                <CombinedGeometry GeometryCombineMode="Exclude">
+                                                    <CombinedGeometry.Geometry1>
+                                                        <EllipseGeometry Center="13,13" RadiusX="12" RadiusY="12"/>
+                                                    </CombinedGeometry.Geometry1>
+                                                    <CombinedGeometry.Geometry2>
+                                                        <EllipseGeometry Center="13,13" RadiusX="9.8" RadiusY="9.8"/>
+                                                    </CombinedGeometry.Geometry2>
+                                                </CombinedGeometry>
+                                                <EllipseGeometry Center="13,13" RadiusX="5.2" RadiusY="5.2"/>
+                                            </GeometryGroup>
+                                        </Path.Data>
+                                    </Path>
                                     <Image x:Name="PrimaryIcon"
                                            Width="20" Height="20"
                                            Stretch="Uniform"
