@@ -320,6 +320,8 @@ public partial class App
             win.NavigateToGallerySettings();
         else if (navigateTo is "notifications" or "toasts")
             win.NavigateToNotificationsSettings();
+        else if (navigateTo is "recording" or "video-gif")
+            win.NavigateToRecordingSettings();
         else if (navigateTo is "uploads" or "upload")
             win.NavigateToUploadsSettings();
         else if (navigateTo is "capture-confirm-pills" or "confirm-pills" or "confirm-destinations")

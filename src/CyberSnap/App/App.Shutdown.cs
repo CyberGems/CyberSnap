@@ -16,6 +16,7 @@ public partial class App
         _historyService = null;
         try { _imageSearchIndexService?.Dispose(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.dispose-image-search", ex); }
         _imageSearchIndexService = null;
+        try { _trayPinTipWindow?.Close(); } catch (Exception ex) { AppDiagnostics.LogWarning("shutdown.close-tray-pin-tip", ex.Message, ex); }
         _trayIcon?.Dispose();
         CloseWidgetWindow();
         _settingsWindow?.Close();

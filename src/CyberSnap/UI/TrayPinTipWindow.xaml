@@ -1,0 +1,217 @@
+<Window x:Class="CyberSnap.UI.TrayPinTipWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ResizeMode="NoResize"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        ShowActivated="False"
+        Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <Window.Resources>
+        <Style x:Key="TipPrimaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForegroundBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{DynamicResource ThemeAccentBrush}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="TipSecondaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="TopTailRow" Height="0"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition x:Name="BottomTailRow" Height="0"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="LeftTailCol" Width="0"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition x:Name="RightTailCol" Width="0"/>
+        </Grid.ColumnDefinitions>
+
+        <Path x:Name="TopTail"
+              Grid.Row="0" Grid.Column="1"
+              HorizontalAlignment="Center" VerticalAlignment="Bottom"
+              Width="18" Height="10" Stretch="Fill"
+              Data="M0,10 L9,0 18,10"
+              Fill="{DynamicResource ThemeInputBackgroundBrush}"
+              Visibility="Collapsed"/>
+        <Path x:Name="BottomTail"
+              Grid.Row="2" Grid.Column="1"
+              HorizontalAlignment="Center" VerticalAlignment="Top"
+              Width="18" Height="10" Stretch="Fill"
+              Data="M0,0 L9,10 18,0"
+              Fill="{DynamicResource ThemeInputBackgroundBrush}"
+              Visibility="Collapsed"/>
+        <Path x:Name="LeftTail"
+              Grid.Row="1" Grid.Column="0"
+              HorizontalAlignment="Right" VerticalAlignment="Center"
+              Width="10" Height="18" Stretch="Fill"
+              Data="M10,0 L0,9 10,18"
+              Fill="{DynamicResource ThemeInputBackgroundBrush}"
+              Visibility="Collapsed"/>
+        <Path x:Name="RightTail"
+              Grid.Row="1" Grid.Column="2"
+              HorizontalAlignment="Left" VerticalAlignment="Center"
+              Width="10" Height="18" Stretch="Fill"
+              Data="M0,0 L10,9 0,18"
+              Fill="{DynamicResource ThemeInputBackgroundBrush}"
+              Visibility="Collapsed"/>
+
+        <Border x:Name="Card"
+                Grid.Row="1" Grid.Column="1"
+                Width="340"
+                BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Background="{DynamicResource ThemeInputBackgroundBrush}"
+                Margin="4">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" Direction="-90" RenderingBias="Quality" ShadowDepth="3" Opacity="0.4" Color="Black"/>
+            </Border.Effect>
+            <Grid Margin="16,14,12,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Image x:Name="TipIcon" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TitleText"
+                               Grid.Column="1"
+                               FontSize="14" FontWeight="SemiBold"
+                               FontFamily="Segoe UI Variable Text"
+                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"/>
+                </Grid>
+                <Button x:Name="CloseBtn"
+                        Grid.Row="0" Grid.Column="1"
+                        Width="24" Height="24"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                        Cursor="Hand" Click="CloseBtn_Click"
+                        ToolTip="Dismiss"
+                        Focusable="False">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="Transparent" CornerRadius="4">
+                                <Path Data="M 3,3 L 13,13 M 13,3 L 3,13"
+                                      Stroke="{DynamicResource ThemeTextSecondaryBrush}"
+                                      StrokeThickness="1.5"
+                                      Width="10" Height="10"
+                                      Stretch="Uniform"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <TextBlock x:Name="BodyText"
+                           Grid.Row="1" Grid.ColumnSpan="2"
+                           Margin="0,10,0,0"
+                           FontSize="12.5"
+                           FontFamily="Segoe UI Variable Text"
+                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                           TextWrapping="Wrap" LineHeight="18"/>
+
+                <CheckBox x:Name="DontShowAgainCheck"
+                          Grid.Row="2" Grid.ColumnSpan="2"
+                          Margin="0,12,0,0"
+                          IsChecked="True"
+                          FontSize="12"
+                          Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                          VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Margin="0,14,0,0">
+                    <Button x:Name="GotItBtn"
+                            Style="{StaticResource TipSecondaryButton}"
+                            Margin="0,0,8,0"
+                            Click="GotItBtn_Click"/>
+                    <Button x:Name="OpenSettingsBtn"
+                            Style="{StaticResource TipPrimaryButton}"
+                            Click="OpenSettingsBtn_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

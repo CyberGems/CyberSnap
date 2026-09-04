@@ -1178,6 +1178,16 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OpenTrayIconSettingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        WindowsNotificationArea.OpenIconSettings();
+    }
+
+    private void OpenSetupWizardBtn_Click(object sender, RoutedEventArgs e)
+    {
+        RunSetupWizard();
+    }
+
     private void ClosePrtScWarnBanner_Click(object sender, RoutedEventArgs e)
     {
         PrtScWarnBanner.Visibility = Visibility.Collapsed;

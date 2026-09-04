@@ -18,7 +18,7 @@ namespace CyberSnap.Capture;
 /// </summary>
 public sealed partial class RecordingForm : Form
 {
-    private const int RecordingWarmupDelayMs = 260;
+    private const int RecordingWarmupDelayMs = 48;
 
     /// <summary>
     /// Fires with (filePath, firstFrameBitmap, openTrimmer). Caller must dispose the bitmap.
@@ -35,7 +35,7 @@ public sealed partial class RecordingForm : Form
     /// <summary>Static reference to the current recording form for external stop control.</summary>
     public static RecordingForm? Current { get; private set; }
 
-    private enum State { Selecting, PreRecording, Recording, Encoding }
+    private enum State { Selecting, PreRecording, Starting, Recording, Encoding }
 
     private Bitmap? _screenshot;
     private readonly Rectangle _virtualBounds;
@@ -100,6 +100,11 @@ public sealed partial class RecordingForm : Form
 
     // Cached GDI objects for paint
     private readonly Font _readoutFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
+    private Rectangle _recordingSizeChipRect = Rectangle.Empty;
+    private Rectangle _recordingSettingsPillRect = Rectangle.Empty;
+    private bool _hoveredRecordingSettings;
+    private WindowsToolTip? _recordingChromeToolTip;
+    private CancellationTokenSource? _recordingStartCts;
 
 
     public RecordingForm(Bitmap? screenshot, Rectangle virtualBounds, int fps, string savePath,
@@ -416,7 +421,7 @@ public sealed partial class RecordingForm : Form
 
     private void CancelFromEscape()
     {
-        if (_state == State.Recording)
+        if (_state is State.Starting or State.Recording)
         {
             DiscardRecording();
             return;
@@ -436,6 +441,8 @@ public sealed partial class RecordingForm : Form
         {
             if (_state == State.Recording)
                 StopRecording();
+            else if (_state == State.Starting)
+                DiscardRecording();
             else if (_state == State.PreRecording)
                 ShowEmptyAreaContextMenu(e.Location);
             else
@@ -461,6 +468,12 @@ public sealed partial class RecordingForm : Form
         }
         else if (_state == State.PreRecording && e.Button == MouseButtons.Left)
         {
+            if (!_recordingSettingsPillRect.IsEmpty && _recordingSettingsPillRect.Contains(e.Location))
+            {
+                OpenRecordingSettings();
+                return;
+            }
+
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
             {
@@ -545,6 +558,23 @@ public sealed partial class RecordingForm : Form
         }
         if (_state == State.PreRecording)
         {
+            bool settingsHover = !_recordingSettingsPillRect.IsEmpty
+                && _recordingSettingsPillRect.Contains(e.Location);
+            if (settingsHover != _hoveredRecordingSettings)
+            {
+                _hoveredRecordingSettings = settingsHover;
+                Invalidate(InflateForRepaint(_recordingSettingsPillRect, UiChrome.ScaleInt(6)));
+                if (settingsHover)
+                    ShowRecordingSettingsTooltip();
+                else
+                    _recordingChromeToolTip?.Hide();
+            }
+            if (settingsHover)
+            {
+                Cursor = Cursors.Hand;
+                return;
+            }
+
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
             {
@@ -562,6 +592,11 @@ public sealed partial class RecordingForm : Form
             else
                 Cursor = Cursors.Default;
         }
+        else if (_hoveredRecordingSettings)
+        {
+            _hoveredRecordingSettings = false;
+            _recordingChromeToolTip?.Hide();
+        }
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -573,6 +608,7 @@ public sealed partial class RecordingForm : Form
             _handleDragIdx = -1;
             RebuildRecordingSurface();
             _controlBarWpf?.SetDragInProgress(false);
+            ScheduleRecordingChromeRelayout();
             Invalidate();
             return;
         }
@@ -676,6 +712,9 @@ public sealed partial class RecordingForm : Form
 
     private void PaintRecordingPhase(Graphics g)
     {
+        if (!_isHandleDragging && _state == State.PreRecording)
+            RefreshRecordingChromeLayout();
+
         g.Clear(TransKey);
 
         // During PreRecording, show dimmed screenshot outside the recording region
@@ -702,7 +741,7 @@ public sealed partial class RecordingForm : Form
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
         var accentColor = _format == Models.RecordingFormat.GIF ? UiChrome.GifAccentColor : UiChrome.AccentColor;
-        var frameAccent = _state == State.Recording
+        var frameAccent = _state is State.Starting or State.Recording
             ? (_isPaused ? RecordingPausedAccent : RecordingLiveAccent)
             : accentColor;
 
@@ -712,16 +751,23 @@ public sealed partial class RecordingForm : Form
         if (_state == State.PreRecording)
         {
             DrawCircularHandles(g, _recordRegion, accentColor);
+        }
 
-            // Persist the size readout pill after drag ends (dimensions only, no format/FPS)
-            SelectionSizeReadout.Draw(
+        if (!_isHandleDragging && (!_recordingSizeChipRect.IsEmpty || !_recordingSettingsPillRect.IsEmpty))
+        {
+            SelectionSizeReadout.DrawConfirmDragPillCached(
                 g,
-                new Point(_recordRegion.Right, _recordRegion.Bottom),
-                _recordRegion,
-                _readoutFont,
-                ClientRectangle,
-                null,
-                accentOverride: accentColor);
+                _recordingSizeChipRect,
+                Rectangle.Empty,
+                _recordRegion.Width,
+                _recordRegion.Height,
+                _readoutFont);
+
+            SelectionSizeReadout.DrawConfirmOptions(
+                g,
+                _recordingSettingsPillRect,
+                hovered: _hoveredRecordingSettings,
+                enabled: _state == State.PreRecording);
         }
     }
 
@@ -1036,10 +1082,119 @@ public sealed partial class RecordingForm : Form
 
     private void RebuildRecordingSurface()
     {
+        RefreshRecordingChromeLayout();
         BuildHollowRegion();
         CaptureWindowExclusion.SetLogicalBounds(Handle, GetRecordingChromeScreenBounds);
         UpdateControlBarPosition();
         Invalidate();
+    }
+
+    private void RefreshRecordingChromeLayout()
+    {
+        if (_recordRegion.Width <= 2 || _recordRegion.Height <= 2)
+        {
+            _recordingSizeChipRect = Rectangle.Empty;
+            _recordingSettingsPillRect = Rectangle.Empty;
+            return;
+        }
+
+        List<Rectangle>? avoid = null;
+        var barScreen = _controlBarWpf?.GetScreenBounds() ?? Rectangle.Empty;
+        if (!barScreen.IsEmpty)
+        {
+            var barClient = barScreen;
+            barClient.Offset(-_virtualBounds.X, -_virtualBounds.Y);
+            avoid = new List<Rectangle> { barClient };
+        }
+
+        if (!SelectionSizeReadout.TryGetRecordingChromeLayout(
+                _recordRegion,
+                _readoutFont,
+                ClientRectangle,
+                avoid,
+                out _recordingSizeChipRect,
+                out _recordingSettingsPillRect))
+        {
+            _recordingSizeChipRect = Rectangle.Empty;
+            _recordingSettingsPillRect = Rectangle.Empty;
+            _hoveredRecordingSettings = false;
+            _recordingChromeToolTip?.Hide();
+        }
+    }
+
+    private void ScheduleRecordingChromeRelayout()
+    {
+        var bar = _controlBarWpf;
+        if (bar is null)
+            return;
+
+        bar.Dispatcher.BeginInvoke(() =>
+        {
+            if (IsDisposed || Disposing || !IsHandleCreated)
+                return;
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || Disposing || _state != State.PreRecording)
+                    return;
+                RefreshRecordingChromeLayout();
+                Invalidate();
+            }));
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void ShowRecordingSettingsTooltip()
+    {
+        if (_recordingSettingsPillRect.IsEmpty || _state != State.PreRecording)
+            return;
+
+        _recordingChromeToolTip ??= new WindowsToolTip();
+        _recordingChromeToolTip.ShowNear(
+            this,
+            LocalizationService.Translate("Recording settings"),
+            RectangleToScreen(_recordingSettingsPillRect),
+            ToolTipPlacement.Above,
+            singleLine: true);
+    }
+
+    private void OpenRecordingSettings()
+    {
+        if (_state != State.PreRecording)
+            return;
+
+        var app = System.Windows.Application.Current as App;
+        bool suppress = false;
+        try
+        {
+            suppress = SettingsService.LoadStatic()?.RecordingSuppressSettingsExitConfirm == true;
+        }
+        catch { }
+
+        if (!suppress)
+        {
+            bool confirmed = ThemedConfirmDialog.Confirm(
+                Handle,
+                LocalizationService.Translate("Open recording settings?"),
+                LocalizationService.Translate("The current recording capture will close before opening Video & GIF settings."),
+                out bool dontShowAgain,
+                primaryText: LocalizationService.Translate("Open settings"),
+                secondaryText: LocalizationService.Translate("Cancel"),
+                danger: false,
+                iconId: "gear");
+
+            if (!confirmed)
+            {
+                _controlBarWpf?.AssertBarTopmost();
+                return;
+            }
+            if (dontShowAgain)
+                app?.PersistRecordingSuppressSettingsExitConfirm(true);
+        }
+
+        _recordingChromeToolTip?.Hide();
+        CloseControlBar();
+        RecordingCancelled?.Invoke();
+        Close();
+        app?.Dispatcher.BeginInvoke(() => app.ShowSettings("recording"));
     }
 
     private void UpdateControlBarPosition()
@@ -1108,6 +1263,23 @@ public sealed partial class RecordingForm : Form
             Native.Gdi32.DeleteObject(rightRgn);
         }
 
+        // Keep recording pills visible while the rest of the overlay stays hollow.
+        // Their containing HWND is excluded from screen capture, including the
+        // SW_HIDE fallback used when display affinity is unavailable.
+        foreach (var chromeRect in new[] { _recordingSizeChipRect, _recordingSettingsPillRect })
+        {
+            if (chromeRect.IsEmpty)
+                continue;
+            var visibleRect = Rectangle.Inflate(chromeRect, UiChrome.ScaleInt(3), UiChrome.ScaleInt(3));
+            var chromeRgn = Native.Gdi32.CreateRectRgn(
+                visibleRect.Left,
+                visibleRect.Top,
+                visibleRect.Right,
+                visibleRect.Bottom);
+            Native.Gdi32.CombineRgn(rgn, rgn, chromeRgn, RGN_OR);
+            Native.Gdi32.DeleteObject(chromeRgn);
+        }
+
         Native.User32.SetWindowRgn(Handle, rgn, true);
     }
 
@@ -1126,6 +1298,9 @@ public sealed partial class RecordingForm : Form
             _escapeHook?.Dispose();
             _escapeHook = null;
             _tickTimer?.Dispose();
+            _recordingStartCts?.Cancel();
+            _recordingStartCts?.Dispose();
+            _recordingStartCts = null;
             _recorder?.Dispose();
             _videoRecorder?.Dispose();
             _magHelper?.Dispose();
@@ -1136,6 +1311,8 @@ public sealed partial class RecordingForm : Form
             _screenshot?.Dispose();
             _screenshot = null;
             _readoutFont.Dispose();
+            _recordingChromeToolTip?.Dispose();
+            _recordingChromeToolTip = null;
         }
         base.Dispose(disposing);
     }

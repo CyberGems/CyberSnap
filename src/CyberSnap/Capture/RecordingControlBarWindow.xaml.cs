@@ -196,6 +196,15 @@ public sealed partial class RecordingControlBarWindow : Window
 
     public int Fps => _fps;
 
+    /// <summary>Current native bounds in physical screen pixels, used by sibling capture chrome.</summary>
+    public System.Drawing.Rectangle GetScreenBounds()
+    {
+        var hwnd = Hwnd;
+        return hwnd != IntPtr.Zero && User32.GetWindowRect(hwnd, out var rect)
+            ? rect.ToRectangle()
+            : System.Drawing.Rectangle.Empty;
+    }
+
     /// <summary>
     /// Hides the bar while the user drags/resizes the capture region so it doesn't
     /// obstruct the view; repositions and re-shows when the drag ends.

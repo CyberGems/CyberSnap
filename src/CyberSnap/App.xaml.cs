@@ -22,6 +22,7 @@ public partial class App : Application
     private ImageSearchIndexService? _imageSearchIndexService;
     private readonly object _historyGate = new();
     private TrayIcon? _trayIcon;
+    private TrayPinTipWindow? _trayPinTipWindow;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
     private AchievementsWindow? _achievementsWindow;
@@ -321,6 +322,16 @@ public partial class App : Application
         _settingsService.Settings.PreviewSuppressCloseAllConfirm = suppress;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("preview.persist-suppress-close-all-confirm", ex); }
+    }
+
+    /// <summary>Persists whether recording selection should confirm before opening settings.</summary>
+    public void PersistRecordingSuppressSettingsExitConfirm(bool suppress)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.RecordingSuppressSettingsExitConfirm == suppress) return;
+        _settingsService.Settings.RecordingSuppressSettingsExitConfirm = suppress;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("recording.persist-suppress-settings-exit-confirm", ex); }
     }
 
     /// <summary>Persists the video trimmer preview volume and export-mute preference.</summary>

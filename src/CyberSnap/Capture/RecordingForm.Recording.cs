@@ -131,6 +131,7 @@ public sealed partial class RecordingForm
         if (_state == State.Recording && Interlocked.Exchange(ref _recordingStopRequested, 1) != 0)
             return;
 
+        _recordingStartCts?.Cancel();
         _tickTimer?.Stop();
         if (_recorder != null) { _recorder.Discard(); _recorder.Dispose(); _recorder = null; }
         if (_videoRecorder != null) { _videoRecorder.Discard(); _videoRecorder.Dispose(); _videoRecorder = null; }
@@ -152,6 +153,11 @@ public sealed partial class RecordingForm
 
         TransitionToRecordingSurface();
         ShowControlBar();
+        RefreshRecordingChromeLayout();
+
+        // Resolve the encoder while the user reviews the selected region, rather
+        // than making the first Record click pay for PATH probing.
+        _ = Task.Run(VideoRecorder.FindFfmpeg);
 
         Current = this;
         Invalidate(_selection);
@@ -228,6 +234,8 @@ public sealed partial class RecordingForm
         {
             if (_state == State.Recording)
                 StopRecording();
+            else if (_state == State.Starting)
+                DiscardRecording();
         };
         _controlBarWpf.PauseClicked += () =>
         {
@@ -236,14 +244,18 @@ public sealed partial class RecordingForm
         };
         _controlBarWpf.CancelClicked += () =>
         {
-            if (_state is State.PreRecording or State.Recording)
+            if (_state is State.PreRecording or State.Starting or State.Recording)
                 DiscardRecording();
         };
         _controlBarWpf.ShowSafely();
+        ScheduleRecordingChromeRelayout();
     }
 
-    private void StartActualRecording()
+    private async void StartActualRecording()
     {
+        if (_state != State.PreRecording)
+            return;
+
         // Never start a recorder with an empty region; fall back to area selection.
         if (_recordRegion.Width <= 0 || _recordRegion.Height <= 0)
         {
@@ -252,7 +264,7 @@ public sealed partial class RecordingForm
             return;
         }
 
-        _state = State.Recording;
+        _state = State.Starting;
         _recordingStopRequested = 0;
         _totalPausedDuration = TimeSpan.Zero;
         _pauseStartTime = null;
@@ -264,36 +276,95 @@ public sealed partial class RecordingForm
 
         _screenshot?.Dispose();
         _screenshot = null;
+        _hoveredRecordingSettings = false;
+        _recordingChromeToolTip?.Hide();
 
         TransitionToRecordingSurface();
         _controlBarWpf?.TransitionToRecording();
         UpdateControlBarPosition();
+        Invalidate();
+        Update();
 
         var screenRegion = new Rectangle(
             _recordRegion.X + _virtualBounds.X,
             _recordRegion.Y + _virtualBounds.Y,
             _recordRegion.Width, _recordRegion.Height);
 
-        if (_format == Models.RecordingFormat.GIF)
-        {
-            _recorder = new GifRecorder(screenRegion, _fps, _maxDuration, _showCursor);
-        }
-        else
-        {
-            var vfmt = VideoRecorder.Format.MP4;
-            _videoRecorder = new VideoRecorder(screenRegion, vfmt, _fps, _maxDuration, _maxHeight,
-                _showCursor, _recordMic, _micDeviceId, _recordDesktop, _desktopDeviceId);
-        }
-
+        _recordingStartCts?.Cancel();
+        _recordingStartCts?.Dispose();
+        var startCts = new CancellationTokenSource();
+        _recordingStartCts = startCts;
+        var startToken = startCts.Token;
+        var startWatch = System.Diagnostics.Stopwatch.StartNew();
         _desktopAudioSoundSuppression = _recordDesktop ? SoundService.SuppressPlayback() : null;
         try
         {
             SoundService.PlayRecordStartSound();
-            _recorder?.Start(RecordingWarmupDelayMs);
-            _videoRecorder?.Start(_savePath, RecordingWarmupDelayMs);
+            var started = await Task.Run(() =>
+            {
+                GifRecorder? gif = null;
+                VideoRecorder? video = null;
+                try
+                {
+                    startToken.ThrowIfCancellationRequested();
+                    if (_format == Models.RecordingFormat.GIF)
+                    {
+                        gif = new GifRecorder(screenRegion, _fps, _maxDuration, _showCursor);
+                        gif.Start(RecordingWarmupDelayMs);
+                    }
+                    else
+                    {
+                        video = new VideoRecorder(
+                            screenRegion,
+                            VideoRecorder.Format.MP4,
+                            _fps,
+                            _maxDuration,
+                            _maxHeight,
+                            _showCursor,
+                            _recordMic,
+                            _micDeviceId,
+                            _recordDesktop,
+                            _desktopDeviceId);
+                        video.Start(_savePath, RecordingWarmupDelayMs);
+                    }
+
+                    startToken.ThrowIfCancellationRequested();
+                    return (Gif: gif, Video: video);
+                }
+                catch
+                {
+                    try { gif?.Discard(); } catch { }
+                    try { video?.Discard(); } catch { }
+                    gif?.Dispose();
+                    video?.Dispose();
+                    throw;
+                }
+            }, startToken);
+
+            if (startToken.IsCancellationRequested || IsDisposed || Disposing)
+            {
+                try { started.Gif?.Discard(); } catch { }
+                try { started.Video?.Discard(); } catch { }
+                started.Gif?.Dispose();
+                started.Video?.Dispose();
+                return;
+            }
+
+            _recorder = started.Gif;
+            _videoRecorder = started.Video;
+            _state = State.Recording;
+            AppDiagnostics.LogInfo(
+                "recording.start-timing",
+                $"{_format} recorder initialized in {startWatch.ElapsedMilliseconds} ms; warmup={RecordingWarmupDelayMs} ms.");
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
+            if (startToken.IsCancellationRequested || IsDisposed || Disposing)
+                return;
             _desktopAudioSoundSuppression?.Dispose();
             _desktopAudioSoundSuppression = null;
             _recorder?.Dispose();
@@ -304,6 +375,14 @@ public sealed partial class RecordingForm
             RecordingFailed?.Invoke(ex);
             Close();
             return;
+        }
+        finally
+        {
+            if (ReferenceEquals(_recordingStartCts, startCts))
+            {
+                startCts.Dispose();
+                _recordingStartCts = null;
+            }
         }
 
         _tickTimer = new System.Windows.Forms.Timer { Interval = 200 };
@@ -350,11 +429,21 @@ public sealed partial class RecordingForm
             return Rectangle.Empty;
 
         const int frameThickness = 15;
-        return new Rectangle(
+        var bounds = new Rectangle(
             _virtualBounds.X + _recordRegion.X - frameThickness,
             _virtualBounds.Y + _recordRegion.Y - frameThickness,
             _recordRegion.Width + frameThickness * 2,
             _recordRegion.Height + frameThickness * 2);
+
+        foreach (var pill in new[] { _recordingSizeChipRect, _recordingSettingsPillRect })
+        {
+            if (pill.IsEmpty)
+                continue;
+            var screenPill = pill;
+            screenPill.Offset(_virtualBounds.X, _virtualBounds.Y);
+            bounds = Rectangle.Union(bounds, screenPill);
+        }
+        return bounds;
     }
 
     /// <summary>External stop (called from tray menu).</summary>

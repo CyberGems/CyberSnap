@@ -145,6 +145,7 @@ public partial class App
 
         ScheduleAutoUpdateCheck();
         EnsureWidgetWindowCreated();
+        ScheduleTrayPinTip();
 
         if (openSettingsAfterWizard || openSettingsOnStartup)
             ShowSettings();
@@ -215,6 +216,40 @@ public partial class App
         _trayIcon.OnAbout += () => ShowAbout();
         _trayIcon.OnHistory += () => ShowHistory();
         _trayIcon.OnQuit += () => Shutdown();
+    }
+
+    private void ScheduleTrayPinTip()
+    {
+        if (_settingsService?.Settings.HasSeenTrayPinTip == true || _trayIcon is null)
+            return;
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            try { ShowTrayPinTipIfNeeded(); }
+            catch (Exception ex) { AppDiagnostics.LogWarning("startup.tray-pin-tip", ex.Message, ex); }
+        };
+        timer.Start();
+    }
+
+    private void ShowTrayPinTipIfNeeded()
+    {
+        if (_settingsService is null || _settingsService.Settings.HasSeenTrayPinTip || _trayIcon is null)
+            return;
+        if (_trayPinTipWindow is { IsVisible: true })
+            return;
+
+        try
+        {
+            _trayPinTipWindow = new TrayPinTipWindow(_settingsService, _trayIcon);
+            _trayPinTipWindow.Closed += (_, _) => _trayPinTipWindow = null;
+            _trayPinTipWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("startup.tray-pin-tip.show", ex.Message, ex);
+        }
     }
 
     private static void WarmDxgiCapture()

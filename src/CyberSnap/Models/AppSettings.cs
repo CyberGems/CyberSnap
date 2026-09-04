@@ -225,6 +225,12 @@ public sealed class AppSettings
     /// </summary>
     public bool PreviewSuppressCloseAllConfirm { get; set; }
 
+    /// <summary>
+    /// When true, opening Video &amp; GIF settings from recording selection chrome
+    /// closes the current capture without asking again.
+    /// </summary>
+    public bool RecordingSuppressSettingsExitConfirm { get; set; }
+
     public bool AllowHotkeyOverride { get; set; }
 
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
@@ -548,6 +554,8 @@ public sealed class AppSettings
     public bool HasSeenCaptureBanner { get; set; }
     /// <summary>True after the capture-mode quick-start bubble has been shown and dismissed once.</summary>
     public bool HasSeenQuickStartGuide { get; set; }
+    /// <summary>True after the first-run “pin tray icon” tip has been dismissed.</summary>
+    public bool HasSeenTrayPinTip { get; set; }
     /// <summary>Last Group-1 (annotation) tool id used during capture confirm, restored next time.</summary>
     public string? LastAnnotationToolId { get; set; }
     /// <summary>Whether to remember and restore the last used annotation tool upon region confirmation.</summary>

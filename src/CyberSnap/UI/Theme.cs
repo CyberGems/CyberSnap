@@ -44,6 +44,8 @@ public static class Theme
 
     // Accent (Cyberpunk cyan; grey: sober silver)
     public static Color Accent => P(GraySilver, C(0, 255, 255), C(0, 120, 215));
+    /// <summary>Text on <see cref="Accent"/> fills. Cyan/silver need dark ink; light-theme blue uses white.</summary>
+    public static Color AccentForeground => IsDark ? C(11, 14, 22) : C(255, 255, 255);
     public static Color AccentSubtle => P(CA(184, 190, 198, 22), CA(0, 255, 255, 20), CA(0, 120, 215, 18));
     public static Color AccentHover => P(CA(184, 190, 198, 44), CA(0, 255, 255, 40), CA(0, 120, 215, 28));
     public static Color DangerHover => IsDark ? CA(255, 0, 85, 210) : CA(196, 43, 28, 225);
@@ -98,6 +100,7 @@ public static class Theme
         resources["ThemeWindowBorderBrush"] = Brush(WindowBorder);
         resources["ThemeSeparatorBrush"] = Brush(Separator);
         resources["ThemeAccentBrush"] = Brush(Accent);
+        resources["ThemeAccentForegroundBrush"] = Brush(AccentForeground);
         resources["ThemeAccentSubtleBrush"] = Brush(AccentSubtle);
         resources["ThemeAccentHoverBrush"] = Brush(AccentHover);
         resources["ThemeTooltipBackgroundBrush"] = Brush(IsDark ? C(20, 20, 20) : C(233, 236, 243));

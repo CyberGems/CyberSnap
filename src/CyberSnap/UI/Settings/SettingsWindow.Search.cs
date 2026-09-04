@@ -728,6 +728,19 @@ public partial class SettingsWindow
         }
     }
 
+    /// <summary>Open the dedicated Video &amp; GIF recording settings tab.</summary>
+    public void NavigateToRecordingSettings()
+    {
+        try
+        {
+            SelectSettingsTab("recording");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.recording-navigate", $"Navigation failed: {ex.Message}");
+        }
+    }
+
     private void SelectSettingsTab(string pageKey)
     {
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
@@ -894,6 +907,8 @@ public partial class SettingsWindow
         {
             // General / Startup
             "startwithwindows"          => StartWithWindowsCheck,
+            "pintrayicon"               => TrayPinRow,
+            "setupwizard"               => SetupWizardRow,
             "aftercapture"              => AfterCaptureOutcomeEditor,
             // General / Behavior after captures
             "autocopytoclipboard"       => AfterCaptureOutcomeEditor,

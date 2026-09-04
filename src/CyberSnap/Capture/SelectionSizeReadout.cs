@@ -254,6 +254,67 @@ internal static class SelectionSizeReadout
     }
 
     /// <summary>
+    /// Recording-mode chrome: dimension chip plus an independent settings pill.
+    /// Only accepts placements fully outside the top edge of the captured area;
+    /// unlike image-confirm mode it never clamps or falls back inside the selection.
+    /// </summary>
+    public static bool TryGetRecordingChromeLayout(
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects,
+        out Rectangle chipRect,
+        out Rectangle settingsRect)
+    {
+        chipRect = Rectangle.Empty;
+        settingsRect = Rectangle.Empty;
+        if (selection.Width <= 2 || selection.Height <= 2)
+            return false;
+
+        int lineH = LineHeight(font);
+        int iconBox = IconBox(lineH);
+        var lines = new List<Seg[]>
+        {
+            new[]
+            {
+                new Seg(Arrow.Horizontal, selection.Width.ToString()),
+                new Seg(Arrow.Vertical, selection.Height.ToString())
+            }
+        };
+        var chipSize = ShowDimensions ? MeasurePill(lines, font, lineH, iconBox) : Size.Empty;
+        int settingsW = ConfirmOptionsWidth(font);
+        int gap = ShowDimensions ? UiChrome.ScaleInt(4) : 0;
+        int unitW = chipSize.Width + gap + settingsW;
+        int unitH = Math.Max(chipSize.Height, settingsW);
+        int y = selection.Top - EdgeGap - unitH;
+
+        var candidates = new[]
+        {
+            new Rectangle(selection.Left, y, unitW, unitH),
+            new Rectangle(selection.Right - unitW, y, unitW, unitH)
+        };
+
+        foreach (var unit in candidates)
+        {
+            if (!FitsInClient(unit, clientBounds) || HitsObstacle(unit, avoidRects))
+                continue;
+
+            if (ShowDimensions)
+            {
+                chipRect = new Rectangle(
+                    unit.X,
+                    unit.Y + (unitH - chipSize.Height) / 2,
+                    chipSize.Width,
+                    chipSize.Height);
+            }
+            settingsRect = new Rectangle(unit.Right - settingsW, unit.Y, settingsW, unitH);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Legacy overload: lays out size first, then places the gear beside it.
     /// </summary>
     public static Rectangle GetConfirmOptionsBounds(
@@ -274,7 +335,8 @@ internal static class SelectionSizeReadout
         Graphics g,
         Rectangle rect,
         bool hovered,
-        bool active = false)
+        bool active = false,
+        bool enabled = true)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
@@ -282,18 +344,20 @@ internal static class SelectionSizeReadout
         var accent = UiChrome.AccentColor;
         float radius = Radius;
 
+        hovered &= enabled;
+        active &= enabled;
         using (var shadowPath = WindowsDockRenderer.RoundedRect(
                    new RectangleF(rect.X, rect.Y + 1.5f, rect.Width, rect.Height), radius))
-        using (var shadowBrush = new SolidBrush(Color.FromArgb(hovered || active ? 100 : 70, 0, 0, 0)))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(enabled ? (hovered || active ? 100 : 70) : 42, 0, 0, 0)))
             g.FillPath(shadowBrush, shadowPath);
 
         using (var path = WindowsDockRenderer.RoundedRect(rect, radius))
         {
-            int bgA = hovered || active ? 240 : 225;
+            int bgA = enabled ? (hovered || active ? 240 : 225) : 185;
             using var bg = new SolidBrush(Color.FromArgb(bgA, UiChrome.SurfaceTier1));
             g.FillPath(bg, path);
             using var border = new Pen(
-                Color.FromArgb(hovered || active ? 220 : 150, accent),
+                Color.FromArgb(enabled ? (hovered || active ? 220 : 150) : 72, accent),
                 hovered || active ? 1.4f : 1f);
             g.DrawPath(border, path);
         }
@@ -305,7 +369,7 @@ internal static class SelectionSizeReadout
             rect.X + (rect.Width - iconSz) / 2f,
             rect.Y + (rect.Height - iconSz) / 2f,
             iconSz, iconSz);
-        int iconA = hovered || active ? 255 : 220;
+        int iconA = enabled ? (hovered || active ? 255 : 220) : 105;
         using var iconColor = new SolidBrush(Color.FromArgb(iconA, UiChrome.SurfaceTextPrimary));
         FluentIcons.DrawIcon(g, "gear", iconRect, iconColor.Color, iconInset: 0f);
     }

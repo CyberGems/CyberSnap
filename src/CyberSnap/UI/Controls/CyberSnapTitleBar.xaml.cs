@@ -243,9 +243,10 @@ public partial class CyberSnapTitleBar : UserControl
         var helpItem = new MenuItem
         {
             Header = LocalizationService.Translate("Help"),
-            Icon = CreateMenuIcon("question", titleIcon, 16),
-            ToolTip = LocalizationService.Translate("Online documentation, updates and about CyberSnap.")
+            Icon = CreateMenuIcon("question", titleIcon, 16)
         };
+        helpItem.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
+        helpItem.SetResourceReference(MenuItem.ItemContainerStyleProperty, "HistoryActionsMenuItem");
 
         var wikiItem = new MenuItem
         {
@@ -317,12 +318,12 @@ public partial class CyberSnapTitleBar : UserControl
             BurgerBtn.ToolTip = LocalizationService.Translate("Menu");
 
             var menu = new ContextMenu();
-            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+            StyleBurgerMenu(menu);
 
             // Editor shortcut
             var editorItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Annotations Editor"),
+                Header = WithEllipsis(LocalizationService.Translate("Annotations Editor")),
                 Icon = CreateMenuIcon("compose", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open the post-capture editor for annotations.")
             };
@@ -338,7 +339,7 @@ public partial class CyberSnapTitleBar : UserControl
             // Gallery shortcut
             var galleryItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Capture Gallery"),
+                Header = WithEllipsis(LocalizationService.Translate("Capture Gallery")),
                 Icon = CreateMenuIcon("history", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Open the Capture Gallery")
             };
@@ -372,7 +373,7 @@ public partial class CyberSnapTitleBar : UserControl
             // Setup wizard
             var wizardItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Setup wizard"),
+                Header = WithEllipsis(LocalizationService.Translate("Setup wizard")),
                 Icon = CreateMenuIcon("gear", titleIcon, 16),
                 ToolTip = LocalizationService.Translate("Re-run the setup wizard")
             };
@@ -388,6 +389,8 @@ public partial class CyberSnapTitleBar : UserControl
             // Help (wiki / homepage / updates / about)
             menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.SettingsPage,
                 "Wiki: Settings...", "Open the Settings page in the CyberSnap wiki.", titleIcon));
+
+            ApplyMenuItemStyles(menu);
 
             menu.Opened += (_, _) =>
             {
@@ -415,7 +418,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             // Build burger menu with toggles + Configuration
             var menu = new ContextMenu();
-            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+            StyleBurgerMenu(menu);
 
             var searchToggle = new MenuItem
             {
@@ -481,6 +484,8 @@ public partial class CyberSnapTitleBar : UserControl
             menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.GalleryAndHistoryPage,
                 "Wiki: Gallery & History...", "Open the Gallery & History page in the CyberSnap wiki.", titleIcon));
 
+            ApplyMenuItemStyles(menu);
+
             menu.Closed += (_, _) =>
             {
                 RecordContextMenuClosed();
@@ -506,7 +511,7 @@ public partial class CyberSnapTitleBar : UserControl
             BurgerBtn.ToolTip = LocalizationService.Translate("Menu");
 
             var menu = new ContextMenu();
-            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+            StyleBurgerMenu(menu);
 
             if (OwnerWindow is CapturePreviewDialog previewWindow)
             {
@@ -580,6 +585,8 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(CreateHelpSubmenu(menu, wikiPage, wikiHeaderKey, wikiTooltipKey, titleIcon));
 
+            ApplyMenuItemStyles(menu);
+
             menu.Opened += (_, _) =>
             {
                 ApplyButtonHoverVisual(BurgerBtn, true);
@@ -601,6 +608,26 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.Visibility = Visibility.Collapsed;
             BurgerBtn.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void StyleBurgerMenu(ContextMenu menu)
+    {
+        menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+    }
+
+    private static void ApplyMenuItemStyles(ContextMenu menu)
+    {
+        foreach (var item in menu.Items.OfType<MenuItem>())
+            item.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
+    }
+
+    private static string WithEllipsis(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return text;
+        if (text.EndsWith("...", StringComparison.Ordinal) || text.EndsWith("…", StringComparison.Ordinal))
+            return text;
+        return text + "...";
     }
 
     private void RecordContextMenuClosed()
