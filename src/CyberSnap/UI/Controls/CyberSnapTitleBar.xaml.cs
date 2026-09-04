@@ -481,8 +481,8 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(achievementsItem);
 
-            menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.GalleryAndHistoryPage,
-                "Wiki: Gallery & History...", "Open the Gallery & History page in the CyberSnap wiki.", titleIcon));
+            menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.GalleryPage,
+                "Wiki: Gallery...", "Open the Gallery page in the CyberSnap wiki.", titleIcon));
 
             ApplyMenuItemStyles(menu);
 
