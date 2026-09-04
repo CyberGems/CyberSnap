@@ -362,9 +362,9 @@ public sealed partial class RecordingControlBarWindow
         StopBtn.Height = h;
         StopBtn.CornerRadius = new CornerRadius(mini ? 6 : 10);
         StopBtn.Margin = w <= 0 ? new Thickness(0) : new Thickness(mini ? 4 : 8, 0, 0, 0);
-        StopGlyph.Width = mini ? 12 : 18;
-        StopGlyph.Height = mini ? 12 : 18;
-        StopGlyph.CornerRadius = new CornerRadius(mini ? 2.5 : 3.5);
+        StopGlyph.Width = mini ? 14 : 18;
+        StopGlyph.Height = mini ? 14 : 18;
+        StopGlyph.CornerRadius = new CornerRadius(mini ? 3 : 3.5);
         if (setSize)
         {
             StopBtn.Width = w;
@@ -411,14 +411,11 @@ public sealed partial class RecordingControlBarWindow
     {
         bool playGlyph = _isPaused;
         double icon = mini
-            ? (playGlyph ? 22 : 20)
-            : 20;
-        double recordIcon = mini ? 21 : 26;
-        double recordDot = mini ? 9 : 11;
+            ? (playGlyph ? 22 : 18)
+            : (playGlyph ? 20 : 24);
+        double recordIcon = mini ? 22 : 26;
         RecordGlyph.Width = recordIcon;
         RecordGlyph.Height = recordIcon;
-        RecordDot.Width = recordDot;
-        RecordDot.Height = recordDot;
         PrimaryIcon.Width = icon;
         PrimaryIcon.Height = icon;
         if (mini)

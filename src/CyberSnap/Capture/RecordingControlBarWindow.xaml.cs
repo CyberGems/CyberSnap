@@ -754,8 +754,7 @@ public sealed partial class RecordingControlBarWindow : Window
         PrimaryBtn.Cursor = _isEncoding ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand;
 
         var neutral = Theme.TextPrimary;
-        RecordRing.Stroke = Theme.Brush(StopRed);
-        RecordDot.Fill = Theme.Brush(StopRed);
+        RecordGlyph.Fill = Theme.Brush(StopRed);
         RecordGlyph.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
         PrimaryIcon.Visibility = ready ? Visibility.Collapsed : Visibility.Visible;
         if (!ready)
