@@ -488,6 +488,14 @@
   "Issues": "Issues",
   "License": "License",
   "Launch on startup": "Launch on startup",
+  "Keep CyberSnap visible in the tray": "Keep CyberSnap visible in the tray",
+  "Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings.": "Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings.",
+  "Show in the notification area": "Show in the notification area",
+  "Pin the CyberSnap icon so it stays visible on the taskbar.": "Pin the CyberSnap icon so it stays visible on the taskbar.",
+  "Open the Windows page where you can pin CyberSnap to the visible tray.": "Open the Windows page where you can pin CyberSnap to the visible tray.",
+  "Got it": "Got it",
+  "Open wizard": "Open wizard",
+  "Review language, theme, capture options, and hotkeys from the first-launch walkthrough.": "Review language, theme, capture options, and hotkeys from the first-launch walkthrough.",
   "Reset Settings": "Reset Settings",
   "Export settings": "Export settings",
   "Import settings": "Import settings",
@@ -2126,5 +2134,9 @@
   "{0} objects deleted": "{0} objects deleted",
   "{0} objects selected": "{0} objects selected",
   "{0} to next milestone": "{0} to next milestone",
-  "{0}-day streak": "{0}-day streak"
+  "{0}-day streak": "{0}-day streak",
+  "Open recording settings?": "Open recording settings?",
+  "The current recording capture will close before opening Video & GIF settings.": "The current recording capture will close before opening Video & GIF settings.",
+  "Open settings": "Open settings",
+  "Recording settings": "Recording settings"
 }

@@ -342,6 +342,9 @@ public sealed class TrayIcon : IDisposable
     public void TriggerQuit() => OnQuit?.Invoke();
     public void TriggerRecord(RecordingFormat format) => OnRecordRequested?.Invoke(format);
 
+    internal bool TryGetIconScreenRect(out System.Drawing.Rectangle rect)
+        => WindowsNotificationArea.TryGetNotifyIconRect(_notifyIcon, out rect);
+
     private static string T(string text) => LocalizationService.Translate(text);
 
     // â”€â”€ Tray icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

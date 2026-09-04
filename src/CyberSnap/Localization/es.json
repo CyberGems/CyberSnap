@@ -684,6 +684,14 @@
   "Issues": "Problemas",
   "License": "Licencia",
   "Launch on startup": "Iniciar con Windows",
+  "Keep CyberSnap visible in the tray": "Mantén CyberSnap visible en la bandeja",
+  "Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings.": "Windows oculta los iconos nuevos detrás de la flecha (^). Arrastra CyberSnap a la barra de tareas, o fíjalo en Configuración de Windows.",
+  "Show in the notification area": "Mostrar en la bandeja principal",
+  "Pin the CyberSnap icon so it stays visible on the taskbar.": "Fija el icono de CyberSnap para que permanezca visible en la barra de tareas.",
+  "Open the Windows page where you can pin CyberSnap to the visible tray.": "Abre la página de Windows donde puedes fijar CyberSnap en la bandeja visible.",
+  "Got it": "Entendido",
+  "Open wizard": "Abrir asistente",
+  "Review language, theme, capture options, and hotkeys from the first-launch walkthrough.": "Revisa idioma, tema, opciones de captura y atajos desde el recorrido inicial.",
   "Start CyberSnap automatically when Windows starts.": "Inicia CyberSnap automáticamente al arrancar Windows.",
   "Reset Settings": "Restablecer ajustes",
   "Reset to default hotkeys": "Restablecer atajos de teclado",
@@ -2392,5 +2400,9 @@
   "The {0} pair is full (2 buttons max). Remove a button first.": "El par {0} está lleno (máximo 2 botones). Quita primero un botón.",
   "This action CANNOT be undone.": "Esta acción NO se puede deshacer.",
   "Video and GIF open in the Trimmer after recording. These buttons are confirm-mode destination buttons for images only.": "Los videos y GIF se abren en el Recortador después de grabar. Estos botones de destino en modo de confirmación son solo para imágenes.",
-  "https://cybersnap.cybergems.org": "https://cybersnap.cybergems.org"
+  "https://cybersnap.cybergems.org": "https://cybersnap.cybergems.org",
+  "Open recording settings?": "¿Abrir la configuración de grabación?",
+  "The current recording capture will close before opening Video & GIF settings.": "La captura de grabación actual se cerrará antes de abrir la configuración de Video y GIF.",
+  "Open settings": "Abrir configuración",
+  "Recording settings": "Configuración de grabación"
 }

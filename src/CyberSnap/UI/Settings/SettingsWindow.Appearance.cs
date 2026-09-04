@@ -1079,6 +1079,7 @@ public partial class SettingsWindow
         _settingsService.Settings.EditorSuppressTransformFlattenConfirm = false;
         _settingsService.Settings.UploadSuppressThirdPartyConfirm = false;
         _settingsService.Settings.PreviewSuppressCloseAllConfirm = false;
+        _settingsService.Settings.RecordingSuppressSettingsExitConfirm = false;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("settings.reset-suppressed-dialogs", ex); }
         var original = ResetSuppressedDialogsButton.Content?.ToString() ?? "Reset";
