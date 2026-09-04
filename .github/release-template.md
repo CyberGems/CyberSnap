@@ -6,33 +6,32 @@ Welcome to the official **CyberSnap {{VERSION}}** release! CyberSnap is a featur
 
 ### ✨ Key Features & Highlights
 
-- ✂️ **Cut Out strip tool**:
-  - Slice a band out of the canvas and close the gap, with the same confirm / cancel chrome as Crop.
-  - Rotate and flip moved into the editor palette so transforms stay one click away.
+- 🎬 **Recording bar overhaul**:
+  - Compact mini bar with redesigned transport glyphs, live size meter, and a format badge as the rec indicator.
+  - Pause works for GIF and MP4; Space and Enter hit the bar instead of the window below.
+  - Drag the bar, blink a tray LED while capturing, and open Video & GIF settings from the overlay.
 
-- 🔄 **Shape rotation**:
-  - Compact corner arrows and a dedicated rotate cursor for selected annotations.
-  - A fine plus handle at the object center, with selection restored after Undo.
+- 📌 **Stay visible in the tray**:
+  - A first-run tip explains that Windows hides new icons behind the overflow (`^`).
+  - Settings → System can open the Windows page *Select which icons appear on the taskbar* (the modern toggle list, not the old Control Panel applet).
 
-- 🗂️ **Editor document tabs**:
-  - Extra captures open as tabs instead of replacing the current document.
-  - Double-click empty tab-bar space to start a new canvas.
+- 🗂️ **Capture preview tabs**:
+  - New captures stack as tabs instead of replacing the current preview.
+  - Right-click menus on preview and editor tabs, including when only one capture is open.
 
-- 🌙 **Quiet Hours**:
-  - Mute notification toasts during a chosen window so captures stay silent overnight.
+- 🎓 **Quick-start guides**:
+  - Refreshed capture tutorial and a new editor bubble that closes when focus leaves.
+  - Pan and Pick can set color and stroke; manual editor opens stay on Pick.
 
-- 😀 **Emoji tool**:
-  - Selecting Emoji restores the last glyph and opens the drawer.
-  - Click the canvas to stamp and close, or click the tool button again to tuck the picker away.
-  - Scroll or `[` `]` to resize; hover chrome stays Pick-only so placement stays clean.
+- 🎞️ **Video trimmer**:
+  - Previews load at actual size, with a hover zoom bar for frame inspection.
 
-- 🔍 **Fit / original zoom toggle**:
-  - One status-bar button switches between *Fit to window* and *Original size*, with larger icons.
+- 📖 **Help where you are**:
+  - Window menus include Help submenus with wiki links (Editor, Gallery, Settings, and more).
 
-- 🎨 **Palette & banners**:
-  - Drawing tools always arm a palette color (cyan by default) so the first shape is never a shadow-only stroke.
-  - Color and stroke chips hint “Select a drawing tool” when they do not apply.
-  - Faster fade/slide banners that dismiss on hover.
+- 🌍 **Polish & reliability**:
+  - Complete English / Spanish catalogs and localization safeguards.
+  - Faster scrolling capture with preview handoff, scan animation on OCR and barcode flows, and sturdier capture-widget restoration.
 
 ---
 
