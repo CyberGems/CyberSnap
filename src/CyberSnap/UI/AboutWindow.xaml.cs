@@ -167,9 +167,11 @@ public partial class AboutWindow : Window
             AboutTitleBar.Title = LocalizationService.Translate("About CyberSnap");
             AboutFooterCopyright.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterWebsiteBtn.ToolTip = LocalizationService.Translate("Visit CyberGems website");
+            AboutFooterDocsBtn.ToolTip = LocalizationService.Translate("Open the online documentation");
             AboutFooterGithubBtn.ToolTip = LocalizationService.Translate("View project on GitHub");
             AboutFooterIssuesBtn.ToolTip = LocalizationService.Translate("Report a bug or open an issue");
             AboutFooterReleasesBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
+            AboutFooterDonateBtn.ToolTip = LocalizationService.Translate("Donate to project");
         }
         catch (Exception ex)
         {
@@ -333,6 +335,12 @@ public partial class AboutWindow : Window
         CyberSnap.Helpers.WikiLinks.Open(CyberSnap.Helpers.WikiLinks.HomePage);
     }
 
+    private void AboutFooterDonate_Click(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        CyberSnap.Helpers.DonationLinks.Open();
+    }
+
     private void AboutFooterCopyright_MouseEnter(object sender, MouseEventArgs e)
     {
         AboutFooterCopyright.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
@@ -362,8 +370,7 @@ public partial class AboutWindow : Window
         var brushKey = primary ? "ThemeTextPrimaryBrush" : "ThemeMutedBrush";
         if (border == AboutFooterWebsiteBtn)
         {
-            AboutFooterWebsiteBox.SetResourceReference(Shape.StrokeProperty, brushKey);
-            AboutFooterWebsiteArrow.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterWebsiteIcon.SetResourceReference(Shape.StrokeProperty, brushKey);
         }
         else if (border == AboutFooterGithubBtn)
         {
@@ -371,8 +378,11 @@ public partial class AboutWindow : Window
         }
         else if (border == AboutFooterIssuesBtn)
         {
-            AboutFooterIssuesRing.SetResourceReference(Shape.StrokeProperty, brushKey);
-            AboutFooterIssuesDot.SetResourceReference(Shape.FillProperty, brushKey);
+            AboutFooterIssuesIcon1.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterIssuesIcon2.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterIssuesIcon3.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterIssuesIcon4.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterIssuesIcon5.SetResourceReference(Shape.StrokeProperty, brushKey);
         }
         else if (border == AboutFooterReleasesBtn)
         {
@@ -383,6 +393,7 @@ public partial class AboutWindow : Window
         {
             AboutFooterDocsBody.SetResourceReference(Shape.StrokeProperty, brushKey);
         }
+        // Donate heart keeps its #F43F5E fill in both states (same as CyberWall).
     }
 
     private void ResetFooterVisuals()
@@ -393,6 +404,7 @@ public partial class AboutWindow : Window
         AboutFooterIssuesBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterReleasesBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterDocsBtn.Background = System.Windows.Media.Brushes.Transparent;
+        AboutFooterDonateBtn.Background = System.Windows.Media.Brushes.Transparent;
         SetFooterIconAccent(AboutFooterWebsiteBtn, primary: false);
         SetFooterIconAccent(AboutFooterGithubBtn, primary: false);
         SetFooterIconAccent(AboutFooterIssuesBtn, primary: false);
@@ -407,12 +419,14 @@ public partial class AboutWindow : Window
         AboutFooterIssuesBtn.IsEnabled = enabled;
         AboutFooterReleasesBtn.IsEnabled = enabled;
         AboutFooterDocsBtn.IsEnabled = enabled;
+        AboutFooterDonateBtn.IsEnabled = enabled;
         AboutFooterCopyright.IsEnabled = enabled;
         AboutFooterWebsiteBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterGithubBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterIssuesBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterReleasesBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterDocsBtn.Opacity = enabled ? 1 : 0.45;
+        AboutFooterDonateBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterCopyright.Opacity = enabled ? 1 : 0.45;
     }
 

@@ -371,6 +371,7 @@
                            MouseLeave="AboutFooterCopyright_MouseLeave"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Website (Globe) — same icon/order as CyberWall -->
                     <Border x:Name="AboutFooterWebsiteBtn"
                             Style="{StaticResource AboutFooterIconButton}"
                             ToolTip="Visit CyberGems website"
@@ -378,19 +379,28 @@
                             MouseLeftButtonUp="AboutFooterWebsite_Click"
                             MouseEnter="AboutFooterIcon_MouseEnter"
                             MouseLeave="AboutFooterIcon_MouseLeave">
-                        <Viewbox Width="14" Height="14" Stretch="Uniform">
-                            <!-- Open-external (box + arrow) — clearer “website” cue than a filled globe -->
-                            <Canvas x:Name="AboutFooterWebsiteIconCanvas" Width="20" Height="20">
-                                <Path x:Name="AboutFooterWebsiteBox"
-                                      Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5"
-                                      StrokeLineJoin="Round" Fill="Transparent"
-                                      Data="M4.5 7.5V15.5A1.5 1.5 0 0 0 6 17h8.5A1.5 1.5 0 0 0 16 15.5V12"/>
-                                <Path x:Name="AboutFooterWebsiteArrow"
-                                      Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5"
-                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                      Fill="Transparent"
-                                      Data="M10.5 3.5H16.5V9.5M16.2 3.8L9 11"/>
-                            </Canvas>
+                        <Viewbox Width="15" Height="15" Stretch="Uniform">
+                            <Path x:Name="AboutFooterWebsiteIcon"
+                                  Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5"
+                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Fill="Transparent"
+                                  Data="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </Viewbox>
+                    </Border>
+                    <!-- Online documentation (Open book) — same icon/order as CyberWall -->
+                    <Border x:Name="AboutFooterDocsBtn"
+                            Style="{StaticResource AboutFooterIconButton}"
+                            ToolTip="Open the online documentation"
+                            Services:LocalizationService.SourceToolTip="Open the online documentation"
+                            MouseLeftButtonUp="AboutFooterDocs_Click"
+                            MouseEnter="AboutFooterIcon_MouseEnter"
+                            MouseLeave="AboutFooterIcon_MouseLeave"
+                            Margin="4,0,0,0">
+                        <Viewbox Width="15" Height="15" Stretch="Uniform">
+                            <Path x:Name="AboutFooterDocsBody"
+                                  Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5"
+                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
+                                  Data="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                         </Viewbox>
                     </Border>
                     <Border x:Name="AboutFooterGithubBtn"
@@ -399,25 +409,34 @@
                             Services:LocalizationService.SourceToolTip="View project on GitHub"
                             MouseLeftButtonUp="AboutFooterGithub_Click"
                             MouseEnter="AboutFooterIcon_MouseEnter"
-                            MouseLeave="AboutFooterIcon_MouseLeave">
-                        <Viewbox Width="14" Height="14" Stretch="Uniform">
+                            MouseLeave="AboutFooterIcon_MouseLeave"
+                            Margin="4,0,0,0">
+                        <Viewbox Width="15" Height="15" Stretch="Uniform">
                             <Path x:Name="AboutFooterGithubIcon" Fill="{DynamicResource ThemeMutedBrush}"
                                   Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
                         </Viewbox>
                     </Border>
+                    <!-- Issues (Bug) — same icon/order as CyberWall -->
                     <Border x:Name="AboutFooterIssuesBtn"
                             Style="{StaticResource AboutFooterIconButton}"
                             ToolTip="Report a bug or open an issue"
                             Services:LocalizationService.SourceToolTip="Report a bug or open an issue"
                             MouseLeftButtonUp="AboutFooterIssues_Click"
                             MouseEnter="AboutFooterIcon_MouseEnter"
-                            MouseLeave="AboutFooterIcon_MouseLeave">
-                        <Viewbox Width="14" Height="14" Stretch="Uniform">
+                            MouseLeave="AboutFooterIcon_MouseLeave"
+                            Margin="4,0,0,0">
+                        <Viewbox Width="15" Height="15" Stretch="Uniform">
                             <Canvas Width="24" Height="24">
-                                <Ellipse x:Name="AboutFooterIssuesRing" Width="18" Height="18" Canvas.Left="3" Canvas.Top="3"
-                                         Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="2" Fill="Transparent"/>
-                                <Ellipse x:Name="AboutFooterIssuesDot" Width="4" Height="4" Canvas.Left="10" Canvas.Top="10"
-                                         Fill="{DynamicResource ThemeMutedBrush}"/>
+                                <Path x:Name="AboutFooterIssuesIcon1" Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
+                                      Data="m8 2 1.88 1.88 M14.12 3.88 16 2"/>
+                                <Path x:Name="AboutFooterIssuesIcon2" Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                      Data="M9 7.13v-1a3 3 0 1 1 6 0v1"/>
+                                <Path x:Name="AboutFooterIssuesIcon3" Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                      Data="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6z"/>
+                                <Path x:Name="AboutFooterIssuesIcon4" Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round"
+                                      Data="M12 20v-9"/>
+                                <Path x:Name="AboutFooterIssuesIcon5" Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                      Data="M6.53 9C4.6 8.8 3 7.1 3 5 M6 13H2 M3 21c0-2.1 1.7-3.9 3.8-4 M20.97 5c0 2.1-1.6 3.8-3.5 4 M22 13h-4 M17.2 17c2.1.1 3.8 1.9 3.8 4"/>
                             </Canvas>
                         </Viewbox>
                     </Border>
@@ -427,8 +446,9 @@
                             Services:LocalizationService.SourceToolTip="View releases and changelogs"
                             MouseLeftButtonUp="AboutFooterReleases_Click"
                             MouseEnter="AboutFooterIcon_MouseEnter"
-                            MouseLeave="AboutFooterIcon_MouseLeave">
-                        <Viewbox Width="14" Height="14" Stretch="Uniform">
+                            MouseLeave="AboutFooterIcon_MouseLeave"
+                            Margin="4,0,0,0">
+                        <Viewbox Width="15" Height="15" Stretch="Uniform">
                             <Canvas Width="24" Height="24">
                                 <Path x:Name="AboutFooterTagBody" Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="2"
                                       StrokeLineJoin="Round" Fill="Transparent"
@@ -438,21 +458,18 @@
                             </Canvas>
                         </Viewbox>
                     </Border>
-                    <Border x:Name="AboutFooterDocsBtn"
+                    <!-- Donate (Heart) — same icon/order/color as CyberWall -->
+                    <Border x:Name="AboutFooterDonateBtn"
                             Style="{StaticResource AboutFooterIconButton}"
-                            ToolTip="Open the online documentation"
-                            Services:LocalizationService.SourceToolTip="Open the online documentation"
-                            MouseLeftButtonUp="AboutFooterDocs_Click"
+                            ToolTip="Donate to project"
+                            Services:LocalizationService.SourceToolTip="Donate to project"
+                            MouseLeftButtonUp="AboutFooterDonate_Click"
                             MouseEnter="AboutFooterIcon_MouseEnter"
-                            MouseLeave="AboutFooterIcon_MouseLeave">
-                        <Viewbox Width="14" Height="14" Stretch="Uniform">
-                            <Canvas Width="24" Height="24">
-                                <!-- Book glyph — links to the online wiki/documentation -->
-                                <Path x:Name="AboutFooterDocsBody"
-                                      Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="2"
-                                      StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
-                                      Data="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-                            </Canvas>
+                            MouseLeave="AboutFooterIcon_MouseLeave"
+                            Margin="4,0,0,0">
+                        <Viewbox Width="15" Height="15" Stretch="Uniform">
+                            <Path x:Name="AboutFooterDonateIcon" Fill="#F43F5E"
+                                  Data="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </Viewbox>
                     </Border>
                 </StackPanel>
