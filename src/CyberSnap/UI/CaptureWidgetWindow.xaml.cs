@@ -108,6 +108,7 @@ public partial class CaptureWidgetWindow : Window
         UpdateCaptureCursorState();
         UpdateAutoCopyState();
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
+        RefreshUpdateBadge();
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -172,6 +173,7 @@ public partial class CaptureWidgetWindow : Window
             return;
         }
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
+        RefreshUpdateBadge();
     }
 
     private void ApplyTheme()
@@ -277,6 +279,7 @@ public partial class CaptureWidgetWindow : Window
         UpdateCaptureCursorState();
         UpdateAutoCopyState();
         LoadIcons();
+        RefreshUpdateBadge();
 
         // Tooltip reflects the configured default capture mode (area vs from-center).
         var lang = _settings.InterfaceLanguage;
@@ -369,6 +372,41 @@ public partial class CaptureWidgetWindow : Window
 
     // Settings → widget: re-read the global Auto-copy master.
     public void RefreshAutoCopyToggle() => UpdateAutoCopyState();
+
+    /// <summary>
+    /// Mirrors the tray menu's green update LED: visible next to the widget branding
+    /// when a newer release was detected (App.LatestUpdateResult). Clicking the
+    /// branding already opens About, same as the tray menu header.
+    /// </summary>
+    public void RefreshUpdateBadge()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshUpdateBadge);
+            return;
+        }
+
+        try
+        {
+            var lang = _settings.InterfaceLanguage;
+            bool updateAvailable = (System.Windows.Application.Current as App)?.LatestUpdateResult?.IsUpdateAvailable ?? false;
+            UpdateLed.Visibility = updateAvailable ? Visibility.Visible : Visibility.Collapsed;
+            if (updateAvailable)
+            {
+                UpdateLed.ToolTip = LocalizationService.Translate(lang, "Update available");
+                WidgetBrandingBtn.ToolTip = $"{LocalizationService.Translate(lang, "Open About CyberSnap")} ({LocalizationService.Translate(lang, "Update available")})";
+            }
+            else
+            {
+                UpdateLed.ToolTip = null;
+                WidgetBrandingBtn.ToolTip = LocalizationService.Translate(lang, "Open About CyberSnap");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("widget.update-badge", ex.Message, ex);
+        }
+    }
 
     /// <summary>
     /// Transparent shadow halo per side. The docked side gets ZERO halo so the window sits flush
@@ -783,6 +821,7 @@ public partial class CaptureWidgetWindow : Window
         // replaced while the peek was collapsed).
         UpdateCaptureCursorState();
         UpdateAutoCopyState();
+        RefreshUpdateBadge();
 
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Arrow;
         MainPanelBorder.Visibility = Visibility.Visible;

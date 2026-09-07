@@ -279,6 +279,7 @@ public partial class App
                 if (Application.Current is null) return;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
+                    RefreshWidgetUpdateBadge();
                     var spec = new ToastSpec
                     {
                         Title = LocalizationService.Translate("Update available"),

@@ -280,6 +280,11 @@ public partial class AboutWindow : Window
     public async Task RunUpdateCheckAsync()
     {
         var result = await UpdateService.CheckForUpdatesAsync();
+        if (Application.Current is App app)
+        {
+            app.LatestUpdateResult = result;
+            app.RefreshWidgetUpdateBadge();
+        }
         if (result.IsUpdateAvailable)
         {
             var currentLabel = LocalizationService.Translate("Current:");

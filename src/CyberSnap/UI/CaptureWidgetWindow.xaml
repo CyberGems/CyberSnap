@@ -250,6 +250,17 @@
                                            Opacity="0.65"
                                            VerticalAlignment="Center"
                                            FontFamily="Segoe UI Variable Display"/>
+                                <Ellipse x:Name="UpdateLed"
+                                         Width="7"
+                                         Height="7"
+                                         Fill="#22C55E"
+                                         Margin="5,0,0,0"
+                                         VerticalAlignment="Center"
+                                         Visibility="Collapsed">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect BlurRadius="6" Color="#22C55E" ShadowDepth="0" Opacity="0.8"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
                             </StackPanel>
                         </Button>
                         <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Configuration"
