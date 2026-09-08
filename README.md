@@ -143,7 +143,7 @@ Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/relea
 
 ### 🛡️ Windows SmartScreen
 
-Windows may show a SmartScreen warning the first time you run the CyberSnap installer — this is expected until Windows builds enough reputation for the file. The same can appear when launching the portable build.
+Windows may show a SmartScreen warning the first time you run the CyberSnap installer — this is an unsigned hobby app, so Windows hasn't built reputation for the file yet. This is expected; the source is public so you can inspect exactly what it does. The same can appear when launching the portable build.
 
 To continue:
 
