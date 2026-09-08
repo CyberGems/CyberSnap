@@ -25,6 +25,7 @@
         <SolidColorBrush x:Key="ThemeInputBorderBrush" Color="#15FFFFFF"/>
         <SolidColorBrush x:Key="ThemeWindowBorderBrush" Color="#12FFFFFF"/>
         <SolidColorBrush x:Key="ThemeAccentBrush" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="ThemeAccentSubtleBrush" Color="#15FFFFFF"/>
         <SolidColorBrush x:Key="ThemeAccentHoverBrush" Color="#40FFFFFF"/>
         <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
         <SolidColorBrush x:Key="ThemePrimaryButtonForegroundBrush" Color="#FF0B1220"/>
@@ -146,6 +147,36 @@
             <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryButtonForegroundBrush}"/>
+            <!-- Own template: keep solid accent on hover so dark-on-accent text stays readable.
+                 Inheriting the base IsMouseOver (translucent AccentHover) would wash the
+                 background out while the foreground stays dark. -->
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.38"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="PreviewPrimaryButton" TargetType="Button">
@@ -351,12 +382,36 @@
                                         Content="4×"
                                         Margin="4,0,0,0"
                                         AutomationProperties.Name="4x"/>
-                                <TextBlock x:Name="ScaleDimensionsText"
-                                           Margin="8,0,2,0"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                           FontSize="10"
-                                           VerticalAlignment="Center"
-                                           Opacity="0.9"/>
+                                <StackPanel x:Name="ScaleDimensionsPanel"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,2,0">
+                                    <TextBlock x:Name="ScaleOriginalText"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                               FontSize="10.5"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               Opacity="0.95"/>
+                                    <TextBlock x:Name="ScaleArrowText"
+                                               Text="→"
+                                               Foreground="{DynamicResource ThemeMutedBrush}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               Margin="6,0"/>
+                                    <Border x:Name="ScaleResultBadge"
+                                            CornerRadius="6"
+                                            Background="{DynamicResource ThemeAccentSubtleBrush}"
+                                            BorderBrush="{DynamicResource ThemeAccentBrush}"
+                                            BorderThickness="1"
+                                            Padding="6,2">
+                                        <TextBlock x:Name="ScaleScaledText"
+                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </Grid>

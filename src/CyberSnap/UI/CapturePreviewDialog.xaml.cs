@@ -2296,16 +2296,37 @@ namespace CyberSnap.UI
             Scale1xBtn.Style = _scaleFactor == 1 ? activeStyle : normalStyle;
             Scale2xBtn.Style = _scaleFactor == 2 ? activeStyle : normalStyle;
             Scale4xBtn.Style = _scaleFactor == 4 ? activeStyle : normalStyle;
-            if (ScaleDimensionsText != null)
+            if (ScaleOriginalText != null && ScaleScaledText != null && ScaleArrowText != null && ScaleResultBadge != null)
             {
                 int w = EffectiveBitmap.Width;
                 int h = EffectiveBitmap.Height;
                 string dims = $"{w} × {h}px";
+                string original = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px";
                 if (_scaleFactor == 1)
-                    ScaleDimensionsText.Text = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px";
+                {
+                    // Sin escalado: medida única, más visible (primaria + semibold).
+                    ScaleOriginalText.Text = original;
+                    ScaleOriginalText.SetResourceReference(TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
+                    ScaleOriginalText.FontWeight = FontWeights.SemiBold;
+                    ScaleOriginalText.FontSize = 11;
+                    ScaleOriginalText.Opacity = 1.0;
+                    ScaleArrowText.Visibility = Visibility.Collapsed;
+                    ScaleResultBadge.Visibility = Visibility.Collapsed;
+                    ScaleDimensionsPanel.ToolTip = dims;
+                }
                 else
-                    ScaleDimensionsText.Text = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px → {dims}";
-                ScaleDimensionsText.ToolTip = dims;
+                {
+                    // Escalado: origen legible pero secundario + resultado destacado en pill con acento.
+                    ScaleOriginalText.Text = original;
+                    ScaleOriginalText.SetResourceReference(TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
+                    ScaleOriginalText.FontWeight = FontWeights.SemiBold;
+                    ScaleOriginalText.FontSize = 10.5;
+                    ScaleOriginalText.Opacity = 0.95;
+                    ScaleArrowText.Visibility = Visibility.Visible;
+                    ScaleResultBadge.Visibility = Visibility.Visible;
+                    ScaleScaledText.Text = dims;
+                    ScaleDimensionsPanel.ToolTip = $"{original} → {dims}";
+                }
             }
             UpdateOptionalActionsAvailability();
         }
