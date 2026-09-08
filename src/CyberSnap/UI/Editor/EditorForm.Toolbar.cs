@@ -46,7 +46,6 @@ public sealed partial class EditorForm
     private EditorChromeButton? _minimizeButton;
     private EditorChromeButton? _donateButton;
     private EditorChromeButton? _menuButton;
-    private EditorChromeButton? _helpButton;
     private Panel? _brandPanel;
     private EditorCommandButton _galleryButton = null!;
     private EditorCommandButton _captureButton = null!;
@@ -663,11 +662,6 @@ public sealed partial class EditorForm
                 : ToolStripDropDownDirection.BelowRight);
         };
         windowActions.Controls.Add(_menuButton);
-
-        windowActions.Controls.Add(MakeSeparator());
-        _helpButton = MakeChromeButton("info", LocalizationService.Translate("Editor Quick Start"));
-        _helpButton.Click += (_, _) => ShowEditorQuickStartGuide();
-        windowActions.Controls.Add(_helpButton);
 
         windowActions.Controls.Add(MakeSeparator());
         _donateButton = MakeChromeButton("heart", LocalizationService.Translate("Donate"));
@@ -2080,6 +2074,11 @@ public sealed partial class EditorForm
             Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
             20, false);
 
+        var quickStartItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Editor Quick Start..."), iconId: "question");
+        quickStartItem.ToolTipText = LocalizationService.Translate("Editor Quick Start");
+        quickStartItem.Click += (_, _) => ShowEditorQuickStartGuide();
+
         var wikiItem = WindowsMenuRenderer.Item(
             LocalizationService.Translate("Wiki: Annotation Editor..."), iconId: "question");
         wikiItem.ToolTipText = LocalizationService.Translate("Open the Annotation Editor page in the CyberSnap wiki.");
@@ -2104,6 +2103,7 @@ public sealed partial class EditorForm
                 app.ShowAbout();
         };
 
+        helpSubmenu.DropDownItems.Add(quickStartItem);
         helpSubmenu.DropDownItems.Add(wikiItem);
         helpSubmenu.DropDownItems.Add(homepageItem);
         helpSubmenu.DropDownItems.Add(updatesItem);

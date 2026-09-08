@@ -689,120 +689,66 @@ public sealed partial class AnnotationCanvas
         return p;
     }
 
-    /// <summary>Draws a modern, polished vector image/drop badge with dual-tone layers and smooth lighting.</summary>
-    private void DrawWelcomeIcon(Graphics g, float cx, float cy, float size, Color accentColor, bool isDragOver, bool isHovered, bool isPressed)
+    /// <summary>Draws a dashed rounded rectangle box with a centered plus sign matching the welcome mockup.</summary>
+    private void DrawWelcomeIcon(Graphics g, float cx, float cy, float boxW, float boxH, Color accentColor, bool isDragOver, bool isHovered, bool isPressed)
     {
-        // 1. Badge container circle with subtle glow and gradient tint
-        float radius = size * 0.46f;
-        var badgeRect = new RectangleF(cx - radius, cy - radius, radius * 2, radius * 2);
+        Color neutralBorder = EditorColors.IsDark ? Color.FromArgb(175, 182, 192) : Color.FromArgb(120, 135, 155);
+        Color brightBorder = EditorColors.IsDark ? Color.FromArgb(240, 246, 255) : Color.FromArgb(40, 55, 75);
+        Color borderColor = isPressed ? brightBorder : (isDragOver ? accentColor : (isHovered ? brightBorder : neutralBorder));
 
-        using (var shadowPath = new GraphicsPath())
+        Color neutralPlus = EditorColors.IsDark ? Color.FromArgb(250, 252, 255) : Color.FromArgb(30, 40, 55);
+        Color brightPlus = EditorColors.IsDark ? Color.White : Color.FromArgb(10, 15, 25);
+        Color plusColor = (isHovered || isDragOver || isPressed) ? brightPlus : neutralPlus;
+
+        float zoom = isPressed ? 0.97f : ((isHovered || isDragOver) ? 1.03f : 1.0f);
+        var gfxState = g.Save();
+        g.TranslateTransform(cx, cy);
+        g.ScaleTransform(zoom, zoom);
+        g.TranslateTransform(-cx, -cy);
+        try
         {
-            shadowPath.AddEllipse(badgeRect.X, badgeRect.Y + 3, badgeRect.Width, badgeRect.Height);
-            using var shadowBrush = new SolidBrush(Color.FromArgb(isHovered ? 60 : 45, 0, 0, 0));
-            g.FillPath(shadowBrush, shadowPath);
-        }
+            float r = 14f;
+            float boxX = cx - boxW / 2f;
+            float boxY = cy - boxH / 2f;
 
-        // Ambient glow when hovered or dragging over
-        if (isHovered || isDragOver)
-        {
-            using var glowPen = new Pen(Color.FromArgb(isDragOver ? 50 : 35, accentColor), 6f);
-            g.DrawEllipse(glowPen, badgeRect.X - 1, badgeRect.Y - 1, badgeRect.Width + 2, badgeRect.Height + 2);
-        }
+            using var path = RoundedRectPath(boxX, boxY, boxW, boxH, r);
 
-        int bgAlpha = isPressed ? 75 : (isHovered ? 52 : (isDragOver ? 60 : (EditorColors.IsDark ? 32 : 24)));
-        using (var bgBrush = new SolidBrush(Color.FromArgb(bgAlpha, accentColor)))
-            g.FillEllipse(bgBrush, badgeRect);
-
-        int borderAlpha = isPressed ? 255 : (isHovered || isDragOver ? 220 : (EditorColors.IsDark ? 110 : 90));
-        using (var borderPen = new Pen(Color.FromArgb(borderAlpha, accentColor), (isHovered || isDragOver) ? 1.75f : 1.5f))
-            g.DrawEllipse(borderPen, badgeRect);
-
-        // 2. Picture Frame artwork
-        float frameW = size * 0.44f;
-        float frameH = size * 0.34f;
-        float frameX = cx - frameW / 2f;
-        float frameY = cy - frameH / 2f - size * 0.02f;
-
-        using (var framePath = RoundedRectPath(frameX, frameY, frameW, frameH, 3.5f))
-        {
-            // Frame outline
-            using var framePen = new Pen(Color.FromArgb(isDragOver ? 255 : 200, accentColor), 1.5f)
+            // Subtle interactive fill on hover/drag
+            if (isHovered || isDragOver || isPressed)
             {
-                LineJoin = LineJoin.Round,
-                StartCap = LineCap.Round,
-                EndCap = LineCap.Round
+                Color fillColor = isPressed
+                    ? Color.FromArgb(32, accentColor)
+                    : isDragOver
+                        ? Color.FromArgb(24, accentColor)
+                        : Color.FromArgb(14, accentColor);
+                using var fillBrush = new SolidBrush(fillColor);
+                g.FillPath(fillBrush, path);
+            }
+
+            // Dashed border matching mockup
+            using (var pen = new Pen(borderColor, isDragOver ? 1.8f : 1.5f)
+            {
+                DashPattern = new float[] { 5.0f, 5.0f },
+                DashCap = DashCap.Flat,
+                LineJoin = LineJoin.Round
+            })
+            {
+                g.DrawPath(pen, path);
+            }
+
+            // Plus symbol in center
+            float arm = 12.5f; // 25px total span, matching mockup
+            using var plusPen = new Pen(plusColor, 2.8f)
+            {
+                StartCap = LineCap.Flat,
+                EndCap = LineCap.Flat
             };
-            g.DrawPath(framePen, framePath);
-
-            // Celestial sun / dot
-            float sunR = size * 0.045f;
-            float sunX = frameX + frameW * 0.72f;
-            float sunY = frameY + frameH * 0.32f;
-            using var sunBrush = new SolidBrush(Color.FromArgb(isDragOver ? 255 : 220, accentColor));
-            g.FillEllipse(sunBrush, sunX - sunR, sunY - sunR, sunR * 2, sunR * 2);
-
-            // Mountain peaks (clipped inside frame)
-            var oldClip = g.Clip;
-            g.SetClip(framePath, CombineMode.Intersect);
-            try
-            {
-                // Back mountain peak (soft)
-                PointF[] backPeak =
-                {
-                    new(frameX + frameW * 0.35f, frameY + frameH),
-                    new(frameX + frameW * 0.65f, frameY + frameH * 0.42f),
-                    new(frameX + frameW * 0.95f, frameY + frameH)
-                };
-                using (var backBrush = new SolidBrush(Color.FromArgb(70, accentColor)))
-                    g.FillPolygon(backBrush, backPeak);
-                using (var backPen = new Pen(Color.FromArgb(140, accentColor), 1.2f))
-                    g.DrawLines(backPen, backPeak);
-
-                // Front mountain peak (prominent)
-                PointF[] frontPeak =
-                {
-                    new(frameX - 2, frameY + frameH + 2),
-                    new(frameX + frameW * 0.38f, frameY + frameH * 0.32f),
-                    new(frameX + frameW * 0.78f, frameY + frameH + 2)
-                };
-                using (var frontBrush = new SolidBrush(Color.FromArgb(110, accentColor)))
-                    g.FillPolygon(frontBrush, frontPeak);
-                using (var frontPen = new Pen(Color.FromArgb(230, accentColor), 1.4f))
-                    g.DrawLines(frontPen, frontPeak);
-            }
-            finally
-            {
-                g.Clip = oldClip;
-            }
+            g.DrawLine(plusPen, cx - arm, cy, cx + arm, cy);
+            g.DrawLine(plusPen, cx, cy - arm, cx, cy + arm);
         }
-
-        // Small floating spark / indicator badge at bottom right of icon
-        float sparkX = cx + radius * 0.62f;
-        float sparkY = cy + radius * 0.60f;
-        float sparkR = size * 0.12f;
-        var sparkBadge = new RectangleF(sparkX - sparkR, sparkY - sparkR, sparkR * 2, sparkR * 2);
-        using (var sbBg = new SolidBrush(EditorColors.BgCard))
-            g.FillEllipse(sbBg, sparkBadge);
-        using (var sbBorder = new Pen(Color.FromArgb(200, accentColor), 1.25f))
-            g.DrawEllipse(sbBorder, sparkBadge);
-
-        // Plus / drop arrow in mini badge
-        using (var sbIconPen = new Pen(accentColor, 1.3f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+        finally
         {
-            if (isDragOver)
-            {
-                // Down arrow
-                g.DrawLine(sbIconPen, sparkX, sparkY - 3f, sparkX, sparkY + 3f);
-                g.DrawLine(sbIconPen, sparkX - 2.5f, sparkY + 0.5f, sparkX, sparkY + 3f);
-                g.DrawLine(sbIconPen, sparkX + 2.5f, sparkY + 0.5f, sparkX, sparkY + 3f);
-            }
-            else
-            {
-                // Clean plus (+)
-                g.DrawLine(sbIconPen, sparkX - 2.5f, sparkY, sparkX + 2.5f, sparkY);
-                g.DrawLine(sbIconPen, sparkX, sparkY - 2.5f, sparkX, sparkY + 2.5f);
-            }
+            g.Restore(gfxState);
         }
     }
 
@@ -845,15 +791,14 @@ public sealed partial class AnnotationCanvas
             using var shBrush = new SolidBrush(Color.FromArgb(40, 0, 0, 0));
             g.FillPath(shBrush, shPath);
         }
-
         using var bgBrush = new SolidBrush(bg);
         using var borderPen = new Pen(border, hovered ? 1.4f : 1.1f);
         g.FillPath(bgBrush, path);
         g.DrawPath(borderPen, path);
 
         // Vector icon + text
-        float iconW = 14f;
-        float gap = 6f;
+        float iconW = 16f;
+        float gap = 7f;
         var textSz = g.MeasureString(label, font);
         float totalContentW = iconW + gap + textSz.Width;
         float startX = rect.X + (rect.Width - totalContentW) / 2f;
@@ -867,7 +812,7 @@ public sealed partial class AnnotationCanvas
 
     private static void DrawChipIcon(Graphics g, int chipType, float cx, float cy, Color color)
     {
-        using var pen = new Pen(color, 1.25f)
+        using var pen = new Pen(color, 1.45f)
         {
             LineJoin = LineJoin.Round,
             StartCap = LineCap.Round,
@@ -876,77 +821,127 @@ public sealed partial class AnnotationCanvas
 
         switch (chipType)
         {
-            case 0: // New Canvas (plus / canvas document)
+            case 0: // New Canvas (document with fold and plus)
             {
-                float w = 11.5f, h = 12f;
+                float w = 13.5f, h = 15.5f;
                 float x = cx - w / 2f, y = cy - h / 2f + 0.5f;
+                float fold = 4.5f;
+
+                // Outer page outline with folded top-right corner
                 g.DrawLines(pen, new[]
                 {
-                    new PointF(x + w * 0.62f, y),
+                    new PointF(x + w - fold, y),
                     new PointF(x, y),
                     new PointF(x, y + h),
                     new PointF(x + w, y + h),
-                    new PointF(x + w, y + w * 0.38f),
-                    new PointF(x + w * 0.62f, y),
-                    new PointF(x + w * 0.62f, y + w * 0.38f),
-                    new PointF(x + w, y + w * 0.38f)
+                    new PointF(x + w, y + fold),
+                    new PointF(x + w - fold, y),
+                    new PointF(x + w - fold, y + fold),
+                    new PointF(x + w, y + fold)
                 });
-                float px = x + w * 0.35f, py = y + h * 0.62f;
-                g.DrawLine(pen, px - 2.2f, py, px + 2.2f, py);
-                g.DrawLine(pen, px, py - 2.2f, px, py + 2.2f);
+
+                // Centered plus (+)
+                float px = cx, py = cy + 2.0f;
+                float pSize = 2.7f;
+                g.DrawLine(pen, px - pSize, py, px + pSize, py);
+                g.DrawLine(pen, px, py - pSize, px, py + pSize);
                 break;
             }
             case 1: // Folder (Open)
             {
-                float w = 13f, h = 9.5f;
+                float w = 15.5f, h = 12.5f;
                 float x = cx - w / 2f, y = cy - h / 2f + 0.5f;
+
+                // Back folder tab + body
                 g.DrawLines(pen, new[]
                 {
-                    new PointF(x, y + 2.5f),
+                    new PointF(x, y + 3f),
                     new PointF(x, y + h),
                     new PointF(x + w, y + h),
-                    new PointF(x + w, y + 2.5f),
-                    new PointF(x + w * 0.55f, y + 2.5f),
-                    new PointF(x + w * 0.42f, y),
+                    new PointF(x + w, y + 3f),
+                    new PointF(x + w * 0.58f, y + 3f),
+                    new PointF(x + w * 0.44f, y),
                     new PointF(x, y),
-                    new PointF(x, y + 2.5f),
-                    new PointF(x + w, y + 2.5f)
+                    new PointF(x, y + 3f),
+                    new PointF(x + w, y + 3f)
                 });
                 break;
             }
             case 2: // Clipboard (Paste)
             {
-                float w = 9.5f, h = 12f;
+                float w = 13f, h = 15.5f;
                 float x = cx - w / 2f, y = cy - h / 2f + 0.5f;
+
+                // Board
                 g.DrawLines(pen, new[]
                 {
-                    new PointF(x + 2f, y + 2f),
-                    new PointF(x, y + 2f),
-                    new PointF(x, y + h),
-                    new PointF(x + w, y + h),
-                    new PointF(x + w, y + 2f),
-                    new PointF(x + w - 2f, y + 2f)
-                });
-                g.DrawRectangle(pen, x + 2.5f, y - 0.5f, w - 5f, 2.8f);
-                break;
-            }
-            case 3: // Camera / Crop (Capture)
-            {
-                float w = 12.5f, h = 10f;
-                float x = cx - w / 2f, y = cy - h / 2f + 1f;
-                g.DrawLines(pen, new[]
-                {
+                    new PointF(x + 2.8f, y + 2.5f),
                     new PointF(x, y + 2.5f),
                     new PointF(x, y + h),
                     new PointF(x + w, y + h),
                     new PointF(x + w, y + 2.5f),
-                    new PointF(x + w * 0.72f, y + 2.5f),
+                    new PointF(x + w - 2.8f, y + 2.5f)
+                });
+
+                // Top clip
+                using (var clipPath = RoundedRectPath(x + 3.2f, y - 0.5f, w - 6.4f, 3.2f, 1f))
+                {
+                    g.DrawPath(pen, clipPath);
+                }
+
+                // Lines on clipboard
+                using var thin = new Pen(color, 1.25f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                g.DrawLine(thin, cx - 3.5f, y + 6.8f, cx + 3.5f, y + 6.8f);
+                g.DrawLine(thin, cx - 3.5f, y + 10.2f, cx + 1.8f, y + 10.2f);
+                break;
+            }
+            case 3: // Camera (Capture)
+            {
+                float w = 15.5f, h = 12f;
+                float x = cx - w / 2f, y = cy - h / 2f + 1f;
+
+                // Camera body
+                g.DrawLines(pen, new[]
+                {
+                    new PointF(x, y + 3f),
+                    new PointF(x, y + h),
+                    new PointF(x + w, y + h),
+                    new PointF(x + w, y + 3f),
+                    new PointF(x + w * 0.72f, y + 3f),
                     new PointF(x + w * 0.62f, y),
                     new PointF(x + w * 0.38f, y),
-                    new PointF(x + w * 0.28f, y + 2.5f),
-                    new PointF(x, y + 2.5f)
+                    new PointF(x + w * 0.28f, y + 3f),
+                    new PointF(x, y + 3f)
                 });
-                g.DrawEllipse(pen, cx - 2.2f, cy - 0.2f, 4.4f, 4.4f);
+
+                // Lens circle
+                float lr = 2.7f;
+                g.DrawEllipse(pen, cx - lr, cy + 1.3f - lr, lr * 2, lr * 2);
+                break;
+            }
+            case 4: // Question mark in circle (Quick Start)
+            {
+                float r = 7.5f;
+                // Outer circle
+                g.DrawEllipse(pen, cx - r, cy - r, r * 2, r * 2);
+
+                // Vector question mark hook
+                using var qPen = new Pen(color, 1.45f)
+                {
+                    StartCap = LineCap.Round,
+                    EndCap = LineCap.Round,
+                    LineJoin = LineJoin.Round
+                };
+
+                var qPath = new GraphicsPath();
+                qPath.AddArc(cx - 2.5f, cy - 4.6f, 5.0f, 4.2f, 195, 170);
+                qPath.AddLine(cx + 2.4f, cy - 2.5f, cx, cy - 0.4f);
+                qPath.AddLine(cx, cy - 0.4f, cx, cy + 1.1f);
+                g.DrawPath(qPen, qPath);
+
+                // Perfectly centered dot
+                using var dotBrush = new SolidBrush(color);
+                g.FillEllipse(dotBrush, cx - 1.0f, cy + 3.2f, 2.0f, 2.0f);
                 break;
             }
         }
@@ -964,6 +959,7 @@ public sealed partial class AnnotationCanvas
         var openLabel = LocalizationService.Translate("Open");
         var pasteLabel = LocalizationService.Translate("Paste");
         var captureLabel = LocalizationService.Translate("Capture");
+        var guideLabel = LocalizationService.Translate("Quick Start");
 
         var measureFlags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
         var titleSize = TextRenderer.MeasureText(titleText, titleFont, new Size(int.MaxValue, int.MaxValue), measureFlags);
@@ -972,20 +968,21 @@ public sealed partial class AnnotationCanvas
         float paddingH = 28;
         float paddingV = 24;
         float spacing = 10;
-        float iconSize = 56;
+        float iconSize = 74;
         float chipH = 32;
         float chipGap = 8;
         float chipMinW = 84;
 
-        float newW = Math.Max(chipMinW, TextRenderer.MeasureText(newLabel, chipFont).Width + 34);
-        float openW = Math.Max(chipMinW, TextRenderer.MeasureText(openLabel, chipFont).Width + 34);
-        float pasteW = Math.Max(chipMinW, TextRenderer.MeasureText(pasteLabel, chipFont).Width + 34);
-        float captureW = Math.Max(chipMinW, TextRenderer.MeasureText(captureLabel, chipFont).Width + 34);
-        float chipsRowW = newW + openW + pasteW + captureW + chipGap * 3;
+        float newW = Math.Max(chipMinW, TextRenderer.MeasureText(newLabel, chipFont).Width + 38);
+        float openW = Math.Max(chipMinW, TextRenderer.MeasureText(openLabel, chipFont).Width + 38);
+        float pasteW = Math.Max(chipMinW, TextRenderer.MeasureText(pasteLabel, chipFont).Width + 38);
+        float captureW = Math.Max(chipMinW, TextRenderer.MeasureText(captureLabel, chipFont).Width + 38);
+        float guideW = Math.Max(chipMinW, TextRenderer.MeasureText(guideLabel, chipFont).Width + 38);
+        float chipsRowW = newW + openW + pasteW + captureW + guideW + chipGap * 4;
 
         float contentW = Math.Max(titleSize.Width, Math.Max(hintSize.Width, chipsRowW));
         float width = Math.Max(contentW + paddingH * 2, 450);
-        float height = paddingV * 2 + iconSize + spacing + titleSize.Height + spacing
+        float height = paddingV * 2 + iconSize + spacing + 4 + titleSize.Height + spacing
             + hintSize.Height + spacing + 6 + chipH;
 
         float destX = (ClientSize.Width - width) / 2f;
@@ -1009,8 +1006,8 @@ public sealed partial class AnnotationCanvas
 
             PaintWelcomeCard(
                 g, x, y, width, height, paddingV, spacing, iconSize, chipH, chipGap,
-                newW, openW, pasteW, captureW, chipsRowW,
-                titleText, hintText, newLabel, openLabel, pasteLabel, captureLabel,
+                newW, openW, pasteW, captureW, guideW, chipsRowW,
+                titleText, hintText, newLabel, openLabel, pasteLabel, captureLabel, guideLabel,
                 titleFont, subFont, chipFont, titleSize, hintSize);
         }
 
@@ -1045,6 +1042,7 @@ public sealed partial class AnnotationCanvas
         float openW,
         float pasteW,
         float captureW,
+        float guideW,
         float chipsRowW,
         string titleText,
         string hintText,
@@ -1052,6 +1050,7 @@ public sealed partial class AnnotationCanvas
         string openLabel,
         string pasteLabel,
         string captureLabel,
+        string guideLabel,
         Font titleFont,
         Font subFont,
         Font chipFont,
@@ -1106,10 +1105,11 @@ public sealed partial class AnnotationCanvas
         float curY = y + paddingV;
         float iconCx = x + width / 2f;
         float iconCy = curY + iconSize / 2f;
-        float iconRadius = iconSize * 0.46f;
-        _welcomeIconRect = new RectangleF(iconCx - iconRadius, iconCy - iconRadius, iconRadius * 2, iconRadius * 2);
-        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, accent, _welcomeDragOver, _welcomeHoverIcon, _welcomePressedIcon);
-        curY += iconSize + spacing;
+        float boxW = 74f;
+        float boxH = 72f;
+        _welcomeIconRect = new RectangleF(iconCx - boxW / 2f, iconCy - boxH / 2f, boxW, boxH);
+        DrawWelcomeIcon(g, iconCx, iconCy, boxW, boxH, accent, _welcomeDragOver, _welcomeHoverIcon, _welcomePressedIcon);
+        curY += iconSize + spacing + 4;
 
         using var titleBrush = new SolidBrush(titleColor);
         using var hintBrush = new SolidBrush(subColor);
@@ -1134,6 +1134,7 @@ public sealed partial class AnnotationCanvas
         _welcomeChipRects[1] = new RectangleF(chipsStartX + newW + chipGap, curY, openW, chipH);
         _welcomeChipRects[2] = new RectangleF(chipsStartX + newW + chipGap + openW + chipGap, curY, pasteW, chipH);
         _welcomeChipRects[3] = new RectangleF(chipsStartX + newW + chipGap + openW + chipGap + pasteW + chipGap, curY, captureW, chipH);
+        _welcomeChipRects[4] = new RectangleF(chipsStartX + newW + chipGap + openW + chipGap + pasteW + chipGap + captureW + chipGap, curY, guideW, chipH);
 
         bool pasteEnabled = IsWelcomeChipEnabled(2);
         DrawWelcomeChip(g, _welcomeChipRects[0], newLabel, chipFont, 0, true,
@@ -1144,6 +1145,8 @@ public sealed partial class AnnotationCanvas
             _welcomeHoverChip == 2, _welcomePressedChip == 2, titleColor, subColor, accent, chipBg, chipBorder);
         DrawWelcomeChip(g, _welcomeChipRects[3], captureLabel, chipFont, 3, true,
             _welcomeHoverChip == 3, _welcomePressedChip == 3, titleColor, subColor, accent, chipBg, chipBorder);
+        DrawWelcomeChip(g, _welcomeChipRects[4], guideLabel, chipFont, 4, true,
+            _welcomeHoverChip == 4, _welcomePressedChip == 4, titleColor, subColor, accent, chipBg, chipBorder);
     }
 
     private void RenderGuides(Graphics g)

@@ -41,7 +41,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     }
 
     private int _undoStackLimit = 100;
-    private const double MinZoom = 0.2;
+    private const double MinZoom = 0.1;
     private const double MaxZoom = 8.0;
 
     // Above this source-pixel count, zoom gestures draw a fast (slightly soft) draft and
@@ -49,7 +49,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     // that the draft would only add a visible blur + snap-back, so we skip it. ~4 MP keeps
     // typical screenshots (1080p/1200p/1440p) crisp while large images stay fluid.
     private const long DraftZoomPixelThreshold = 4_000_000;
-    public const int MinZoomPercent = 20;
+    public const int MinZoomPercent = 10;
     public const int MaxZoomPercent = 800;
 
     private Bitmap _baseBitmap;
@@ -74,8 +74,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private bool _welcomeDragOver;       // file drag currently over the editor while welcome is shown
     private RectangleF _welcomeCardRect;
     private RectangleF _welcomeIconRect;
-    private readonly RectangleF[] _welcomeChipRects = new RectangleF[4];
-    private int _welcomeHoverChip = -1;  // -1 none, 0 New, 1 Open, 2 Paste, 3 Capture
+    private readonly RectangleF[] _welcomeChipRects = new RectangleF[5];
+    private int _welcomeHoverChip = -1;  // -1 none, 0 New, 1 Open, 2 Paste, 3 Capture, 4 Guide
     private bool _welcomeHoverCard;
     private bool _welcomeHoverIcon;
     private int _welcomePressedChip = -1;
@@ -357,6 +357,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// <summary>Welcome chip: start a new region capture.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? WelcomeCaptureRequested { get; set; }
+
+    /// <summary>Welcome chip: open the editor quick-start guide.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Action? WelcomeGuideRequested { get; set; }
 
     private const float BannerFadeInSeconds = 0.10f;
     private const float BannerFadeOutSeconds = 0.10f;
@@ -762,6 +766,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             case 1: WelcomeOpenRequested?.Invoke(); break;
             case 2: WelcomePasteRequested?.Invoke(); break;
             case 3: WelcomeCaptureRequested?.Invoke(); break;
+            case 4: WelcomeGuideRequested?.Invoke(); break;
         }
         return true;
     }
@@ -783,7 +788,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             try { return Clipboard.ContainsImage(); }
             catch { return false; }
         }
-        return chip is 0 or 1 or 3;
+        return chip is 0 or 1 or 3 or 4;
     }
     private CanvasTool _activeTool = CanvasTool.Move;
     private int _lastClickTick;

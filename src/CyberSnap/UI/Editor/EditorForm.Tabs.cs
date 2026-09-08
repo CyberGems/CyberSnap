@@ -106,6 +106,7 @@ public sealed partial class EditorForm
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.OnHotkeyPressedProxy();
         };
+        canvas.WelcomeGuideRequested = () => ShowEditorQuickStartGuide();
     }
 
     private void DetachCanvas(AnnotationCanvas canvas)
@@ -127,6 +128,7 @@ public sealed partial class EditorForm
         canvas.WelcomeOpenRequested = null;
         canvas.WelcomePasteRequested = null;
         canvas.WelcomeCaptureRequested = null;
+        canvas.WelcomeGuideRequested = null;
         canvas.ConfirmResizeByHandle = null;
         canvas.BlankBitmapFactory = null;
     }
