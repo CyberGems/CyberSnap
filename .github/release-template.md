@@ -6,32 +6,23 @@ Welcome to the official **CyberSnap {{VERSION}}** release! CyberSnap is a featur
 
 ### ✨ Key Features & Highlights
 
-- 🎬 **Recording bar overhaul**:
-  - Compact mini bar with redesigned transport glyphs, live size meter, and a format badge as the rec indicator.
-  - Pause works for GIF and MP4; Space and Enter hit the bar instead of the window below.
-  - Drag the bar, blink a tray LED while capturing, and open Video & GIF settings from the overlay.
+- 🎨 **Annotation Editor Welcome Experience & Action Buttons**:
+  - **Modern drop badge**: Replaced the previous welcome banner artwork with a clean, dashed rounded drop container and centered plus glyph featuring responsive hover, press, and drag-over interactions.
+  - **Quick Start access**: Integrated a dedicated *Quick Start* action chip button directly on the welcome overlay and added quick-start guidance inside the Editor *Help* submenu.
+  - **High-definition vector button icons**: Upgraded all action buttons (*New canvas*, *Open*, *Paste*, *Capture*, *Quick Start*) to crisp, scaled vector icons with balanced padding, resolving the deformed question mark glyph.
+  - **Extended zoom**: Minimum canvas zoom level extended down to 10% for large images and high-resolution captures.
 
-- 📌 **Stay visible in the tray**:
-  - A first-run tip explains that Windows hides new icons behind the overflow (`^`).
-  - Settings → System can open the Windows page *Select which icons appear on the taskbar* (the modern toggle list, not the old Control Panel applet).
+- 🔔 **Capture Widget Update Badge**:
+  - Desktop capture widget now displays a subtle, pulsing LED notification badge whenever a newer version of CyberSnap is available.
 
-- 🗂️ **Capture preview tabs**:
-  - New captures stack as tabs instead of replacing the current preview.
-  - Right-click menus on preview and editor tabs, including when only one capture is open.
+- 💖 **About Dialog & Contributions**:
+  - Redesigned the footer icon row in the About dialog with clean vector glyphs and added direct donation links (Buy Me a Coffee, PayPal, Crypto) in English and Spanish.
 
-- 🎓 **Quick-start guides**:
-  - Refreshed capture tutorial and a new editor bubble that closes when focus leaves.
-  - Pan and Pick can set color and stroke; manual editor opens stay on Pick.
+- 📐 **Scale & Preview Visibility**:
+  - Improved measurement label visibility and enhanced hover contrast across capture preview cards and zoom inspection flows.
 
-- 🎞️ **Video trimmer**:
-  - Previews load at actual size, with a hover zoom bar for frame inspection.
-
-- 📖 **Help where you are**:
-  - Window menus include Help submenus with wiki links (Editor, Gallery, Settings, and more).
-
-- 🌍 **Polish & reliability**:
-  - Complete English / Spanish catalogs and localization safeguards.
-  - Faster scrolling capture with preview handoff, scan animation on OCR and barcode flows, and sturdier capture-widget restoration.
+- 📚 **Documentation & Security Transparency**:
+  - Clarified Windows SmartScreen reputation guidance for open-source hobby software and updated wiki links across window help menus.
 
 ---
 
