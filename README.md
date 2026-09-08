@@ -141,6 +141,15 @@ CyberSnap/
 
 Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/releases/latest) and follow the wizard. The installer registers `.csnp` file associations, creates shortcuts, and offers to start with Windows.
 
+### 🛡️ Windows SmartScreen
+
+Windows may show a SmartScreen warning the first time you run the CyberSnap installer — this is expected until Windows builds enough reputation for the file. The same can appear when launching the portable build.
+
+To continue:
+
+1. Click **More info**.
+2. Click **Run anyway**.
+
 ### Build from Source
 
 **Prerequisites:** .NET 9 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2022 or `dotnet` CLI
