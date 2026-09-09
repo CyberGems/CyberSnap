@@ -853,8 +853,12 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <Border Grid.Column="0"
+                <Border Grid.Row="0" Grid.Column="0"
                         Style="{StaticResource TrimmerChipBorderStyle}"
                         MinWidth="96"
                         Padding="3"
@@ -907,7 +911,7 @@
                 </Border>
 
                 <!-- Slider with integrated range track (red/green segments behind thumb) -->
-                <Grid Grid.Column="1" VerticalAlignment="Center" Margin="0,0,10,0" Height="28" ClipToBounds="False">
+                <Grid Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,10,0" Height="28" ClipToBounds="False">
                     <Border VerticalAlignment="Center"
                             Height="6"
                             CornerRadius="3"
@@ -999,7 +1003,7 @@
                 </Grid>
 
                 <!-- Set End marker -->
-                <Border Grid.Column="2"
+                <Border Grid.Row="0" Grid.Column="2"
                         Style="{StaticResource TrimmerChipBorderStyle}"
                         MinWidth="96"
                         Padding="3">
@@ -1048,6 +1052,19 @@
                             </Grid>
                         </Button>
                     </Grid>
+                </Border>
+
+                <!-- Filmstrip: evenly spaced preview thumbnails across the full duration -->
+                <Border x:Name="FilmstripHost"
+                        Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                        Margin="0,6,0,0"
+                        CornerRadius="6"
+                        ClipToBounds="True"
+                        Background="{DynamicResource ThemeInputBackgroundBrush}"
+                        BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                        BorderThickness="1"
+                        Visibility="Collapsed">
+                    <UniformGrid x:Name="Filmstrip" Rows="1" />
                 </Border>
             </Grid>
 

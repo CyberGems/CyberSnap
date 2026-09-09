@@ -436,6 +436,7 @@ namespace CyberSnap.UI
             UpdatePreviewFrameDisplay(0, force: true);
             SetPlayPauseIcon(true);
             UpdatePlayPauseToolTip();
+            BuildFilmstrip();
             HideProgressOverlay();
 
             if (_hasAudioTrack)
@@ -545,6 +546,7 @@ namespace CyberSnap.UI
             UpdatePreviewFrameDisplay(0, force: true);
             SetPlayPauseIcon(true);
             UpdatePlayPauseToolTip();
+            BuildFilmstrip();
             HideProgressOverlay();
         }
 
@@ -1281,6 +1283,40 @@ namespace CyberSnap.UI
             UpdateRangeBarDisplay();
         }
 
+        private void BuildFilmstrip()
+        {
+            Filmstrip.Children.Clear();
+
+            bool hasFrames = _isGif ? _gifSequence != null : _mp4Sequence != null;
+            if (!hasFrames || _videoDurationSeconds <= 0.05)
+            {
+                FilmstripHost.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            const int thumbCount = 8;
+            for (int i = 0; i < thumbCount; i++)
+            {
+                double t = _videoDurationSeconds * i / (thumbCount - 1);
+                int frameIndex = _isGif
+                    ? _gifSequence!.GetFrameIndexAt(t)
+                    : _mp4Sequence!.GetFrameIndexAt(t);
+                BitmapSource source = _isGif
+                    ? _gifSequence!.GetFrameSource(frameIndex)
+                    : _mp4Sequence!.GetFrameSource(frameIndex);
+
+                Filmstrip.Children.Add(new System.Windows.Controls.Image
+                {
+                    Source = source,
+                    Stretch = Stretch.UniformToFill,
+                    Height = 30,
+                    Margin = new Thickness(1, 0, 1, 0)
+                });
+            }
+
+            FilmstripHost.Visibility = Visibility.Visible;
+        }
+
         private void UpdateRangeBarDisplay()
         {
             if (_videoDurationSeconds <= 0) return;
@@ -1948,6 +1984,7 @@ namespace CyberSnap.UI
 
             CompositionTarget.Rendering -= OnRendering;
             CancelZoomHideTimer();
+            Filmstrip.Children.Clear();
             _audioPersistTimer.Stop();
             Interlocked.Increment(ref _gifLoadVersion);
             Interlocked.Increment(ref _mp4LoadVersion);
