@@ -64,6 +64,7 @@ namespace CyberSnap.UI
         private int _gifDisplayedFrameIndex = -1;
         private int _gifLoadVersion;
         private int _mp4LoadVersion;
+        private long _sourceFileBytes;
         private CancellationTokenSource? _exportCts;
         private bool _isExporting;
 
@@ -410,6 +411,7 @@ namespace CyberSnap.UI
             GifPreviewImage.Visibility = Visibility.Visible;
 
             _videoDurationSeconds = _mp4Sequence.TotalDurationSeconds;
+            _sourceFileBytes = TryGetFileSize(_mediaFilePath);
             TimeSlider.Maximum = _videoDurationSeconds;
             _startTimeSeconds = 0;
             _endTimeSeconds = _videoDurationSeconds;
@@ -526,6 +528,7 @@ namespace CyberSnap.UI
                 duration = ResolveGifDuration(0);
 
             _videoDurationSeconds = duration;
+            _sourceFileBytes = TryGetFileSize(_mediaFilePath);
             TimeSlider.Maximum = _videoDurationSeconds;
             _startTimeSeconds = 0;
             _endTimeSeconds = _videoDurationSeconds;
@@ -1173,13 +1176,61 @@ namespace CyberSnap.UI
                 double segmentSeconds = _endTimeSeconds - _startTimeSeconds;
                 SegmentDurationSeparator.Visibility = Visibility.Visible;
                 SegmentDurationText.Visibility = Visibility.Visible;
-                SegmentDurationText.Text = FormatSegmentDuration(segmentSeconds);
+                SegmentDurationText.Text = FormatSegmentSummary(segmentSeconds);
             }
             else
             {
                 SegmentDurationSeparator.Visibility = Visibility.Collapsed;
                 SegmentDurationText.Visibility = Visibility.Collapsed;
             }
+        }
+
+        private string FormatSegmentSummary(double segmentSeconds)
+        {
+            string summary = FormatSegmentDuration(segmentSeconds);
+            if (_videoDurationSeconds > 0.05)
+                summary += $" · {segmentSeconds / _videoDurationSeconds * 100:0}%";
+
+            long estimate = EstimateOutputBytes(segmentSeconds);
+            if (estimate > 0)
+                summary += $" · ~{FormatBytes(estimate)}";
+
+            return summary;
+        }
+
+        /// <summary>Rough output size: source size prorated to the kept segment.</summary>
+        private long EstimateOutputBytes(double segmentSeconds)
+        {
+            if (_sourceFileBytes <= 0 || _videoDurationSeconds <= 0.05 || segmentSeconds <= 0)
+                return 0;
+
+            return (long)(_sourceFileBytes * (segmentSeconds / _videoDurationSeconds));
+        }
+
+        private static long TryGetFileSize(string path)
+        {
+            try
+            {
+                return new FileInfo(path).Length;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static string FormatBytes(long bytes)
+        {
+            if (bytes < 1024)
+                return $"{bytes} B";
+            double kb = bytes / 1024.0;
+            if (kb < 1024)
+                return $"{kb:0.0} KB";
+            double mb = kb / 1024.0;
+            if (mb < 1024)
+                return $"{mb:0.0} MB";
+            double gb = mb / 1024.0;
+            return $"{gb:0.0} GB";
         }
 
         private static string FormatSegmentDuration(double seconds)
