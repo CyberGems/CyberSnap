@@ -63,6 +63,8 @@ namespace CyberSnap.UI
         private int _gifDisplayedFrameIndex = -1;
         private int _gifLoadVersion;
         private int _mp4LoadVersion;
+        private CancellationTokenSource? _exportCts;
+        private bool _isExporting;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService, Bitmap? posterFrame = null)
         {
@@ -284,14 +286,59 @@ namespace CyberSnap.UI
         private void ShowProgressOverlay(string message)
         {
             ProgressText.Text = message;
+            CancelExportBtn.Visibility = Visibility.Collapsed;
+            ExportProgressBar.IsIndeterminate = true;
             ProgressOverlay.Visibility = Visibility.Visible;
             UpdateZoomControlsVisibility();
         }
 
         private void HideProgressOverlay()
         {
+            CancelExportBtn.Visibility = Visibility.Collapsed;
+            ExportProgressBar.IsIndeterminate = true;
+            ExportProgressBar.Value = 0;
             ProgressOverlay.Visibility = Visibility.Collapsed;
             UpdateZoomControlsVisibility();
+        }
+
+        private void ShowExportProgress()
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            ProgressText.Text = LocalizationService.Translate(lang, "Exporting...");
+            ExportProgressBar.IsIndeterminate = false;
+            ExportProgressBar.Minimum = 0;
+            ExportProgressBar.Maximum = 1;
+            ExportProgressBar.Value = 0;
+            CancelExportBtn.Content = LocalizationService.Translate(lang, "Cancel");
+            CancelExportBtn.Visibility = Visibility.Visible;
+            ProgressOverlay.Visibility = Visibility.Visible;
+            UpdateZoomControlsVisibility();
+        }
+
+        private void UpdateExportProgress(double fraction)
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            fraction = Math.Clamp(fraction, 0, 1);
+            ExportProgressBar.Value = fraction;
+            ProgressText.Text = $"{LocalizationService.Translate(lang, "Exporting...")} {Math.Round(fraction * 100)}%";
+        }
+
+        private void CancelExportBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _exportCts?.Cancel();
+        }
+
+        private static void TryKillProcess(Process process)
+        {
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("ffmpeg.trim-kill", $"Could not kill FFmpeg process: {ex.Message}", ex);
+            }
         }
 
         private void DisposeMp4Sequence()
@@ -1905,6 +1952,9 @@ namespace CyberSnap.UI
         
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Stop any ongoing export so ffmpeg doesn't outlive the window.
+            _exportCts?.Cancel();
+
             // Prompt if there are unsaved changes
             bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
             if (isModified)
@@ -1942,6 +1992,9 @@ namespace CyberSnap.UI
         
         private async void TrimBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isExporting)
+                return;
+
             string lang = _settingsService.Settings.InterfaceLanguage;
             string template = LocalizationService.Translate(lang, "Are you sure you want to overwrite the original file '{0}'?\nThis action cannot be undone.");
             string msg = string.Format(template, Path.GetFileName(_mediaFilePath));
@@ -2021,6 +2074,9 @@ namespace CyberSnap.UI
         
         private async void SaveAsNewBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isExporting)
+                return;
+
             string dir = Path.GetDirectoryName(_mediaFilePath) ?? string.Empty;
             string nameWithoutExt = Path.GetFileNameWithoutExtension(_mediaFilePath);
             string ext = Path.GetExtension(_mediaFilePath);
@@ -2048,36 +2104,42 @@ namespace CyberSnap.UI
                 return;
             }
             
+            bool destExisted = File.Exists(newPath);
             bool success = await RunFfmpegTrimAsync(_mediaFilePath, newPath, _startTimeSeconds, _endTimeSeconds);
-            if (success)
+            if (!success)
             {
-                string lang = _settingsService.Settings.InterfaceLanguage;
-                ToastWindow.Show(
-                    LocalizationService.Translate(lang, "Video saved"),
-                    LocalizationService.Translate(lang, "Trimmed copy saved successfully."),
-                    newPath
-                );
+                // Don't leave a partial file behind when we created the destination.
+                if (!destExisted)
+                    TryDeleteFile(newPath);
+                return;
+            }
 
-                // Auto-load the new copy in the editor
-                bool renderingDetached = false;
-                try
-                {
-                    CompositionTarget.Rendering -= OnRendering;
-                    renderingDetached = true;
-                    DisposeGifSequence();
-                    DisposeMp4Sequence();
-                    MediaPlayer.Close();
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            ToastWindow.Show(
+                LocalizationService.Translate(lang, "Video saved"),
+                LocalizationService.Translate(lang, "Trimmed copy saved successfully."),
+                newPath
+            );
 
-                    // Give player time to release lock without blocking the UI thread.
-                    await Task.Delay(200);
+            // Auto-load the new copy in the editor
+            bool renderingDetached = false;
+            try
+            {
+                CompositionTarget.Rendering -= OnRendering;
+                renderingDetached = true;
+                DisposeGifSequence();
+                DisposeMp4Sequence();
+                MediaPlayer.Close();
 
-                    LoadMediaFile(newPath);
-                }
-                finally
-                {
-                    if (renderingDetached)
-                        CompositionTarget.Rendering += OnRendering;
-                }
+                // Give player time to release lock without blocking the UI thread.
+                await Task.Delay(200);
+
+                LoadMediaFile(newPath);
+            }
+            finally
+            {
+                if (renderingDetached)
+                    CompositionTarget.Rendering += OnRendering;
             }
         }
 
@@ -2125,14 +2187,19 @@ namespace CyberSnap.UI
                 );
                 return false;
             }
-            
-            ShowProgressOverlay(LocalizationService.Translate(lang, "Exporting..."));
+
+            double expectedSeconds = Math.Max(end - start, 0.05);
+            ShowExportProgress();
+            _isExporting = true;
 
             bool isGif = string.Equals(Path.GetExtension(input), ".gif", StringComparison.OrdinalIgnoreCase);
             double exportVolume = VolumeControl.Volume;
             bool exportMuted = VolumeControl.IsExportMuted;
-            string args = BuildTrimArguments(input, output, start, end, isGif, _hasAudioTrack, exportVolume, exportMuted);
-                
+            string args = "-hide_banner -nostats -progress pipe:1 "
+                + BuildTrimArguments(input, output, start, end, isGif, _hasAudioTrack, exportVolume, exportMuted);
+
+            using var cts = new CancellationTokenSource();
+            _exportCts = cts;
             try
             {
                 var psi = new ProcessStartInfo
@@ -2141,14 +2208,34 @@ namespace CyberSnap.UI
                     Arguments = args,
                     CreateNoWindow = true,
                     UseShellExecute = false,
-                    RedirectStandardError = true
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
                 };
-                
+
                 using (var process = new Process { StartInfo = psi })
                 {
                     process.Start();
-                    await process.WaitForExitAsync();
-                    
+                    var progress = new Progress<double>(UpdateExportProgress);
+                    Task progressTask = ConsumeFfmpegProgressAsync(process, expectedSeconds, progress, cts.Token);
+
+                    bool cancelled = false;
+                    try
+                    {
+                        await process.WaitForExitAsync(cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        cancelled = true;
+                        TryKillProcess(process);
+                        await process.WaitForExitAsync();
+                    }
+
+                    // The progress reader ends when ffmpeg closes stdout.
+                    await progressTask;
+
+                    if (cancelled)
+                        return false;
+
                     if (process.ExitCode != 0)
                     {
                         string err = await process.StandardError.ReadToEndAsync();
@@ -2177,7 +2264,39 @@ namespace CyberSnap.UI
             }
             finally
             {
+                _isExporting = false;
+                if (_exportCts == cts)
+                    _exportCts = null;
                 HideProgressOverlay();
+            }
+        }
+
+        private static async Task ConsumeFfmpegProgressAsync(
+            Process process,
+            double expectedSeconds,
+            IProgress<double> progress,
+            CancellationToken ct)
+        {
+            const string prefix = "out_time_ms=";
+            try
+            {
+                string? line;
+                while ((line = await process.StandardOutput.ReadLineAsync(ct)) != null)
+                {
+                    if (!line.StartsWith(prefix, StringComparison.Ordinal))
+                        continue;
+
+                    if (long.TryParse(line.AsSpan(prefix.Length), NumberStyles.Integer, CultureInfo.InvariantCulture, out long micros) && micros >= 0)
+                        progress.Report(micros / 1_000_000.0 / expectedSeconds);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Export cancelled: stdout closes when the process is killed.
+            }
+            catch (InvalidOperationException)
+            {
+                // Process already exited; nothing left to read.
             }
         }
 

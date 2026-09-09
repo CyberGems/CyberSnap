@@ -808,6 +808,15 @@
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <ProgressBar x:Name="ExportProgressBar" IsIndeterminate="True" Width="200" Height="6" Margin="0,0,0,12"/>
                         <TextBlock x:Name="ProgressText" Text="Exporting..." Foreground="{DynamicResource ThemeTextPrimaryBrush}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                        <Button x:Name="CancelExportBtn"
+                                Content="Cancel"
+                                Padding="16,6"
+                                Margin="0,12,0,0"
+                                HorizontalAlignment="Center"
+                                Click="CancelExportBtn_Click"
+                                Style="{StaticResource TrimmerFlatButtonStyle}"
+                                FontWeight="SemiBold"
+                                Visibility="Collapsed"/>
                     </StackPanel>
                 </Grid>
                 <!-- Banner Notification Overlay -->
