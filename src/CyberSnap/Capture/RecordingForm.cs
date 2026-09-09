@@ -1210,6 +1210,33 @@ public sealed partial class RecordingForm : Form
         _controlBarWpf.Reposition(screenRegion);
     }
 
+    /// <summary>
+    /// The pills avoid the bar when they are laid out, but the bar can still land on
+    /// them afterwards (late HWND, width change between phases, fast Record press).
+    /// Re-layout pills around the settled bar and, if they still collide, lift the
+    /// bar clear and lay out once more. Must run on the overlay UI thread.
+    /// </summary>
+    private void ResolveBarPillsCollision()
+    {
+        var bar = _controlBarWpf;
+        if (bar is null)
+            return;
+
+        RefreshRecordingChromeLayout();
+
+        Rectangle pills = _recordingSizeChipRect;
+        if (!_recordingSettingsPillRect.IsEmpty)
+            pills = pills.IsEmpty ? _recordingSettingsPillRect : Rectangle.Union(pills, _recordingSettingsPillRect);
+        if (pills.IsEmpty)
+            return;
+        pills.Offset(_virtualBounds.X, _virtualBounds.Y);
+
+        if (bar.EnsureClearOf(pills))
+            RefreshRecordingChromeLayout();
+
+        Invalidate();
+    }
+
     private void CloseControlBar()
     {
         if (_controlBarWpf is not null)

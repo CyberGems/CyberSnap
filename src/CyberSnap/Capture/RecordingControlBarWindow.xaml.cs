@@ -385,6 +385,35 @@ public sealed partial class RecordingControlBarWindow : Window
             User32.SWP_NOSIZE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
     }
 
+    /// <summary>
+    /// Lifts the bar above <paramref name="obstacleScreen"/> (physical screen pixels)
+    /// when they intersect — e.g. the size/settings pills parked above the region.
+    /// HWND-only, so it is safe to call from the overlay thread. Respects manual
+    /// placement and clamps to the monitor top. Returns true when the bar moved.
+    /// </summary>
+    public bool EnsureClearOf(System.Drawing.Rectangle obstacleScreen)
+    {
+        if (_userPositioned || _isBarDragging || obstacleScreen.IsEmpty)
+            return false;
+
+        var bounds = GetScreenBounds();
+        if (bounds.IsEmpty || !bounds.IntersectsWith(obstacleScreen))
+            return false;
+
+        const int liftGap = 14;
+        int lift = obstacleScreen.Bottom - bounds.Top + liftGap;
+        if (lift <= 0)
+            return false;
+
+        var screen = System.Windows.Forms.Screen.FromRectangle(
+            _lastCaptureRegion.IsEmpty ? bounds : _lastCaptureRegion);
+        int newTop = Math.Max(bounds.Top - lift, screen.Bounds.Top + 4);
+        MoveBarToPhysical(bounds.Left, newTop);
+
+        var moved = GetScreenBounds();
+        return !moved.IsEmpty && !moved.IntersectsWith(obstacleScreen);
+    }
+
     // ══════════════════════════════════════════════════════════════
     //  Drag (chrome, not buttons — those mark MouseLeftButtonDown handled)
     // ══════════════════════════════════════════════════════════════

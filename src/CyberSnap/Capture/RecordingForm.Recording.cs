@@ -142,6 +142,40 @@ public sealed partial class RecordingForm
         Close();
     }
 
+    /// <summary>Net recorded material excluding paused spans.</summary>
+    private TimeSpan RecordedMaterialElapsed()
+    {
+        var raw = _recorder?.Elapsed ?? _videoRecorder?.Elapsed ?? TimeSpan.Zero;
+        var pausedNow = _isPaused && _pauseStartTime.HasValue ? DateTime.UtcNow - _pauseStartTime.Value : TimeSpan.Zero;
+        var net = raw - _totalPausedDuration - pausedNow;
+        return net < TimeSpan.Zero ? TimeSpan.Zero : net;
+    }
+
+    private bool HasRecordedMaterial() =>
+        _state == State.Recording
+        && (_recorder != null || _videoRecorder != null)
+        && RecordedMaterialElapsed() >= TimeSpan.FromSeconds(1);
+
+    private void ConfirmDiscardRecording()
+    {
+        bool confirmed = ThemedConfirmDialog.Confirm(
+            Handle,
+            LocalizationService.Translate("Discard recording?"),
+            LocalizationService.Translate("The recorded material will be discarded. This action cannot be undone."),
+            primaryText: LocalizationService.Translate("Discard"),
+            secondaryText: LocalizationService.Translate("Keep recording"),
+            danger: true);
+
+        if (confirmed)
+        {
+            DiscardRecording();
+        }
+        else
+        {
+            _controlBarWpf?.AssertBarTopmost();
+        }
+    }
+
     private void PrepareRecording()
     {
         _state = State.PreRecording;
@@ -244,8 +278,17 @@ public sealed partial class RecordingForm
         };
         _controlBarWpf.CancelClicked += () =>
         {
-            if (_state is State.PreRecording or State.Starting or State.Recording)
+            if (_state is State.PreRecording or State.Starting)
+            {
                 DiscardRecording();
+            }
+            else if (_state is State.Recording)
+            {
+                if (HasRecordedMaterial())
+                    ConfirmDiscardRecording();
+                else
+                    DiscardRecording();
+            }
         };
         _controlBarWpf.ShowSafely();
         ScheduleRecordingChromeRelayout();
@@ -282,6 +325,7 @@ public sealed partial class RecordingForm
         TransitionToRecordingSurface();
         _controlBarWpf?.TransitionToRecording();
         UpdateControlBarPosition();
+        ResolveBarPillsCollision();
         Invalidate();
         Update();
 
