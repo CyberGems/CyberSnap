@@ -35,7 +35,7 @@ namespace CyberSnap.UI
         private double _fps = 30.0;
         private double _lastTargetSeekSeconds = -1;
         private bool _hasAudioTrack;
-        private readonly bool _isGif;
+        private bool _isGif;
         private bool _suppressLoadBanner;
         private readonly DispatcherTimer _audioPersistTimer;
         private bool _audioPersistPending;
@@ -2005,32 +2005,36 @@ namespace CyberSnap.UI
             }
         }
         
+        /// <returns>True when it is safe to abandon the current file (nothing to lose or user confirmed).</returns>
+        private bool ConfirmDiscardChanges()
+        {
+            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
+            if (!isModified)
+                return true;
+
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            string template = LocalizationService.Translate(lang, "The changes made will be lost.\nThe original file '{0}' will be kept.");
+            string msg = string.Format(template, Path.GetFileName(_mediaFilePath));
+
+            return ThemedConfirmDialog.Confirm(
+                this,
+                LocalizationService.Translate(lang, "Discard changes?"),
+                msg,
+                LocalizationService.Translate(lang, "Discard"),
+                LocalizationService.Translate(lang, "Keep editing"),
+                danger: false);
+        }
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             // Stop any ongoing export so ffmpeg doesn't outlive the window.
             _exportCts?.Cancel();
 
             // Prompt if there are unsaved changes
-            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
-            if (isModified)
+            if (!ConfirmDiscardChanges())
             {
-                string lang = _settingsService.Settings.InterfaceLanguage;
-                string template = LocalizationService.Translate(lang, "The changes made will be lost.\nThe original file '{0}' will be kept.");
-                string msg = string.Format(template, Path.GetFileName(_mediaFilePath));
-
-                bool discard = ThemedConfirmDialog.Confirm(
-                    this,
-                    LocalizationService.Translate(lang, "Discard changes?"),
-                    msg,
-                    LocalizationService.Translate(lang, "Discard"),
-                    LocalizationService.Translate(lang, "Keep editing"),
-                    danger: false);
-
-                if (!discard)
-                {
-                    e.Cancel = true;
-                    return;
-                }
+                e.Cancel = true;
+                return;
             }
 
             CompositionTarget.Rendering -= OnRendering;
@@ -2201,7 +2205,20 @@ namespace CyberSnap.UI
 
         private void LoadMediaFile(string newPath)
         {
+            newPath = Path.GetFullPath(newPath);
+
+            // Invalidate any in-flight loads and release the current media first.
+            Interlocked.Increment(ref _gifLoadVersion);
+            Interlocked.Increment(ref _mp4LoadVersion);
+            DisposeGifSequence();
+            DisposeMp4Sequence();
+            MediaPlayer.Close();
+            Filmstrip.Children.Clear();
+
             _mediaFilePath = newPath;
+            _isGif = string.Equals(Path.GetExtension(newPath), ".gif", StringComparison.OrdinalIgnoreCase);
+            _fps = _isGif ? _settingsService.Settings.GifFps : _settingsService.Settings.RecordingFps;
+            if (_fps <= 0) _fps = 30.0;
 
             if (_isGif)
             {
@@ -2211,9 +2228,6 @@ namespace CyberSnap.UI
             }
 
             GifPreviewImage.Visibility = Visibility.Collapsed;
-            MediaPlayer.Close();
-            DisposeMp4Sequence();
-            Interlocked.Increment(ref _mp4LoadVersion);
 
             _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
             if (!_hasAudioTrack)
@@ -2227,6 +2241,51 @@ namespace CyberSnap.UI
             }
 
             LoadMp4Preview();
+        }
+
+        private void Window_DragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            e.Effects = GetSupportedDropPath(e) != null ? System.Windows.DragDropEffects.Copy : System.Windows.DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void Window_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            string? path = GetSupportedDropPath(e);
+            if (path == null || _isExporting)
+                return;
+
+            if (string.Equals(Path.GetFullPath(path), _mediaFilePath, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (!ConfirmDiscardChanges())
+                return;
+
+            LoadMediaFile(path);
+        }
+
+        private static string? GetSupportedDropPath(System.Windows.DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
+                return null;
+
+            if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] files)
+                return null;
+
+            foreach (string file in files)
+            {
+                if (!File.Exists(file))
+                    continue;
+
+                string ext = Path.GetExtension(file);
+                if (string.Equals(ext, ".mp4", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(ext, ".gif", StringComparison.OrdinalIgnoreCase))
+                {
+                    return file;
+                }
+            }
+
+            return null;
         }
         
         private async System.Threading.Tasks.Task<bool> RunFfmpegTrimAsync(string input, string output, double start, double end)
