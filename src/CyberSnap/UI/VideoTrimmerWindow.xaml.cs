@@ -1935,37 +1935,60 @@ namespace CyberSnap.UI
                                           $"trim_temp_{Guid.NewGuid()}{ext}");
             
             bool success = await RunFfmpegTrimAsync(_mediaFilePath, tempOut, _startTimeSeconds, _endTimeSeconds);
-            if (success)
+            if (!success)
             {
-                try
-                {
-                    CompositionTarget.Rendering -= OnRendering;
-                    DisposeGifSequence();
-                    DisposeMp4Sequence();
-                    MediaPlayer.Close();
-                    
-                    // Give player time to release lock
-                    System.Threading.Thread.Sleep(200);
-                    
-                    File.Delete(_mediaFilePath);
-                    File.Move(tempOut, _mediaFilePath);
-                    
-                    // Reload original path
-                    LoadMediaFile(_mediaFilePath);
+                TryDeleteFile(tempOut);
+                return;
+            }
+
+            bool renderingDetached = false;
+            try
+            {
+                CompositionTarget.Rendering -= OnRendering;
+                renderingDetached = true;
+                DisposeGifSequence();
+                DisposeMp4Sequence();
+                MediaPlayer.Close();
+
+                // Give player time to release lock without blocking the UI thread.
+                await Task.Delay(200);
+
+                // Atomic overwrite: no window where the original is missing.
+                File.Replace(tempOut, _mediaFilePath, null);
+
+                // Reload original path
+                LoadMediaFile(_mediaFilePath);
+
+                ToastWindow.Show(
+                    LocalizationService.Translate(lang, "Video trimmed"),
+                    LocalizationService.Translate(lang, "Original file overwritten successfully."),
+                    _mediaFilePath
+                );
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("trim.overwrite", ex);
+                TryDeleteFile(tempOut);
+                string errMsg = LocalizationService.Translate(lang, "Failed to overwrite original file: ");
+                ThemedConfirmDialog.Alert(this, LocalizationService.Translate(lang, "Error"), $"{errMsg}{ex.Message}", error: true);
+            }
+            finally
+            {
+                if (renderingDetached)
                     CompositionTarget.Rendering += OnRendering;
-                    
-                    ToastWindow.Show(
-                        LocalizationService.Translate(lang, "Video trimmed"),
-                        LocalizationService.Translate(lang, "Original file overwritten successfully."),
-                        _mediaFilePath
-                    );
-                }
-                catch (Exception ex)
-                {
-                    AppDiagnostics.LogError("trim.overwrite", ex);
-                    string errMsg = LocalizationService.Translate(lang, "Failed to overwrite original file: ");
-                    ThemedConfirmDialog.Alert(this, LocalizationService.Translate(lang, "Error"), $"{errMsg}{ex.Message}", error: true);
-                }
+            }
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("trim.cleanup-temp", $"Could not delete temp file '{path}': {ex.Message}", ex);
             }
         }
         
@@ -1989,6 +2012,14 @@ namespace CyberSnap.UI
                 return;
 
             string newPath = sfd.FileName;
+
+            // Guard: exporting onto the source file would corrupt it (ffmpeg reads
+            // and writes the same path). Route through the safe overwrite flow instead.
+            if (string.Equals(Path.GetFullPath(newPath), Path.GetFullPath(_mediaFilePath), StringComparison.OrdinalIgnoreCase))
+            {
+                TrimBtn_Click(sender, e);
+                return;
+            }
             
             bool success = await RunFfmpegTrimAsync(_mediaFilePath, newPath, _startTimeSeconds, _endTimeSeconds);
             if (success)
@@ -2001,16 +2032,25 @@ namespace CyberSnap.UI
                 );
 
                 // Auto-load the new copy in the editor
-                CompositionTarget.Rendering -= OnRendering;
-                DisposeGifSequence();
-                DisposeMp4Sequence();
-                MediaPlayer.Close();
+                bool renderingDetached = false;
+                try
+                {
+                    CompositionTarget.Rendering -= OnRendering;
+                    renderingDetached = true;
+                    DisposeGifSequence();
+                    DisposeMp4Sequence();
+                    MediaPlayer.Close();
 
-                // Give player time to release lock
-                System.Threading.Thread.Sleep(200);
+                    // Give player time to release lock without blocking the UI thread.
+                    await Task.Delay(200);
 
-                LoadMediaFile(newPath);
-                CompositionTarget.Rendering += OnRendering;
+                    LoadMediaFile(newPath);
+                }
+                finally
+                {
+                    if (renderingDetached)
+                        CompositionTarget.Rendering += OnRendering;
+                }
             }
         }
 
