@@ -124,6 +124,7 @@ namespace CyberSnap.UI
             CopyFileBtn.Content = LocalizationService.Translate(lang, "Copy");
             SaveAsNewBtn.Content = LocalizationService.Translate(lang, "Save As New");
             TrimBtn.Content = LocalizationService.Translate(lang, "Trim");
+            ResetBtn.Content = LocalizationService.Translate(lang, "Reset");
             UpdatePlayPauseToolTip();
             UpdateAllTooltips();
 
@@ -1152,7 +1153,12 @@ namespace CyberSnap.UI
                 return;
 
             System.Windows.Point mousePos = e.GetPosition(TimeSlider);
-            double percent = mousePos.X / TimeSlider.ActualWidth;
+            // The slider track is inset by the template/time-range margins (6px each side).
+            const double trackMargin = 6;
+            double travel = TimeSlider.ActualWidth - trackMargin * 2;
+            if (travel <= 0)
+                return;
+            double percent = (mousePos.X - trackMargin) / travel;
             percent = Math.Clamp(percent, 0.0, 1.0);
 
             double hoverTimeSeconds = percent * _videoDurationSeconds;
@@ -1390,10 +1396,10 @@ namespace CyberSnap.UI
         private void EndThumb_DragCompleted(object sender, DragCompletedEventArgs e)
         {
             _isHandleDragging = false;
-            SeekMediaTo(_startTimeSeconds); // Snap back to start on release so player is ready to play instantly
-            _userTargetSeconds = _startTimeSeconds;
+            SeekMediaTo(_endTimeSeconds);
+            _userTargetSeconds = _endTimeSeconds;
             _lastUserDragTime = DateTime.UtcNow;
-            TimeSlider.Value = _startTimeSeconds;
+            TimeSlider.Value = _endTimeSeconds;
         }
 
         private void EndThumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -1425,10 +1431,25 @@ namespace CyberSnap.UI
             SetEndBtn.IsChecked = _endTimeSeconds < (_videoDurationSeconds - 0.05);
         }
         
+        private void ResetBtn_Click(object sender, RoutedEventArgs e)
+        {
+            PausePlayback();
+            _startTimeSeconds = 0;
+            _endTimeSeconds = _videoDurationSeconds;
+            SetStartBtn.IsChecked = false;
+            SetEndBtn.IsChecked = false;
+            UpdateMarkerLabels();
+            EvaluateCropState();
+            SeekMediaTo(_startTimeSeconds);
+            TimeSlider.Value = _startTimeSeconds;
+            UpdateTimeStatus();
+        }
+
         private void EvaluateCropState()
         {
             bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
             SetTrimButtonVisible(isModified);
+            ResetBtn.IsEnabled = isModified;
             UpdateTitleState(isModified);
         }
 
@@ -1650,6 +1671,7 @@ namespace CyberSnap.UI
             CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the media file to the clipboard");
             SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file");
             TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version");
+            ResetBtn.ToolTip = LocalizationService.Translate(lang, "Reset crop range") + " (R)";
             UpdateLoopTooltip();
             InitZoomIcons();
         }
@@ -1871,6 +1893,11 @@ namespace CyberSnap.UI
                 case Key.L:
                     LoopToggleBtn.IsChecked = !LoopToggleBtn.IsChecked;
                     LoopToggleBtn_Click(LoopToggleBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+                case Key.R:
+                    if (ResetBtn.IsEnabled)
+                        ResetBtn_Click(ResetBtn, new RoutedEventArgs());
                     e.Handled = true;
                     break;
             }

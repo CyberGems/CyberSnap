@@ -1159,7 +1159,17 @@
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                            Margin="0,0,12,0">
+                             Margin="0,0,12,0">
+                    <Button x:Name="ResetBtn"
+                            Content="Reset"
+                            Padding="16,8"
+                            Margin="0,0,10,0"
+                            Click="ResetBtn_Click"
+                            ToolTip="Reset crop range"
+                            Style="{StaticResource TrimmerFlatButtonStyle}"
+                            FontWeight="SemiBold"
+                            IsEnabled="False"/>
+
                     <Border x:Name="TrimBtnHost"
                             ClipToBounds="True"
                             VerticalAlignment="Center"
