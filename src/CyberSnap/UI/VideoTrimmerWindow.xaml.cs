@@ -1052,7 +1052,6 @@ namespace CyberSnap.UI
             string output,
             double start,
             double end,
-            bool isGif,
             bool hasAudio,
             double volume,
             bool exportMuted,
@@ -1067,9 +1066,6 @@ namespace CyberSnap.UI
                 string preciseStart = start.ToString("0.000", invariant);
                 string duration = Math.Max(end - start, 0.05).ToString("0.000", invariant);
 
-                if (isGif)
-                    return $"-y -i \"{input}\" -ss {preciseStart} -t {duration} -loop 0 \"{output}\"";
-
                 const string videoArgs = "-c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -movflags +faststart";
                 if (!hasAudio || exportMuted || volume <= 0.001)
                     return $"-y -i \"{input}\" -ss {preciseStart} -t {duration} {videoArgs} -an \"{output}\"";
@@ -1083,9 +1079,6 @@ namespace CyberSnap.UI
 
             string cultureStart = start.ToString("0.000", invariant);
             string cultureEnd = end.ToString("0.000", invariant);
-
-            if (isGif)
-                return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -loop 0 \"{output}\"";
 
             if (!hasAudio || exportMuted || volume <= 0.001)
                 return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -c:v copy -an \"{output}\"";
@@ -2252,63 +2245,19 @@ namespace CyberSnap.UI
             _isExporting = true;
 
             bool isGif = string.Equals(Path.GetExtension(input), ".gif", StringComparison.OrdinalIgnoreCase);
-            double exportVolume = VolumeControl.Volume;
-            bool exportMuted = VolumeControl.IsExportMuted;
-            string args = "-hide_banner -nostats -progress pipe:1 "
-                + BuildTrimArguments(input, output, start, end, isGif, _hasAudioTrack, exportVolume, exportMuted, _preciseCut);
 
             using var cts = new CancellationTokenSource();
             _exportCts = cts;
             try
             {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = ffmpeg,
-                    Arguments = args,
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true
-                };
+                if (isGif)
+                    return await RunGifTrimAsync(ffmpeg, input, output, start, end, expectedSeconds, lang, cts.Token);
 
-                using (var process = new Process { StartInfo = psi })
-                {
-                    process.Start();
-                    var progress = new Progress<double>(UpdateExportProgress);
-                    Task progressTask = ConsumeFfmpegProgressAsync(process, expectedSeconds, progress, cts.Token);
-
-                    bool cancelled = false;
-                    try
-                    {
-                        await process.WaitForExitAsync(cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        cancelled = true;
-                        TryKillProcess(process);
-                        await process.WaitForExitAsync();
-                    }
-
-                    // The progress reader ends when ffmpeg closes stdout.
-                    await progressTask;
-
-                    if (cancelled)
-                        return false;
-
-                    if (process.ExitCode != 0)
-                    {
-                        string err = await process.StandardError.ReadToEndAsync();
-                        AppDiagnostics.LogError("ffmpeg.trim-fail", new Exception(err));
-                        MessageBox.Show(
-                            $"{LocalizationService.Translate(lang, "Trim failed")} ({process.ExitCode}): {err}",
-                            LocalizationService.Translate(lang, "Trim failed"),
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error
-                        );
-                        return false;
-                    }
-                }
-                return true;
+                double exportVolume = VolumeControl.Volume;
+                bool exportMuted = VolumeControl.IsExportMuted;
+                string args = BuildTrimArguments(input, output, start, end, _hasAudioTrack, exportVolume, exportMuted, _preciseCut);
+                var progress = new Progress<double>(UpdateExportProgress);
+                return await RunFfmpegPassAsync(ffmpeg, args, expectedSeconds, progress, lang, cts.Token);
             }
             catch (Exception ex)
             {
@@ -2328,6 +2277,104 @@ namespace CyberSnap.UI
                     _exportCts = null;
                 HideProgressOverlay();
             }
+        }
+
+        /// <summary>
+        /// Trims a GIF with a two-pass palette (palettegen + paletteuse) so the
+        /// output keeps clean colors instead of ffmpeg's default single-pass palette.
+        /// </summary>
+        private async Task<bool> RunGifTrimAsync(
+            string ffmpeg,
+            string input,
+            string output,
+            double start,
+            double end,
+            double expectedSeconds,
+            string lang,
+            CancellationToken ct)
+        {
+            var invariant = System.Globalization.CultureInfo.InvariantCulture;
+            string range = _preciseCut
+                ? $"-i \"{input}\" -ss {start.ToString("0.000", invariant)} -t {Math.Max(end - start, 0.05).ToString("0.000", invariant)}"
+                : $"-ss {start.ToString("0.000", invariant)} -to {end.ToString("0.000", invariant)} -i \"{input}\"";
+
+            string palettePath = Path.Combine(Path.GetTempPath(), $"cybersnap-palette-{Guid.NewGuid():N}.png");
+            try
+            {
+                // Pass 1 (0-20%): analyze the segment colors. Decode-only, no output file pressure.
+                var pass1Progress = new Progress<double>(f => UpdateExportProgress(f * 0.2));
+                if (!await RunFfmpegPassAsync(ffmpeg, $"-y {range} -vf \"palettegen\" \"{palettePath}\"", expectedSeconds, pass1Progress, lang, ct))
+                    return false;
+
+                // Pass 2 (20-100%): encode the GIF with the custom palette.
+                var pass2Progress = new Progress<double>(f => UpdateExportProgress(0.2 + f * 0.8));
+                return await RunFfmpegPassAsync(ffmpeg, $"-y {range} -i \"{palettePath}\" -lavfi \"paletteuse\" -loop 0 \"{output}\"", expectedSeconds, pass2Progress, lang, ct);
+            }
+            finally
+            {
+                TryDeleteFile(palettePath);
+            }
+        }
+
+        /// <summary>
+        /// Runs one ffmpeg pass with machine-readable progress. Returns false on
+        /// failure or cancellation (silent when cancelled by the user).
+        /// </summary>
+        private async Task<bool> RunFfmpegPassAsync(
+            string ffmpeg,
+            string args,
+            double expectedSeconds,
+            IProgress<double> progress,
+            string lang,
+            CancellationToken ct)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = ffmpeg,
+                Arguments = "-hide_banner -nostats -progress pipe:1 " + args,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true
+            };
+
+            using (var process = new Process { StartInfo = psi })
+            {
+                process.Start();
+                Task progressTask = ConsumeFfmpegProgressAsync(process, expectedSeconds, progress, ct);
+
+                bool cancelled = false;
+                try
+                {
+                    await process.WaitForExitAsync(ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    cancelled = true;
+                    TryKillProcess(process);
+                    await process.WaitForExitAsync();
+                }
+
+                // The progress reader ends when ffmpeg closes stdout.
+                await progressTask;
+
+                if (cancelled)
+                    return false;
+
+                if (process.ExitCode != 0)
+                {
+                    string err = await process.StandardError.ReadToEndAsync();
+                    AppDiagnostics.LogError("ffmpeg.trim-fail", new Exception(err));
+                    MessageBox.Show(
+                        $"{LocalizationService.Translate(lang, "Trim failed")} ({process.ExitCode}): {err}",
+                        LocalizationService.Translate(lang, "Trim failed"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error
+                    );
+                    return false;
+                }
+            }
+            return true;
         }
 
         private static async Task ConsumeFfmpegProgressAsync(
