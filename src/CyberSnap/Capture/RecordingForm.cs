@@ -1081,7 +1081,10 @@ public sealed partial class RecordingForm : Form
 
         if (next == _recordRegion) return;
         _recordRegion = next;
-        BuildHollowRegion(); // keep region in sync during drag
+        // NOTE: no BuildHollowRegion() here. During PreRecording the window region
+        // is always the full window (see its early branch), so re-applying it via
+        // SetWindowRgn on every mousemove only forces DWM recomposition and lags
+        // the drag. The region is (re)built on transitions and drag end.
         Invalidate();
     }
 
