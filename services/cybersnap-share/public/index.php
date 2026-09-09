@@ -69,8 +69,9 @@ function handle_home(array $config): void
             'eyebrow' => 'COMPARTIR IMÁGENES TEMPORALES',
             'title' => 'Comparte capturas sin fricción.',
             'lead' => 'CyberSnap Share le da a CyberSnap un lugar rápido y confiable para publicar una imagen y obtener un enlace que caduca automáticamente.',
-            'primary' => 'Visitar CyberGems',
+            'primary' => 'Obtener CyberSnap',
             'secondary' => 'Cómo funciona',
+            'tertiary' => 'Visitar CyberGems',
             'status' => 'Servicio listo para CyberSnap',
             'features_label' => 'Características',
             'features_title' => 'Diseñado para compartir rápido y por poco tiempo.',
@@ -102,8 +103,9 @@ function handle_home(array $config): void
             'eyebrow' => 'TEMPORARY IMAGE SHARING',
             'title' => 'Share screenshots without friction.',
             'lead' => 'CyberSnap Share gives CyberSnap a fast, reliable place to publish an image and get a link that expires automatically.',
-            'primary' => 'Visit CyberGems',
+            'primary' => 'Get CyberSnap',
             'secondary' => 'How it works',
+            'tertiary' => 'Visit CyberGems',
             'status' => 'Service ready for CyberSnap',
             'features_label' => 'Features',
             'features_title' => 'Made for quick, temporary sharing.',
@@ -137,6 +139,7 @@ function handle_home(array $config): void
     $esClass = $lang === 'es' ? 'active' : '';
     $healthUrl = '/health';
     $cyberGemsUrl = 'https://cybergems.org';
+    $appUrl = app_page_url($lang);
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: public, max-age=300, stale-while-revalidate=60');
     echo <<<HTML
@@ -227,8 +230,9 @@ function handle_home(array $config): void
       <h1 id="hero-title">{$copy['title']}</h1>
       <p class="lead">{$copy['lead']}</p>
       <div class="hero-actions">
-        <a class="button primary" href="{$cyberGemsUrl}">{$copy['primary']}</a>
+        <a class="button primary" href="{$appUrl}" target="_blank" rel="noopener">{$copy['primary']}</a>
         <a class="button secondary" href="#how">{$copy['secondary']}</a>
+        <a class="button secondary" href="{$cyberGemsUrl}" target="_blank" rel="noopener">{$copy['tertiary']}</a>
       </div>
       <p class="status"><span class="status-dot" aria-hidden="true"></span>{$copy['status']}</p>
       <p class="ttl">{$ttlNote}</p>
