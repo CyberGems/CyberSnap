@@ -965,6 +965,17 @@ namespace CyberSnap.UI
             return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -map 0:v -map 0:a? -c:v copy -af \"volume={cultureVolume}\" -c:a aac -b:a 192k \"{output}\"";
         }
 
+        private void SeekBySeconds(double delta) => SeekToSeconds(GetCurrentTimelineSeconds() + delta);
+
+        private void SeekToSeconds(double target)
+        {
+            PausePlayback();
+            target = Math.Clamp(target, 0, _videoDurationSeconds);
+            SeekMediaTo(target);
+            TimeSlider.Value = target;
+            UpdateTimeStatus();
+        }
+
         private void StepBackBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
@@ -1634,8 +1645,8 @@ namespace CyberSnap.UI
         private void UpdateAllTooltips()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
-            StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (\u2190)";
-            StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (\u2192)";
+            StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (← · Shift+← −1s)";
+            StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (→ · Shift+→ +1s)";
             CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the media file to the clipboard");
             SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file");
             TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version");
@@ -1828,15 +1839,30 @@ namespace CyberSnap.UI
                     Close();
                     break;
                 case Key.Space:
+                case Key.K:
                     PlayPauseBtn_Click(PlayPauseBtn, new RoutedEventArgs());
                     e.Handled = true;
                     break;
                 case Key.Left:
-                    StepBackBtn_Click(StepBackBtn, new RoutedEventArgs());
+                    if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+                        SeekBySeconds(-1);
+                    else
+                        StepBackBtn_Click(StepBackBtn, new RoutedEventArgs());
                     e.Handled = true;
                     break;
                 case Key.Right:
-                    StepForwardBtn_Click(StepForwardBtn, new RoutedEventArgs());
+                    if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+                        SeekBySeconds(1);
+                    else
+                        StepForwardBtn_Click(StepForwardBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+                case Key.Home:
+                    SeekToSeconds(0);
+                    e.Handled = true;
+                    break;
+                case Key.End:
+                    SeekToSeconds(_videoDurationSeconds);
                     e.Handled = true;
                     break;
                 case Key.I:
