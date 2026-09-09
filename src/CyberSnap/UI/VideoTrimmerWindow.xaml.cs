@@ -43,6 +43,7 @@ namespace CyberSnap.UI
         private double _trimButtonExpandedWidth;
         private bool _detailedTimeDisplay = true;
         private bool _loopEnabled = true;
+        private bool _preciseCut;
 
         private static readonly SolidColorBrush GreenLedBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(34, 197, 94));
         private static readonly SolidColorBrush GreenLedAuraBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 34, 197, 94));
@@ -127,6 +128,9 @@ namespace CyberSnap.UI
             SaveAsNewBtn.Content = LocalizationService.Translate(lang, "Save As New");
             TrimBtn.Content = LocalizationService.Translate(lang, "Trim");
             ResetBtn.Content = LocalizationService.Translate(lang, "Reset");
+            _preciseCut = settingsService.Settings.VideoTrimmerPreciseCut;
+            PreciseCutToggleBtn.IsChecked = _preciseCut;
+            UpdatePreciseCutTooltip();
             UpdatePlayPauseToolTip();
             UpdateAllTooltips();
 
@@ -1051,10 +1055,34 @@ namespace CyberSnap.UI
             bool isGif,
             bool hasAudio,
             double volume,
-            bool exportMuted)
+            bool exportMuted,
+            bool precise = false)
         {
-            string cultureStart = start.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
-            string cultureEnd = end.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
+            var invariant = System.Globalization.CultureInfo.InvariantCulture;
+
+            if (precise)
+            {
+                // Accurate path: seek after -i decodes up to the target frame and
+                // re-encodes, so cuts land exactly on start/end at the cost of speed.
+                string preciseStart = start.ToString("0.000", invariant);
+                string duration = Math.Max(end - start, 0.05).ToString("0.000", invariant);
+
+                if (isGif)
+                    return $"-y -i \"{input}\" -ss {preciseStart} -t {duration} -loop 0 \"{output}\"";
+
+                const string videoArgs = "-c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -movflags +faststart";
+                if (!hasAudio || exportMuted || volume <= 0.001)
+                    return $"-y -i \"{input}\" -ss {preciseStart} -t {duration} {videoArgs} -an \"{output}\"";
+
+                if (Math.Abs(volume - 1.0) < 0.001)
+                    return $"-y -i \"{input}\" -ss {preciseStart} -t {duration} {videoArgs} -c:a aac -b:a 192k \"{output}\"";
+
+                string preciseVolume = volume.ToString("0.###", invariant);
+                return $"-y -i \"{input}\" -ss {preciseStart} -t {duration} {videoArgs} -af \"volume={preciseVolume}\" -c:a aac -b:a 192k \"{output}\"";
+            }
+
+            string cultureStart = start.ToString("0.000", invariant);
+            string cultureEnd = end.ToString("0.000", invariant);
 
             if (isGif)
                 return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -loop 0 \"{output}\"";
@@ -1710,6 +1738,31 @@ namespace CyberSnap.UI
                 : LocalizationService.Translate(lang, "Enable loop") + " (L)";
         }
 
+        private void PreciseCutToggleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _preciseCut = PreciseCutToggleBtn.IsChecked == true;
+            UpdatePreciseCutTooltip();
+
+            if (Application.Current is App app)
+                app.PersistVideoTrimmerPreciseCut(_preciseCut);
+
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            string msg = _preciseCut
+                ? LocalizationService.Translate(lang, "Precise cut on")
+                : LocalizationService.Translate(lang, "Precise cut off");
+            ShowBanner(msg);
+        }
+
+        private void UpdatePreciseCutTooltip()
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            PreciseCutToggleBtn.ToolTip = _preciseCut
+                ? LocalizationService.Translate(lang, "Disable precise cut") + " (P)"
+                : LocalizationService.Translate(lang, "Enable precise cut") + " (P)";
+            System.Windows.Automation.AutomationProperties.SetName(PreciseCutToggleBtn,
+                LocalizationService.Translate(lang, "Enable precise cut"));
+        }
+
         private void UpdateAllTooltips()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
@@ -1720,6 +1773,7 @@ namespace CyberSnap.UI
             TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version");
             ResetBtn.ToolTip = LocalizationService.Translate(lang, "Reset crop range") + " (R)";
             UpdateLoopTooltip();
+            UpdatePreciseCutTooltip();
             InitZoomIcons();
         }
 
@@ -1940,6 +1994,11 @@ namespace CyberSnap.UI
                 case Key.L:
                     LoopToggleBtn.IsChecked = !LoopToggleBtn.IsChecked;
                     LoopToggleBtn_Click(LoopToggleBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+                case Key.P:
+                    PreciseCutToggleBtn.IsChecked = !PreciseCutToggleBtn.IsChecked;
+                    PreciseCutToggleBtn_Click(PreciseCutToggleBtn, new RoutedEventArgs());
                     e.Handled = true;
                     break;
                 case Key.R:
@@ -2196,7 +2255,7 @@ namespace CyberSnap.UI
             double exportVolume = VolumeControl.Volume;
             bool exportMuted = VolumeControl.IsExportMuted;
             string args = "-hide_banner -nostats -progress pipe:1 "
-                + BuildTrimArguments(input, output, start, end, isGif, _hasAudioTrack, exportVolume, exportMuted);
+                + BuildTrimArguments(input, output, start, end, isGif, _hasAudioTrack, exportVolume, exportMuted, _preciseCut);
 
             using var cts = new CancellationTokenSource();
             _exportCts = cts;

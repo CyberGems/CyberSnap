@@ -397,6 +397,8 @@ public sealed class AppSettings
     public double VideoTrimmerVolume { get; set; } = 1.0;
     /// <summary>When true, exported trimmer output excludes the audio track.</summary>
     public bool VideoTrimmerExportMuted { get; set; }
+    /// <summary>When true, the trimmer re-encodes for frame-accurate cuts instead of fast keyframe cuts.</summary>
+    public bool VideoTrimmerPreciseCut { get; set; }
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
     public bool EditorFitToWindowOnOpen { get; set; } = false;
     public bool EditorPanModeLockObjects { get; set; } = true;

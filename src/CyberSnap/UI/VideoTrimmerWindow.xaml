@@ -1169,6 +1169,22 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                              Margin="0,0,12,0">
+                    <ToggleButton x:Name="PreciseCutToggleBtn" Width="32" Height="32"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,0"
+                                  Click="PreciseCutToggleBtn_Click"
+                                  ToolTip="Enable precise cut (P)"
+                                  Style="{StaticResource TrimmerLoopToggleStyle}">
+                        <Path Data="M 12,3 L 12,9 M 12,15 L 12,21 M 3,12 L 9,12 M 15,12 L 21,12 M 10,10 L 14,10 L 14,14 L 10,14 Z"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                              StrokeThickness="1.8"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Fill="Transparent"
+                              Width="14" Height="14" Stretch="Uniform"/>
+                    </ToggleButton>
+
                     <Button x:Name="ResetBtn"
                             Content="Reset"
                             Padding="16,8"

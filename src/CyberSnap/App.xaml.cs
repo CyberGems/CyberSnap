@@ -351,6 +351,20 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("trimmer.persist-audio", ex); }
     }
 
+    /// <summary>Persists the video trimmer precise-cut preference.</summary>
+    public void PersistVideoTrimmerPreciseCut(bool enabled)
+    {
+        if (_settingsService is null) return;
+
+        var settings = _settingsService.Settings;
+        if (settings.VideoTrimmerPreciseCut == enabled)
+            return;
+
+        settings.VideoTrimmerPreciseCut = enabled;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("trimmer.persist-precise-cut", ex); }
+    }
+
     /// <summary>
     /// Persists Send-to-Trimmer for video or GIF on the live App settings instance
     /// (recording-bar toggles must not write through a detached SettingsService).
