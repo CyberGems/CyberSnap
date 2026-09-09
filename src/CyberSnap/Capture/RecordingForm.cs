@@ -481,6 +481,9 @@ public sealed partial class RecordingForm : Form
                 _isHandleDragging = true;
                 _handleDragOrigin = e.Location;
                 _handleDragStartRect = _recordRegion;
+                // Keep receiving MouseUp even if released over the control bar
+                // (separate HWND); otherwise the bar stays hidden until the next drag.
+                Capture = true;
                 _controlBarWpf?.SetDragInProgress(true);
                 return;
             }
@@ -490,6 +493,7 @@ public sealed partial class RecordingForm : Form
                 _isHandleDragging = true;
                 _handleDragOrigin = e.Location;
                 _handleDragStartRect = _recordRegion;
+                Capture = true;
                 _controlBarWpf?.SetDragInProgress(true);
                 return;
             }
@@ -606,6 +610,7 @@ public sealed partial class RecordingForm : Form
         {
             _isHandleDragging = false;
             _handleDragIdx = -1;
+            if (Capture) Capture = false;
             RebuildRecordingSurface();
             _controlBarWpf?.SetDragInProgress(false);
             ScheduleRecordingChromeRelayout();

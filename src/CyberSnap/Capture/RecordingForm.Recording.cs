@@ -158,21 +158,27 @@ public sealed partial class RecordingForm
 
     private void ConfirmDiscardRecording()
     {
-        bool confirmed = ThemedConfirmDialog.Confirm(
-            Handle,
-            LocalizationService.Translate("Discard recording?"),
-            LocalizationService.Translate("The recorded material will be discarded. This action cannot be undone."),
-            primaryText: LocalizationService.Translate("Discard"),
-            secondaryText: LocalizationService.Translate("Keep recording"),
-            danger: true);
+        // The bar is TOPMOST: without this it would cover the modal.
+        _controlBarWpf?.SuspendTopmost();
+        bool confirmed;
+        try
+        {
+            confirmed = ThemedConfirmDialog.Confirm(
+                Handle,
+                LocalizationService.Translate("Discard recording?"),
+                LocalizationService.Translate("The recorded material will be discarded. This action cannot be undone."),
+                primaryText: LocalizationService.Translate("Discard"),
+                secondaryText: LocalizationService.Translate("Keep recording"),
+                danger: true);
+        }
+        finally
+        {
+            _controlBarWpf?.AssertBarTopmost();
+        }
 
         if (confirmed)
         {
             DiscardRecording();
-        }
-        else
-        {
-            _controlBarWpf?.AssertBarTopmost();
         }
     }
 

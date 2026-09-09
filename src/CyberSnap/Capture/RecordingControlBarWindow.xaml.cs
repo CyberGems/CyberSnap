@@ -400,8 +400,9 @@ public sealed partial class RecordingControlBarWindow : Window
         if (bounds.IsEmpty || !bounds.IntersectsWith(obstacleScreen))
             return false;
 
+        // Lift so the bar bottom clears the obstacle top (plus a gap).
         const int liftGap = 14;
-        int lift = obstacleScreen.Bottom - bounds.Top + liftGap;
+        int lift = bounds.Bottom - (obstacleScreen.Top - liftGap);
         if (lift <= 0)
             return false;
 
@@ -499,6 +500,22 @@ public sealed partial class RecordingControlBarWindow : Window
         if (hwnd == IntPtr.Zero)
             return;
         User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, 0, 0, 0, 0,
+            User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE);
+    }
+
+    /// <summary>
+    /// Temporarily drops TOPMOST so owned modal dialogs (discard confirm, settings)
+    /// render above the bar instead of underneath it. HWND-only, safe from any
+    /// thread. Restore with <see cref="AssertBarTopmost"/>.
+    /// </summary>
+    internal void SuspendTopmost()
+    {
+        IntPtr hwnd;
+        try { hwnd = new WindowInteropHelper(this).Handle; }
+        catch { return; }
+        if (hwnd == IntPtr.Zero)
+            return;
+        User32.SetWindowPos(hwnd, User32.HWND_NOTOPMOST, 0, 0, 0, 0,
             User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE);
     }
 
