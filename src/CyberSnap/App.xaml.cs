@@ -365,6 +365,22 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("trimmer.persist-precise-cut", ex); }
     }
 
+    /// <summary>Persists the video trimmer loop and time-display preferences.</summary>
+    public void PersistVideoTrimmerView(bool loopEnabled, bool detailedTimeDisplay)
+    {
+        if (_settingsService is null) return;
+
+        var settings = _settingsService.Settings;
+        if (settings.VideoTrimmerLoopEnabled == loopEnabled
+            && settings.VideoTrimmerDetailedTimeDisplay == detailedTimeDisplay)
+            return;
+
+        settings.VideoTrimmerLoopEnabled = loopEnabled;
+        settings.VideoTrimmerDetailedTimeDisplay = detailedTimeDisplay;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("trimmer.persist-view", ex); }
+    }
+
     /// <summary>
     /// Persists Send-to-Trimmer for video or GIF on the live App settings instance
     /// (recording-bar toggles must not write through a detached SettingsService).

@@ -132,6 +132,9 @@ namespace CyberSnap.UI
             _preciseCut = settingsService.Settings.VideoTrimmerPreciseCut;
             PreciseCutToggleBtn.IsChecked = _preciseCut;
             UpdatePreciseCutTooltip();
+            _loopEnabled = settingsService.Settings.VideoTrimmerLoopEnabled;
+            LoopToggleBtn.IsChecked = _loopEnabled;
+            _detailedTimeDisplay = settingsService.Settings.VideoTrimmerDetailedTimeDisplay;
             UpdatePlayPauseToolTip();
             UpdateAllTooltips();
 
@@ -1058,6 +1061,8 @@ namespace CyberSnap.UI
         private void PlaybackTimeBtn_Click(object sender, RoutedEventArgs e)
         {
             _detailedTimeDisplay = !_detailedTimeDisplay;
+            if (Application.Current is App timeApp)
+                timeApp.PersistVideoTrimmerView(_loopEnabled, _detailedTimeDisplay);
             RefreshTimeDisplay();
         }
         
@@ -1703,6 +1708,9 @@ namespace CyberSnap.UI
         {
             _loopEnabled = LoopToggleBtn.IsChecked == true;
             UpdateLoopTooltip();
+
+            if (Application.Current is App loopApp)
+                loopApp.PersistVideoTrimmerView(_loopEnabled, _detailedTimeDisplay);
 
             string lang = _settingsService.Settings.InterfaceLanguage;
             string msg = _loopEnabled

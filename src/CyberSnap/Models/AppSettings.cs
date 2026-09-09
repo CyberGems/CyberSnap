@@ -399,6 +399,10 @@ public sealed class AppSettings
     public bool VideoTrimmerExportMuted { get; set; }
     /// <summary>When true, the trimmer re-encodes for frame-accurate cuts instead of fast keyframe cuts.</summary>
     public bool VideoTrimmerPreciseCut { get; set; }
+    /// <summary>When true, the trimmer loops the preview segment.</summary>
+    public bool VideoTrimmerLoopEnabled { get; set; } = true;
+    /// <summary>When true, the trimmer shows detailed (tenths) timecodes.</summary>
+    public bool VideoTrimmerDetailedTimeDisplay { get; set; } = true;
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
     public bool EditorFitToWindowOnOpen { get; set; } = false;
     public bool EditorPanModeLockObjects { get; set; } = true;
