@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -20,7 +19,7 @@ internal sealed class Mp4FrameSequence : IDisposable
 
     private readonly string _framesDirectory;
     private readonly string[] _framePaths;
-    private readonly Dictionary<int, BitmapSource> _frameCache = new();
+    private readonly BitmapFrameCache _frameCache = new(capacity: 60);
     private bool _disposed;
 
     public double TotalDurationSeconds { get; }
@@ -57,6 +56,7 @@ internal sealed class Mp4FrameSequence : IDisposable
         effectiveFps = Math.Clamp(effectiveFps, 1, requestedFps);
 
         string tempDir = Path.Combine(Path.GetTempPath(), $"cybersnap-mp4prev-{Guid.NewGuid():N}");
+        SweepStalePreviewTemp();
         Directory.CreateDirectory(tempDir);
 
         try
@@ -122,12 +122,12 @@ internal sealed class Mp4FrameSequence : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         frameIndex = Math.Clamp(frameIndex, 0, _framePaths.Length - 1);
-        if (_frameCache.TryGetValue(frameIndex, out BitmapSource? cached))
+        if (_frameCache.TryGet(frameIndex, out BitmapSource? cached))
             return cached;
 
         using var bitmap = BitmapPerf.LoadDetached(_framePaths[frameIndex]);
         BitmapSource source = BitmapPerf.ToBitmapSource(bitmap);
-        _frameCache[frameIndex] = source;
+        _frameCache.Add(frameIndex, source);
         return source;
     }
 
@@ -195,6 +195,57 @@ internal sealed class Mp4FrameSequence : IDisposable
         catch
         {
             // Best effort cleanup for temp preview frames.
+        }
+    }
+
+    /// <summary>
+    /// Deletes preview/palette temp leftovers from crashed sessions (older than a day,
+    /// so live sessions from this or another app instance are never touched).
+    /// </summary>
+    private static void SweepStalePreviewTemp()
+    {
+        string tempRoot;
+        try
+        {
+            tempRoot = Path.GetTempPath();
+        }
+        catch
+        {
+            return;
+        }
+
+        DateTime cutoffUtc = DateTime.UtcNow - TimeSpan.FromDays(1);
+        try
+        {
+            foreach (string dir in Directory.EnumerateDirectories(tempRoot, "cybersnap-mp4prev-*"))
+            {
+                try
+                {
+                    if (Directory.GetLastWriteTimeUtc(dir) < cutoffUtc)
+                        TryDeleteDirectory(dir);
+                }
+                catch
+                {
+                    // Best effort per entry.
+                }
+            }
+
+            foreach (string file in Directory.EnumerateFiles(tempRoot, "cybersnap-palette-*.png"))
+            {
+                try
+                {
+                    if (File.GetLastWriteTimeUtc(file) < cutoffUtc)
+                        File.Delete(file);
+                }
+                catch
+                {
+                    // Best effort per entry.
+                }
+            }
+        }
+        catch
+        {
+            // Temp enumeration itself failed; skip the sweep.
         }
     }
 }

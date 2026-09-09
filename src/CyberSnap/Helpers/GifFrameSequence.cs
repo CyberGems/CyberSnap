@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -20,7 +19,7 @@ internal sealed class GifFrameSequence : IDisposable
     private readonly FrameDimension _dimension;
     private readonly int[] _frameDelayMs;
     private readonly double[] _frameStartSeconds;
-    private readonly Dictionary<int, BitmapSource> _frameCache = new();
+    private readonly BitmapFrameCache _frameCache = new(capacity: 150);
     private readonly bool _useUniformFrameTiming;
     private bool _disposed;
 
@@ -95,13 +94,13 @@ internal sealed class GifFrameSequence : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         frameIndex = Math.Clamp(frameIndex, 0, FrameCount - 1);
-        if (_frameCache.TryGetValue(frameIndex, out BitmapSource? cached))
+        if (_frameCache.TryGet(frameIndex, out BitmapSource? cached))
             return cached;
 
         _bitmap.SelectActiveFrame(_dimension, frameIndex);
         using var frame = BitmapPerf.Clone32bppArgb(_bitmap);
         BitmapSource source = BitmapPerf.ToBitmapSource(frame);
-        _frameCache[frameIndex] = source;
+        _frameCache.Add(frameIndex, source);
         return source;
     }
 
