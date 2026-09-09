@@ -612,7 +612,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="MaxLength" Value="8"/>
+            <Setter Property="MaxLength" Value="12"/>
             <Setter Property="Padding" Value="2,0"/>
             <Setter Property="MinWidth" Value="48"/>
         </Style>
@@ -1166,7 +1166,7 @@
                             MaxWidth="0"
                             Opacity="0">
                         <Button x:Name="TrimBtn"
-                                Content="Cortar"
+                                Content="Trim"
                                 Padding="20,8"
                                 Margin="0,0,12,0"
                                 Click="TrimBtn_Click"

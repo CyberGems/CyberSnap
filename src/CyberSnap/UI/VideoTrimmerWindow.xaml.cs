@@ -123,6 +123,7 @@ namespace CyberSnap.UI
             
             CopyFileBtn.Content = LocalizationService.Translate(lang, "Copy");
             SaveAsNewBtn.Content = LocalizationService.Translate(lang, "Save As New");
+            TrimBtn.Content = LocalizationService.Translate(lang, "Trim");
             UpdatePlayPauseToolTip();
             UpdateAllTooltips();
 
@@ -1214,6 +1215,8 @@ namespace CyberSnap.UI
         {
             if (seconds < 0) seconds = 0;
             var t = TimeSpan.FromSeconds(seconds);
+            if (t.TotalHours >= 1)
+                return $"{(int)t.TotalHours}h {t.Minutes}m";
             if (t.TotalMinutes >= 1)
                 return $"{(int)t.TotalMinutes}m {t.Seconds}s";
             return $"{t.TotalSeconds:0.0}s";
@@ -1221,13 +1224,20 @@ namespace CyberSnap.UI
         
         private string FormatTime(double seconds)
         {
+            if (seconds < 0) seconds = 0;
             var t = TimeSpan.FromSeconds(seconds);
-            return $"{t.Minutes:D2}:{t.Seconds:D2}.{t.Milliseconds / 100:D1}";
+            string tenths = $"{t.Milliseconds / 100:D1}";
+            if (t.TotalHours >= 1)
+                return $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}.{tenths}";
+            return $"{t.Minutes:D2}:{t.Seconds:D2}.{tenths}";
         }
 
         private static string FormatSimpleTime(double seconds)
         {
+            if (seconds < 0) seconds = 0;
             var t = TimeSpan.FromSeconds(seconds);
+            if (t.TotalHours >= 1)
+                return $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}";
             return $"{t.Minutes:D2}:{t.Seconds:D2}";
         }
         
@@ -1639,6 +1649,7 @@ namespace CyberSnap.UI
             StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (\u2192)";
             CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the media file to the clipboard");
             SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file");
+            TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version");
             UpdateLoopTooltip();
             InitZoomIcons();
         }
@@ -1751,26 +1762,34 @@ namespace CyberSnap.UI
             if (string.IsNullOrWhiteSpace(input))
                 return false;
 
-            input = input.Trim();
+            input = input.Trim().Replace(',', '.');
 
-            // Try mm:ss.d or mm:ss
+            // Try h:mm:ss.d, mm:ss.d or mm:ss
             if (input.Contains(':'))
             {
                 var parts = input.Split(':');
-                if (parts.Length == 2)
+                if (parts.Length is 2 or 3)
                 {
-                    if (double.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out double mins) &&
-                        double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double secs))
+                    double total = 0;
+                    // All but last part must be integer minutes/hours.
+                    for (int i = 0; i < parts.Length - 1; i++)
                     {
-                        seconds = mins * 60 + secs;
-                        return seconds >= 0;
+                        if (!double.TryParse(parts[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out double head) || head < 0)
+                            return false;
+                        total = total * 60 + head;
                     }
+
+                    if (!double.TryParse(parts[^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double tail) || tail < 0 || tail >= 60)
+                        return false;
+
+                    seconds = total * 60 + tail;
+                    return seconds >= 0;
                 }
                 return false;
             }
 
             // Try plain seconds (e.g. "5.3" or "12")
-            if (double.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out double plainSeconds))
+            if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double plainSeconds))
             {
                 seconds = plainSeconds;
                 return seconds >= 0;
@@ -1869,10 +1888,10 @@ namespace CyberSnap.UI
 
                 bool discard = ThemedConfirmDialog.Confirm(
                     this,
-                    "Discard changes?",
+                    LocalizationService.Translate(lang, "Discard changes?"),
                     msg,
-                    "Discard",
-                    "Keep editing",
+                    LocalizationService.Translate(lang, "Discard"),
+                    LocalizationService.Translate(lang, "Keep editing"),
                     danger: false);
 
                 if (!discard)
@@ -1902,10 +1921,10 @@ namespace CyberSnap.UI
 
             if (!ThemedConfirmDialog.Confirm(
                 this, 
-                "Confirm Overwrite", 
+                LocalizationService.Translate(lang, "Confirm Overwrite"), 
                 msg,
-                "Yes",
-                "No",
+                LocalizationService.Translate(lang, "Yes"),
+                LocalizationService.Translate(lang, "No"),
                 danger: false))
             {
                 return;
@@ -1945,7 +1964,7 @@ namespace CyberSnap.UI
                 {
                     AppDiagnostics.LogError("trim.overwrite", ex);
                     string errMsg = LocalizationService.Translate(lang, "Failed to overwrite original file: ");
-                    ThemedConfirmDialog.Alert(this, "Error", $"{errMsg}{ex.Message}", error: true);
+                    ThemedConfirmDialog.Alert(this, LocalizationService.Translate(lang, "Error"), $"{errMsg}{ex.Message}", error: true);
                 }
             }
         }
@@ -2033,7 +2052,7 @@ namespace CyberSnap.UI
             {
                 MessageBox.Show(
                     LocalizationService.Translate(lang, "FFmpeg binary not found."),
-                    "Error",
+                    LocalizationService.Translate(lang, "Error"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error
                 );
@@ -2083,7 +2102,7 @@ namespace CyberSnap.UI
                 AppDiagnostics.LogError("ffmpeg.trim-exception", ex);
                 MessageBox.Show(
                     $"{LocalizationService.Translate(lang, "Error running FFmpeg: ")}{ex.Message}",
-                    "Error",
+                    LocalizationService.Translate(lang, "Error"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error
                 );
