@@ -157,9 +157,10 @@ function handle_home(array $config): void
     a{color:inherit}
     .site-header,.site-shell,.site-footer{width:min(1100px,calc(100% - 40px));margin:0 auto}
     .site-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 0}
-    .brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;font-weight:700;letter-spacing:.01em}
+    .brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;font-weight:700;letter-spacing:.01em;color:var(--text)}
     .brand img{width:38px;height:38px;border-radius:11px;display:block;box-shadow:0 8px 24px rgba(0,0,0,.28)}
-    .brand em{font-style:normal;color:var(--accent);font-weight:500}
+    .brand-accent{color:var(--accent)}
+    .brand em{font-style:normal;color:var(--text);font-weight:500}
     nav{display:flex;align-items:center;gap:15px;color:var(--muted);font-size:.9rem}
     nav a{text-decoration:none}
     nav a:hover,nav a:focus-visible{color:var(--text)}
@@ -208,7 +209,7 @@ function handle_home(array $config): void
   <header class="site-header">
     <a class="brand" href="/" aria-label="CyberSnap Share">
       <img src="/logo.png" width="38" height="38" alt="CyberSnap"/>
-      <span>CyberSnap <em>Share</em></span>
+      <span>Cyber<span class="brand-accent">Snap</span> <em>Share</em></span>
     </a>
     <nav aria-label="{$copy['nav_label']}">
       <a href="{$cyberGemsUrl}">CyberGems</a>
@@ -441,8 +442,9 @@ function handle_view(array $config, string $filesDir, string $metaDir, string $i
     body{margin:0;font-family:Segoe UI,system-ui,sans-serif;background:#0d0f17;color:#e8eaef;
       min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 48px}
     header{width:100%;max-width:960px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:1.05rem;color:#00e5ff}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:1.05rem;color:#e8eaef}
     .brand img{width:32px;height:32px;border-radius:8px;display:block;flex-shrink:0}
+    .brand-accent{color:#00e5ff}
     .meta{opacity:.65;font-size:.9rem}
     .actions{display:flex;gap:8px}
     a.btn{display:inline-block;padding:8px 16px;border-radius:999px;border:1px solid #3b82f6;color:#93c5fd;
@@ -457,7 +459,7 @@ function handle_view(array $config, string $filesDir, string $metaDir, string $i
   <header>
     <div class="brand">
       <img src="/logo.png" width="32" height="32" alt="CyberSnap"/>
-      <span>CyberSnap Share</span>
+      <span>Cyber<span class="brand-accent">Snap</span> Share</span>
     </div>
     <div class="meta">{$fmt} &nbsp; {$dims} &nbsp; {$sizeLabel}</div>
     <div class="actions">
