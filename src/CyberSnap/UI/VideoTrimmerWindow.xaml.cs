@@ -976,6 +976,15 @@ namespace CyberSnap.UI
             UpdateTimeStatus();
         }
 
+        /// <summary>Snaps a marker to the frame grid so cuts land on real frames.</summary>
+        private double SnapToFrame(double seconds)
+        {
+            if (_fps <= 0 || _videoDurationSeconds <= 0)
+                return seconds;
+
+            return Math.Clamp(Math.Round(seconds * _fps) / _fps, 0, _videoDurationSeconds);
+        }
+
         private void StepBackBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
@@ -1325,6 +1334,9 @@ namespace CyberSnap.UI
             double maxStart = _endTimeSeconds - 0.05;
             if (newStart < 0) newStart = 0;
             if (newStart > maxStart) newStart = maxStart;
+            newStart = SnapToFrame(newStart);
+            if (newStart < 0) newStart = 0;
+            if (newStart > maxStart) newStart = maxStart;
 
             _startTimeSeconds = newStart;
 
@@ -1367,6 +1379,9 @@ namespace CyberSnap.UI
             double newEnd = _endTimeSeconds + deltaSeconds;
 
             double minEnd = _startTimeSeconds + 0.05;
+            if (newEnd < minEnd) newEnd = minEnd;
+            if (newEnd > _videoDurationSeconds) newEnd = _videoDurationSeconds;
+            newEnd = SnapToFrame(newEnd);
             if (newEnd < minEnd) newEnd = minEnd;
             if (newEnd > _videoDurationSeconds) newEnd = _videoDurationSeconds;
 
