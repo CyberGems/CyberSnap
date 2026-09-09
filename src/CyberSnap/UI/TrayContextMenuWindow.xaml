@@ -173,6 +173,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Border x:Name="AboutHeaderBtn"
                         Grid.Column="0"
@@ -209,8 +210,33 @@
                         </Ellipse>
                     </StackPanel>
                 </Border>
-                <Button x:Name="TrayCloseBtn"
+                <!-- Compact toggle chevron -->
+                <Button x:Name="CompactToggleBtn"
                         Grid.Column="1"
+                        Style="{StaticResource HeaderActionButtonStyle}"
+                        Click="CompactToggle_Click"
+                        ToolTip="Collapse capture modes"
+                        Margin="0,0,4,0">
+                    <Path x:Name="CompactToggleChevron"
+                          Data="M 4,2 L 10,8 L 4,14"
+                          Stroke="{DynamicResource ThemeTextSecondaryBrush}"
+                          StrokeThickness="1.5"
+                          StrokeLineJoin="Round"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"
+                          Width="10"
+                          Height="10"
+                          Stretch="Uniform"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          RenderTransformOrigin="0.5,0.5">
+                        <Path.RenderTransform>
+                            <RotateTransform x:Name="ChevronRotation" Angle="90"/>
+                        </Path.RenderTransform>
+                    </Path>
+                </Button>
+                <Button x:Name="TrayCloseBtn"
+                        Grid.Column="2"
                         Width="24"
                         Height="24"
                         Background="Transparent"
@@ -247,9 +273,13 @@
             <!-- Grid Tools -->
             <StackPanel Grid.Row="1">
                 <!-- Primary capture block: large Area action beside the four image modes. -->
-                <UniformGrid Columns="2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
                     <!-- Area Capture -->
-                    <Button x:Name="AreaCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
+                    <Button x:Name="AreaCaptureBtn" Grid.Column="0" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Grid Width="100" Height="100" Margin="0,0,0,8"
                                   RenderTransformOrigin="0.5,0.5">
@@ -281,8 +311,8 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- Image capture modes, arranged vertically like the reference mockup. -->
-                    <StackPanel Width="132" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Image capture modes (collapsible) -->
+                    <StackPanel x:Name="CaptureModesPanel" Grid.Column="1" Width="132" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True">
                         <Button x:Name="FullscreenBtn" Style="{StaticResource BottomButtonStyle}" Click="Fullscreen_Click"
                                 ToolTip="Fullscreen capture" Height="34" Padding="4,2" Margin="0,0,0,1">
                             <StackPanel Width="120" Orientation="Horizontal">
@@ -320,7 +350,7 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                </UniformGrid>
+                </Grid>
 
                 <!-- Separate image-capture shortcuts from video recording controls. -->
                 <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="8,4,8,4"/>

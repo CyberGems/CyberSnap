@@ -236,6 +236,28 @@ public sealed class SettingsService : IDisposable
         }
     }
 
+    public static void SaveQuickPanelCompact(bool value)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+                s_cachedSettings.QuickPanelCompact = value;
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.QuickPanelCompact = value;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.quick-panel-compact.static-save", ex);
+        }
+    }
+
     public SettingsService(string? settingsPath = null, TimeSpan? saveDelay = null)
     {
         _settingsPath = ResolveSettingsPath(settingsPath);

@@ -676,6 +676,12 @@ public sealed class AppSettings
     public double WidgetDockPositionOffset { get; set; } = 0.5;
     public int WidgetHoverDelayMs { get; set; } = 250;
 
+    /// <summary>
+    /// When true, the tray quick-panel hides the secondary capture-mode buttons
+    /// (Fullscreen, Window, Repeat, Scrolling) and shows only the primary Area button.
+    /// </summary>
+    public bool QuickPanelCompact { get; set; }
+
     // Window bounds
     public double SettingsWindowLeft { get; set; } = -1;
     public double SettingsWindowTop { get; set; } = -1;

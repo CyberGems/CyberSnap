@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using CyberSnap.Helpers;
@@ -19,6 +20,7 @@ public partial class TrayContextMenuWindow : Window
     private readonly TrayIcon _trayIcon;
     private readonly System.Drawing.Point _clickPoint;
     private bool _isClosing = false;
+    private bool _isCompact;
     private WpfToolTip? _activeTooltip;
     private FrameworkElement? _activeTooltipOwner;
 
@@ -36,6 +38,10 @@ public partial class TrayContextMenuWindow : Window
 
         LoadLocalizedLabels();
         LoadIcons();
+
+        // Restore persisted compact state (no animation on first show)
+        _isCompact = SettingsService.LoadStatic()?.QuickPanelCompact ?? false;
+        ApplyCompactMode(animate: false);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -223,6 +229,7 @@ public partial class TrayContextMenuWindow : Window
         SetTooltip(AchievementsBtn, T("Open Achievements"));
         SetTooltip(AboutBtn, T("Open About CyberSnap"));
         SetTooltip(ExitBtn, T("Quit CyberSnap"));
+        SetCompactTooltip();
 
         // Determine recording state and localize the compact record button.
         bool isRecording = Capture.RecordingForm.Current != null;
@@ -368,6 +375,80 @@ public partial class TrayContextMenuWindow : Window
     {
         try { CloseMenu(); }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.close-btn", ex); }
+    }
+
+    private void CompactToggle_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _isCompact = !_isCompact;
+            ApplyCompactMode(animate: true);
+            SettingsService.SaveQuickPanelCompact(_isCompact);
+        }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.compact-toggle", ex); }
+    }
+
+    private void ApplyCompactMode(bool animate)
+    {
+        const double animDuration = 0.15; // seconds — fast but smooth
+        var duration = new Duration(TimeSpan.FromSeconds(animDuration));
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+
+        // Chevron: 90° = expanded (pointing down), 0° = collapsed (pointing right)
+        double targetAngle = _isCompact ? 0 : 90;
+
+        if (animate)
+        {
+            // Animate chevron rotation
+            var rotAnim = new DoubleAnimation(targetAngle, duration) { EasingFunction = ease };
+            ChevronRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, rotAnim);
+
+            // Animate capture modes panel width to avoid size jump
+            if (_isCompact)
+            {
+                // Collapse: animate Width from current to 0, then set Visibility
+                double currentWidth = CaptureModesPanel.ActualWidth > 0 ? CaptureModesPanel.ActualWidth : 132;
+                CaptureModesPanel.Width = currentWidth;
+                var widthAnim = new DoubleAnimation(currentWidth, 0, duration) { EasingFunction = ease };
+                widthAnim.Completed += (_, _) =>
+                {
+                    CaptureModesPanel.Visibility = Visibility.Collapsed;
+                    CaptureModesPanel.Width = 132; // restore for next expand
+                };
+                CaptureModesPanel.BeginAnimation(FrameworkElement.WidthProperty, widthAnim);
+            }
+            else
+            {
+                // Expand: set Visibility first, then animate Width from 0 to 132
+                CaptureModesPanel.BeginAnimation(FrameworkElement.WidthProperty, null);
+                CaptureModesPanel.Width = 0;
+                CaptureModesPanel.Visibility = Visibility.Visible;
+                var widthAnim = new DoubleAnimation(0, 132, duration) { EasingFunction = ease };
+                widthAnim.Completed += (_, _) =>
+                {
+                    CaptureModesPanel.BeginAnimation(FrameworkElement.WidthProperty, null);
+                    CaptureModesPanel.Width = 132;
+                };
+                CaptureModesPanel.BeginAnimation(FrameworkElement.WidthProperty, widthAnim);
+            }
+        }
+        else
+        {
+            // Instant (first show)
+            ChevronRotation.Angle = targetAngle;
+            CaptureModesPanel.Visibility = _isCompact ? Visibility.Collapsed : Visibility.Visible;
+            CaptureModesPanel.Width = 132;
+        }
+
+        SetCompactTooltip();
+    }
+
+    private void SetCompactTooltip()
+    {
+        string tip = _isCompact
+            ? T("Expand capture modes")
+            : T("Collapse capture modes");
+        SetTooltip(CompactToggleBtn, tip);
     }
 
     private void AreaCapture_Click(object sender, RoutedEventArgs e)
