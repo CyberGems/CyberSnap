@@ -62,39 +62,224 @@ function handle_home(array $config): void
 {
     $base = htmlspecialchars((string)$config['public_base_url'], ENT_QUOTES, 'UTF-8');
     $ttl = (int)$config['ttl_hours'];
+    $lang = preferred_language();
+    $copy = $lang === 'es'
+        ? [
+            'nav_label' => 'Navegación',
+            'eyebrow' => 'COMPARTIR IMÁGENES TEMPORALES',
+            'title' => 'Comparte capturas sin fricción.',
+            'lead' => 'CyberSnap Share le da a CyberSnap un lugar rápido y confiable para publicar una imagen y obtener un enlace que caduca automáticamente.',
+            'primary' => 'Visitar CyberGems',
+            'secondary' => 'Cómo funciona',
+            'status' => 'Servicio listo para CyberSnap',
+            'features_label' => 'Características',
+            'features_title' => 'Diseñado para compartir rápido y por poco tiempo.',
+            'feature_one_title' => 'Hecho para CyberSnap',
+            'feature_one_body' => 'Optimizado para capturas y para el flujo de trabajo de escritorio de CyberSnap.',
+            'feature_two_title' => 'Temporal por diseño',
+            'feature_two_body' => 'Los enlaces públicos caducan automáticamente y luego se eliminan su imagen y metadata.',
+            'feature_three_title' => 'Entrega sencilla',
+            'feature_three_body' => 'Sube mediante la API, abre el enlace generado y descarga la imagen original cuando la necesites.',
+            'how_label' => 'Flujo',
+            'how_title' => 'De la captura al enlace',
+            'step_one_title' => 'Captura',
+            'step_one_body' => 'Toma una captura con CyberSnap y elige Compartir.',
+            'step_two_title' => 'Sube',
+            'step_two_body' => 'CyberSnap envía la imagen a este endpoint protegido.',
+            'step_three_title' => 'Comparte',
+            'step_three_body' => 'Recibes un enlace público listo para pegar donde quieras.',
+            'technical_title' => 'Un endpoint enfocado, no una red social.',
+            'technical_body' => 'Este servicio existe para entregar enlaces públicos de imágenes con vida limitada para CyberSnap. Sin cuenta, feed ni panel de seguimiento.',
+            'health_label' => 'Estado del servicio',
+            'health_body' => 'El estado en vivo está disponible en',
+            'language' => 'Idioma',
+            'footer' => 'Operado por CyberGems · Creado para CyberSnap',
+            'ttl_note' => 'Los enlaces caducan después de',
+            'hours' => 'horas',
+        ]
+        : [
+            'nav_label' => 'Navigation',
+            'eyebrow' => 'TEMPORARY IMAGE SHARING',
+            'title' => 'Share screenshots without friction.',
+            'lead' => 'CyberSnap Share gives CyberSnap a fast, reliable place to publish an image and get a link that expires automatically.',
+            'primary' => 'Visit CyberGems',
+            'secondary' => 'How it works',
+            'status' => 'Service ready for CyberSnap',
+            'features_label' => 'Features',
+            'features_title' => 'Made for quick, temporary sharing.',
+            'feature_one_title' => 'Built for CyberSnap',
+            'feature_one_body' => 'Optimized for screenshots and the CyberSnap desktop workflow.',
+            'feature_two_title' => 'Temporary by design',
+            'feature_two_body' => 'Public links expire automatically, then their image and metadata are removed.',
+            'feature_three_title' => 'Simple delivery',
+            'feature_three_body' => 'Upload through the API, open the generated link, and download the original when needed.',
+            'how_label' => 'Workflow',
+            'how_title' => 'From capture to link',
+            'step_one_title' => 'Capture',
+            'step_one_body' => 'Take a screenshot in CyberSnap and choose Share.',
+            'step_two_title' => 'Upload',
+            'step_two_body' => 'CyberSnap sends the image to this protected endpoint.',
+            'step_three_title' => 'Share',
+            'step_three_body' => 'You get a public link ready to paste wherever you need it.',
+            'technical_title' => 'A focused endpoint, not a social network.',
+            'technical_body' => 'This service exists to deliver short-lived public image links for CyberSnap. No account, feed, or tracking dashboard.',
+            'health_label' => 'Service health',
+            'health_body' => 'Live status is available at',
+            'language' => 'Language',
+            'footer' => 'Operated by CyberGems · Built for CyberSnap',
+            'ttl_note' => 'Links expire after',
+            'hours' => 'hours',
+        ];
+    $text = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $copy = array_map($text, $copy);
+    $ttlNote = $copy['ttl_note'] . ' <strong>' . $ttl . ' ' . $copy['hours'] . '</strong>';
+    $enClass = $lang === 'en' ? 'active' : '';
+    $esClass = $lang === 'es' ? 'active' : '';
+    $healthUrl = '/health';
+    $cyberGemsUrl = 'https://cybergems.org';
     header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: public, max-age=300, stale-while-revalidate=60');
     echo <<<HTML
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{$lang}">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="description" content="{$copy['lead']}"/>
+  <meta name="theme-color" content="#0b111d"/>
   <link rel="icon" href="/logo.png" type="image/png"/>
   <title>CyberSnap Share</title>
   <style>
-    body{margin:0;font-family:Segoe UI,system-ui,sans-serif;background:#0d0f17;color:#e8eaef;
-      display:flex;min-height:100vh;align-items:center;justify-content:center}
-    .card{max-width:420px;padding:28px 32px;border-radius:12px;background:#161a24;border:1px solid #2a3142}
-    .brand-row{display:flex;align-items:center;gap:12px;margin:0 0 12px}
-    .brand-row img{width:40px;height:40px;border-radius:10px;display:block}
-    h1{font-size:1.25rem;margin:0;color:#00e5ff;font-weight:600}
-    p{margin:0;opacity:.75;line-height:1.5;font-size:.95rem}
-    a{color:#00e5ff}
+    :root{color-scheme:dark;--bg:#0b111d;--panel:rgba(20,31,48,.78);--panel-strong:#13243a;--line:#263a52;--text:#edf6ff;--muted:#9eb2c8;--accent:#69d5e8;--accent-strong:#35bcd6}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:Segoe UI,Inter,system-ui,sans-serif;background:radial-gradient(circle at 15% 0%,#18304b 0,transparent 36%),radial-gradient(circle at 100% 20%,#123c4d 0,transparent 30%),var(--bg);color:var(--text);min-height:100vh}
+    a{color:inherit}
+    .site-header,.site-shell,.site-footer{width:min(1100px,calc(100% - 40px));margin:0 auto}
+    .site-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 0}
+    .brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;font-weight:700;letter-spacing:.01em}
+    .brand img{width:38px;height:38px;border-radius:11px;display:block;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+    .brand em{font-style:normal;color:var(--accent);font-weight:500}
+    nav{display:flex;align-items:center;gap:15px;color:var(--muted);font-size:.9rem}
+    nav a{text-decoration:none}
+    nav a:hover,nav a:focus-visible{color:var(--text)}
+    .language{display:inline-flex;gap:5px;padding:4px;border:1px solid var(--line);border-radius:999px}
+    .language a{padding:4px 8px;border-radius:999px;font-size:.78rem}
+    .language .active{background:var(--accent);color:#08202a;font-weight:700}
+    .hero{padding:84px 0 76px;max-width:800px}
+    .eyebrow,.section-label{margin:0 0 16px;color:var(--accent);font-size:.75rem;font-weight:700;letter-spacing:.16em}
+    h1{margin:0;max-width:760px;font-size:clamp(2.8rem,7vw,5.7rem);line-height:.98;letter-spacing:-.055em}
+    .lead{max-width:640px;margin:28px 0 0;color:var(--muted);font-size:clamp(1.05rem,2vw,1.3rem);line-height:1.65}
+    .hero-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:34px}
+    .button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 18px;border-radius:10px;text-decoration:none;font-weight:700;transition:transform .18s ease,background .18s ease,border-color .18s ease}
+    .button:hover{transform:translateY(-2px)}
+    .button.primary{background:var(--accent);color:#08202a;box-shadow:0 10px 25px rgba(53,188,214,.2)}
+    .button.primary:hover{background:#8ce5f2}
+    .button.secondary{border:1px solid var(--line);color:var(--text)}
+    .button.secondary:hover{border-color:var(--accent);background:rgba(105,213,232,.08)}
+    .status{display:inline-flex;align-items:center;gap:8px;margin-top:30px;color:var(--muted);font-size:.9rem}
+    .status-dot{width:8px;height:8px;border-radius:50%;background:#52df9a;box-shadow:0 0 0 5px rgba(82,223,154,.12)}
+    .section{padding:28px 0 82px}
+    .section h2{margin:0;font-size:clamp(1.8rem,4vw,3rem);letter-spacing:-.035em}
+    .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+    .feature{padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--panel);backdrop-filter:blur(12px)}
+    .feature-number{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:9px;background:rgba(105,213,232,.12);color:var(--accent);font-size:.8rem;font-weight:800}
+    .feature h3{margin:22px 0 10px;font-size:1.08rem}
+    .feature p,.step p,.technical p{margin:0;color:var(--muted);line-height:1.6}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:28px;border-top:1px solid var(--line)}
+    .step{position:relative;padding:25px 24px 0 0}
+    .step:not(:last-child){margin-right:24px;border-right:1px solid var(--line)}
+    .step-number{color:var(--accent);font-size:.85rem;font-weight:800}
+    .step h3{margin:14px 0 8px;font-size:1.05rem}
+    .technical{display:flex;align-items:center;justify-content:space-between;gap:32px;padding:28px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,rgba(23,57,77,.75),rgba(16,25,39,.8))}
+    .technical h2{font-size:1.35rem;margin-bottom:10px}
+    .health{flex:0 0 235px;padding:16px;border:1px solid rgba(105,213,232,.28);border-radius:12px;background:rgba(6,17,29,.5);font-size:.88rem}
+    .health strong{display:block;margin-bottom:8px;color:var(--accent)}
+    .health a{color:var(--text);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;text-decoration:none}
+    .health a:hover{text-decoration:underline}
+    .ttl{margin:0;color:var(--muted);font-size:.9rem}.ttl strong{color:var(--text)}
+    .site-footer{padding:0 0 28px;color:#7890a8;font-size:.85rem;text-align:center}
+    :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+    @media (max-width:760px){.site-header,.site-shell,.site-footer{width:min(100% - 28px,620px)}.site-header{padding-top:16px}.hero{padding:62px 0 56px}.feature-grid,.steps{grid-template-columns:1fr}.feature{padding:22px}.step{padding:20px 0;border-bottom:1px solid var(--line)}.step:not(:last-child){margin-right:0;border-right:0}.step:last-child{border-bottom:0}.technical{align-items:stretch;flex-direction:column;gap:22px}.health{flex-basis:auto}}
+    @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button{transition:none}.button:hover{transform:none}}
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="brand-row">
-      <img src="/logo.png" width="40" height="40" alt="CyberSnap"/>
-      <h1>CyberSnap Share</h1>
-    </div>
-    <p>Temporary public image hosting for <a href="https://cybergems.org">CyberGems</a> / CyberSnap.</p>
-    <p style="margin-top:12px">Links expire after {$ttl} hours.</p>
-    <p style="margin-top:12px;font-size:.85rem;opacity:.55">{$base}</p>
-  </div>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="CyberSnap Share">
+      <img src="/logo.png" width="38" height="38" alt="CyberSnap"/>
+      <span>CyberSnap <em>Share</em></span>
+    </a>
+    <nav aria-label="{$copy['nav_label']}">
+      <a href="{$cyberGemsUrl}">CyberGems</a>
+      <span aria-hidden="true">·</span>
+      <span>{$copy['language']}</span>
+      <span class="language">
+        <a href="?lang=en" class="{$enClass}" lang="en">EN</a>
+        <a href="?lang=es" class="{$esClass}" lang="es">ES</a>
+      </span>
+    </nav>
+  </header>
+  <main class="site-shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="eyebrow">{$copy['eyebrow']}</p>
+      <h1 id="hero-title">{$copy['title']}</h1>
+      <p class="lead">{$copy['lead']}</p>
+      <div class="hero-actions">
+        <a class="button primary" href="{$cyberGemsUrl}">{$copy['primary']}</a>
+        <a class="button secondary" href="#how">{$copy['secondary']}</a>
+      </div>
+      <p class="status"><span class="status-dot" aria-hidden="true"></span>{$copy['status']}</p>
+      <p class="ttl">{$ttlNote}</p>
+    </section>
+
+    <section class="section" aria-labelledby="features-title">
+      <p class="section-label">{$copy['features_label']}</p>
+      <h2 id="features-title">{$copy['features_title']}</h2>
+      <div class="feature-grid">
+        <article class="feature"><span class="feature-number">01</span><h3>{$copy['feature_one_title']}</h3><p>{$copy['feature_one_body']}</p></article>
+        <article class="feature"><span class="feature-number">02</span><h3>{$copy['feature_two_title']}</h3><p>{$copy['feature_two_body']}</p></article>
+        <article class="feature"><span class="feature-number">03</span><h3>{$copy['feature_three_title']}</h3><p>{$copy['feature_three_body']}</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="how" aria-labelledby="how-title">
+      <p class="section-label">{$copy['how_label']}</p>
+      <h2 id="how-title">{$copy['how_title']}</h2>
+      <div class="steps">
+        <article class="step"><span class="step-number">01</span><h3>{$copy['step_one_title']}</h3><p>{$copy['step_one_body']}</p></article>
+        <article class="step"><span class="step-number">02</span><h3>{$copy['step_two_title']}</h3><p>{$copy['step_two_body']}</p></article>
+        <article class="step"><span class="step-number">03</span><h3>{$copy['step_three_title']}</h3><p>{$copy['step_three_body']}</p></article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="technical-title">
+      <div class="technical">
+        <div>
+          <h2 id="technical-title">{$copy['technical_title']}</h2>
+          <p>{$copy['technical_body']}</p>
+        </div>
+        <div class="health">
+          <strong>{$copy['health_label']}</strong>
+          <span>{$copy['health_body']} </span><a href="{$healthUrl}">/health</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">{$copy['footer']} · <span>{$base}</span></footer>
 </body>
 </html>
 HTML;
+}
+
+function preferred_language(): string
+{
+    $requested = strtolower((string)($_GET['lang'] ?? ''));
+    if ($requested === 'es' || $requested === 'en') {
+        return $requested;
+    }
+
+    return str_starts_with(strtolower((string)($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '')), 'es') ? 'es' : 'en';
 }
 
 function handle_upload(array $config, string $filesDir, string $metaDir, string $rateDir): void
@@ -144,7 +329,9 @@ function handle_upload(array $config, string $filesDir, string $metaDir, string 
     $filePath = $filesDir . '/' . $fileName;
     $metaPath = $metaDir . '/' . $id . '.json';
 
-    if (file_put_contents($filePath, $raw, LOCK_EX) === false) {
+    $writtenBytes = file_put_contents($filePath, $raw, LOCK_EX);
+    if ($writtenBytes === false || $writtenBytes !== strlen($raw)) {
+        @unlink($filePath);
         json_error(500, 'write_failed', 'Could not store image.');
     }
     @chmod($filePath, 0640);
@@ -170,7 +357,13 @@ function handle_upload(array $config, string $filesDir, string $metaDir, string 
         }
     }
 
-    file_put_contents($metaPath, json_encode($meta, JSON_UNESCAPED_SLASHES), LOCK_EX);
+    $metaJson = json_encode($meta, JSON_UNESCAPED_SLASHES);
+    $metaBytes = $metaJson === false ? false : file_put_contents($metaPath, $metaJson, LOCK_EX);
+    if ($metaBytes === false || $metaBytes !== strlen((string)$metaJson)) {
+        @unlink($filePath);
+        @unlink($metaPath);
+        json_error(500, 'write_failed', 'Could not finalize image metadata.');
+    }
     @chmod($metaPath, 0640);
 
     $base = rtrim((string)$config['public_base_url'], '/');
@@ -303,7 +496,8 @@ function handle_file(array $config, string $filesDir, string $metaDir, string $i
     $mime = (string)($meta['mime'] ?? 'application/octet-stream');
     header('Content-Type: ' . $mime);
     header('Content-Length: ' . (string)filesize($filePath));
-    header('Cache-Control: public, max-age=3600');
+    // Keep CDN/browser copies short-lived so they do not materially outlive the share TTL.
+    header('Cache-Control: public, max-age=300, s-maxage=300');
     header('X-Content-Type-Options: nosniff');
     // Inline for <img>; download attribute on viewer uses same URL
     header('Content-Disposition: inline; filename="' . basename((string)$meta['file']) . '"');

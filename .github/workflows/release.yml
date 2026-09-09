@@ -32,6 +32,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-Localization.ps1 -Strict
 
+      - name: Validate CyberSnap Share Branding
+        shell: pwsh
+        run: ./scripts/Test-CyberSnapShareBrand.ps1
+
       - name: Build Solution
         run: dotnet build CyberSnap.sln --configuration Release --no-restore
 

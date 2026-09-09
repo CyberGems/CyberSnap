@@ -26,6 +26,10 @@ Designed so CyberSnap needs **no client change** when you move hosts—only the 
 - Size + per-IP rate limits
 - Static assets in `public/` (e.g. `logo.png`)
 
+### Branding maintenance
+
+`public/logo.png` is a deployed copy of the canonical application asset at `src/CyberSnap/Assets/CyberSnap_square.png`. If the CyberSnap icon changes, update both files in the same change. See [`BRANDING.md`](BRANDING.md) and run `scripts/Test-CyberSnapShareBrand.ps1`; otherwise this service can keep showing an outdated icon.
+
 ---
 
 ## Directory layout (critical)
@@ -38,7 +42,7 @@ cybersnap.cybergems.org/          ← account folder (NOT the web root)
   public/                         ← ★ Document Root of the subdomain
     index.php
     .htaccess
-    logo.png
+    logo.png                  ← copy of src/CyberSnap/Assets/CyberSnap_square.png
 ```
 
 **Document Root must be `…/public`, not the parent folder.**
