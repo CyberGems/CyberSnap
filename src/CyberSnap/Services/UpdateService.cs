@@ -17,7 +17,8 @@ public sealed record UpdateCheckResult(
     string? AssetSha256,
     DateTimeOffset? PublishedAt,
     bool IsUpdateAvailable,
-    string StatusMessage);
+    string StatusMessage,
+    string? ReleaseNotes = null);
 
 public static class UpdateService
 {
@@ -69,6 +70,7 @@ public static class UpdateService
             var root = doc.RootElement;
             var tagName = root.GetProperty("tag_name").GetString() ?? "";
             var releaseUrl = root.GetProperty("html_url").GetString() ?? "";
+            var releaseNotes = root.TryGetProperty("body", out var bodyProp) ? bodyProp.GetString() : null;
             DateTimeOffset? publishedAt = root.TryGetProperty("published_at", out var pub) ? pub.GetDateTimeOffset() : null;
 
             var latestVersionStr = tagName.TrimStart('v');
@@ -134,7 +136,8 @@ public static class UpdateService
                 assetSha256,
                 publishedAt,
                 isAvailable,
-                status);
+                status,
+                releaseNotes);
         }
         catch (HttpRequestException)
         {
@@ -201,5 +204,90 @@ public static class UpdateService
         {
             System.Windows.Application.Current.Shutdown();
         });
+    }
+
+    /// <summary>
+    /// Generates a clean 3-4 bullet plain-text teaser of the release notes for toasts and compact previews.
+    /// Filters out markdown headings, badges, hashes, and download tables (CyberLauncher model).
+    /// </summary>
+    public static string PeekReleaseNotes(string? body, int maxChars = 220)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+            return string.Empty;
+
+        var lines = body
+            .TrimStart('\uFEFF')
+            .Replace("\r\n", "\n")
+            .Split('\n');
+
+        var extracted = new List<string>();
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            if (line.StartsWith("---") || line.StartsWith("***") || line.StartsWith("___")) continue;
+            if (line.StartsWith("|") || line.StartsWith("<!--") || line.StartsWith("-->")) continue;
+            if (line.StartsWith("#")) continue;
+            if (line.StartsWith("Welcome to", StringComparison.OrdinalIgnoreCase)) continue;
+            if (line.StartsWith("Crafted with", StringComparison.OrdinalIgnoreCase)) continue;
+            if (line.StartsWith("Release Notes", StringComparison.OrdinalIgnoreCase)) continue;
+            if (line.StartsWith("Full Changelog", StringComparison.OrdinalIgnoreCase)) continue;
+            if (line.StartsWith("VirusTotal", StringComparison.OrdinalIgnoreCase)) continue;
+            if (line.StartsWith("SHA256", StringComparison.OrdinalIgnoreCase)) continue;
+
+            // Top-level bullet points
+            if (rawLine.StartsWith("- ") || rawLine.StartsWith("* ") || rawLine.StartsWith("• "))
+            {
+                var clean = rawLine.Substring(2).Trim();
+                clean = clean.Replace("**", "").Replace("__", "").Replace("`", "").TrimEnd(':').Trim();
+                if (!string.IsNullOrWhiteSpace(clean))
+                {
+                    extracted.Add("• " + clean);
+                    if (extracted.Count >= 4)
+                        break;
+                }
+            }
+        }
+
+        // If no top-level bullets found, fall back to any bullet points
+        if (extracted.Count == 0)
+        {
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (line.StartsWith("---") || line.StartsWith("***") || line.StartsWith("___") || line.StartsWith("|") || line.StartsWith("#")) continue;
+                if (line.StartsWith("- ") || line.StartsWith("* ") || line.StartsWith("• "))
+                {
+                    var clean = line.Substring(2).Trim();
+                    clean = clean.Replace("**", "").Replace("__", "").Replace("`", "").TrimEnd(':').Trim();
+                    if (!string.IsNullOrWhiteSpace(clean))
+                    {
+                        extracted.Add("• " + clean);
+                        if (extracted.Count >= 4)
+                            break;
+                    }
+                }
+            }
+        }
+
+        if (extracted.Count == 0)
+        {
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();
+                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#") || line.StartsWith("---") || line.StartsWith("|"))
+                    continue;
+                extracted.Add(line.Replace("**", "").Replace("__", "").Replace("`", ""));
+                if (extracted.Count >= 3)
+                    break;
+            }
+        }
+
+        var text = string.Join("\n", extracted);
+        if (text.Length <= maxChars)
+            return text;
+
+        return text.Substring(0, maxChars).TrimEnd() + "…";
     }
 }

@@ -280,13 +280,17 @@ public partial class App
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     RefreshWidgetUpdateBadge();
+                    var peek = UpdateService.PeekReleaseNotes(result.ReleaseNotes, 160);
+                    var header = string.Format(LocalizationService.Translate("CyberSnap {0} is out!\nYou're on {1}"), result.LatestVersionLabel, UpdateService.GetCurrentVersionLabel());
+                    var body = string.IsNullOrWhiteSpace(peek) ? header : $"{header}\n\n{peek}";
+
                     var spec = new ToastSpec
                     {
                         Title = LocalizationService.Translate("Update available"),
-                        Body = string.Format(LocalizationService.Translate("CyberSnap {0} is out!\nYou're on {1}"), result.LatestVersionLabel, UpdateService.GetCurrentVersionLabel()),
+                        Body = body,
                         ClickActionUrl = "cybersnap://update",
-                        ClickActionLabel = LocalizationService.Translate("Download"),
-                        DurationSeconds = 12,
+                        ClickActionLabel = LocalizationService.Translate("Update Now"),
+                        DurationSeconds = 14,
                         SuppressSound = true
                     };
                     ToastWindow.Show(spec);

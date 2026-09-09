@@ -160,9 +160,19 @@ public partial class AboutWindow : Window
             AboutAutoUpdateDesc.Text = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
             AutoCheckUpdateCheck.ToolTip = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
             AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
-            AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
-            UpdateBtn.Content = LocalizationService.Translate("Check Now");
-            UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
+            var app = Application.Current as App;
+            if (app?.LatestUpdateResult?.IsUpdateAvailable == true)
+            {
+                AboutUpdateDesc.Text = app.LatestUpdateResult.StatusMessage;
+                UpdateBtn.Content = LocalizationService.Translate("Update Now");
+                UpdateBtn.ToolTip = LocalizationService.Translate("View update details and changelog");
+            }
+            else
+            {
+                AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
+                UpdateBtn.Content = LocalizationService.Translate("Check Now");
+                UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
+            }
             UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
             AboutTitleBar.Title = LocalizationService.Translate("About CyberSnap");
             AboutFooterCopyright.ToolTip = LocalizationService.Translate("Visit CyberGems website");
@@ -272,6 +282,13 @@ public partial class AboutWindow : Window
 
     private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
     {
+        var app = Application.Current as App;
+        if (app?.LatestUpdateResult?.IsUpdateAvailable == true)
+        {
+            ThemedUpdateDialog.Show(this, app.LatestUpdateResult);
+            return;
+        }
+
         await RunUpdateCheckAsync();
     }
 
@@ -287,22 +304,16 @@ public partial class AboutWindow : Window
         }
         if (result.IsUpdateAvailable)
         {
-            var currentLabel = LocalizationService.Translate("Current:");
-            var latestLabel = LocalizationService.Translate("Latest:");
-            var promptMessage = LocalizationService.Translate("Download and install now?");
-            var currentVerLabel = UpdateService.GetCurrentVersionLabel();
-            var msg = $"{result.StatusMessage}\n\n{currentLabel} {currentVerLabel}\n{latestLabel} {result.LatestVersionLabel}\n\n{promptMessage}";
-            var choice = ThemedConfirmDialog.Confirm(this,
-                LocalizationService.Translate("Update available"),
-                msg,
-                LocalizationService.Translate("Download"),
-                LocalizationService.Translate("Later"),
-                danger: false);
-            if (choice)
-                await StartUpdateDownloadAsync(result);
+            AboutUpdateDesc.Text = result.StatusMessage;
+            UpdateBtn.Content = LocalizationService.Translate("Update Now");
+            UpdateBtn.ToolTip = LocalizationService.Translate("View update details and changelog");
+            ThemedUpdateDialog.Show(this, result);
         }
         else
         {
+            AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
+            UpdateBtn.Content = LocalizationService.Translate("Check Now");
+            UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
             ThemedConfirmDialog.Alert(this,
                 LocalizationService.Translate("Check for Updates"),
                 result.StatusMessage,

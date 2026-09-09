@@ -1793,7 +1793,7 @@ public partial class ToastWindow : Window
                     var result = app.LatestUpdateResult;
                     if (result != null)
                     {
-                        app.ShowAboutAndDownloadUpdate(result);
+                        app.ShowUpdateDialog(result);
                     }
                 });
                 return;

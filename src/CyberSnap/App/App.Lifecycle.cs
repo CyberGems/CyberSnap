@@ -141,20 +141,21 @@ public partial class App
         }, DispatcherPriority.Background);
     }
 
+    public void ShowUpdateDialog(UpdateCheckResult result)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var activeEditor = UI.Editor.EditorForm.ActiveInstance;
+            IntPtr ownerHandle = activeEditor != null && !activeEditor.IsDisposed && activeEditor.Visible
+                ? activeEditor.Handle
+                : IntPtr.Zero;
+            UI.ThemedUpdateDialog.Show(ownerHandle, result);
+        });
+    }
+
     public void ShowAboutAndDownloadUpdate(UpdateCheckResult result)
     {
-        ShowAbout();
-        _ = Dispatcher.BeginInvoke(async () =>
-        {
-            for (int i = 0; i < 20; i++)
-            {
-                if (_aboutWindow is { IsVisible: true })
-                    break;
-                await Task.Delay(100);
-            }
-            if (_aboutWindow != null)
-                await _aboutWindow.StartUpdateDownloadAsync(result);
-        }, DispatcherPriority.Background);
+        ShowUpdateDialog(result);
     }
 
     /// <summary>Opens the About window and runs a manual update check once it is visible.

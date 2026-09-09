@@ -2141,5 +2141,16 @@
   "Open recording settings?": "Open recording settings?",
   "The current recording capture will close before opening Video & GIF settings.": "The current recording capture will close before opening Video & GIF settings.",
   "Open settings": "Open settings",
-  "Recording settings": "Recording settings"
+  "Recording settings": "Recording settings",
+  "A new version of CyberSnap is available.": "A new version of CyberSnap is available.",
+  "Current version": "Current version",
+  "Download and Install": "Download and Install",
+  "Download failed": "Download failed",
+  "Latest version": "Latest version",
+  "NEW": "NEW",
+  "No release notes provided for this version.": "No release notes provided for this version.",
+  "Update Now": "Update Now",
+  "View on GitHub": "View on GitHub",
+  "View update details and changelog": "View update details and changelog",
+  "What's New in this Version": "What's New in this Version"
 }
