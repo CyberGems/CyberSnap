@@ -46,7 +46,7 @@ internal sealed class Mp4FrameSequence : IDisposable
         if (!File.Exists(filePath))
             throw new FileNotFoundException("Video file not found.", filePath);
 
-        double duration = await Task.Run(() => ProbeDurationSeconds(ffmpeg, filePath));
+        double duration = await Task.Run(() => MediaProbe.TryGetDurationSeconds(filePath));
         if (duration <= 0.05)
             throw new InvalidOperationException("Could not read video duration.");
 
@@ -139,50 +139,6 @@ internal sealed class Mp4FrameSequence : IDisposable
         _disposed = true;
         _frameCache.Clear();
         TryDeleteDirectory(_framesDirectory);
-    }
-
-    private static double ProbeDurationSeconds(string ffmpeg, string filePath)
-    {
-        string? directory = Path.GetDirectoryName(ffmpeg);
-        string ffprobePath = directory == null
-            ? "ffprobe.exe"
-            : Path.Combine(directory, "ffprobe.exe");
-
-        if (!File.Exists(ffprobePath))
-        {
-            if (ffmpeg.EndsWith("ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
-                ffprobePath = ffmpeg[..^"ffmpeg.exe".Length] + "ffprobe.exe";
-            else if (ffmpeg.EndsWith("ffmpeg", StringComparison.OrdinalIgnoreCase))
-                ffprobePath = ffmpeg[..^"ffmpeg".Length] + "ffprobe";
-        }
-
-        if (!File.Exists(ffprobePath))
-            return 0;
-
-        try
-        {
-            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = ffprobePath,
-                Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true
-            });
-
-            if (process == null)
-                return 0;
-
-            string output = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit(5000);
-            return double.TryParse(output, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
-                ? seconds
-                : 0;
-        }
-        catch
-        {
-            return 0;
-        }
     }
 
     private static void TryDeleteDirectory(string path)

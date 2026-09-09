@@ -697,108 +697,11 @@ namespace CyberSnap.UI
 
         private static double GetMediaDurationViaFfprobe(string mediaPath)
         {
-            string? ffmpeg = VideoRecorder.FindFfmpeg();
-            if (ffmpeg == null)
-                return 0;
+            double fromFrames = MediaProbe.TryGetFrameCountDuration(mediaPath);
+            if (fromFrames > 0.05)
+                return fromFrames;
 
-            string? directory = Path.GetDirectoryName(ffmpeg);
-            string ffprobePath = directory == null
-                ? "ffprobe.exe"
-                : Path.Combine(directory, "ffprobe.exe");
-
-            if (!File.Exists(ffprobePath))
-            {
-                if (ffmpeg.EndsWith("ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
-                    ffprobePath = ffmpeg[..^"ffmpeg.exe".Length] + "ffprobe.exe";
-                else if (ffmpeg.EndsWith("ffmpeg", StringComparison.OrdinalIgnoreCase))
-                    ffprobePath = ffmpeg[..^"ffmpeg".Length] + "ffprobe";
-            }
-
-            if (!File.Exists(ffprobePath))
-                return 0;
-
-            try
-            {
-                double fromFrames = TryGetFfprobeFrameDuration(ffprobePath, mediaPath);
-                if (fromFrames > 0.05)
-                    return fromFrames;
-
-                using var process = Process.Start(new ProcessStartInfo
-                {
-                    FileName = ffprobePath,
-                    Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{mediaPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true
-                });
-
-                if (process == null)
-                    return 0;
-
-                string output = process.StandardOutput.ReadToEnd().Trim();
-                process.WaitForExit(5000);
-
-                return double.TryParse(output, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double seconds)
-                    ? seconds
-                    : 0;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
-        private static double TryGetFfprobeFrameDuration(string ffprobePath, string mediaPath)
-        {
-            try
-            {
-                using var process = Process.Start(new ProcessStartInfo
-                {
-                    FileName = ffprobePath,
-                    Arguments = $"-v error -select_streams v:0 -show_entries stream=nb_frames,r_frame_rate -of csv=p=0 \"{mediaPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true
-                });
-
-                if (process == null)
-                    return 0;
-
-                string output = process.StandardOutput.ReadToEnd().Trim();
-                process.WaitForExit(5000);
-                if (string.IsNullOrWhiteSpace(output))
-                    return 0;
-
-                string[] parts = output.Split(',');
-                if (parts.Length < 2)
-                    return 0;
-
-                if (!int.TryParse(parts[0].Trim(), out int frames) || frames <= 0)
-                    return 0;
-
-                double fps = ParseFfprobeFrameRate(parts[1].Trim());
-                return fps > 0 ? frames / fps : 0;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
-        private static double ParseFfprobeFrameRate(string rate)
-        {
-            string[] segments = rate.Split('/');
-            if (segments.Length == 2
-                && double.TryParse(segments[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double numerator)
-                && double.TryParse(segments[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double denominator)
-                && denominator > 0)
-            {
-                return numerator / denominator;
-            }
-
-            return double.TryParse(rate, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double direct)
-                ? direct
-                : 0;
+            return MediaProbe.TryGetDurationSeconds(mediaPath);
         }
 
         private void MediaPlayer_MediaOpened(object sender, RoutedEventArgs e)
@@ -1017,35 +920,7 @@ namespace CyberSnap.UI
             ShowBanner(msg);
         }
 
-        private static bool MediaHasAudioTrack(string mediaPath)
-        {
-            string? ffmpeg = VideoRecorder.FindFfmpeg();
-            if (ffmpeg == null)
-                return false;
-
-            try
-            {
-                using var process = Process.Start(new ProcessStartInfo
-                {
-                    FileName = ffmpeg,
-                    Arguments = $"-hide_banner -i \"{mediaPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true
-                });
-
-                if (process == null)
-                    return false;
-
-                string stderr = process.StandardError.ReadToEnd();
-                process.WaitForExit(5000);
-                return stderr.Contains("Audio:", StringComparison.OrdinalIgnoreCase);
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        private static bool MediaHasAudioTrack(string mediaPath) => MediaProbe.HasAudioTrack(mediaPath);
 
         private static string BuildTrimArguments(
             string input,
