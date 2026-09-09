@@ -134,6 +134,7 @@ public sealed partial class RecordingControlBarWindow : Window
         LoadIcons();
         HookHoverEffects();
         HookClickHandlers();
+        HookTooltipGuards();
         SetupMini();
 
         // ── Rounded corners + no-activate + owner-window for z-order ──
@@ -1147,7 +1148,9 @@ public sealed partial class RecordingControlBarWindow : Window
             Padding = new Thickness(4),
             HasDropShadow = true,
             PlacementTarget = FpsCombo,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            Placement = TryGetPopupPlacement(out var menuPlacement)
+                ? menuPlacement
+                : System.Windows.Controls.Primitives.PlacementMode.Bottom,
         };
 
         foreach (var option in GetFpsOptions(_format))
@@ -1201,6 +1204,77 @@ public sealed partial class RecordingControlBarWindow : Window
     // ══════════════════════════════════════════════════════════════
     //  Tooltips
     // ══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// The bar itself is excluded from captures (WDA_EXCLUDEFROMCAPTURE), but WPF
+    /// tooltips are separate windows without that exclusion: if they unfold over the
+    /// capture region they get recorded, shadows included. Every tooltip owner gets
+    /// this guard, which steers tips away from the region or suppresses them when
+    /// the bar overlaps it (no safe side exists then).
+    /// </summary>
+    private void HookTooltipGuards()
+    {
+        FrameworkElement[] owners =
+        [
+            PrimaryBtn, StopBtn, FpsCombo, TrimmerBtn, CancelBtn,
+            FormatBadge, StorageText, GripBtn, ModeBtn,
+        ];
+        foreach (var owner in owners)
+            owner.ToolTipOpening += GuardedTooltip_Opening;
+    }
+
+    private void GuardedTooltip_Opening(object sender, ToolTipEventArgs e)
+    {
+        if (sender is not FrameworkElement element)
+            return;
+
+        if (!TryGetPopupPlacement(out var placement))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        ToolTipService.SetPlacement(element, placement);
+        ToolTipService.SetPlacementTarget(element, element);
+        ToolTipService.SetHorizontalOffset(element, 0);
+        ToolTipService.SetVerticalOffset(element, placement == System.Windows.Controls.Primitives.PlacementMode.Top ? -6 : 6);
+    }
+
+    /// <returns>
+    /// False when the bar overlaps the capture region (tooltips must not open);
+    /// otherwise the side away from the region. Falls back to Bottom when the
+    /// geometry cannot be determined.
+    /// </returns>
+    private bool TryGetPopupPlacement(out System.Windows.Controls.Primitives.PlacementMode placement)
+    {
+        placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+
+        if (_lastCaptureRegion.IsEmpty)
+            return true;
+
+        Point topLeft, bottomRight;
+        try
+        {
+            topLeft = PointToScreen(new Point(0, 0));
+            bottomRight = PointToScreen(new Point(ActualWidth, ActualHeight));
+        }
+        catch
+        {
+            return true;
+        }
+
+        // PointToScreen reports physical pixels, same space as the capture region.
+        if (bottomRight.Y <= _lastCaptureRegion.Top)
+        {
+            placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+            return true;
+        }
+
+        if (topLeft.Y >= _lastCaptureRegion.Bottom)
+            return true;
+
+        return false;
+    }
 
     private void UpdateTooltips()
     {
