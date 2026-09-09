@@ -2051,6 +2051,7 @@
   "Loading GIF...": "Cargando GIF...",
   "Loading video...": "Cargando video...",
   "Media load failed": "No se pudo cargar el archivo multimedia",
+  "The source file no longer exists.": "El archivo de origen ya no existe.",
   "Could not read video duration.": "No se pudo leer la duración del video.",
   "Unknown error": "Error desconocido",
   "Muted": "Silenciado",

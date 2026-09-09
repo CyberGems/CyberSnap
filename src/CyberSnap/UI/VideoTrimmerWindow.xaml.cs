@@ -2107,6 +2107,9 @@ namespace CyberSnap.UI
                 // Reload original path
                 LoadMediaFile(_mediaFilePath);
 
+                if (Application.Current is App trimApp)
+                    trimApp.RefreshHistoryWindowIfOpen();
+
                 ToastWindow.Show(
                     LocalizationService.Translate(lang, "Video trimmed"),
                     LocalizationService.Translate(lang, "Original file overwritten successfully."),
@@ -2188,6 +2191,9 @@ namespace CyberSnap.UI
                 LocalizationService.Translate(lang, "Trimmed copy saved successfully."),
                 newPath
             );
+
+            if (Application.Current is App saveApp)
+                saveApp.RefreshHistoryWindowIfOpen();
 
             // Auto-load the new copy in the editor
             bool renderingDetached = false;
@@ -2312,6 +2318,17 @@ namespace CyberSnap.UI
             }
 
             double expectedSeconds = Math.Max(end - start, 0.05);
+            if (!File.Exists(input))
+            {
+                MessageBox.Show(
+                    LocalizationService.Translate(lang, "The source file no longer exists."),
+                    LocalizationService.Translate(lang, "Error"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+                return false;
+            }
+
             ShowExportProgress();
             _isExporting = true;
 

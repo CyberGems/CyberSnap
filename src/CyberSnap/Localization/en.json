@@ -1729,6 +1729,7 @@
   "Loading GIF...": "Loading GIF...",
   "Loading video...": "Loading video...",
   "Media load failed": "Media load failed",
+  "The source file no longer exists.": "The source file no longer exists.",
   "Could not read video duration.": "Could not read video duration.",
   "Unknown error": "Unknown error",
   "Muted": "Muted",
