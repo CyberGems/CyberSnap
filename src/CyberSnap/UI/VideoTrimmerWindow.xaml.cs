@@ -1373,6 +1373,15 @@ namespace CyberSnap.UI
             FilmstripHost.Visibility = Visibility.Visible;
         }
 
+        private void Filmstrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_videoDurationSeconds <= 0.05 || Filmstrip.ActualWidth <= 0)
+                return;
+
+            double percent = Math.Clamp(e.GetPosition(Filmstrip).X / Filmstrip.ActualWidth, 0.0, 1.0);
+            SeekToSeconds(percent * _videoDurationSeconds);
+        }
+
         private void UpdateRangeBarDisplay()
         {
             if (_videoDurationSeconds <= 0) return;

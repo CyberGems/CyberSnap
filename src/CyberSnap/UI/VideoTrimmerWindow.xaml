@@ -1067,7 +1067,11 @@
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                         BorderThickness="1"
                         Visibility="Collapsed">
-                    <UniformGrid x:Name="Filmstrip" Rows="1" />
+                    <UniformGrid x:Name="Filmstrip"
+                                 Rows="1"
+                                 Cursor="Hand"
+                                 Background="Transparent"
+                                 MouseLeftButtonDown="Filmstrip_MouseLeftButtonDown" />
                 </Border>
             </Grid>
 
