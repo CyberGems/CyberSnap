@@ -242,6 +242,8 @@ If you're enjoying CyberSnap, I'd be truly grateful for your support! You can sh
 
 CyberSnap is distributed under the terms of the GNU General Public License v3.0. See [`LICENSE`](LICENSE) for the full license text.
 
+Copyright (C) 2026 CyberGems
+
 ---
 
 ## ❓ FAQ
