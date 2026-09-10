@@ -229,7 +229,7 @@ This project also builds on open-source components including Tesseract OCR, ZXin
 
 ## ❤️ Donate
 
-**CyberSnap** is one of the gems in [CyberGems](https://github.com/CyberGems#-all-apps--repositories), a personal suite I've spent thousands of hours building and refining for my own use. I've decided to share the whole suite with the world, completely free and open-source.
+**CyberSnap** is one of the projects in [CyberGems](https://github.com/CyberGems#-all-apps--repositories), a personal set of daily-use tools for Windows. I've spent countless hours building and refining it for my own use, and it will continue to be maintained by me. I recently decided to share the entire suite with the world, completely free and open-source.
 
 If you're enjoying CyberSnap, I'd be truly grateful for your support! You can show your appreciation by [giving a star](https://github.com/CyberGems/CyberSnap) on GitHub or making a donation. Thank you! 🙏
 
