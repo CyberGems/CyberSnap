@@ -189,6 +189,8 @@ public sealed partial class RecordingForm
         _selectionAdorner?.Close();
         _selectionAdorner?.Dispose();
         _selectionAdorner = null;
+        EnsureSelectionMonitorFromRect(_selection);
+        _selection = ClampRectToSelectionMonitor(_selection);
         _recordRegion = _selection;
 
         TransitionToRecordingSurface();

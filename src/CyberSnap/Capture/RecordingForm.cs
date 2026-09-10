@@ -46,6 +46,8 @@ public sealed partial class RecordingForm : Form
     private Point _dragStart;
     private Point _selectionCursor;
     private Rectangle _selection;
+    /// <summary>Monitor that owns the current selection, in overlay client coords.</summary>
+    private Rectangle _selectionMonitorClientBounds;
 
     // Handle resize/move during PreRecording (after drag-release, before START)
     // Indices: 0=TL, 1=TR, 2=BL, 3=BR, 4=Top, 5=Left, 6=Right, 7=Bottom, 8=move
@@ -139,6 +141,10 @@ public sealed partial class RecordingForm : Form
         if (initialSelection.HasValue && !initialSelection.Value.IsEmpty)
         {
             _selection = initialSelection.Value;
+            CaptureSelectionMonitorAt(new Point(
+                _selection.X + Math.Max(0, _selection.Width) / 2,
+                _selection.Y + Math.Max(0, _selection.Height) / 2));
+            _selection = ClampRectToSelectionMonitor(_selection);
             _state = State.PreRecording;
         }
         if (_showMagnifier && screenshot is not null)
@@ -461,11 +467,12 @@ public sealed partial class RecordingForm : Form
         if (_state == State.Selecting && e.Button == MouseButtons.Left)
         {
             _isDragging = true;
-            _dragStart = e.Location;
-            _selectionCursor = e.Location;
+            CaptureSelectionMonitorAt(e.Location);
+            _dragStart = ClampPointToSelectionMonitor(e.Location);
+            _selectionCursor = _dragStart;
             if (_autoDetectActive && !_autoDetectRect.IsEmpty)
             {
-                _selection = _autoDetectRect;
+                _selection = ClampRectToSelectionMonitor(_autoDetectRect);
             }
             else
             {
@@ -534,10 +541,9 @@ public sealed partial class RecordingForm : Form
 
             if (_isDragging)
             {
-                var oldSelection = _selection;
-                var oldCursor = _selectionCursor;
-                _selection = NormRect(_dragStart, e.Location);
-                _selectionCursor = e.Location;
+                var current = ClampPointToSelectionMonitor(e.Location);
+                _selection = ClampRectToSelectionMonitor(NormRect(_dragStart, current));
+                _selectionCursor = current;
                 UpdateLiveSelectionAdorner();
                 Invalidate(); // full repaint for correct dim overlay
             }
@@ -641,18 +647,19 @@ public sealed partial class RecordingForm : Form
         if (_state == State.Selecting && _isDragging && e.Button == MouseButtons.Left)
         {
             _isDragging = false;
-            var dragSelection = NormRect(_dragStart, e.Location);
+            var current = ClampPointToSelectionMonitor(e.Location);
+            var dragSelection = ClampRectToSelectionMonitor(NormRect(_dragStart, current));
             if (dragSelection.Width > 10 && dragSelection.Height > 10)
             {
                 _selection = dragSelection;
-                _selectionCursor = e.Location;
+                _selectionCursor = current;
                 UpdateLiveSelectionAdorner();
                 PrepareRecording();
             }
             else if (_autoDetectActive && !_autoDetectRect.IsEmpty)
             {
-                _selection = _autoDetectRect;
-                _selectionCursor = e.Location;
+                _selection = ClampRectToSelectionMonitor(_autoDetectRect);
+                _selectionCursor = current;
                 UpdateLiveSelectionAdorner();
                 PrepareRecording();
             }
@@ -1135,6 +1142,25 @@ public sealed partial class RecordingForm : Form
             _recordRegion.Height);
     }
 
+    private void CaptureSelectionMonitorAt(Point clientPt)
+        => _selectionMonitorClientBounds = SelectionMonitorClamp.GetMonitorClientBounds(_virtualBounds, clientPt);
+
+    private void EnsureSelectionMonitorFromRect(Rectangle rect)
+    {
+        if (!_selectionMonitorClientBounds.IsEmpty)
+            return;
+        var anchor = rect.Width > 0 && rect.Height > 0
+            ? new Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2)
+            : Point.Empty;
+        CaptureSelectionMonitorAt(anchor);
+    }
+
+    private Point ClampPointToSelectionMonitor(Point p)
+        => SelectionMonitorClamp.ClampPoint(p, _selectionMonitorClientBounds);
+
+    private Rectangle ClampRectToSelectionMonitor(Rectangle rect)
+        => SelectionMonitorClamp.ClampRect(rect, _selectionMonitorClientBounds);
+
     private bool IsPointOnRecordingPills(Point clientPoint)
         => (!_recordingSizeChipRect.IsEmpty && _recordingSizeChipRect.Contains(clientPoint))
            || (!_recordingSettingsPillRect.IsEmpty && _recordingSettingsPillRect.Contains(clientPoint));
@@ -1209,8 +1235,8 @@ public sealed partial class RecordingForm : Form
 
         if (next.Width < 20) next.Width = 20;
         if (next.Height < 20) next.Height = 20;
-        next.X = Math.Max(0, Math.Min(next.X, ClientSize.Width - next.Width));
-        next.Y = Math.Max(0, Math.Min(next.Y, ClientSize.Height - next.Height));
+        EnsureSelectionMonitorFromRect(_handleDragStartRect);
+        next = ClampRectToSelectionMonitor(next);
 
         if (next == _recordRegion) return;
         _recordRegion = next;
