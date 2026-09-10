@@ -187,34 +187,6 @@ Open the annotation editor directly: `CyberSnap.exe --editor`
 
 ---
 
-## ❓ Frequently Asked Questions
-
-### What capture modes does CyberSnap support?
-
-Area selection, active window, full screen, repeat area, scroll capture (long pages stitched into one image), MP4 recording, and GIF recording.
-
-### How does OCR work?
-
-CyberSnap uses Tesseract to extract text from captured images. The language is auto-detected from your Windows display language, and you can search across all OCR text in your capture history. Extracted text can also be translated via the integrated translation service.
-
-### Where can I upload captures?
-
-CyberSnap supports FTP, SFTP, S3-compatible storage, ImgBB, Imgur, Webhook, and CyberSnap Share. Upload credentials are encrypted locally with AES-GCM.
-
-### Where is my data stored?
-
-All captures, history, and settings are stored locally on your machine. Upload provider credentials are kept in an encrypted vault. No data is sent to third parties except the upload providers you explicitly configure.
-
-### How do I change hotkeys?
-
-Go to **Settings** and navigate to the hotkeys section. CyberSnap includes conflict detection to warn you if a hotkey is already in use by another application.
-
-### Can I use CyberSnap in my language?
-
-Yes. CyberSnap supports 29 languages including English, Spanish, German, French, Japanese, Korean, Chinese (Simplified and Traditional), and many more. UI strings are in JSON files under `src/CyberSnap/Localization/` and can be edited without recompiling.
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome. Please open an issue describing the change before starting large work, and submit pull requests against the main branch.
@@ -269,6 +241,10 @@ If you're enjoying CyberSnap, I'd be truly grateful for your support! You can sh
 ## 📄 License
 
 CyberSnap is distributed under the terms of the GNU General Public License v3.0. See [`LICENSE`](LICENSE) for the full license text.
+
+## ❓ FAQ
+
+For frequently asked questions, troubleshooting guides, and detailed configuration instructions, visit the [FAQ](https://github.com/CyberGems/CyberSnap/wiki/FAQ) or the [online documentation](https://cybergems.org/docs/cybersnap/FAQ).
 
 ---
 
