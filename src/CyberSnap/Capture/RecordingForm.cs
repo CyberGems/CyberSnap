@@ -715,15 +715,19 @@ public sealed partial class RecordingForm : Form
             g.Restore(state);
 
             var selAccent = _format == Models.RecordingFormat.GIF ? UiChrome.GifAccentColor : UiChrome.AccentColor;
+            var layoutBounds = SelectionLayoutBounds;
+            var clipState = g.Save();
+            g.SetClip(layoutBounds, CombineMode.Intersect);
             DrawRecordingFrame(g, _selection, selAccent);
             SelectionSizeReadout.Draw(
                 g,
                 _selectionCursor,
                 _selection,
                 _readoutFont,
-                ClientRectangle,
+                layoutBounds,
                 null,
                 accentOverride: selAccent);
+            g.Restore(clipState);
         }
         else if (_autoDetectActive && !_autoDetectRect.IsEmpty)
         {
@@ -739,7 +743,7 @@ public sealed partial class RecordingForm : Form
         if (_selectionAdorner is null)
             return;
 
-        _selectionAdorner.SetSelection(_selection, PointToClient(Cursor.Position), null);
+        _selectionAdorner.SetSelection(_selection, PointToClient(Cursor.Position), _selectionMonitorClientBounds);
     }
 
     private void PaintRecordingPhase(Graphics g)
@@ -777,6 +781,8 @@ public sealed partial class RecordingForm : Form
             ? (_isPaused ? RecordingPausedAccent : RecordingLiveAccent)
             : accentColor;
 
+        var chromeClip = g.Save();
+        g.SetClip(SelectionLayoutBounds, CombineMode.Intersect);
         DrawRecordingFrame(g, _recordRegion, frameAccent);
 
         // Draw circular resize handles during PreRecording (before START is clicked)
@@ -801,6 +807,7 @@ public sealed partial class RecordingForm : Form
                 hovered: _hoveredRecordingSettings,
                 enabled: _state == State.PreRecording);
         }
+        g.Restore(chromeClip);
 
         if (_state == State.PreRecording && !_isHandleDragging)
             KeepControlBarAboveOverlay();
@@ -1008,7 +1015,7 @@ public sealed partial class RecordingForm : Form
             PointToClient(Cursor.Position),
             _selection,
             _readoutFont,
-            ClientRectangle,
+            SelectionLayoutBounds,
             GetRecordingReadoutDetails());
         return readoutBounds.IsEmpty
             ? _selection
@@ -1043,7 +1050,7 @@ public sealed partial class RecordingForm : Form
             cursor,
             selection,
             _readoutFont,
-            ClientRectangle,
+            SelectionLayoutBounds,
             GetRecordingReadoutDetails());
         if (!readoutBounds.IsEmpty)
             dirty = Rectangle.Union(dirty, InflateForRepaint(readoutBounds, 10));
@@ -1161,6 +1168,9 @@ public sealed partial class RecordingForm : Form
     private Rectangle ClampRectToSelectionMonitor(Rectangle rect)
         => SelectionMonitorClamp.ClampRect(rect, _selectionMonitorClientBounds);
 
+    private Rectangle SelectionLayoutBounds
+        => SelectionMonitorClamp.LayoutBounds(_selectionMonitorClientBounds, ClientRectangle);
+
     private bool IsPointOnRecordingPills(Point clientPoint)
         => (!_recordingSizeChipRect.IsEmpty && _recordingSizeChipRect.Contains(clientPoint))
            || (!_recordingSettingsPillRect.IsEmpty && _recordingSettingsPillRect.Contains(clientPoint));
@@ -1236,7 +1246,9 @@ public sealed partial class RecordingForm : Form
         if (next.Width < 20) next.Width = 20;
         if (next.Height < 20) next.Height = 20;
         EnsureSelectionMonitorFromRect(_handleDragStartRect);
-        next = ClampRectToSelectionMonitor(next);
+        next = _handleDragIdx == 8
+            ? SelectionMonitorClamp.ClampRectKeepSize(next, _selectionMonitorClientBounds)
+            : ClampRectToSelectionMonitor(next);
 
         if (next == _recordRegion) return;
         _recordRegion = next;
@@ -1285,7 +1297,7 @@ public sealed partial class RecordingForm : Form
         if (!SelectionSizeReadout.TryGetRecordingChromeLayout(
                 _recordRegion,
                 _readoutFont,
-                ClientRectangle,
+                SelectionLayoutBounds,
                 avoid,
                 out _recordingSizeChipRect,
                 out _recordingSettingsPillRect,

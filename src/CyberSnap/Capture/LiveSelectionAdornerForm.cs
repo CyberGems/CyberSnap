@@ -185,7 +185,9 @@ internal sealed class LiveSelectionAdornerForm : Form
 
     private Rectangle ClampToVirtualClient(Rectangle rect)
     {
-        var client = new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height);
+        var client = !_selectionMonitorBounds.IsEmpty
+            ? _selectionMonitorBounds
+            : new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height);
         rect.Intersect(client);
         return rect.Width <= 0 || rect.Height <= 0 ? new Rectangle(0, 0, 1, 1) : rect;
     }
@@ -203,6 +205,12 @@ internal sealed class LiveSelectionAdornerForm : Form
 
     private void DrawSelection(Graphics g)
     {
+        var clamp = !_selectionMonitorBounds.IsEmpty
+            ? _selectionMonitorBounds
+            : new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height);
+        var clipState = g.Save();
+        g.SetClip(clamp, CombineMode.Intersect);
+
         if (_accentOverride.HasValue)
             RecordingForm.DrawRecordingFrame(
                 g,
@@ -212,9 +220,6 @@ internal sealed class LiveSelectionAdornerForm : Form
         else
             SelectionFrameRenderer.DrawRectangle(g, _selection);
 
-        var clamp = !_selectionMonitorBounds.IsEmpty
-            ? _selectionMonitorBounds
-            : new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height);
         SelectionSizeReadout.Draw(
             g,
             _cursor,
@@ -222,6 +227,7 @@ internal sealed class LiveSelectionAdornerForm : Form
             _readoutFont,
             clamp,
             _readoutDetails);
+        g.Restore(clipState);
     }
 
     private void DrawOutlinedText(Graphics g, string text, Font font, float x, float y)

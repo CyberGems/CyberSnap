@@ -1043,6 +1043,8 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var borderRect = Rectangle.Inflate(_selection, 2, 2);
+            var clipState = g.Save();
+            g.SetClip(SelectionLayoutBounds, CombineMode.Intersect);
             if (_state == State.Capturing)
                 PaintCapturingFrame(g, borderRect);
             else
@@ -1056,6 +1058,7 @@ public sealed partial class ScrollingCaptureForm : Form
             // Draw only round mid-edge resize handles; the corner brackets are part of the frame.
             if (_state == State.Selecting && _controlBar is not null)
                 SelectionFrameRenderer.DrawConfirmHandles(g, GetHandleRects(borderRect));
+            g.Restore(clipState);
         }
     }
 
@@ -1128,6 +1131,9 @@ public sealed partial class ScrollingCaptureForm : Form
     private Rectangle ClampRectToSelectionMonitor(Rectangle rect)
         => SelectionMonitorClamp.ClampRect(rect, _selectionMonitorClientBounds);
 
+    private Rectangle SelectionLayoutBounds
+        => SelectionMonitorClamp.LayoutBounds(_selectionMonitorClientBounds, ClientRectangle);
+
     private void ApplyHandleDrag(Point current)
     {
         int dx = current.X - _handleDragOrigin.X;
@@ -1169,7 +1175,9 @@ public sealed partial class ScrollingCaptureForm : Form
         if (next.Height < 20) next.Height = 20;
 
         EnsureSelectionMonitorFromRect(_handleDragStartRect);
-        next = ClampRectToSelectionMonitor(next);
+        next = _handleDragIndex == 8
+            ? SelectionMonitorClamp.ClampRectKeepSize(next, _selectionMonitorClientBounds)
+            : ClampRectToSelectionMonitor(next);
 
         if (next == _selection) return;
 
@@ -1212,11 +1220,14 @@ public sealed partial class ScrollingCaptureForm : Form
 
         if (_selection.Width > 2 && _selection.Height > 2)
         {
+            var clipState = g.Save();
+            g.SetClip(SelectionLayoutBounds, CombineMode.Intersect);
             SelectionFrameRenderer.DrawRectangle(
                 g,
                 _selection,
                 accentOverride: ScrollingAccent,
                 bracketAccentOverride: UiChrome.AccentColor);
+            g.Restore(clipState);
         }
 
         // Keep painting while fading out (Dismiss keeps the instance; opacity gates visibility).
@@ -1235,7 +1246,7 @@ public sealed partial class ScrollingCaptureForm : Form
         if (_selectionAdorner is null)
             return;
 
-        _selectionAdorner.SetSelection(_selection, PointToClient(Cursor.Position));
+        _selectionAdorner.SetSelection(_selection, PointToClient(Cursor.Position), _selectionMonitorClientBounds);
     }
 
     private Rectangle GetMagnifierAvoidBounds()
@@ -1247,7 +1258,7 @@ public sealed partial class ScrollingCaptureForm : Form
             PointToClient(Cursor.Position),
             _selection,
             _readoutFont,
-            ClientRectangle);
+            SelectionLayoutBounds);
         return readoutBounds.IsEmpty
             ? _selection
             : Rectangle.Union(_selection, InflateForRepaint(readoutBounds, 8));
@@ -1279,7 +1290,7 @@ public sealed partial class ScrollingCaptureForm : Form
             cursor,
             selection,
             _readoutFont,
-            ClientRectangle);
+            SelectionLayoutBounds);
         if (!readoutBounds.IsEmpty)
             dirty = Rectangle.Union(dirty, InflateForRepaint(readoutBounds, 10));
 
