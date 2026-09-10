@@ -24,7 +24,7 @@ A full-featured **screenshot, annotation, OCR, translation, screen-recording and
 
 ## 📸 Why CyberSnap?
 
-Most screenshot tools either do too little or bury features behind a paywall. CyberSnap gives you **professional-grade capture, editing, and sharing** — including OCR, translation, and 7 upload destinations — all in a free, open-source package with a polished cyberpunk aesthetic.
+Most screenshot tools either do too little or bury features behind a paywall. CyberSnap gives you **professional-grade capture, editing, and sharing** — including OCR, translation, and 7 upload destinations — all in a free, open-source package with a polished, modern design.
 
 | Need | Solution |
 |---|---|
