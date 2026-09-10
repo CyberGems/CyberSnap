@@ -95,7 +95,13 @@ public sealed class WindowsToolTip : Form
     public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, bool above)
         => ShowNear(owner, text, anchorScreenBounds, above ? ToolTipPlacement.Above : ToolTipPlacement.Below);
 
-    public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, ToolTipPlacement placement, bool singleLine = false)
+    public void ShowNear(
+        IWin32Window owner,
+        string text,
+        Rectangle anchorScreenBounds,
+        ToolTipPlacement placement,
+        bool singleLine = false,
+        bool attachToOwner = true)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -165,7 +171,15 @@ public sealed class WindowsToolTip : Form
             Region = new Region(path);
 
         if (!Visible)
-            Show(owner);
+        {
+            // Owning a TopMost tooltip to a fullscreen overlay raises that overlay
+            // above sibling TopMost windows (the recording bar). Skip ownership when
+            // the caller needs the overlay to stay underneath other chrome.
+            if (attachToOwner)
+                Show(owner);
+            else
+                Show();
+        }
 
         try
         {

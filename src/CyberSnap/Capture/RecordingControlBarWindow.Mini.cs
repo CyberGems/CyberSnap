@@ -162,6 +162,10 @@ public sealed partial class RecordingControlBarWindow
 
     private void Window_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        RecoverVisibilityIfIdle();
+        if (OwnerWinFormsForm is RecordingForm form && !form.IsDisposed)
+            form.NotifyControlBarPointerEntered();
+
         if (!_isMini || _isEncoding || _suppressMiniHover)
             return;
         ArmMiniHover(expand: true, MiniHoverExpandDelayMs);

@@ -213,7 +213,7 @@ internal static class SelectionSizeReadout
     public static int ConfirmOptionsWidth(Font font)
     {
         int lineH = LineHeight(font);
-        return Math.Max(UiChrome.ScaleInt(24), lineH + PadY * 2 + UiChrome.ScaleInt(6));
+        return Math.Max(UiChrome.ScaleInt(24), lineH + PadY * 2);
     }
 
     /// <summary>
@@ -255,8 +255,10 @@ internal static class SelectionSizeReadout
 
     /// <summary>
     /// Recording-mode chrome: dimension chip plus an independent settings pill.
-    /// Only accepts placements fully outside the top edge of the captured area;
-    /// unlike image-confirm mode it never clamps or falls back inside the selection.
+    /// Prefers the outside-top corners. When <paramref name="occupyTopBand"/> is set
+    /// (control bar flipped above the region), parks beside the frame so the path
+    /// from the selection to the bar stays clear. Never enters the recording area —
+    /// if no outside slot fits, the caller should hide the pills.
     /// </summary>
     public static bool TryGetRecordingChromeLayout(
         Rectangle selection,
@@ -264,7 +266,8 @@ internal static class SelectionSizeReadout
         Rectangle clientBounds,
         IReadOnlyList<Rectangle>? avoidRects,
         out Rectangle chipRect,
-        out Rectangle settingsRect)
+        out Rectangle settingsRect,
+        bool occupyTopBand = false)
     {
         chipRect = Rectangle.Empty;
         settingsRect = Rectangle.Empty;
@@ -282,36 +285,81 @@ internal static class SelectionSizeReadout
             }
         };
         var chipSize = ShowDimensions ? MeasurePill(lines, font, lineH, iconBox) : Size.Empty;
-        int settingsW = ConfirmOptionsWidth(font);
+        // Match the size chip exactly so the gear is not a taller square that
+        // peeks out from under the recording bar at 125%/150% DPI.
+        int settingsW = ShowDimensions && chipSize.Height > 0
+            ? chipSize.Height
+            : ConfirmOptionsWidth(font);
         int gap = ShowDimensions ? UiChrome.ScaleInt(4) : 0;
         int unitW = chipSize.Width + gap + settingsW;
         int unitH = Math.Max(chipSize.Height, settingsW);
         int y = selection.Top - EdgeGap - unitH;
+        int sideGap = UiChrome.ScaleInt(8);
 
-        var candidates = new[]
+        // occupyTopBand is decided from "no room below for the control bar", not from
+        // HWND intersection — mixed-DPI GetWindowRect/client mapping was missing the
+        // top strip and leaving pills under the bar.
+        var topStrip = new Rectangle(selection.Left, y, Math.Max(1, selection.Width), unitH);
+        bool topBandBlocked = occupyTopBand || HitsObstacle(topStrip, avoidRects);
+
+        var candidates = new List<Rectangle>(8);
+        if (!topBandBlocked)
         {
-            new Rectangle(selection.Left, y, unitW, unitH),
-            new Rectangle(selection.Right - unitW, y, unitW, unitH)
-        };
+            candidates.Add(new Rectangle(selection.Left, y, unitW, unitH));
+            candidates.Add(new Rectangle(selection.Right - unitW, y, unitW, unitH));
+        }
+
+        // Beside the frame — never inside the recording rect.
+        candidates.Add(new Rectangle(selection.Left - sideGap - unitW, selection.Top, unitW, unitH));
+        candidates.Add(new Rectangle(selection.Right + sideGap, selection.Top, unitW, unitH));
+        candidates.Add(new Rectangle(selection.Left - sideGap - unitW, selection.Bottom - unitH, unitW, unitH));
+        candidates.Add(new Rectangle(selection.Right + sideGap, selection.Bottom - unitH, unitW, unitH));
+        if (!topBandBlocked)
+        {
+            // Raised beside-frame slots share the bar's vertical band; skip them
+            // when the bar is (or will be) above the selection.
+            candidates.Add(new Rectangle(selection.Left - sideGap - unitW, y, unitW, unitH));
+            candidates.Add(new Rectangle(selection.Right + sideGap, y, unitW, unitH));
+        }
 
         foreach (var unit in candidates)
         {
-            if (!FitsInClient(unit, clientBounds) || HitsObstacle(unit, avoidRects))
+            if (!FitsInClient(unit, clientBounds) || IntersectsSelection(unit, selection) || HitsObstacle(unit, avoidRects))
                 continue;
 
-            if (ShowDimensions)
-            {
-                chipRect = new Rectangle(
-                    unit.X,
-                    unit.Y + (unitH - chipSize.Height) / 2,
-                    chipSize.Width,
-                    chipSize.Height);
-            }
-            settingsRect = new Rectangle(unit.Right - settingsW, unit.Y, settingsW, unitH);
+            ApplyRecordingUnitLayout(unit, chipSize, settingsW, out chipRect, out settingsRect);
             return true;
         }
 
         return false;
+    }
+
+    private static void ApplyRecordingUnitLayout(
+        Rectangle unit,
+        Size chipSize,
+        int settingsW,
+        out Rectangle chipRect,
+        out Rectangle settingsRect)
+    {
+        int unitH = unit.Height;
+        if (ShowDimensions && chipSize.Width > 0)
+        {
+            chipRect = new Rectangle(
+                unit.X,
+                unit.Y + (unitH - chipSize.Height) / 2,
+                chipSize.Width,
+                chipSize.Height);
+            settingsRect = new Rectangle(
+                unit.Right - settingsW,
+                unit.Y + (unitH - chipSize.Height) / 2,
+                settingsW,
+                chipSize.Height);
+        }
+        else
+        {
+            chipRect = Rectangle.Empty;
+            settingsRect = new Rectangle(unit.Right - settingsW, unit.Y, settingsW, unitH);
+        }
     }
 
     /// <summary>
@@ -759,6 +807,9 @@ internal static class SelectionSizeReadout
             : selection.Top - EdgeGap - mSize.Height;
         return ClampToClient(new Rectangle(xOutside, yOutside, mSize.Width, mSize.Height), clientBounds);
     }
+
+    private static bool IntersectsSelection(Rectangle r, Rectangle selection)
+        => r.IntersectsWith(selection);
 
     private static bool HitsObstacle(Rectangle r, IReadOnlyList<Rectangle>? avoidRects)
     {

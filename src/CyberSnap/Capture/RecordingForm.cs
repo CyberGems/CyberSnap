@@ -51,6 +51,7 @@ public sealed partial class RecordingForm : Form
     // Indices: 0=TL, 1=TR, 2=BL, 3=BR, 4=Top, 5=Left, 6=Right, 7=Bottom, 8=move
     private int _handleDragIdx = -1;
     private bool _isHandleDragging;
+    private bool _handleDragBarHidden;
     private Point _handleDragOrigin;
     private Rectangle _handleDragStartRect;
     private static readonly int HandleSize = 10;
@@ -192,12 +193,19 @@ public sealed partial class RecordingForm : Form
         }
     }
 
+    protected override void WndProc(ref Message m)
+    {
+        base.WndProc(ref m);
+        if (m.Msg is User32.WM_WINDOWPOSCHANGED or User32.WM_ACTIVATE)
+            KeepControlBarAboveOverlay();
+    }
+
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
         CaptureWindowExclusion.Apply(this);
         User32.SetWindowPos(Handle, User32.HWND_TOPMOST, 0, 0, 0, 0,
-            User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_SHOWWINDOW);
+            User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_SHOWWINDOW | User32.SWP_NOOWNERZORDER);
         User32.SetForegroundWindow(Handle);
         Activate();
         Focus();
@@ -468,33 +476,25 @@ public sealed partial class RecordingForm : Form
         }
         else if (_state == State.PreRecording && e.Button == MouseButtons.Left)
         {
-            if (!_recordingSettingsPillRect.IsEmpty && _recordingSettingsPillRect.Contains(e.Location))
+            if (IsPointOnControlBar(e.Location))
+                return;
+
+            if (IsPointOnRecordingPills(e.Location))
             {
-                OpenRecordingSettings();
+                if (!_recordingSettingsPillRect.IsEmpty && _recordingSettingsPillRect.Contains(e.Location))
+                    OpenRecordingSettings();
                 return;
             }
 
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
             {
-                _handleDragIdx = hit;
-                _isHandleDragging = true;
-                _handleDragOrigin = e.Location;
-                _handleDragStartRect = _recordRegion;
-                // Keep receiving MouseUp even if released over the control bar
-                // (separate HWND); otherwise the bar stays hidden until the next drag.
-                Capture = true;
-                _controlBarWpf?.SetDragInProgress(true);
+                BeginHandleDrag(hit, e.Location);
                 return;
             }
             if (_recordRegion.Contains(e.Location))
             {
-                _handleDragIdx = 8; // move
-                _isHandleDragging = true;
-                _handleDragOrigin = e.Location;
-                _handleDragStartRect = _recordRegion;
-                Capture = true;
-                _controlBarWpf?.SetDragInProgress(true);
+                BeginHandleDrag(8, e.Location); // move
                 return;
             }
         }
@@ -505,6 +505,23 @@ public sealed partial class RecordingForm : Form
         // Handle resize/move during PreRecording
         if (_isHandleDragging && _state == State.PreRecording)
         {
+            if (MouseButtons != MouseButtons.Left)
+            {
+                FinishHandleDrag();
+                return;
+            }
+
+            if (!_handleDragBarHidden)
+            {
+                int dx = e.Location.X - _handleDragOrigin.X;
+                int dy = e.Location.Y - _handleDragOrigin.Y;
+                if (Math.Abs(dx) >= 3 || Math.Abs(dy) >= 3)
+                {
+                    _handleDragBarHidden = true;
+                    _controlBarWpf?.SetDragInProgress(true);
+                }
+            }
+
             ApplyHandleDrag(e.Location);
             return;
         }
@@ -562,8 +579,13 @@ public sealed partial class RecordingForm : Form
         }
         if (_state == State.PreRecording)
         {
+            KeepControlBarAboveOverlay();
+
+            bool overSize = !_recordingSizeChipRect.IsEmpty
+                && _recordingSizeChipRect.Contains(e.Location);
             bool settingsHover = !_recordingSettingsPillRect.IsEmpty
                 && _recordingSettingsPillRect.Contains(e.Location);
+
             if (settingsHover != _hoveredRecordingSettings)
             {
                 _hoveredRecordingSettings = settingsHover;
@@ -571,11 +593,14 @@ public sealed partial class RecordingForm : Form
                 if (settingsHover)
                     ShowRecordingSettingsTooltip();
                 else
+                {
                     _recordingChromeToolTip?.Hide();
+                    KeepControlBarAboveOverlay();
+                }
             }
-            if (settingsHover)
+            if (settingsHover || overSize)
             {
-                Cursor = Cursors.Hand;
+                Cursor = settingsHover ? Cursors.Hand : Cursors.Default;
                 return;
             }
 
@@ -600,6 +625,7 @@ public sealed partial class RecordingForm : Form
         {
             _hoveredRecordingSettings = false;
             _recordingChromeToolTip?.Hide();
+            KeepControlBarAboveOverlay();
         }
     }
 
@@ -608,13 +634,7 @@ public sealed partial class RecordingForm : Form
         // Finish handle drag in PreRecording
         if (_isHandleDragging)
         {
-            _isHandleDragging = false;
-            _handleDragIdx = -1;
-            if (Capture) Capture = false;
-            RebuildRecordingSurface();
-            _controlBarWpf?.SetDragInProgress(false);
-            ScheduleRecordingChromeRelayout();
-            Invalidate();
+            FinishHandleDrag();
             return;
         }
 
@@ -774,6 +794,9 @@ public sealed partial class RecordingForm : Form
                 hovered: _hoveredRecordingSettings,
                 enabled: _state == State.PreRecording);
         }
+
+        if (_state == State.PreRecording && !_isHandleDragging)
+            KeepControlBarAboveOverlay();
     }
 
     /// <summary>
@@ -1023,6 +1046,113 @@ public sealed partial class RecordingForm : Form
 
     // ── Handle resize/move helpers (PreRecording phase) ──
 
+    private void BeginHandleDrag(int handleIdx, Point origin)
+    {
+        _handleDragIdx = handleIdx;
+        _isHandleDragging = true;
+        _handleDragBarHidden = false;
+        _handleDragOrigin = origin;
+        _handleDragStartRect = _recordRegion;
+        // Keep receiving MouseUp even if released over the control bar
+        // (separate HWND); otherwise the bar stays hidden until the next drag.
+        Capture = true;
+    }
+
+    private void FinishHandleDrag()
+    {
+        if (!_isHandleDragging)
+            return;
+
+        _isHandleDragging = false;
+        _handleDragIdx = -1;
+        _handleDragBarHidden = false;
+        if (Capture) Capture = false;
+        RebuildRecordingSurface();
+        _controlBarWpf?.SetDragInProgress(false);
+        ScheduleRecordingChromeRelayout();
+        Invalidate();
+    }
+
+    /// <summary>
+    /// The WPF bar lives on another dispatcher. Hovering it can swallow the overlay
+    /// MouseUp that was supposed to end a region drag, leaving the bar at opacity 0.
+    /// </summary>
+    internal void NotifyControlBarPointerEntered()
+    {
+        if (IsDisposed || Disposing)
+            return;
+        if (InvokeRequired)
+        {
+            BeginInvoke(NotifyControlBarPointerEntered);
+            return;
+        }
+
+        if (_isHandleDragging && MouseButtons != MouseButtons.Left)
+            FinishHandleDrag();
+    }
+
+    protected override void OnMouseCaptureChanged(EventArgs e)
+    {
+        base.OnMouseCaptureChanged(e);
+        if (!_isHandleDragging)
+            return;
+        if (MouseButtons == MouseButtons.Left)
+        {
+            if (!Capture)
+                Capture = true;
+            return;
+        }
+        FinishHandleDrag();
+    }
+
+    private Rectangle ScreenToClientRect(Rectangle screen)
+    {
+        if (screen.IsEmpty || !IsHandleCreated)
+            return Rectangle.Empty;
+        var topLeft = PointToClient(new Point(screen.Left, screen.Top));
+        var bottomRight = PointToClient(new Point(screen.Right, screen.Bottom));
+        return Rectangle.FromLTRB(topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y);
+    }
+
+    private Rectangle ClientToScreenRect(Rectangle client)
+    {
+        if (client.IsEmpty || !IsHandleCreated)
+            return Rectangle.Empty;
+        var topLeft = PointToScreen(new Point(client.Left, client.Top));
+        var bottomRight = PointToScreen(new Point(client.Right, client.Bottom));
+        return Rectangle.FromLTRB(topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y);
+    }
+
+    private Rectangle GetRecordRegionScreen()
+    {
+        var screenRegion = ClientToScreenRect(_recordRegion);
+        if (!screenRegion.IsEmpty)
+            return screenRegion;
+        return new Rectangle(
+            _recordRegion.X + _virtualBounds.X,
+            _recordRegion.Y + _virtualBounds.Y,
+            _recordRegion.Width,
+            _recordRegion.Height);
+    }
+
+    private bool IsPointOnRecordingPills(Point clientPoint)
+        => (!_recordingSizeChipRect.IsEmpty && _recordingSizeChipRect.Contains(clientPoint))
+           || (!_recordingSettingsPillRect.IsEmpty && _recordingSettingsPillRect.Contains(clientPoint));
+
+    private bool IsPointOnControlBar(Point clientPoint)
+    {
+        if (_controlBarWpf is null || !IsHandleCreated)
+            return false;
+        try
+        {
+            return _controlBarWpf.ContainsScreenPoint(PointToScreen(clientPoint));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private Rectangle[] GetHandleRects()
     {
         int hs = HandleSizeScaled;
@@ -1043,6 +1173,9 @@ public sealed partial class RecordingForm : Form
 
     private int HitTestHandle(Point p)
     {
+        if (IsPointOnControlBar(p) || IsPointOnRecordingPills(p))
+            return -1;
+
         var handles = GetHandleRects();
         for (int i = 0; i < handles.Length; i++)
         {
@@ -1110,10 +1243,18 @@ public sealed partial class RecordingForm : Form
         var barScreen = _controlBarWpf?.GetScreenBounds() ?? Rectangle.Empty;
         if (!barScreen.IsEmpty)
         {
-            var barClient = barScreen;
-            barClient.Offset(-_virtualBounds.X, -_virtualBounds.Y);
-            avoid = new List<Rectangle> { barClient };
+            // PointToClient maps the WPF HWND (physical pixels) into this overlay's
+            // client space — subtracting _virtualBounds is wrong on mixed-DPI setups
+            // (125% + 150%) and leaves the pills under the bar.
+            var barClient = ScreenToClientRect(barScreen);
+            if (!barClient.IsEmpty)
+                avoid = new List<Rectangle> { barClient };
         }
+
+        // Do not wait for HWND intersection to evacuate the top band: mixed-DPI
+        // mapping often misses the bar, and the pills keep the outside-top slots.
+        // Prefer the bar's own flip flag, then the same "no room below" rule.
+        bool occupyTopBand = _controlBarWpf?.WouldAutoParkAbove(GetRecordRegionScreen()) == true;
 
         if (!SelectionSizeReadout.TryGetRecordingChromeLayout(
                 _recordRegion,
@@ -1121,7 +1262,8 @@ public sealed partial class RecordingForm : Form
                 ClientRectangle,
                 avoid,
                 out _recordingSizeChipRect,
-                out _recordingSettingsPillRect))
+                out _recordingSettingsPillRect,
+                occupyTopBand))
         {
             _recordingSizeChipRect = Rectangle.Empty;
             _recordingSettingsPillRect = Rectangle.Empty;
@@ -1142,12 +1284,33 @@ public sealed partial class RecordingForm : Form
                 return;
             BeginInvoke(new Action(() =>
             {
-                if (IsDisposed || Disposing || _state != State.PreRecording)
+                if (IsDisposed || Disposing || _state is not (State.PreRecording or State.Starting or State.Recording))
                     return;
-                RefreshRecordingChromeLayout();
-                Invalidate();
+                ResolveBarPillsCollision();
             }));
         }, System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// Called from the WPF bar thread after it parks above or below the region so
+    /// the size/settings pills can evacuate the top band without waiting for HWND
+    /// hit-testing.
+    /// </summary>
+    internal void RequestRecordingChromeRelayout()
+    {
+        if (!IsHandleCreated || IsDisposed || Disposing)
+            return;
+        if (InvokeRequired)
+        {
+            try { BeginInvoke(RequestRecordingChromeRelayout); }
+            catch { /* overlay closing */ }
+            return;
+        }
+
+        if (_state is not (State.PreRecording or State.Starting or State.Recording))
+            return;
+        RefreshRecordingChromeLayout();
+        Invalidate();
     }
 
     private void ShowRecordingSettingsTooltip()
@@ -1156,12 +1319,33 @@ public sealed partial class RecordingForm : Form
             return;
 
         _recordingChromeToolTip ??= new WindowsToolTip();
+        var pillScreen = RectangleToScreen(_recordingSettingsPillRect);
+        var barScreen = _controlBarWpf?.GetScreenBounds() ?? Rectangle.Empty;
+        var placement = ToolTipPlacement.Above;
+        if (!barScreen.IsEmpty && pillScreen.Top >= barScreen.Top && pillScreen.Top <= barScreen.Bottom + UiChrome.ScaleInt(24))
+            placement = pillScreen.Left >= _virtualBounds.X + _recordRegion.Left + _recordRegion.Width / 2
+                ? ToolTipPlacement.Right
+                : ToolTipPlacement.Left;
+
         _recordingChromeToolTip.ShowNear(
             this,
             LocalizationService.Translate("Recording settings"),
-            RectangleToScreen(_recordingSettingsPillRect),
-            ToolTipPlacement.Above,
-            singleLine: true);
+            pillScreen,
+            placement,
+            singleLine: true,
+            attachToOwner: false);
+        KeepControlBarAboveOverlay();
+    }
+
+    /// <summary>
+    /// Showing a WinForms tooltip owned by this overlay raises the overlay above the
+    /// WPF bar. Re-assert topmost so the bar does not vanish behind the dimmer.
+    /// </summary>
+    private void KeepControlBarAboveOverlay()
+    {
+        if (_isHandleDragging)
+            return;
+        _controlBarWpf?.AssertBarTopmost();
     }
 
     private void OpenRecordingSettings()
@@ -1210,12 +1394,7 @@ public sealed partial class RecordingForm : Form
         if (_controlBarWpf is null)
             return;
 
-        var screenRegion = new Rectangle(
-            _recordRegion.X + _virtualBounds.X,
-            _recordRegion.Y + _virtualBounds.Y,
-            _recordRegion.Width,
-            _recordRegion.Height);
-        _controlBarWpf.Reposition(screenRegion);
+        _controlBarWpf.Reposition(GetRecordRegionScreen());
     }
 
     /// <summary>
@@ -1237,9 +1416,7 @@ public sealed partial class RecordingForm : Form
             pills = pills.IsEmpty ? _recordingSettingsPillRect : Rectangle.Union(pills, _recordingSettingsPillRect);
         if (pills.IsEmpty)
             return;
-        pills.Offset(_virtualBounds.X, _virtualBounds.Y);
-
-        if (bar.EnsureClearOf(pills))
+        if (bar.EnsureClearOf(ClientToScreenRect(pills)))
             RefreshRecordingChromeLayout();
 
         Invalidate();

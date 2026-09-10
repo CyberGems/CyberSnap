@@ -166,11 +166,15 @@ internal static partial class User32
 
     public static readonly IntPtr HWND_TOPMOST = new(-1);
     public static readonly IntPtr HWND_NOTOPMOST = new(-2);
+    public static readonly IntPtr HWND_TOP = IntPtr.Zero;
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_SHOWWINDOW = 0x0040;
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_NOZORDER = 0x0004;
+    public const uint SWP_NOOWNERZORDER = 0x0200;
+    public const int WM_ACTIVATE = 0x0006;
+    public const int WM_WINDOWPOSCHANGED = 0x0047;
     public const uint ASFW_ANY = 0xFFFFFFFF;
 
     [LibraryImport("user32.dll")]

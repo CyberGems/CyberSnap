@@ -74,6 +74,10 @@ public sealed partial class RecordingControlBarWindow : Window
 
     // ── Positioning ──
     private System.Drawing.Rectangle _lastCaptureRegion;
+    private bool _parkedAboveRegion;
+
+    /// <summary>Cached HWND so overlay-thread GetWindowRect does not touch WindowInteropHelper.</summary>
+    private IntPtr _nativeHwnd;
 
     /// <summary>The WinForms RecordingForm that owns this bar; keeps the bar above the overlay.</summary>
     public System.Windows.Forms.Form? OwnerWinFormsForm { get; set; }
@@ -83,6 +87,8 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         get
         {
+            if (_nativeHwnd != IntPtr.Zero)
+                return _nativeHwnd;
             try { return new WindowInteropHelper(this).Handle; }
             catch { return IntPtr.Zero; }
         }
@@ -143,17 +149,17 @@ public sealed partial class RecordingControlBarWindow : Window
         {
             PopupWindowHelper.ApplyNoActivateChrome(this);
             var hwnd = new WindowInteropHelper(this).Handle;
+            _nativeHwnd = hwnd;
             if (hwnd != IntPtr.Zero)
             {
                 CaptureWindowExclusion.Apply(hwnd);
 
-                // Owner the WPF bar to the WinForms RecordingForm overlay. Owned windows
-                // always stay above their owner in z-order — this is what keeps the bar
-                // visible over the dimmed overlay while the user drags the selection.
+                // Owner the WPF bar to the WinForms overlay. Must use WindowInteropHelper
+                // (SetWindowLongPtr) — SetWindowLongA truncates HWNDs on 64-bit, so the
+                // overlay could cover the bar whenever it restacked (tooltip show/hide).
                 if (OwnerWinFormsForm?.IsHandleCreated == true)
-                    User32.SetWindowLongA(hwnd, User32.GWL_HWNDPARENT, unchecked((int)OwnerWinFormsForm.Handle));
+                    new WindowInteropHelper(this).Owner = OwnerWinFormsForm.Handle;
 
-                // Assert topmost once the window exists.
                 User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, 0, 0, 0, 0,
                     User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
             }
@@ -200,10 +206,92 @@ public sealed partial class RecordingControlBarWindow : Window
     /// <summary>Current native bounds in physical screen pixels, used by sibling capture chrome.</summary>
     public System.Drawing.Rectangle GetScreenBounds()
     {
-        var hwnd = Hwnd;
+        // Overlay-thread callers must not touch WindowInteropHelper (STA/WPF only).
+        var hwnd = _nativeHwnd;
         return hwnd != IntPtr.Zero && User32.GetWindowRect(hwnd, out var rect)
             ? rect.ToRectangle()
             : System.Drawing.Rectangle.Empty;
+    }
+
+    /// <summary>
+    /// Physical bar height for placement. Uses the cached HWND when it exists so
+    /// the overlay thread never constructs a WindowInteropHelper.
+    /// </summary>
+    internal int EstimatePhysicalHeight(System.Drawing.Rectangle captureRegion)
+    {
+        if (_nativeHwnd != IntPtr.Zero && User32.GetWindowRect(_nativeHwnd, out var wr))
+        {
+            int h = wr.Bottom - wr.Top;
+            if (h > 0)
+                return h;
+        }
+
+        var scale = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(
+            captureRegion.X + Math.Max(0, captureRegion.Width) / 2,
+            captureRegion.Y));
+        return Math.Max(1, (int)Math.Round(BarHeight * UiScale.Current * scale.Y));
+    }
+
+    /// <summary>
+    /// True when this bar occupies (or auto-anchor would occupy) the strip above
+    /// <paramref name="captureRegion"/>. Safe from the overlay thread.
+    /// Does not treat a not-yet-positioned HWND (e.g. 0,0) as occupying the top band.
+    /// </summary>
+    internal bool WouldAutoParkAbove(System.Drawing.Rectangle captureRegion)
+    {
+        if (captureRegion.IsEmpty)
+            return false;
+
+        if (!_userPositioned && (_parkedAboveRegion || WouldParkAboveRegion(captureRegion, EstimatePhysicalHeight(captureRegion))))
+            return true;
+
+        var bounds = GetScreenBounds();
+        if (bounds.IsEmpty)
+            return false;
+        if (bounds.Right <= captureRegion.Left || bounds.Left >= captureRegion.Right)
+            return false;
+        // Must actually sit in the gap above the region, not merely be higher on the screen.
+        int maxGap = Math.Max(40, bounds.Height);
+        return bounds.Bottom <= captureRegion.Top + 8
+            && bounds.Bottom >= captureRegion.Top - maxGap;
+    }
+
+    /// <summary>
+    /// Same flip rule as <see cref="PositionAboveRegion"/>: no room below the region
+    /// in the monitor work area, and the above placement still fits on-screen.
+    /// </summary>
+    internal static bool WouldParkAboveRegion(System.Drawing.Rectangle captureRegion, int barHeightPhys)
+    {
+        if (captureRegion.IsEmpty || barHeightPhys <= 0)
+            return false;
+
+        var screen = System.Windows.Forms.Screen.FromRectangle(captureRegion);
+        System.Drawing.Rectangle workArea;
+        System.Drawing.Rectangle screenBounds;
+        if (PopupWindowHelper.TryGetNativeMonitorInfo(screen, out var nativeBounds, out var nativeWork)
+            && !nativeWork.IsEmpty)
+        {
+            workArea = nativeWork;
+            screenBounds = nativeBounds.IsEmpty ? screen.Bounds : nativeBounds;
+        }
+        else
+        {
+            workArea = screen.WorkingArea;
+            screenBounds = screen.Bounds;
+        }
+
+        var scale = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(
+            captureRegion.X + Math.Max(0, captureRegion.Width) / 2,
+            captureRegion.Y));
+        int gap = (int)Math.Round(14 * scale.Y);
+        int edge = (int)Math.Round(4 * scale.Y);
+
+        int tyBelow = captureRegion.Bottom + gap;
+        if (tyBelow + barHeightPhys <= workArea.Bottom - edge)
+            return false;
+
+        int tyAbove = captureRegion.Y - barHeightPhys - gap;
+        return tyAbove >= screenBounds.Top + edge;
     }
 
     /// <summary>
@@ -216,6 +304,32 @@ public sealed partial class RecordingControlBarWindow : Window
         _isDragInProgress = dragging;
         Opacity = dragging ? 0.0 : 1.0;
         IsHitTestVisible = !dragging;
+        if (!dragging)
+            AssertBarTopmost();
+    }
+
+    /// <summary>
+    /// Pointer is on the bar. Restore visibility if a region-drag hide was left
+    /// stuck (MouseUp lost to this HWND) and keep the bar above the overlay.
+    /// </summary>
+    internal void RecoverVisibilityIfIdle()
+    {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(RecoverVisibilityIfIdle); return; }
+        if (_isDragInProgress)
+        {
+            _isDragInProgress = false;
+            Opacity = 1.0;
+            IsHitTestVisible = true;
+        }
+        AssertBarTopmost();
+        Dispatcher.BeginInvoke(AssertBarTopmost, DispatcherPriority.Loaded);
+    }
+
+    /// <summary>True when <paramref name="screenPoint"/> (physical pixels) is on this bar.</summary>
+    public bool ContainsScreenPoint(System.Drawing.Point screenPoint)
+    {
+        var bounds = GetScreenBounds();
+        return !bounds.IsEmpty && bounds.Contains(screenPoint);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -353,13 +467,17 @@ public sealed partial class RecordingControlBarWindow : Window
         int ty = captureRegion.Bottom + gap;
 
         // If that goes past the working area bottom, flip ABOVE the region.
-        if (ty + barHeightPhys > workArea.Bottom - edge)
+        // Pills evacuate to the sides of the frame so they are not in the path to the bar.
+        bool noRoomBelow = ty + barHeightPhys > workArea.Bottom - edge;
+        if (noRoomBelow)
             ty = captureRegion.Y - barHeightPhys - gap;
 
         // If still off the top, park at the bottom of the working area without
         // overlapping the region if possible.
+        bool clampedOffTop = false;
         if (ty < screenBounds.Top + edge)
         {
+            clampedOffTop = true;
             ty = workArea.Bottom - barHeightPhys - (int)Math.Round(16 * scale.Y);
             if (ty < screenBounds.Top + edge)
                 ty = screenBounds.Top + edge;
@@ -369,8 +487,18 @@ public sealed partial class RecordingControlBarWindow : Window
         if (tx < screenBounds.Left + edge) tx = screenBounds.Left + edge;
         if (tx + barWidthPhys > screenBounds.Right - edge) tx = screenBounds.Right - edge - barWidthPhys;
 
+        _parkedAboveRegion = noRoomBelow && !clampedOffTop;
         MoveBarToPhysical(tx, ty);
+        NotifyOverlayChromeRelayout();
         // If handle isn't ready, SourceInitialized re-invokes this and places it then.
+    }
+
+    private void NotifyOverlayChromeRelayout()
+    {
+        if (OwnerWinFormsForm is not RecordingForm form || !form.IsHandleCreated || form.IsDisposed)
+            return;
+        try { form.RequestRecordingChromeRelayout(); }
+        catch { /* overlay may be closing */ }
     }
 
     private void MoveBarToPhysical(int x, int y)
@@ -397,11 +525,16 @@ public sealed partial class RecordingControlBarWindow : Window
             return false;
 
         var bounds = GetScreenBounds();
-        if (bounds.IsEmpty || !bounds.IntersectsWith(obstacleScreen))
+        if (bounds.IsEmpty)
             return false;
 
-        // Lift so the bar bottom clears the obstacle top (plus a gap).
+        // Treat "flush adjacent" as a collision too — sitting in the same band
+        // next to the pills is the layout the user reported.
         const int liftGap = 14;
+        var padded = obstacleScreen;
+        padded.Inflate(liftGap, liftGap);
+        if (!bounds.IntersectsWith(padded))
+            return false;
         int lift = bounds.Bottom - (obstacleScreen.Top - liftGap);
         if (lift <= 0)
             return false;
@@ -448,6 +581,7 @@ public sealed partial class RecordingControlBarWindow : Window
             return;
 
         _userPositioned = true;
+        _parkedAboveRegion = false;
 
         var hwnd = new WindowInteropHelper(this).Handle;
         int barWidth = (int)Math.Round(BarWidth * UiScale.Current);
@@ -488,15 +622,16 @@ public sealed partial class RecordingControlBarWindow : Window
         AssertBarTopmost();
     }
 
-    /// <summary>Keep the bar above the fullscreen overlay without ShowWindow flash.</summary>
+    /// <summary>
+    /// Keep the bar above the fullscreen overlay without ShowWindow flash.
+    /// HWND-only so the overlay thread can call it without waiting on the WPF
+    /// dispatcher — a delayed assert loses the race to tooltip Hide() restacking.
+    /// </summary>
     internal void AssertBarTopmost()
     {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.BeginInvoke(AssertBarTopmost);
-            return;
-        }
-        var hwnd = new WindowInteropHelper(this).Handle;
+        IntPtr hwnd;
+        try { hwnd = new WindowInteropHelper(this).Handle; }
+        catch { return; }
         if (hwnd == IntPtr.Zero)
             return;
         User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, 0, 0, 0, 0,
@@ -1450,6 +1585,7 @@ public sealed partial class RecordingControlBarWindow : Window
         TeardownMini();
         _pulseTimer.Stop();
         _storageTimer.Stop();
+        _nativeHwnd = IntPtr.Zero;
         base.OnClosed(e);
     }
 }

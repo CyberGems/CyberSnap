@@ -247,11 +247,7 @@ public sealed partial class RecordingForm
     {
         CloseControlBar();
 
-        var screenRegion = new Rectangle(
-            _recordRegion.X + _virtualBounds.X,
-            _recordRegion.Y + _virtualBounds.Y,
-            _recordRegion.Width,
-            _recordRegion.Height);
+        var screenRegion = GetRecordRegionScreen();
 
         // Own the bar by this overlay so it stays above it while dragging.
         _controlBarWpf = RecordingControlBarWindow.Create(screenRegion, _format, _fps, _openTrimmerAfterCapture, this, _savePath);
@@ -489,9 +485,7 @@ public sealed partial class RecordingForm
         {
             if (pill.IsEmpty)
                 continue;
-            var screenPill = pill;
-            screenPill.Offset(_virtualBounds.X, _virtualBounds.Y);
-            bounds = Rectangle.Union(bounds, screenPill);
+            bounds = Rectangle.Union(bounds, ClientToScreenRect(pill));
         }
         return bounds;
     }
