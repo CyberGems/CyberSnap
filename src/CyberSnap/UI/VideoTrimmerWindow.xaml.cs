@@ -188,6 +188,7 @@ namespace CyberSnap.UI
             Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
             Resources["ThemeAccentHoverBrush"] = Theme.Brush(Theme.AccentHover);
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
+            Waveform.BarBrush = Theme.Brush(Theme.TextSecondary);
             VolumeControl.RefreshThemeBrushes();
             Icon = WindowIcons.Wpf(WindowIconKind.Trimmer);
 
@@ -372,6 +373,8 @@ namespace CyberSnap.UI
             DisposeGifSequence();
             DisposeMp4Sequence();
             Filmstrip.Children.Clear();
+            Waveform.Peaks = null;
+            WaveformHost.Visibility = Visibility.Collapsed;
         }
 
         private void ReattachPreviewRendering()
@@ -504,6 +507,7 @@ namespace CyberSnap.UI
             SetPlayPauseIcon(true);
             UpdatePlayPauseToolTip();
             BuildFilmstrip();
+            StartWaveformLoad(loadVersion);
             HideProgressOverlay();
 
             if (_hasAudioTrack)
@@ -1502,10 +1506,69 @@ namespace CyberSnap.UI
 
         private void Filmstrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (_videoDurationSeconds <= 0.05 || Filmstrip.ActualWidth <= 0)
+            if (_videoDurationSeconds <= MinSegmentSeconds || Filmstrip.ActualWidth <= 0)
                 return;
 
             double percent = Math.Clamp(e.GetPosition(Filmstrip).X / Filmstrip.ActualWidth, 0.0, 1.0);
+            SeekToSeconds(percent * _videoDurationSeconds);
+        }
+
+        private void StartWaveformLoad(int version)
+        {
+            if (_isGif || !_hasAudioTrack)
+            {
+                WaveformHost.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            CancellationToken ct = _previewLoadCts?.Token ?? CancellationToken.None;
+            _ = LoadWaveformAsync(version, ct);
+        }
+
+        private async Task LoadWaveformAsync(int version, CancellationToken ct)
+        {
+            const int buckets = 180;
+            float[]? peaks = await AudioWaveform.GetPeaksAsync(_mediaFilePath, buckets, ct);
+            if (version != _mp4LoadVersion)
+                return;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (version != _mp4LoadVersion)
+                    return;
+
+                if (peaks == null || peaks.Length == 0)
+                {
+                    Waveform.Peaks = null;
+                    WaveformHost.Visibility = Visibility.Collapsed;
+                    return;
+                }
+
+                Waveform.Peaks = peaks;
+                UpdateWaveformSelection();
+                WaveformHost.Visibility = Visibility.Visible;
+            });
+        }
+
+        private void UpdateWaveformSelection()
+        {
+            if (_videoDurationSeconds <= 0)
+            {
+                Waveform.SelectionStart = 0;
+                Waveform.SelectionEnd = 1;
+                return;
+            }
+
+            Waveform.SelectionStart = Math.Clamp(_startTimeSeconds / _videoDurationSeconds, 0, 1);
+            Waveform.SelectionEnd = Math.Clamp(_endTimeSeconds / _videoDurationSeconds, 0, 1);
+        }
+
+        private void Waveform_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_videoDurationSeconds <= MinSegmentSeconds || Waveform.ActualWidth <= 0)
+                return;
+
+            double percent = Math.Clamp(e.GetPosition(Waveform).X / Waveform.ActualWidth, 0.0, 1.0);
             SeekToSeconds(percent * _videoDurationSeconds);
         }
 
@@ -1532,6 +1595,8 @@ namespace CyberSnap.UI
                 ColKeepHandle.Width = new GridLength(keep, GridUnitType.Star);
                 ColEndHandle.Width = new GridLength(endCut, GridUnitType.Star);
             }
+
+            UpdateWaveformSelection();
         }
 
         private void StartThumb_DragStarted(object sender, DragStartedEventArgs e)
@@ -1864,9 +1929,10 @@ namespace CyberSnap.UI
         private void UpdatePreciseCutTooltip()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
-            PreciseCutToggleBtn.ToolTip = _preciseCut
-                ? LocalizationService.Translate(lang, "Disable precise cut") + " (P)"
-                : LocalizationService.Translate(lang, "Enable precise cut") + " (P)";
+            PreciseCutLabel.Text = LocalizationService.Translate(lang, "Precise");
+            PreciseCutToggleBtn.ToolTip = (_preciseCut
+                ? LocalizationService.Translate(lang, "Precise cut on: frame-exact boundaries (re-encode, slower)")
+                : LocalizationService.Translate(lang, "Precise cut off: fast keyframe cut (boundaries are approximate)")) + " (P)";
             System.Windows.Automation.AutomationProperties.SetName(PreciseCutToggleBtn,
                 LocalizationService.Translate(lang, "Enable precise cut"));
         }
@@ -1876,10 +1942,11 @@ namespace CyberSnap.UI
             string lang = _settingsService.Settings.InterfaceLanguage;
             StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (← · Shift+← −1s)";
             StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (→ · Shift+→ +1s)";
-            CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the media file to the clipboard");
-            SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file") + " (Ctrl+S)";
+            CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the original file (untrimmed) to the clipboard");
+            SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed segment as a new file, keeping the original") + " (Ctrl+S)";
             TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version") + " (Ctrl+T)";
             ResetBtn.ToolTip = LocalizationService.Translate(lang, "Reset crop range") + " (R)";
+            WaveformHost.ToolTip = LocalizationService.Translate(lang, "Audio waveform — click to seek");
             UpdateLoopTooltip();
             UpdatePreciseCutTooltip();
             InitZoomIcons();

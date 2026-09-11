@@ -857,6 +857,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0" Grid.Column="0"
@@ -1075,6 +1076,25 @@
                                  Background="Transparent"
                                  MouseLeftButtonDown="Filmstrip_MouseLeftButtonDown" />
                 </Border>
+
+                <!-- Audio waveform: peaks across the full duration, dimmed outside
+                     the kept segment. Click to seek. Collapsed when no audio. -->
+                <Border x:Name="WaveformHost"
+                        Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                        Margin="0,6,0,0"
+                        Height="34"
+                        CornerRadius="6"
+                        ClipToBounds="True"
+                        Background="{DynamicResource ThemeInputBackgroundBrush}"
+                        BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                        BorderThickness="1"
+                        Cursor="Hand"
+                        Visibility="Collapsed"
+                        MouseLeftButtonDown="Waveform_MouseLeftButtonDown">
+                    <controls:WaveformControl x:Name="Waveform"
+                                              Margin="8,3,8,3"
+                                              IsHitTestVisible="False"/>
+                </Border>
             </Grid>
 
             <!-- Playback Controls (Play/Pause, Frame Steps) + Volume + Actions -->
@@ -1194,70 +1214,92 @@
                 </Grid>
 
                 <!-- Export actions on their own full-width row so Trim is never
-                     clipped at the default window size (fixes hidden Trim button). -->
-                <StackPanel Grid.Row="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Margin="12,10,12,0">
-                    <ToggleButton x:Name="PreciseCutToggleBtn" Width="32" Height="32"
+                     clipped at the default window size (fixes hidden Trim button).
+                     Left: export mode. Right: utilities | file outputs. -->
+                <Grid Grid.Row="2" Margin="12,10,12,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ToggleButton x:Name="PreciseCutToggleBtn" Grid.Column="0" Height="32"
                                   VerticalAlignment="Center"
-                                  Margin="0,0,10,0"
+                                  Padding="10,0"
                                   Click="PreciseCutToggleBtn_Click"
                                   ToolTip="Enable precise cut (P)"
                                   Style="{StaticResource TrimmerLoopToggleStyle}">
-                        <Path Data="M 12,3 L 12,9 M 12,15 L 12,21 M 3,12 L 9,12 M 15,12 L 21,12 M 10,10 L 14,10 L 14,14 L 10,14 Z"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
-                              StrokeThickness="1.8"
-                              StrokeStartLineCap="Round"
-                              StrokeEndLineCap="Round"
-                              StrokeLineJoin="Round"
-                              Fill="Transparent"
-                              Width="14" Height="14" Stretch="Uniform"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="M 12,3 L 12,9 M 12,15 L 12,21 M 3,12 L 9,12 M 15,12 L 21,12 M 10,10 L 14,10 L 14,14 L 10,14 Z"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                  StrokeThickness="1.8"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="Transparent"
+                                  Width="14" Height="14" Stretch="Uniform"
+                                  VerticalAlignment="Center"/>
+                            <TextBlock x:Name="PreciseCutLabel"
+                                       Text="Precise"
+                                       Margin="7,0,0,0"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
                     </ToggleButton>
 
-                    <Button x:Name="ResetBtn"
-                            Content="Reset"
-                            Padding="16,8"
-                            Margin="0,0,10,0"
-                            Click="ResetBtn_Click"
-                            ToolTip="Reset crop range"
-                            Style="{StaticResource TrimmerFlatButtonStyle}"
-                            FontWeight="SemiBold"
-                            IsEnabled="False"/>
-
-                    <Border x:Name="TrimBtnHost"
-                            ClipToBounds="True"
-                            VerticalAlignment="Center"
-                            Opacity="0.45">
-                        <Button x:Name="TrimBtn"
-                                Content="Trim"
-                                Padding="20,8"
-                                Margin="0,0,12,0"
-                                Click="TrimBtn_Click"
-                                ToolTip="Overwrite the original file with the trimmed version"
-                                Style="{StaticResource TrimmerCutButtonStyle}"
-                                FontWeight="Bold"
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        <Button x:Name="ResetBtn"
+                                Content="Reset"
+                                Padding="14,8"
+                                Margin="0,0,8,0"
+                                Click="ResetBtn_Click"
+                                ToolTip="Reset crop range"
+                                Style="{StaticResource TrimmerFlatButtonStyle}"
+                                FontWeight="SemiBold"
                                 IsEnabled="False"/>
-                    </Border>
 
-                    <Button x:Name="CopyFileBtn"
-                            Content="Copy"
-                            Padding="16,8"
-                            Margin="0,0,10,0"
-                            Click="CopyFileBtn_Click"
-                            ToolTip="Copy the media file to the clipboard"
-                            Style="{StaticResource TrimmerFlatButtonStyle}"
-                            FontWeight="SemiBold"/>
+                        <Button x:Name="CopyFileBtn"
+                                Content="Copy"
+                                Padding="14,8"
+                                Margin="0,0,8,0"
+                                Click="CopyFileBtn_Click"
+                                ToolTip="Copy the media file to the clipboard"
+                                Style="{StaticResource TrimmerFlatButtonStyle}"
+                                FontWeight="SemiBold"/>
 
-                    <Button x:Name="SaveAsNewBtn"
-                            Content="Save As New"
-                            Padding="16,8"
-                            Click="SaveAsNewBtn_Click"
-                            ToolTip="Save the trimmed video as a new file"
-                            Style="{StaticResource TrimmerFlatButtonStyle}"
-                            FontWeight="SemiBold"/>
-                </StackPanel>
+                        <Border Width="1"
+                                Height="20"
+                                Background="{DynamicResource ThemeSeparatorBrush}"
+                                Margin="4,0,12,0"
+                                VerticalAlignment="Center"/>
+
+                        <Button x:Name="SaveAsNewBtn"
+                                Content="Save As New"
+                                Padding="14,8"
+                                Margin="0,0,10,0"
+                                Click="SaveAsNewBtn_Click"
+                                ToolTip="Save the trimmed video as a new file"
+                                Style="{StaticResource TrimmerFlatButtonStyle}"
+                                FontWeight="SemiBold"/>
+
+                        <Border x:Name="TrimBtnHost"
+                                ClipToBounds="True"
+                                VerticalAlignment="Center"
+                                Opacity="0.45">
+                            <Button x:Name="TrimBtn"
+                                    Content="Trim"
+                                    Padding="22,8"
+                                    Click="TrimBtn_Click"
+                                    ToolTip="Overwrite the original file with the trimmed version"
+                                    Style="{StaticResource TrimmerCutButtonStyle}"
+                                    FontWeight="Bold"
+                                    IsEnabled="False"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
     </Border>
