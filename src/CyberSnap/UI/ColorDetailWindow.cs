@@ -421,10 +421,12 @@ internal sealed class ColorDetailWindow : Window
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
             IsReadOnly = true,
-            IsReadOnlyCaretVisible = true,
+            IsReadOnlyCaretVisible = false,
+            FocusVisualStyle = new Style(),
             Cursor = System.Windows.Input.Cursors.Arrow,
         };
         ToolTipService.SetToolTip(tb, T("Click to select, use the copy button"));
+        tb.ContextMenu = BuildValueMenu(tb);
         tb.GotFocus += (_, _) => tb.SelectAll();
         tb.PreviewMouseLeftButtonDown += (_, _) =>
         {
@@ -463,6 +465,19 @@ internal sealed class ColorDetailWindow : Window
         grid.Children.Add(copy);
 
         return grid;
+    }
+
+    /// <summary>Minimal text menu: partial selection is allowed, but nothing else (no cut/paste/undo).</summary>
+    private static ContextMenu BuildValueMenu(WpfTextBox tb)
+    {
+        var menu = new ContextMenu();
+        var copyItem = new MenuItem { Header = T("Copy") };
+        copyItem.Click += (_, _) => tb.Copy();
+        var selectItem = new MenuItem { Header = T("Select all") };
+        selectItem.Click += (_, _) => { tb.Focus(); tb.SelectAll(); };
+        menu.Items.Add(copyItem);
+        menu.Items.Add(selectItem);
+        return menu;
     }
 
     private FrameworkElement BuildFooter()
@@ -873,7 +888,7 @@ internal sealed class ColorDetailWindow : Window
         double onWhite = ColorFormatHelper.ContrastRatio(_r, _g, _b, againstWhite: true);
         double onBlack = ColorFormatHelper.ContrastRatio(_r, _g, _b, againstWhite: false);
         _previewName.Text = $"{T(name)}  ·  {hex}";
-        _previewContrast.Text = $"◐ {onWhite:0.0}:1 / ◑ {onBlack:0.0}:1  ·  {ColorFormatHelper.ContrastGrade(Math.Max(onWhite, onBlack))}";
+        _previewContrast.Text = $"{T("Contrast")}: {onWhite:0.0}:1 {T("on white")} · {onBlack:0.0}:1 {T("on black")} ({ColorFormatHelper.ContrastGrade(Math.Max(onWhite, onBlack))})";
 
         PopulateRecents();
     }
