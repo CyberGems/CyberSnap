@@ -204,18 +204,37 @@ public sealed class StandaloneColorPickerForm : Form
 
         var color = Color.FromArgb(argb);
         PickedColor = color;
-        string hex = $"{color.R:X2}{color.G:X2}{color.B:X2}";
 
-        try
+        // Read-only snapshot on this (WinForms STA) thread; the detail window
+        // itself is always created on the WPF UI thread via Dispatcher below,
+        // so there is no cross-thread UI ownership issue.
+        var prefs = SettingsService.LoadStatic();
+        bool showDetail = prefs?.ShowColorDetailWindow ?? true;
+        bool autoCopy = prefs?.ColorDetailAutoCopy ?? true;
+        var format = prefs?.ColorDetailCopyFormat ?? Models.ColorDetailCopyFormat.Hex;
+        bool includeHash = prefs?.ColorDetailIncludeHash ?? true;
+
+        string hexBare = $"{color.R:X2}{color.G:X2}{color.B:X2}";
+        string copyText = format switch
         {
-            Clipboard.SetText($"#{hex}");
-        }
-        catch (Exception ex)
+            Models.ColorDetailCopyFormat.Rgb => Helpers.ColorFormatHelper.ToRgb(color.R, color.G, color.B),
+            Models.ColorDetailCopyFormat.Hsl => Helpers.ColorFormatHelper.ToHsl(color.R, color.G, color.B),
+            _ => Helpers.ColorFormatHelper.ToHex(color.R, color.G, color.B, includeHash),
+        };
+
+        if (autoCopy)
         {
-            AppDiagnostics.LogWarning("standalone-colorpicker.clipboard", ex.Message);
+            try
+            {
+                ClipboardService.CopyTextToClipboard(copyText);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("standalone-colorpicker.clipboard", ex.Message);
+            }
         }
 
-        HistoryService.QuickSaveColor(hex);
+        HistoryService.QuickSaveColor(hexBare);
         App.NotifyStandaloneCapture(isColor: true);
 
         Close();
@@ -225,11 +244,37 @@ public sealed class StandaloneColorPickerForm : Form
         {
             System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
             {
-                ToastWindow.ShowWithColor(
-                    $"#{hex}",
-                    $"R: {color.R}  G: {color.G}  B: {color.B}",
-                    wpfColor,
-                    suppressSound: false);
+                try
+                {
+                    if (System.Windows.Application.Current is App app)
+                        app.PersistRecentColor($"#{hexBare}");
+
+                    if (showDetail)
+                    {
+                        ColorDetailWindow.ShowForColor(color.R, color.G, color.B,
+                            repick: () =>
+                            {
+                                try
+                                {
+                                    if (System.Windows.Application.Current is App repickApp)
+                                        repickApp.OnStandaloneColorPickerProxy();
+                                }
+                                catch (Exception ex) { AppDiagnostics.LogError("standalone-colorpicker.repick", ex); }
+                            });
+                    }
+                    else
+                    {
+                        ToastWindow.ShowWithColor(
+                            $"#{hexBare}",
+                            $"R: {color.R}  G: {color.G}  B: {color.B}",
+                            wpfColor,
+                            suppressSound: false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppDiagnostics.LogError("standalone-colorpicker.toast", ex);
+                }
             });
         }
         catch (Exception ex)

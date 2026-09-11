@@ -142,9 +142,16 @@ public enum HistoryClickAction
     OpenInDefaultViewer
 }
 
-/// <summary>What happens when the user left-clicks the capture preview body on a toast.</summary>
-public enum ToastPreviewClickAction
+/// <summary>Preferred color format for the standalone color detail window auto-copy.</summary>
+public enum ColorDetailCopyFormat
 {
+    Hex = 0,
+    Rgb = 1,
+    Hsl = 2,
+}
+
+/// <summary>What happens when the user left-clicks the capture preview body on a toast.</summary>
+public enum ToastPreviewClickAction{
     OpenInEditor = 0,
     OpenInDefaultViewer = 1,
     CopyToClipboard = 2,
@@ -503,6 +510,18 @@ public sealed class AppSettings
 
     /// <summary>Most recently selected colors in the color picker. Hex format. Capped to 12 entries.</summary>
     public List<string> RecentColors { get; set; } = new();
+
+    /// <summary>Show the color detail window after picking a color with the standalone picker.</summary>
+    public bool ShowColorDetailWindow { get; set; } = true;
+
+    /// <summary>Automatically copy the favorite format when a color is picked.</summary>
+    public bool ColorDetailAutoCopy { get; set; } = true;
+
+    /// <summary>Favorite format used for auto-copy and the footer quick action.</summary>
+    public ColorDetailCopyFormat ColorDetailCopyFormat { get; set; } = ColorDetailCopyFormat.Hex;
+
+    /// <summary>Include the leading "#" when copying HEX values.</summary>
+    public bool ColorDetailIncludeHash { get; set; } = true;
 
     /// <summary>Persist image captures to the configured save folder.</summary>
     public bool SaveToFile { get; set; } = true;

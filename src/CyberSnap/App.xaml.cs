@@ -184,6 +184,19 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.clear-recent-files", ex); }
     }
 
+    /// <summary>Persists the standalone color detail window preferences.</summary>
+    public void PersistColorDetailPrefs(bool showWindow, bool autoCopy, Models.ColorDetailCopyFormat format, bool includeHash)
+    {
+        if (_settingsService is null) return;
+        var s = _settingsService.Settings;
+        s.ShowColorDetailWindow = showWindow;
+        s.ColorDetailAutoCopy = autoCopy;
+        s.ColorDetailCopyFormat = format;
+        s.ColorDetailIncludeHash = includeHash;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-color-detail", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "auto-fit vs real size on open" preference.</summary>
     public void PersistEditorFitPreference(bool fitToWindow)
     {
