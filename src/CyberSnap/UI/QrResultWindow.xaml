@@ -68,10 +68,17 @@
             <Setter Property="Padding" Value="8,3"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForegroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="QrTextBox" TargetType="TextBox">
@@ -199,7 +206,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="CopyIcon"
                                       Data="{StaticResource CopyIconGeometry}"
-                                      Stroke="{DynamicResource ThemeTextSecondaryBrush}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                       StrokeThickness="2.2"
                                       StrokeLineJoin="Round"
                                       Fill="Transparent"

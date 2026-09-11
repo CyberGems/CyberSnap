@@ -107,6 +107,8 @@ public partial class QrResultWindow : Window
         Resources["ThemeInputBorderBrush"] = Theme.Brush(Theme.BorderSubtle);
         Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
         Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
+        Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
+        Resources["ThemeAccentForegroundBrush"] = Theme.Brush(Theme.AccentForeground);
         Resources["ThemeAccentHoverBrush"] = Theme.Brush(Theme.AccentHover);
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         CheckerboardHost.Background = Theme.CreateCheckerboardBrush();

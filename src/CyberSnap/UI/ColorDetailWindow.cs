@@ -48,6 +48,13 @@ internal sealed class ColorDetailWindow : Window
     private WpfComboBox _formatCombo = null!;
     private System.Windows.Controls.Image _expanderIcon = null!;
     private WpfButton _expanderBtn = null!;
+    private Grid _headerBar = null!;
+    private TextBlock _titleBlock = null!;
+
+    private string _builtLang = "";
+    private WpfColor _builtAccent;
+    private bool _builtDark;
+    private bool _builtGray;
 
     public event Action? RepickRequested;
 
@@ -76,8 +83,44 @@ internal sealed class ColorDetailWindow : Window
         Content = BuildContent();
         PositionNearCursor();
         RefreshAll();
+        SnapshotLiveState();
 
         PreviewKeyDown += OnPreviewKeyDown;
+        Activated += (_, _) => RefreshLiveState();
+        ContentRendered += (_, _) => ClampToMonitor();
+    }
+
+    private void SnapshotLiveState()
+    {
+        _builtLang = LocalizationService.CurrentLanguageCode;
+        _builtAccent = Theme.Accent;
+        _builtDark = Theme.IsDark;
+        _builtGray = Theme.IsGray;
+    }
+
+    /// <summary>Rebuilds content when theme or language changed while open (like other windows).</summary>
+    private void RefreshLiveState()
+    {
+        try
+        {
+            Theme.Refresh();
+            if (LocalizationService.CurrentLanguageCode == _builtLang
+                && Theme.Accent == _builtAccent
+                && Theme.IsDark == _builtDark
+                && Theme.IsGray == _builtGray)
+                return;
+
+            try { Theme.ApplyTo(Resources); } catch { }
+            LoadPrefs();
+            bool expanded = _footerExpanded;
+            Title = LocalizationService.Translate("Color picker");
+            Content = BuildContent();
+            SnapshotLiveState();
+            if (!expanded)
+                ToggleFooterOptions();
+            RefreshAll();
+        }
+        catch (Exception ex) { AppDiagnostics.LogError("color-detail.live", ex); }
     }
 
     private void LoadPrefs()
@@ -152,15 +195,17 @@ internal sealed class ColorDetailWindow : Window
 
     private FrameworkElement BuildHeader()
     {
-        var grid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+        var grid = new Grid { Margin = new Thickness(0, 0, 0, 10), Background = WpfBrushes.Transparent };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.MouseLeftButtonDown += OnHeaderDrag;
+        _headerBar = grid;
 
         var icon = new System.Windows.Controls.Image
         {
-            Source = FluentIcons.RenderWpf("picker", ToDrawing(accentFg: true), 18),
+            Source = FluentIcons.RenderWpf("picker", ToDrawing(accentFg: true), 36),
             Width = 18,
             Height = 18,
             VerticalAlignment = VerticalAlignment.Center,
@@ -168,7 +213,7 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(icon, 0);
         grid.Children.Add(icon);
 
-        var title = new TextBlock
+        _titleBlock = new TextBlock
         {
             Text = T("Color picker"),
             FontSize = 15,
@@ -176,13 +221,14 @@ internal sealed class ColorDetailWindow : Window
             Foreground = Theme.Brush(Theme.TextPrimary),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 0, 0),
+            Cursor = System.Windows.Input.Cursors.SizeAll,
         };
-        Grid.SetColumn(title, 1);
-        grid.Children.Add(title);
+        Grid.SetColumn(_titleBlock, 1);
+        grid.Children.Add(_titleBlock);
 
         _expanderIcon = new System.Windows.Controls.Image
         {
-            Source = FluentIcons.RenderWpf("chevronDown", ToDrawing(Theme.TextSecondary), 14),
+            Source = FluentIcons.RenderWpf("chevronDown", ToDrawing(Theme.TextSecondary), 28),
             Width = 14,
             Height = 14,
             RenderTransformOrigin = new System.Windows.Point(0.5, 0.5),
@@ -211,11 +257,12 @@ internal sealed class ColorDetailWindow : Window
             BorderThickness = new Thickness(0),
             Content = new System.Windows.Controls.Image
             {
-                Source = FluentIcons.RenderWpf("close", ToDrawing(Theme.TextMuted), 12),
+                Source = FluentIcons.RenderWpf("close", ToDrawing(Theme.TextMuted), 24),
                 Width = 12,
                 Height = 12,
             },
         };
+        ToolTipService.SetToolTip(close, T("Close"));
         close.Click += (_, _) => Close();
         Grid.SetColumn(close, 3);
         grid.Children.Add(close);
@@ -249,7 +296,7 @@ internal sealed class ColorDetailWindow : Window
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             Content = new System.Windows.Controls.Image
             {
-                Source = FluentIcons.RenderWpf("picker", ToDrawing(Theme.TextPrimary), 15),
+                Source = FluentIcons.RenderWpf("picker", ToDrawing(Theme.TextPrimary), 30),
                 Width = 15,
                 Height = 15,
             },
@@ -277,6 +324,27 @@ internal sealed class ColorDetailWindow : Window
             _expanderIcon.RenderTransform = new RotateTransform(_footerExpanded ? 180 : 0);
         if (_expanderBtn is not null)
             ToolTipService.SetToolTip(_expanderBtn, T(_footerExpanded ? "Hide options" : "Show options"));
+        Dispatcher.BeginInvoke(new Action(ClampToMonitor), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>Drags the window from the whole header bar (SizeAll cursor on the title, grabbing while dragging).</summary>
+    private void OnHeaderDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+            return;
+
+        DependencyObject? current = e.OriginalSource as DependencyObject;
+        while (current is not null && !ReferenceEquals(current, _headerBar))
+        {
+            if (current is WpfButton)
+                return;
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        Cursor = System.Windows.Input.Cursors.SizeAll;
+        try { DragMove(); }
+        catch (Exception ex) { AppDiagnostics.LogError("color-detail.drag", ex); }
+        finally { ClearValue(CursorProperty); }
     }
 
     private FrameworkElement? _footer;
@@ -352,9 +420,20 @@ internal sealed class ColorDetailWindow : Window
             Foreground = Theme.Brush(Theme.TextPrimary),
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
-            IsReadOnly = false,
+            IsReadOnly = true,
+            IsReadOnlyCaretVisible = true,
+            Cursor = System.Windows.Input.Cursors.Arrow,
         };
+        ToolTipService.SetToolTip(tb, T("Click to select, use the copy button"));
         tb.GotFocus += (_, _) => tb.SelectAll();
+        tb.PreviewMouseLeftButtonDown += (_, _) =>
+        {
+            if (!tb.IsFocused)
+            {
+                tb.Focus();
+                tb.SelectAll();
+            }
+        };
         box = tb;
         Grid.SetColumn(box, 1);
         grid.Children.Add(box);
@@ -372,7 +451,7 @@ internal sealed class ColorDetailWindow : Window
             BorderThickness = new Thickness(1),
             Content = new System.Windows.Controls.Image
             {
-                Source = FluentIcons.RenderWpf("copy", ToDrawing(Theme.TextPrimary), 14),
+                Source = FluentIcons.RenderWpf("copy", ToDrawing(Theme.TextPrimary), 28),
                 Width = 14,
                 Height = 14,
             },
@@ -900,28 +979,58 @@ internal sealed class ColorDetailWindow : Window
         {
             var cursor = System.Windows.Forms.Cursor.Position;
             WindowStartupLocation = WindowStartupLocation.Manual;
-            var source = PresentationSource.FromVisual(this);
-            double dpiX = 1, dpiY = 1;
-            if (source?.CompositionTarget is not null)
-            {
-                dpiX = source.CompositionTarget.TransformToDevice.M11;
-                dpiY = source.CompositionTarget.TransformToDevice.M22;
-            }
-            double w = (Width + 16) * dpiX;
-            double h = 480 * dpiY;
+            // Initial placement next to the cursor; ContentRendered clamps with the real size.
             var work = System.Windows.Forms.Screen.FromPoint(cursor).WorkingArea;
-            int x = cursor.X + 24;
-            int y = cursor.Y - (int)(h / 2);
-            if (x + w > work.Right - 8) x = cursor.X - (int)w - 24;
-            if (y < work.Top + 8) y = work.Top + 8;
-            if (y + h > work.Bottom - 8) y = (int)(work.Bottom - h - 8);
-            Left = x / dpiX;
-            Top = Math.Max(work.Top, y) / dpiY;
+            var dpi = VisualTreeHelper.GetDpi(this);
+            double xPhys = cursor.X + 24;
+            double yPhys = cursor.Y - 240;
+            xPhys = Math.Min(xPhys, work.Right - 100);
+            yPhys = Math.Clamp(yPhys, work.Top + 8, Math.Max(work.Top + 8, work.Bottom - 200));
+            Left = xPhys / dpi.DpiScaleX;
+            Top = yPhys / dpi.DpiScaleY;
         }
         catch
         {
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
+    }
+
+    /// <summary>Keeps the whole window inside its own monitor's working area (all four edges).</summary>
+    private void ClampToMonitor()
+    {
+        try
+        {
+            if (!IsLoaded || ActualWidth <= 0 || ActualHeight <= 0)
+                return;
+
+            var dpi = VisualTreeHelper.GetDpi(this);
+
+            double wPhys = ActualWidth * dpi.DpiScaleX;
+            double hPhys = ActualHeight * dpi.DpiScaleY;
+            double xPhys = Left * dpi.DpiScaleX;
+            double yPhys = Top * dpi.DpiScaleY;
+
+            // Use the window's own center so a dragged window clamps to the monitor it's on.
+            var center = new System.Drawing.Point(
+                (int)(xPhys + wPhys / 2),
+                (int)(yPhys + hPhys / 2));
+            var work = System.Windows.Forms.Screen.FromPoint(center).WorkingArea;
+
+            const double margin = 8;
+            if (wPhys < work.Width - margin * 2)
+                xPhys = Math.Clamp(xPhys, work.Left + margin, work.Right - margin - wPhys);
+            else
+                xPhys = work.Left + margin;
+
+            if (hPhys < work.Height - margin * 2)
+                yPhys = Math.Clamp(yPhys, work.Top + margin, work.Bottom - margin - hPhys);
+            else
+                yPhys = work.Top + margin;
+
+            Left = xPhys / dpi.DpiScaleX;
+            Top = yPhys / dpi.DpiScaleY;
+        }
+        catch (Exception ex) { AppDiagnostics.LogError("color-detail.clamp", ex); }
     }
 
     private static System.Drawing.Color ToDrawing(WpfColor c) =>
