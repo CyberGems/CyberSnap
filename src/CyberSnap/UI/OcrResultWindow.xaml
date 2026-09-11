@@ -1,6 +1,7 @@
 <Window x:Class="CyberSnap.UI.OcrResultWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:CyberSnap.UI"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:Services="clr-namespace:CyberSnap.Services"
         Title="Text extraction (OCR)"
@@ -263,7 +264,10 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
         </Style>
 
-        <!-- Compact accent button used for the per-section Copy actions (same family as the color picker CTA) -->
+        <!-- Compact accent button used for the per-section Copy actions (same family as the color picker CTA).
+             Own ControlTemplate so hover really paints solid accent + accent-ink in every
+             theme (a Style-level Background setter would lose against the ChromeButtonBase
+             template-level hover). Press squash comes from ui:PressFeedback. -->
         <Style x:Key="OcrHeaderActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="MinHeight" Value="24"/>
             <Setter Property="MinWidth" Value="0"/>
@@ -274,13 +278,40 @@
             <Setter Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForegroundBrush}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForegroundBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForegroundBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- The translation action gets a restrained accent tint so it is easier to
@@ -295,6 +326,38 @@
             <Setter Property="Background" Value="{DynamicResource TranslationTintBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource TranslationTintBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="OcrSearchNavButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">

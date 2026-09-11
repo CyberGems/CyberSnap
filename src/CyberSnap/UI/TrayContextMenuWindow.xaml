@@ -1,6 +1,7 @@
 <Window x:Class="CyberSnap.UI.TrayContextMenuWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:CyberSnap.UI"
         xmlns:Services="clr-namespace:CyberSnap.Services"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -32,6 +33,8 @@
             <Setter Property="Padding" Value="6"/>
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Height" Value="160"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="ui:PressFeedback.Enabled" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -67,6 +70,8 @@
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Height" Value="38"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="ui:PressFeedback.Enabled" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -101,6 +106,8 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="ui:PressFeedback.Enabled" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">

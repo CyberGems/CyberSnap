@@ -307,11 +307,11 @@ public partial class OcrResultWindow : Window
         MoveCopyButton(expand);
 
         var targetAngle = expand ? 90.0 : 0.0;
-        if (animate)
+        if (animate && !Motion.Disabled)
         {
-            var spin = new DoubleAnimation(targetAngle, TimeSpan.FromMilliseconds(160))
+            var spin = new DoubleAnimation(targetAngle, Motion.Ms(160))
             {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                EasingFunction = Motion.Ease(Motion.SmoothOut)
             };
             TranslationChevronRotation.BeginAnimation(RotateTransform.AngleProperty, spin);
         }

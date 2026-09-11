@@ -265,6 +265,9 @@ public partial class CaptureWidgetWindow : Window
         HookDisplayEvents();
         ClampMonitorIndexToAvailableScreens();
         PositionWindow();
+        // Template parts exist now: park both thumbs on their rest position
+        // without playing the slide on startup.
+        SnapToggleThumbs();
     }
 
     public void RefreshLayout()
@@ -372,6 +375,99 @@ public partial class CaptureWidgetWindow : Window
 
     // Settings → widget: re-read the global Auto-copy master.
     public void RefreshAutoCopyToggle() => UpdateAutoCopyState();
+
+    private const double WidgetToggleThumbTravel = 16.0;
+    private const int WidgetToggleSlideMs = 140;
+    private const int WidgetCapturePopMs = 120;
+    private const int WidgetCaptureSettleMs = 180;
+
+    /// <summary>
+    /// Slides a WidgetToggleSwitch thumb with Motion so "Disable animations"
+    /// snaps instantly instead of playing the old hardcoded XAML Storyboard.
+    /// </summary>
+    private void AnimateToggleThumb(System.Windows.Controls.Primitives.ToggleButton toggle, bool animate)
+    {
+        try
+        {
+            toggle.ApplyTemplate();
+            var offset = toggle.Template.FindName("ThumbOffset", toggle) as TranslateTransform;
+            if (offset is null)
+                return;
+            double target = toggle.IsChecked == true ? WidgetToggleThumbTravel : 0.0;
+            offset.BeginAnimation(TranslateTransform.XProperty, null);
+            if (!animate || Motion.Disabled)
+            {
+                offset.X = target;
+                return;
+            }
+            offset.BeginAnimation(TranslateTransform.XProperty,
+                Motion.FromTo(offset.X, target, WidgetToggleSlideMs, Motion.SmoothOut));
+        }
+        catch { /* best-effort microanimation; checked colors still apply via template */ }
+    }
+
+    private void SnapToggleThumbs()
+    {
+        AnimateToggleThumb(AutoCopyToggle, animate: false);
+        AnimateToggleThumb(CaptureCursorToggle, animate: false);
+    }
+
+    private void CaptureButton_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) =>
+        AnimateCaptureButton(hovered: true);
+
+    private void CaptureButton_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) =>
+        AnimateCaptureButton(hovered: false);
+
+    /// <summary>
+    /// Hover pop for the big capture mark (ring + center + glow), Motion-aware.
+    /// </summary>
+    private void AnimateCaptureButton(bool hovered)
+    {
+        try
+        {
+            CaptureButton.ApplyTemplate();
+            var ring = CaptureButton.Template.FindName("RingScale", CaptureButton) as ScaleTransform;
+            var center = CaptureButton.Template.FindName("CenterScale", CaptureButton) as ScaleTransform;
+            var glow = CaptureButton.Template.FindName("CenterGlow", CaptureButton) as System.Windows.Media.Effects.DropShadowEffect;
+            if (ring is null || center is null)
+                return;
+
+            double ringTarget = hovered ? 1.06 : 1.0;
+            double centerTarget = hovered ? 1.30 : 1.0;
+            double blurTarget = hovered ? 22.0 : 10.0;
+            double glowTarget = hovered ? 1.0 : 0.8;
+            int ms = hovered ? WidgetCapturePopMs : WidgetCaptureSettleMs;
+
+            if (Motion.Disabled)
+            {
+                ring.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                ring.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                center.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                center.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                ring.ScaleX = ring.ScaleY = ringTarget;
+                center.ScaleX = center.ScaleY = centerTarget;
+                if (glow is not null)
+                {
+                    glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, null);
+                    glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
+                    glow.BlurRadius = blurTarget;
+                    glow.Opacity = glowTarget;
+                }
+                return;
+            }
+
+            ring.BeginAnimation(ScaleTransform.ScaleXProperty, Motion.To(ringTarget, ms, Motion.SmoothOut));
+            ring.BeginAnimation(ScaleTransform.ScaleYProperty, Motion.To(ringTarget, ms, Motion.SmoothOut));
+            center.BeginAnimation(ScaleTransform.ScaleXProperty, Motion.To(centerTarget, ms, Motion.SmoothOut));
+            center.BeginAnimation(ScaleTransform.ScaleYProperty, Motion.To(centerTarget, ms, Motion.SmoothOut));
+            if (glow is not null)
+            {
+                glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, Motion.To(blurTarget, ms, Motion.SmoothOut));
+                glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, Motion.To(glowTarget, ms, Motion.SmoothOut));
+            }
+        }
+        catch { /* hover pop is decorative; ring highlight still applies via template */ }
+    }
 
     /// <summary>
     /// Mirrors the tray menu's green update LED: visible next to the widget branding
@@ -1457,7 +1553,9 @@ public partial class CaptureWidgetWindow : Window
 
     private void CaptureCursorToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressCaptureCursorToggle) return;
+        bool programmatic = _suppressCaptureCursorToggle;
+        AnimateToggleThumb(CaptureCursorToggle, animate: !programmatic && IsLoaded);
+        if (programmatic) return;
 
         // The widget's cursor toggle is screenshot-only: video and GIF have their
         // own per-format toggles in Settings (and now also inline on the recording
@@ -1471,7 +1569,9 @@ public partial class CaptureWidgetWindow : Window
 
     private void AutoCopyToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressAutoCopyToggle) return;
+        bool programmatic = _suppressAutoCopyToggle;
+        AnimateToggleThumb(AutoCopyToggle, animate: !programmatic && IsLoaded);
+        if (programmatic) return;
 
         var enabled = AutoCopyToggle.IsChecked == true;
         AutoCopyPreferences.SetMaster(_settings, enabled);

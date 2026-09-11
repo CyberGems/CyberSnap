@@ -1,10 +1,13 @@
 <Application x:Class="CyberSnap.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:CyberSnap.UI"
              ThemeMode="System"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <!-- Shared button chrome used by app-wide and page-specific styles -->
+        <!-- Shared button chrome used by app-wide and page-specific styles.
+             Press squash is animated by ui:PressFeedback (Motion-aware) instead of
+             an instant RenderTransform setter, so Disable-animations snaps instantly. -->
         <Style x:Key="ChromeButtonBase" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -14,6 +17,7 @@
             <Setter Property="MinWidth" Value="40"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="ui:PressFeedback.Enabled" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -30,11 +34,6 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonPressedBrush}"/>
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
-                                    </Setter.Value>
-                                </Setter>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>

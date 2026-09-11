@@ -194,6 +194,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryCtaBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="ui:PressFeedback.Enabled" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -211,11 +212,7 @@
                                 <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
