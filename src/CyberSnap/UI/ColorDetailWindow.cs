@@ -9,8 +9,8 @@ using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using WpfButton = System.Windows.Controls.Button;
-using WpfCheckBox = System.Windows.Controls.CheckBox;
 using WpfComboBox = System.Windows.Controls.ComboBox;
+using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using WpfTextBox = System.Windows.Controls.TextBox;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfCursors = System.Windows.Input.Cursors;
@@ -46,9 +46,8 @@ internal sealed class ColorDetailWindow : Window
     private WpfTextBox _hslBox = null!;
     private WrapPanel _recentPanel = null!;
     private WpfComboBox _formatCombo = null!;
-    private WpfCheckBox _autoCopyCheck = null!;
-    private WpfCheckBox _hashCheck = null!;
-    private WpfCheckBox _showCheck = null!;
+    private System.Windows.Controls.Image _expanderIcon = null!;
+    private WpfButton _expanderBtn = null!;
 
     public event Action? RepickRequested;
 
@@ -59,6 +58,7 @@ internal sealed class ColorDetailWindow : Window
         _b = b;
 
         Theme.Refresh();
+        try { Theme.ApplyTo(Resources); } catch { }
         LoadPrefs();
 
         Title = LocalizationService.Translate("Color picker");
@@ -156,6 +156,7 @@ internal sealed class ColorDetailWindow : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var icon = new System.Windows.Controls.Image
         {
@@ -179,6 +180,28 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(title, 1);
         grid.Children.Add(title);
 
+        _expanderIcon = new System.Windows.Controls.Image
+        {
+            Source = FluentIcons.RenderWpf("chevronDown", ToDrawing(Theme.TextSecondary), 14),
+            Width = 14,
+            Height = 14,
+            RenderTransformOrigin = new System.Windows.Point(0.5, 0.5),
+            RenderTransform = new RotateTransform(180),
+        };
+        _expanderBtn = new WpfButton
+        {
+            Width = 28,
+            Height = 28,
+            Cursor = WpfCursors.Hand,
+            Background = WpfBrushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Content = _expanderIcon,
+        };
+        ToolTipService.SetToolTip(_expanderBtn, T("Hide options"));
+        _expanderBtn.Click += (_, _) => ToggleFooterOptions();
+        Grid.SetColumn(_expanderBtn, 2);
+        grid.Children.Add(_expanderBtn);
+
         var close = new WpfButton
         {
             Width = 28,
@@ -194,7 +217,7 @@ internal sealed class ColorDetailWindow : Window
             },
         };
         close.Click += (_, _) => Close();
-        Grid.SetColumn(close, 2);
+        Grid.SetColumn(close, 3);
         grid.Children.Add(close);
 
         return grid;
@@ -203,42 +226,42 @@ internal sealed class ColorDetailWindow : Window
     private FrameworkElement BuildPickRow()
     {
         var grid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var pick = StyledButton(T("Pick"), isAccent: false);
-        pick.Click += (_, _) => { Close(); RepickRequested?.Invoke(); };
-        ToolTipService.SetToolTip(pick, T("Pick another color from the screen"));
-        Grid.SetColumn(pick, 0);
-        grid.Children.Add(pick);
 
         _recentPanel = new WrapPanel
         {
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(10, 0, 0, 0),
         };
-        Grid.SetColumn(_recentPanel, 1);
+        Grid.SetColumn(_recentPanel, 0);
         grid.Children.Add(_recentPanel);
 
-        var gear = new WpfButton
+        // Eyedropper button like the annotation editor's flyout gotero.
+        var pick = new WpfButton
         {
-            Width = 28,
-            Height = 28,
+            Width = 32,
+            Height = 32,
             Cursor = WpfCursors.Hand,
-            Background = WpfBrushes.Transparent,
-            BorderThickness = new Thickness(0),
+            BorderThickness = new Thickness(1),
+            Background = Theme.Brush(Theme.IsDark
+                ? WpfColor.FromArgb(255, 48, 50, 66)
+                : WpfColor.FromArgb(255, 228, 230, 237)),
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
             Content = new System.Windows.Controls.Image
             {
-                Source = FluentIcons.RenderWpf("gear", ToDrawing(Theme.TextSecondary), 16),
-                Width = 16,
-                Height = 16,
+                Source = FluentIcons.RenderWpf("picker", ToDrawing(Theme.TextPrimary), 15),
+                Width = 15,
+                Height = 15,
             },
         };
-        ToolTipService.SetToolTip(gear, T("Color detail options"));
-        gear.Click += (_, _) => ToggleFooterOptions();
-        Grid.SetColumn(gear, 2);
-        grid.Children.Add(gear);
+        ToolTipService.SetToolTip(pick, T("Pick") + ": " + T("Pick another color from the screen"));
+        pick.Click += (_, _) => { Close(); RepickRequested?.Invoke(); };
+        pick.MouseEnter += (_, _) => pick.Background = Theme.Brush(Theme.TabHoverBg);
+        pick.MouseLeave += (_, _) => pick.Background = Theme.Brush(Theme.IsDark
+            ? WpfColor.FromArgb(255, 48, 50, 66)
+            : WpfColor.FromArgb(255, 228, 230, 237));
+        Grid.SetColumn(pick, 1);
+        grid.Children.Add(pick);
 
         return grid;
     }
@@ -250,6 +273,10 @@ internal sealed class ColorDetailWindow : Window
         _footerExpanded = !_footerExpanded;
         if (_footer is not null)
             _footer.Visibility = _footerExpanded ? Visibility.Visible : Visibility.Collapsed;
+        if (_expanderIcon is not null)
+            _expanderIcon.RenderTransform = new RotateTransform(_footerExpanded ? 180 : 0);
+        if (_expanderBtn is not null)
+            ToolTipService.SetToolTip(_expanderBtn, T(_footerExpanded ? "Hide options" : "Show options"));
     }
 
     private FrameworkElement? _footer;
@@ -379,10 +406,18 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(favLabel, 0);
         formatRow.Children.Add(favLabel);
 
-        _formatCombo = new WpfComboBox { Height = 26, MinWidth = 110 };
-        _formatCombo.Items.Add("HEX");
-        _formatCombo.Items.Add("RGB");
-        _formatCombo.Items.Add("HSL");
+        _formatCombo = new WpfComboBox
+        {
+            Height = 34,
+            MinWidth = 110,
+            FontSize = 12,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            MaxDropDownHeight = 240,
+            Style = GetThemedComboBoxStyle(),
+        };
+        _formatCombo.Items.Add(BuildThemedComboBoxItem("HEX"));
+        _formatCombo.Items.Add(BuildThemedComboBoxItem("RGB"));
+        _formatCombo.Items.Add(BuildThemedComboBoxItem("HSL"));
         _formatCombo.SelectedIndex = _format switch
         {
             ColorDetailCopyFormat.Rgb => 1,
@@ -403,12 +438,9 @@ internal sealed class ColorDetailWindow : Window
         formatRow.Children.Add(_formatCombo);
         stack.Children.Add(formatRow);
 
-        _autoCopyCheck = OptionCheck(T("Auto-copy on pick"), _autoCopy, v => { _autoCopy = v; SavePrefs(); });
-        _hashCheck = OptionCheck(T("Include # in HEX"), _includeHash, v => { _includeHash = v; SavePrefs(); RefreshAll(); });
-        _showCheck = OptionCheck(T("Show this window after picking"), _showWindowPref, v => { _showWindowPref = v; SavePrefs(); });
-        stack.Children.Add(_autoCopyCheck);
-        stack.Children.Add(_hashCheck);
-        stack.Children.Add(_showCheck);
+        stack.Children.Add(OptionToggleRow(T("Auto-copy on pick"), _autoCopy, v => { _autoCopy = v; SavePrefs(); }));
+        stack.Children.Add(OptionToggleRow(T("Include # in HEX"), _includeHash, v => { _includeHash = v; SavePrefs(); RefreshAll(); }));
+        stack.Children.Add(OptionToggleRow(T("Show this window after picking"), _showWindowPref, v => { _showWindowPref = v; SavePrefs(); }));
 
         var actions = new Grid { Margin = new Thickness(0, 10, 0, 0) };
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -429,20 +461,281 @@ internal sealed class ColorDetailWindow : Window
         return stack;
     }
 
-    private static WpfCheckBox OptionCheck(string text, bool initial, Action<bool> onChange)
+    /// <summary>Settings-style option row: label on the left, widget-like toggle on the right.</summary>
+    private static FrameworkElement OptionToggleRow(string text, bool initial, Action<bool> onChange)
     {
-        var check = new WpfCheckBox
+        var grid = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var label = new TextBlock
+        {
+            Text = text,
+            FontSize = 12,
+            Foreground = Theme.Brush(Theme.TextPrimary),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(label, 0);
+        grid.Children.Add(label);
+
+        var toggle = BuildToggle(initial, onChange);
+        Grid.SetColumn(toggle, 1);
+        grid.Children.Add(toggle);
+
+        return grid;
+    }
+
+    /// <summary>Widget-style toggle switch (34x18 sliding thumb, accent track when on).</summary>
+    private static WpfButton BuildToggle(bool initial, Action<bool> onChange)
+    {
+        bool isOn = initial;
+        var accent = Theme.Accent;
+
+        var track = new Border
+        {
+            Width = 34,
+            Height = 18,
+            CornerRadius = new CornerRadius(9),
+            BorderThickness = new Thickness(1.2),
+            SnapsToDevicePixels = true,
+        };
+        var thumb = new Border
+        {
+            Width = 12,
+            Height = 12,
+            CornerRadius = new CornerRadius(6),
+            SnapsToDevicePixels = true,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                Color = Colors.Black,
+                BlurRadius = 3,
+                ShadowDepth = 1,
+                Direction = 270,
+                Opacity = 0.35,
+            },
+        };
+        var host = new Grid
+        {
+            Width = 34,
+            Height = 18,
+            Background = WpfBrushes.Transparent,
+            SnapsToDevicePixels = true,
+        };
+        host.Children.Add(track);
+        host.Children.Add(thumb);
+
+        void Refresh()
+        {
+            track.Background = isOn
+                ? Theme.Brush(accent)
+                : Theme.Brush(Theme.IsDark
+                    ? WpfColor.FromArgb(255, 48, 50, 66)
+                    : WpfColor.FromArgb(255, 214, 218, 229));
+            track.BorderBrush = isOn
+                ? Theme.Brush(accent)
+                : Theme.Brush(Theme.BorderSubtle);
+            thumb.Background = isOn
+                ? Theme.Brush(Colors.White)
+                : Theme.Brush(Theme.IsDark
+                    ? WpfColor.FromRgb(150, 156, 170)
+                    : WpfColor.FromRgb(120, 124, 135));
+            thumb.HorizontalAlignment = isOn ? WpfHAlign.Right : WpfHAlign.Left;
+            thumb.VerticalAlignment = VerticalAlignment.Center;
+            thumb.Margin = isOn ? new Thickness(0, 0, 3, 0) : new Thickness(3, 0, 0, 0);
+        }
+        Refresh();
+
+        var toggle = new WpfButton
+        {
+            Width = 34,
+            Height = 18,
+            Padding = new Thickness(0),
+            Cursor = WpfCursors.Hand,
+            Background = WpfBrushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Content = host,
+            Template = BlankButtonTemplate(),
+        };
+        toggle.Click += (_, _) =>
+        {
+            isOn = !isOn;
+            Refresh();
+            onChange(isOn);
+        };
+        return toggle;
+    }
+
+    private static ControlTemplate BlankButtonTemplate()
+    {
+        var border = new FrameworkElementFactory(typeof(Border));
+        border.SetValue(Border.BackgroundProperty, WpfBrushes.Transparent);
+        var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+        presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, WpfHAlign.Center);
+        presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+        border.AppendChild(presenter);
+        return new ControlTemplate(typeof(WpfButton)) { VisualTree = border };
+    }
+
+    private static WpfComboBoxItem BuildThemedComboBoxItem(string text)
+    {
+        return new WpfComboBoxItem
         {
             Content = text,
-            FontSize = 11.5,
+            Height = 30,
+            Padding = new Thickness(8, 4, 8, 4),
             Foreground = Theme.Brush(Theme.TextPrimary),
-            IsChecked = initial,
-            Margin = new Thickness(0, 2, 0, 2),
-            Cursor = WpfCursors.Hand,
+            Background = WpfBrushes.Transparent,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Style = GetThemedComboBoxItemStyle(),
         };
-        check.Checked += (_, _) => onChange(true);
-        check.Unchecked += (_, _) => onChange(false);
-        return check;
+    }
+
+    private static Style GetThemedComboBoxStyle()
+    {
+        const string xaml = @"
+<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+       xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
+       TargetType='ComboBox'>
+    <Setter Property='MinHeight' Value='34'/>
+    <Setter Property='Padding' Value='8,4,8,4'/>
+    <Setter Property='FontSize' Value='12'/>
+    <Setter Property='VerticalContentAlignment' Value='Center'/>
+    <Setter Property='Foreground' Value='{DynamicResource ThemeTextPrimaryBrush}'/>
+    <Setter Property='Background' Value='{DynamicResource ThemeInputBackgroundBrush}'/>
+    <Setter Property='BorderBrush' Value='{DynamicResource ThemeInputBorderBrush}'/>
+    <Setter Property='BorderThickness' Value='1'/>
+    <Setter Property='ScrollViewer.CanContentScroll' Value='True'/>
+    <Setter Property='MaxDropDownHeight' Value='280'/>
+    <Setter Property='Template'>
+        <Setter.Value>
+            <ControlTemplate TargetType='ComboBox'>
+                <Grid SnapsToDevicePixels='True'>
+                    <ToggleButton x:Name='ToggleSite'
+                                  HorizontalAlignment='Stretch'
+                                  VerticalAlignment='Stretch'
+                                  Background='Transparent'
+                                  BorderThickness='0'
+                                  Focusable='False'
+                                  IsChecked='{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}'
+                                  ClickMode='Press'>
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType='ToggleButton'>
+                                <ContentPresenter HorizontalAlignment='Stretch' VerticalAlignment='Stretch'/>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                        <Border x:Name='Bd'
+                                HorizontalAlignment='Stretch'
+                                MinHeight='{TemplateBinding MinHeight}'
+                                Background='{TemplateBinding Background}'
+                                BorderBrush='{TemplateBinding BorderBrush}'
+                                BorderThickness='{TemplateBinding BorderThickness}'
+                                CornerRadius='6'
+                                Padding='{TemplateBinding Padding}'>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width='*'/>
+                                    <ColumnDefinition Width='18'/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter x:Name='ContentSite'
+                                                  Content='{TemplateBinding SelectionBoxItem}'
+                                                  ContentTemplate='{TemplateBinding SelectionBoxItemTemplate}'
+                                                  ContentStringFormat='{TemplateBinding SelectionBoxItemStringFormat}'
+                                                  IsHitTestVisible='False'
+                                                  Margin='0,0,6,0'
+                                                  RecognizesAccessKey='True'
+                                                  TextBlock.Foreground='{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}'
+                                                  VerticalAlignment='{TemplateBinding VerticalContentAlignment}'/>
+                                <Path Grid.Column='1'
+                                      Width='8'
+                                      Height='4'
+                                      HorizontalAlignment='Center'
+                                      VerticalAlignment='Center'
+                                      Data='M 0 0 L 4 4 L 8 0 Z'
+                                      Fill='{DynamicResource ThemeTextSecondaryBrush}'/>
+                            </Grid>
+                        </Border>
+                    </ToggleButton>
+                    <Popup x:Name='PART_Popup'
+                           AllowsTransparency='True'
+                           Focusable='False'
+                           IsOpen='{TemplateBinding IsDropDownOpen}'
+                           Placement='Bottom'
+                           PopupAnimation='Fade'>
+                        <Border MinWidth='{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}'
+                                MaxHeight='{TemplateBinding MaxDropDownHeight}'
+                                Margin='0,4,0,0'
+                                Background='{DynamicResource ThemeCardBrush}'
+                                BorderBrush='{DynamicResource ThemeInputBorderBrush}'
+                                BorderThickness='1'
+                                CornerRadius='6'
+                                SnapsToDevicePixels='True'>
+                            <ScrollViewer Padding='4'
+                                          CanContentScroll='{TemplateBinding ScrollViewer.CanContentScroll}'
+                                          HorizontalScrollBarVisibility='Disabled'
+                                          VerticalScrollBarVisibility='Auto'>
+                                <ItemsPresenter KeyboardNavigation.DirectionalNavigation='Contained'/>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+                </Grid>
+                <ControlTemplate.Triggers>
+                    <Trigger Property='IsMouseOver' Value='True'>
+                        <Setter TargetName='Bd' Property='BorderBrush' Value='#35FFFFFF'/>
+                    </Trigger>
+                    <Trigger Property='IsKeyboardFocusWithin' Value='True'>
+                        <Setter TargetName='Bd' Property='BorderBrush' Value='{DynamicResource ThemeTextPrimaryBrush}'/>
+                    </Trigger>
+                    <Trigger Property='IsEnabled' Value='False'>
+                        <Setter TargetName='Bd' Property='Opacity' Value='0.45'/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>";
+        return (Style)System.Windows.Markup.XamlReader.Parse(xaml);
+    }
+
+    private static Style GetThemedComboBoxItemStyle()
+    {
+        const string xaml = @"
+<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+       xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
+       TargetType='ComboBoxItem'>
+    <Setter Property='MinHeight' Value='30'/>
+    <Setter Property='Padding' Value='9,5'/>
+    <Setter Property='Foreground' Value='{DynamicResource ThemeTextPrimaryBrush}'/>
+    <Setter Property='Background' Value='Transparent'/>
+    <Setter Property='HorizontalContentAlignment' Value='Stretch'/>
+    <Setter Property='VerticalContentAlignment' Value='Center'/>
+    <Setter Property='Template'>
+        <Setter.Value>
+            <ControlTemplate TargetType='ComboBoxItem'>
+                <Border x:Name='Bd'
+                        Background='{TemplateBinding Background}'
+                        CornerRadius='4'
+                        Padding='{TemplateBinding Padding}'
+                        SnapsToDevicePixels='True'>
+                    <ContentPresenter HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}'
+                                      RecognizesAccessKey='True'
+                                      VerticalAlignment='{TemplateBinding VerticalContentAlignment}'/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property='IsHighlighted' Value='True'>
+                        <Setter TargetName='Bd' Property='Background' Value='{DynamicResource ThemeTabActiveBrush}'/>
+                    </Trigger>
+                    <Trigger Property='IsSelected' Value='True'>
+                        <Setter TargetName='Bd' Property='Background' Value='{DynamicResource ThemeTabHoverBrush}'/>
+                    </Trigger>
+                    <Trigger Property='IsEnabled' Value='False'>
+                        <Setter TargetName='Bd' Property='Opacity' Value='0.4'/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>";
+        return (Style)System.Windows.Markup.XamlReader.Parse(xaml);
     }
 
     private WpfButton StyledButton(string text, bool isAccent)
