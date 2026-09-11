@@ -31,7 +31,6 @@ public partial class OcrResultWindow : Window
     private readonly List<ComboBoxItem> _fromLanguageItems = new();
     private readonly List<ComboBoxItem> _toLanguageItems = new();
     private bool _suppressTranslationPreferenceChange;
-    private bool _isPinned;
     private readonly List<int> _searchMatchStarts = new();
     private int _currentMatchIndex = -1;
     private bool _restoreOcrSelectionOnContextMenuClose;
@@ -76,7 +75,6 @@ public partial class OcrResultWindow : Window
         PopulateLanguageCombos();
         SelectTranslationModelCombo(settingsService.Settings.TranslationModel);
         SetTranslationPanelExpanded(settingsService.Settings.OcrTranslationPanelExpanded, animate: false);
-        SetPinned(settingsService.Settings.OcrResultWindowPinnedByDefault);
         RefreshLocalization();
 
         Activated += (_, _) => ApplyTheme();
@@ -91,19 +89,12 @@ public partial class OcrResultWindow : Window
             OcrTextBox.CaretIndex = OcrTextBox.Text.Length;
 
             // Force window to foreground on show, even if the user switched to another app
-            var wasPinned = _isPinned;
             Topmost = true;
             Activate();
-            if (!wasPinned)
+            Dispatcher.BeginInvoke(new Action(() =>
             {
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (!_isPinned)
-                    {
-                        Topmost = false;
-                    }
-                }), DispatcherPriority.Background);
-            }
+                Topmost = false;
+            }), DispatcherPriority.Background);
         };
 
         TranslationService.SetGoogleApiKey(settingsService.Settings.GoogleTranslateApiKey);
@@ -998,21 +989,6 @@ public partial class OcrResultWindow : Window
             Stretch = Stretch.Uniform,
             Opacity = 0.88
         };
-    }
-
-    private void TitleBar_PinRequested(object? sender, EventArgs e)
-    {
-        SetPinned(!_isPinned);
-    }
-
-    private void SetPinned(bool pinned)
-    {
-        _isPinned = pinned;
-        _lifecycle.SetPinned(_isPinned);
-        OcrTitleBar.IsPinActive = _isPinned;
-        Topmost = pinned;
-        _settingsService.Settings.OcrResultWindowPinnedByDefault = pinned;
-        _settingsService.Save();
     }
 
     private int _savedOcrSelectionStart;

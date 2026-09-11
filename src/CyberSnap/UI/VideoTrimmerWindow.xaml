@@ -2,9 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
-        Title="Video &amp; GIF Trimmer"
-        Height="560" Width="720"
-        MinHeight="450" MinWidth="600"
+         Title="Video &amp; GIF Trimmer"
+         Height="604" Width="720"
+         MinHeight="500" MinWidth="600"
         ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
@@ -642,9 +642,7 @@
             <Grid Grid.Row="0">
                 <controls:CyberSnapTitleBar x:Name="TrimmerTitleBar"
                                             Title="Video &amp; GIF Trimmer ⋅ CyberSnap"
-                                            ShowPinButton="True"
-                                            CloseRequested="TitleBar_CloseRequested"
-                                            PinRequested="TitleBar_PinRequested"/>
+                                            CloseRequested="TitleBar_CloseRequested"/>
                 <!-- Centered Filename with LED Overlay -->
                 <StackPanel x:Name="TitleContainer"
                             Orientation="Horizontal" 
@@ -916,9 +914,11 @@
                 <!-- Slider with integrated range track (red/green segments behind thumb) -->
                 <Grid Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,10,0" Height="28" ClipToBounds="False">
                     <Border VerticalAlignment="Center"
-                            Height="6"
-                            CornerRadius="3"
+                            Height="8"
+                            CornerRadius="4"
                             ClipToBounds="True"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                             Margin="6,0,6,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -957,10 +957,11 @@
                         <Thumb x:Name="StartThumb"
                                Grid.Column="1"
                                HorizontalAlignment="Left"
-                               Width="12"
-                               Height="24"
-                               Margin="-6,0,0,0"
+                               Width="16"
+                               Height="28"
+                               Margin="-8,0,0,0"
                                Cursor="SizeWE"
+                               Focusable="True"
                                Style="{StaticResource TrimmerStartHandleThumbStyle}"
                                DragStarted="StartThumb_DragStarted"
                                DragDelta="StartThumb_DragDelta"
@@ -969,10 +970,11 @@
                         <Thumb x:Name="EndThumb"
                                Grid.Column="1"
                                HorizontalAlignment="Right"
-                               Width="12"
-                               Height="24"
-                               Margin="0,0,-6,0"
+                               Width="16"
+                               Height="28"
+                               Margin="0,0,-8,0"
                                Cursor="SizeWE"
+                               Focusable="True"
                                Style="{StaticResource TrimmerEndHandleThumbStyle}"
                                DragStarted="EndThumb_DragStarted"
                                DragDelta="EndThumb_DragDelta"
@@ -1075,9 +1077,10 @@
                 </Border>
             </Grid>
 
-            <!-- Playback Controls (Play/Pause, Frame Steps) + Volume -->
+            <!-- Playback Controls (Play/Pause, Frame Steps) + Volume + Actions -->
             <Grid Grid.Row="3" Margin="0,0,0,8">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -1172,7 +1175,7 @@
                  </Button>
  
                  <!-- Step Forward -->
-                 <Button x:Name="StepForwardBtn" Width="40" Height="40" Click="StepForwardBtn_Click" Margin="12,0,40,0"
+                  <Button x:Name="StepForwardBtn" Width="40" Height="40" Click="StepForwardBtn_Click" Margin="12,0,0,0"
                          Style="{StaticResource TrimmerRoundButtonStyle}">
                      <Path Data="M 4,5 L 6,5 L 6,15 L 4,15 Z M 9,5 L 16,10 L 9,15 Z" 
                            Fill="{DynamicResource ThemeTextPrimaryBrush}" Stretch="Uniform" Width="14" Height="14"/>
@@ -1188,11 +1191,15 @@
                                              VolumeChanged="VolumeControl_VolumeChanged"
                                              ExportMuteChanged="VolumeControl_ExportMuteChanged"/>
 
-                <StackPanel Grid.Column="2"
+                </Grid>
+
+                <!-- Export actions on their own full-width row so Trim is never
+                     clipped at the default window size (fixes hidden Trim button). -->
+                <StackPanel Grid.Row="2"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                             Margin="0,0,12,0">
+                            Margin="12,10,12,0">
                     <ToggleButton x:Name="PreciseCutToggleBtn" Width="32" Height="32"
                                   VerticalAlignment="Center"
                                   Margin="0,0,10,0"
@@ -1222,8 +1229,7 @@
                     <Border x:Name="TrimBtnHost"
                             ClipToBounds="True"
                             VerticalAlignment="Center"
-                            MaxWidth="0"
-                            Opacity="0">
+                            Opacity="0.45">
                         <Button x:Name="TrimBtn"
                                 Content="Trim"
                                 Padding="20,8"
@@ -1252,7 +1258,6 @@
                             Style="{StaticResource TrimmerFlatButtonStyle}"
                             FontWeight="SemiBold"/>
                 </StackPanel>
-                </Grid>
             </Grid>
         </Grid>
     </Border>

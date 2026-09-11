@@ -80,13 +80,25 @@ internal sealed class GifFrameSequence : IDisposable
             return Math.Clamp(uniformIndex, 0, _frameStartSeconds.Length - 1);
         }
 
-        for (int i = _frameStartSeconds.Length - 1; i >= 0; i--)
+        // Binary search over start times: O(log n) instead of O(n) per tick.
+        int lo = 0;
+        int hi = _frameStartSeconds.Length - 1;
+        int result = 0;
+        while (lo <= hi)
         {
-            if (seconds >= _frameStartSeconds[i] - 0.0001)
-                return i;
+            int mid = lo + ((hi - lo) >> 1);
+            if (seconds >= _frameStartSeconds[mid] - 0.0001)
+            {
+                result = mid;
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid - 1;
+            }
         }
 
-        return 0;
+        return result;
     }
 
     public BitmapSource GetFrameSource(int frameIndex)

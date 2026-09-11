@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using CyberSnap.Capture;
@@ -34,7 +35,10 @@ internal sealed class Mp4FrameSequence : IDisposable
         PreviewFps = previewFps;
     }
 
-    public static async Task<Mp4FrameSequence> OpenAsync(string filePath, double requestedFps)
+    public static Task<Mp4FrameSequence> OpenAsync(string filePath, double requestedFps)
+        => OpenAsync(filePath, requestedFps, CancellationToken.None);
+
+    public static async Task<Mp4FrameSequence> OpenAsync(string filePath, double requestedFps, CancellationToken ct)
     {
         if (requestedFps <= 0)
             requestedFps = 30;
@@ -46,14 +50,15 @@ internal sealed class Mp4FrameSequence : IDisposable
         if (!File.Exists(filePath))
             throw new FileNotFoundException("Video file not found.", filePath);
 
-        double duration = await Task.Run(() => MediaProbe.TryGetDurationSeconds(filePath));
+        double duration = await Task.Run(() => MediaProbe.TryGetDurationSeconds(filePath), ct);
         if (duration <= 0.05)
             throw new InvalidOperationException("Could not read video duration.");
 
-        double effectiveFps = requestedFps;
-        if (duration * effectiveFps > MaxPreviewFrames)
-            effectiveFps = MaxPreviewFrames / duration;
-        effectiveFps = Math.Clamp(effectiveFps, 1, requestedFps);
+        // Cap total preview frames so very long videos don't exhaust disk/RAM.
+        // For >15 min material the effective fps may drop below 1 fps, which is
+        // fine for a trimmer preview (filmstrip + scrubbing, not full playback).
+        double effectiveFps = Math.Min(requestedFps, MaxPreviewFrames / Math.Max(duration, 0.05));
+        effectiveFps = Math.Clamp(effectiveFps, 0.25, requestedFps);
 
         string tempDir = Path.Combine(Path.GetTempPath(), $"cybersnap-mp4prev-{Guid.NewGuid():N}");
         SweepStalePreviewTemp();
@@ -75,10 +80,21 @@ internal sealed class Mp4FrameSequence : IDisposable
                 RedirectStandardError = true
             }) ?? throw new InvalidOperationException("Failed to start FFmpeg.");
 
-            await process.WaitForExitAsync();
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync(ct);
+            try
+            {
+                await process.WaitForExitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                await process.WaitForExitAsync();
+                throw;
+            }
+
+            string err = await stderrTask;
             if (process.ExitCode != 0)
             {
-                string err = await process.StandardError.ReadToEndAsync();
                 throw new InvalidOperationException(string.IsNullOrWhiteSpace(err)
                     ? $"FFmpeg preview decode failed ({process.ExitCode})."
                     : err.Trim());

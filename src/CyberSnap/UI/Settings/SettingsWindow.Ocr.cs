@@ -32,7 +32,6 @@ public partial class SettingsWindow
                 AutoCopyOcrCheck.IsChecked =
                     AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Ocr);
             UpdateAutoCopyExcludeEnabledState();
-            OcrPinByDefaultCheck.IsChecked = _settingsService.Settings.OcrResultWindowPinnedByDefault;
             GoogleApiKeyBox.Password = _settingsService.Settings.GoogleTranslateApiKey ?? "";
         }
         finally
@@ -146,22 +145,6 @@ public partial class SettingsWindow
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
             });
-    }
-
-    private void OcrPinByDefaultCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressOcrPreferenceChange) return;
-
-        var previous = _settingsService.Settings.OcrResultWindowPinnedByDefault;
-        var selected = OcrPinByDefaultCheck.IsChecked == true;
-        UpdateOcrPreference(
-            "settings.ocr-pin-by-default",
-            "OCR result window pin",
-            previous,
-            selected,
-            value => _settingsService.Settings.OcrResultWindowPinnedByDefault = value,
-            value => OcrPinByDefaultCheck.IsChecked = value,
-            SetOcrPreferenceStatus);
     }
 
     private static string GetLanguageLabel(string languageTag)

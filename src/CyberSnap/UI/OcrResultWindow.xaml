@@ -397,9 +397,7 @@
 
             <controls:CyberSnapTitleBar x:Name="OcrTitleBar" Grid.Row="0"
                                       Title="Text Extraction (OCR) ⋅ CyberSnap"
-                                      ShowPinButton="True"
-                                      CloseRequested="TitleBar_CloseRequested"
-                                      PinRequested="TitleBar_PinRequested"/>
+                                      CloseRequested="TitleBar_CloseRequested"/>
 
             <!-- OCR workbench: source preview on the left and recognized text on the right. -->
             <Grid x:Name="OcrWorkbench" Grid.Row="1" Margin="14,2,14,0">

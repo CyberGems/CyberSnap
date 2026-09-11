@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
@@ -28,7 +29,6 @@ namespace CyberSnap.UI
         private bool _isHandleDragging;
         private DateTime _lastHandleSeekTime = DateTime.MinValue;
         private double _videoDurationSeconds;
-        private bool _isPinned = false;
 
         private double _startTimeSeconds;
         private double _endTimeSeconds;
@@ -66,7 +66,9 @@ namespace CyberSnap.UI
         private int _mp4LoadVersion;
         private long _sourceFileBytes;
         private CancellationTokenSource? _exportCts;
+        private CancellationTokenSource? _previewLoadCts;
         private bool _isExporting;
+        private const double MinSegmentSeconds = 0.05;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService, Bitmap? posterFrame = null)
         {
@@ -121,10 +123,6 @@ namespace CyberSnap.UI
             CacheTrimButtonWidth();
             SetTrimButtonVisible(false, animate: false);
 
-            // Set up Pin/Topmost state (default is Off)
-            TrimmerTitleBar.IsPinActive = _isPinned;
-            Topmost = _isPinned;
-            
             CopyFileBtn.Content = LocalizationService.Translate(lang, "Copy");
             SaveAsNewBtn.Content = LocalizationService.Translate(lang, "Save As New");
             TrimBtn.Content = LocalizationService.Translate(lang, "Trim");
@@ -356,11 +354,70 @@ namespace CyberSnap.UI
             _gifDisplayedFrameIndex = -1;
         }
 
+        /// <summary>
+        /// Detaches live playback and releases decoded frames + the audio player
+        /// before a reload/overwrite. Shared by Trim / Save As New / file switch
+        /// so the three paths cannot diverge.
+        /// </summary>
+        private void TeardownPreviewForReload()
+        {
+            CompositionTarget.Rendering -= OnRendering;
+            ReleaseDecodedMedia();
+            try { MediaPlayer.Close(); } catch { }
+        }
+
+        private void ReleaseDecodedMedia()
+        {
+            CancelPreviewLoad();
+            DisposeGifSequence();
+            DisposeMp4Sequence();
+            Filmstrip.Children.Clear();
+        }
+
+        private void ReattachPreviewRendering()
+        {
+            CompositionTarget.Rendering -= OnRendering;
+            CompositionTarget.Rendering += OnRendering;
+        }
+
+        private CancellationToken NewPreviewLoadToken()
+        {
+            // NOTE: must NOT bump _gifLoadVersion/_mp4LoadVersion here.
+            // The caller already incremented its version to invalidate any
+            // previous load; bumping again would instantly invalidate the new
+            // load itself and leave the "Loading..." overlay stuck forever.
+            try { _previewLoadCts?.Cancel(); } catch { }
+            _previewLoadCts?.Dispose();
+            _previewLoadCts = new CancellationTokenSource();
+            return _previewLoadCts.Token;
+        }
+
+        private void CancelPreviewLoad()
+        {
+            Interlocked.Increment(ref _gifLoadVersion);
+            Interlocked.Increment(ref _mp4LoadVersion);
+            try { _previewLoadCts?.Cancel(); } catch { }
+            _previewLoadCts?.Dispose();
+            _previewLoadCts = null;
+        }
+
+        private double GetSegmentSeconds() => Math.Max(_endTimeSeconds - _startTimeSeconds, 0);
+
+        private bool IsSegmentValid()
+            => _videoDurationSeconds > 0
+            && _endTimeSeconds > _startTimeSeconds
+            && GetSegmentSeconds() >= MinSegmentSeconds;
+
+        private bool IsCropModified()
+            => _startTimeSeconds > MinSegmentSeconds
+            || _endTimeSeconds < (_videoDurationSeconds - MinSegmentSeconds);
+
         private async Task LoadMp4PreviewAsync()
         {
             int loadVersion = Interlocked.Increment(ref _mp4LoadVersion);
             string path = _mediaFilePath;
             string lang = _settingsService.Settings.InterfaceLanguage;
+            CancellationToken previewCt = NewPreviewLoadToken();
 
             ShowProgressOverlay(LocalizationService.Translate(lang, "Loading video..."));
             MediaPlayer.Visibility = Visibility.Collapsed;
@@ -371,7 +428,12 @@ namespace CyberSnap.UI
             Exception? loadError = null;
             try
             {
-                sequence = await Mp4FrameSequence.OpenAsync(path, _fps);
+                sequence = await Mp4FrameSequence.OpenAsync(path, _fps, previewCt);
+            }
+            catch (OperationCanceledException)
+            {
+                sequence?.Dispose();
+                return;
             }
             catch (Exception ex)
             {
@@ -472,6 +534,7 @@ namespace CyberSnap.UI
             string path = _mediaFilePath;
             int defaultDelayMs = Math.Max(1, (int)Math.Round(1000.0 / _fps));
             string lang = _settingsService.Settings.InterfaceLanguage;
+            CancellationToken previewCt = NewPreviewLoadToken();
 
             ShowProgressOverlay(LocalizationService.Translate(lang, "Loading GIF..."));
             GifPreviewImage.Visibility = Visibility.Collapsed;
@@ -484,7 +547,12 @@ namespace CyberSnap.UI
             Exception? loadError = null;
             try
             {
-                sequence = await Task.Run(() => GifFrameSequence.Open(path, defaultDelayMs));
+                sequence = await Task.Run(() => GifFrameSequence.Open(path, defaultDelayMs), previewCt);
+            }
+            catch (OperationCanceledException)
+            {
+                sequence?.Dispose();
+                return;
             }
             catch (Exception ex)
             {
@@ -1136,9 +1204,18 @@ namespace CyberSnap.UI
 
             double hoverTimeSeconds = percent * _videoDurationSeconds;
 
-            HoverTooltipText.Text = _detailedTimeDisplay 
-                ? FormatTime(hoverTimeSeconds) 
+            string baseText = _detailedTimeDisplay
+                ? FormatTime(hoverTimeSeconds)
                 : FormatSimpleTime(hoverTimeSeconds);
+            if (_fps > 0 && _videoDurationSeconds > 0)
+            {
+                int frame = (int)Math.Round(hoverTimeSeconds * _fps) + 1;
+                int totalFrames = Math.Max(1, (int)Math.Round(_videoDurationSeconds * _fps));
+                frame = Math.Clamp(frame, 1, totalFrames);
+                string frameLabel = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "Frame");
+                baseText += $" · {frameLabel} {frame}/{totalFrames}";
+            }
+            HoverTooltipText.Text = baseText;
 
             // Force layout update so TimelineHoverTooltip.ActualWidth gets calculated correctly based on the new text
             TimelineHoverTooltip.UpdateLayout();
@@ -1175,7 +1252,7 @@ namespace CyberSnap.UI
             }
 
             // Show segment duration when there is an active crop
-            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
+            bool isModified = IsCropModified();
             if (isModified && _detailedTimeDisplay)
             {
                 double segmentSeconds = _endTimeSeconds - _startTimeSeconds;
@@ -1336,6 +1413,13 @@ namespace CyberSnap.UI
             StartSeekBtn.ToolTip = LocalizationService.Translate(lang, "Click to seek · Double-click to edit") + " (Shift+I)";
             EndSeekBtn.ToolTip = LocalizationService.Translate(lang, "Click to seek · Double-click to edit") + " (Shift+O)";
 
+            string startHandleName = LocalizationService.Translate(lang, "Crop start handle");
+            string endHandleName = LocalizationService.Translate(lang, "Crop end handle");
+            System.Windows.Automation.AutomationProperties.SetName(StartThumb, startHandleName);
+            System.Windows.Automation.AutomationProperties.SetName(EndThumb, endHandleName);
+            StartThumb.ToolTip = $"{startHandleName} ({FormatTime(_startTimeSeconds)} · ←/→)";
+            EndThumb.ToolTip = $"{endHandleName} ({FormatTime(_endTimeSeconds)} · ←/→)";
+
             UpdateRangeBarDisplay();
         }
 
@@ -1350,27 +1434,70 @@ namespace CyberSnap.UI
                 return;
             }
 
+            int version = _isGif ? _gifLoadVersion : _mp4LoadVersion;
+            _ = BuildFilmstripAsync(version);
+        }
+
+        private async Task BuildFilmstripAsync(int version)
+        {
             const int thumbCount = 8;
+            const double thumbHeight = 30;
+            var thumbs = new List<BitmapSource>(thumbCount);
+
             for (int i = 0; i < thumbCount; i++)
             {
-                double t = _videoDurationSeconds * i / (thumbCount - 1);
-                int frameIndex = _isGif
-                    ? _gifSequence!.GetFrameIndexAt(t)
-                    : _mp4Sequence!.GetFrameIndexAt(t);
-                BitmapSource source = _isGif
-                    ? _gifSequence!.GetFrameSource(frameIndex)
-                    : _mp4Sequence!.GetFrameSource(frameIndex);
+                if ((_isGif ? _gifLoadVersion : _mp4LoadVersion) != version)
+                    return;
 
+                double t = _videoDurationSeconds * i / (thumbCount - 1);
+                try
+                {
+                    int frameIndex = _isGif
+                        ? _gifSequence!.GetFrameIndexAt(t)
+                        : _mp4Sequence!.GetFrameIndexAt(t);
+                    BitmapSource source = _isGif
+                        ? _gifSequence!.GetFrameSource(frameIndex)
+                        : _mp4Sequence!.GetFrameSource(frameIndex);
+
+                    // Store a small frozen thumbnail instead of the full-res frame
+                    // so the strip costs ~8x60px instead of 8x1080p in memory.
+                    if (source.PixelHeight > (int)(thumbHeight * 2) && source.PixelHeight > 0)
+                    {
+                        double scale = thumbHeight * 2 / source.PixelHeight;
+                        var scaled = new TransformedBitmap(source, new ScaleTransform(scale, scale));
+                        scaled.Freeze();
+                        thumbs.Add(scaled);
+                    }
+                    else
+                    {
+                        thumbs.Add(source);
+                    }
+                }
+                catch
+                {
+                    // Best effort: skip a thumbnail that fails to decode.
+                }
+
+                // Yield so the loading overlay can paint between decodes.
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+            }
+
+            if ((_isGif ? _gifLoadVersion : _mp4LoadVersion) != version)
+                return;
+
+            Filmstrip.Children.Clear();
+            foreach (BitmapSource thumb in thumbs)
+            {
                 Filmstrip.Children.Add(new System.Windows.Controls.Image
                 {
-                    Source = source,
+                    Source = thumb,
                     Stretch = Stretch.UniformToFill,
-                    Height = 30,
+                    Height = thumbHeight,
                     Margin = new Thickness(1, 0, 1, 0)
                 });
             }
 
-            FilmstripHost.Visibility = Visibility.Visible;
+            FilmstripHost.Visibility = thumbs.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void Filmstrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1517,8 +1644,9 @@ namespace CyberSnap.UI
 
         private void EvaluateCropState()
         {
-            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
-            SetTrimButtonVisible(isModified);
+            bool isModified = IsCropModified();
+            bool canTrim = isModified && IsSegmentValid();
+            SetTrimButtonVisible(canTrim);
             ResetBtn.IsEnabled = isModified;
             UpdateTitleState(isModified);
         }
@@ -1642,9 +1770,13 @@ namespace CyberSnap.UI
             _trimButtonExpandedWidth = Math.Max(TrimBtn.DesiredSize.Width + TrimBtn.Margin.Right, 96);
         }
 
+        /// <summary>
+        /// The Trim button always occupies layout space now (no shift when a crop
+        /// becomes active); only its enabled/opacity state toggles.
+        /// </summary>
         private void SetTrimButtonVisible(bool visible, bool animate = true)
         {
-            if (_trimButtonVisible == visible)
+            if (_trimButtonVisible == visible && TrimBtn.IsEnabled == visible)
                 return;
 
             _trimButtonVisible = visible;
@@ -1652,55 +1784,33 @@ namespace CyberSnap.UI
             if (_trimButtonExpandedWidth <= 0)
                 CacheTrimButtonWidth();
 
+            TrimBtnHost.BeginAnimation(FrameworkElement.MaxWidthProperty, null);
+            TrimBtnHost.BeginAnimation(UIElement.OpacityProperty, null);
+            TrimBtnHost.MaxWidth = _trimButtonExpandedWidth;
+            TrimBtn.IsEnabled = visible;
+
+            double targetOpacity = visible ? 1.0 : 0.45;
             if (!animate)
             {
-                TrimBtnHost.BeginAnimation(FrameworkElement.MaxWidthProperty, null);
-                TrimBtnHost.BeginAnimation(UIElement.OpacityProperty, null);
-                TrimBtnHost.MaxWidth = visible ? _trimButtonExpandedWidth : 0;
-                TrimBtnHost.Opacity = visible ? 1 : 0;
-                TrimBtn.IsEnabled = visible;
+                TrimBtnHost.Opacity = targetOpacity;
                 return;
             }
 
-            TrimBtnHost.BeginAnimation(FrameworkElement.MaxWidthProperty, null);
-            TrimBtnHost.BeginAnimation(UIElement.OpacityProperty, null);
-
-            var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
-            var widthAnimation = new DoubleAnimation
-            {
-                From = visible ? 0 : _trimButtonExpandedWidth,
-                To = visible ? _trimButtonExpandedWidth : 0,
-                Duration = TimeSpan.FromMilliseconds(visible ? 200 : 160),
-                EasingFunction = easing,
-                FillBehavior = FillBehavior.Stop
-            };
-            widthAnimation.Completed += (_, _) => TrimBtnHost.MaxWidth = visible ? _trimButtonExpandedWidth : 0;
-
             var opacityAnimation = new DoubleAnimation
             {
-                From = visible ? 0 : 1,
-                To = visible ? 1 : 0,
-                Duration = TimeSpan.FromMilliseconds(visible ? 180 : 140),
-                EasingFunction = easing,
+                From = TrimBtnHost.Opacity,
+                To = targetOpacity,
+                Duration = TimeSpan.FromMilliseconds(160),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
                 FillBehavior = FillBehavior.Stop
             };
-            opacityAnimation.Completed += (_, _) => TrimBtnHost.Opacity = visible ? 1 : 0;
-
-            TrimBtn.IsEnabled = visible;
-            TrimBtnHost.BeginAnimation(FrameworkElement.MaxWidthProperty, widthAnimation);
+            opacityAnimation.Completed += (_, _) => TrimBtnHost.Opacity = targetOpacity;
             TrimBtnHost.BeginAnimation(UIElement.OpacityProperty, opacityAnimation);
         }
         
         private void TitleBar_CloseRequested(object? sender, EventArgs e)
         {
             Close();
-        }
-
-        private void TitleBar_PinRequested(object? sender, EventArgs e)
-        {
-            _isPinned = !_isPinned;
-            TrimmerTitleBar.IsPinActive = _isPinned;
-            Topmost = _isPinned;
         }
 
         private void PlayOpenAnimation()
@@ -1767,8 +1877,8 @@ namespace CyberSnap.UI
             StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (← · Shift+← −1s)";
             StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (→ · Shift+→ +1s)";
             CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the media file to the clipboard");
-            SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file");
-            TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version");
+            SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file") + " (Ctrl+S)";
+            TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version") + " (Ctrl+T)";
             ResetBtn.ToolTip = LocalizationService.Translate(lang, "Reset crop range") + " (R)";
             UpdateLoopTooltip();
             UpdatePreciseCutTooltip();
@@ -1952,6 +2062,21 @@ namespace CyberSnap.UI
             if (TryHandleZoomHotkey(e))
                 return;
 
+            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+            if (ctrl && e.Key == Key.S)
+            {
+                SaveAsNewBtn_Click(SaveAsNewBtn, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+            if (ctrl && (e.Key == Key.T || e.Key == Key.Enter))
+            {
+                if (TrimBtn.IsEnabled)
+                    TrimBtn_Click(TrimBtn, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+
             switch (e.Key)
             {
                 case Key.Escape:
@@ -1960,6 +2085,10 @@ namespace CyberSnap.UI
                 case Key.Space:
                 case Key.K:
                     PlayPauseBtn_Click(PlayPauseBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+                case Key.J:
+                    SeekBySeconds(-1);
                     e.Handled = true;
                     break;
                 case Key.Left:
@@ -2025,8 +2154,7 @@ namespace CyberSnap.UI
         /// <returns>True when it is safe to abandon the current file (nothing to lose or user confirmed).</returns>
         private bool ConfirmDiscardChanges()
         {
-            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
-            if (!isModified)
+            if (!IsCropModified())
                 return true;
 
             string lang = _settingsService.Settings.InterfaceLanguage;
@@ -2054,17 +2182,11 @@ namespace CyberSnap.UI
                 return;
             }
 
-            CompositionTarget.Rendering -= OnRendering;
+            TeardownPreviewForReload();
             CancelZoomHideTimer();
-            Filmstrip.Children.Clear();
             _audioPersistTimer.Stop();
-            Interlocked.Increment(ref _gifLoadVersion);
-            Interlocked.Increment(ref _mp4LoadVersion);
             if (_audioPersistPending && Application.Current is App app)
                 app.PersistVideoTrimmerAudio(VolumeControl.Volume, VolumeControl.IsExportMuted);
-            DisposeGifSequence();
-            DisposeMp4Sequence();
-            MediaPlayer.Close();
         }
         
         private async void TrimBtn_Click(object sender, RoutedEventArgs e)
@@ -2098,14 +2220,15 @@ namespace CyberSnap.UI
                 return;
             }
 
-            bool renderingDetached = false;
+            if (!IsSegmentValid())
+            {
+                ShowBanner(LocalizationService.Translate(lang, "Segment too short"));
+                return;
+            }
+
             try
             {
-                CompositionTarget.Rendering -= OnRendering;
-                renderingDetached = true;
-                DisposeGifSequence();
-                DisposeMp4Sequence();
-                MediaPlayer.Close();
+                TeardownPreviewForReload();
 
                 // Give player time to release lock without blocking the UI thread.
                 await Task.Delay(200);
@@ -2134,8 +2257,7 @@ namespace CyberSnap.UI
             }
             finally
             {
-                if (renderingDetached)
-                    CompositionTarget.Rendering += OnRendering;
+                ReattachPreviewRendering();
             }
         }
 
@@ -2205,14 +2327,9 @@ namespace CyberSnap.UI
                 saveApp.RefreshHistoryWindowIfOpen();
 
             // Auto-load the new copy in the editor
-            bool renderingDetached = false;
             try
             {
-                CompositionTarget.Rendering -= OnRendering;
-                renderingDetached = true;
-                DisposeGifSequence();
-                DisposeMp4Sequence();
-                MediaPlayer.Close();
+                TeardownPreviewForReload();
 
                 // Give player time to release lock without blocking the UI thread.
                 await Task.Delay(200);
@@ -2221,8 +2338,7 @@ namespace CyberSnap.UI
             }
             finally
             {
-                if (renderingDetached)
-                    CompositionTarget.Rendering += OnRendering;
+                ReattachPreviewRendering();
             }
         }
 
@@ -2231,12 +2347,9 @@ namespace CyberSnap.UI
             newPath = Path.GetFullPath(newPath);
 
             // Invalidate any in-flight loads and release the current media first.
-            Interlocked.Increment(ref _gifLoadVersion);
-            Interlocked.Increment(ref _mp4LoadVersion);
-            DisposeGifSequence();
-            DisposeMp4Sequence();
-            MediaPlayer.Close();
-            Filmstrip.Children.Clear();
+            // Keep the Rendering loop attached: only the decoded frames are swapped.
+            ReleaseDecodedMedia();
+            try { MediaPlayer.Close(); } catch { }
 
             _mediaFilePath = newPath;
             _isGif = string.Equals(Path.GetExtension(newPath), ".gif", StringComparison.OrdinalIgnoreCase);
@@ -2439,6 +2552,9 @@ namespace CyberSnap.UI
             {
                 process.Start();
                 Task progressTask = ConsumeFfmpegProgressAsync(process, expectedSeconds, progress, ct);
+                // Drain stderr concurrently: ffmpeg writes the encode log there and
+                // would block once the pipe buffer fills if nobody reads it.
+                Task<string> stderrTask = process.StandardError.ReadToEndAsync(ct);
 
                 bool cancelled = false;
                 try
@@ -2454,13 +2570,21 @@ namespace CyberSnap.UI
 
                 // The progress reader ends when ffmpeg closes stdout.
                 await progressTask;
+                string err;
+                try
+                {
+                    err = await stderrTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    err = string.Empty;
+                }
 
                 if (cancelled)
                     return false;
 
                 if (process.ExitCode != 0)
                 {
-                    string err = await process.StandardError.ReadToEndAsync();
                     AppDiagnostics.LogError("ffmpeg.trim-fail", new Exception(err));
                     MessageBox.Show(
                         $"{LocalizationService.Translate(lang, "Trim failed")} ({process.ExitCode}): {err}",
@@ -2521,8 +2645,7 @@ namespace CyberSnap.UI
             MenuShowInFolder.IsEnabled = fileReady;
 
             // Enable/disable Trim based on modifications
-            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
-            MenuTrim.IsEnabled = isModified;
+            MenuTrim.IsEnabled = IsCropModified() && IsSegmentValid() && !_isExporting;
         }
 
         private void MenuShowInFolder_Click(object sender, RoutedEventArgs e)
