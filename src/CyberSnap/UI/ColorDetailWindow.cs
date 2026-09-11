@@ -527,6 +527,7 @@ internal sealed class ColorDetailWindow : Window
                 _ => ColorDetailCopyFormat.Hex,
             };
             SavePrefs();
+            RefreshAll();
         };
         Grid.SetColumn(_formatCombo, 1);
         formatRow.Children.Add(_formatCombo);
@@ -884,10 +885,9 @@ internal sealed class ColorDetailWindow : Window
         var media = WpfColor.FromRgb(_r, _g, _b);
         _previewBorder.Background = new SolidColorBrush(media);
 
-        string name = ColorFormatHelper.ApproximateName(_r, _g, _b);
-        double onWhite = ColorFormatHelper.ContrastRatio(_r, _g, _b, againstWhite: true);
+        string name = ColorFormatHelper.ApproximateName(_r, _g, _b);        double onWhite = ColorFormatHelper.ContrastRatio(_r, _g, _b, againstWhite: true);
         double onBlack = ColorFormatHelper.ContrastRatio(_r, _g, _b, againstWhite: false);
-        _previewName.Text = $"{T(name)}  ·  {hex}";
+        _previewName.Text = $"{T(name)}  ·  {FavoriteText()}";
         _previewContrast.Text = $"{T("Contrast")}: {onWhite:0.0}:1 {T("on white")} · {onBlack:0.0}:1 {T("on black")} ({ColorFormatHelper.ContrastGrade(Math.Max(onWhite, onBlack))})";
 
         PopulateRecents();
