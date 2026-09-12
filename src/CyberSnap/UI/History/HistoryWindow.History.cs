@@ -852,7 +852,7 @@ public partial class HistoryWindow
 
     private void UpdateSelectModeControls()
     {
-        SelectBtn.Content = LocalizationService.Translate(_selectMode ? "Done" : "Select");
+        RefreshSelectBtnIcon();
         SelectAllBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
         SelectAllBtn.Content = LocalizationService.Translate("Select all");
         SelectAllBtn.ToolTip = LocalizationService.Translate("Select all items in the current filter");
@@ -880,11 +880,9 @@ public partial class HistoryWindow
 
         SelectBtn.IsEnabled = !historyUnavailable && (visibleCount > 0 || _selectMode);
         // "Vaciar categoría/filtro en un click": always visible, single confirm (not hidden in select mode).
+        // Icon-only button: the live count travels in the tooltip and automation name below.
         DeleteAllBtn.Visibility = Visibility.Visible;
         DeleteAllBtn.IsEnabled = !historyUnavailable && deletableCount > 0;
-        DeleteAllBtn.Content = deletableCount > 0
-            ? $"{LocalizationService.Translate("Clear all")} ({deletableCount})"
-            : LocalizationService.Translate("Clear all");
         DeleteSelectedBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
         DeleteSelectedBtn.IsEnabled = !historyUnavailable && _selectMode && selectedCount > 0;
         DeleteSelectedBtn.Content = selectedCount > 0

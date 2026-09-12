@@ -480,9 +480,25 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Top bar: actions + search row, category tabs on their own row -->
+                    <!-- Top bar: status line, actions + search row, tabs, selection row -->
                     <Border Grid.Row="0" Padding="0,0,0,6">
                         <StackPanel>
+                            <!-- Status line (count + status), centered on top -->
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock x:Name="HistoryCountText" FontSize="12" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.85"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.Name="History item count"
+                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                                <TextBlock x:Name="HistorySearchStatusText" FontSize="12" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.7"
+                                           Margin="12,0,0,0"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.Name="History status"
+                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                            </StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -490,18 +506,24 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button x:Name="SelectBtn" Content="Select" Style="{StaticResource HistoryActionButton}"
-                                            Services:LocalizationService.SourceText="Select"
-                                             Margin="0,0,6,0" ToolTip="Select history items"
-                                             AutomationProperties.Name="Select history items"
-                                             AutomationProperties.HelpText="Select history items"
-                                             Cursor="Hand" Click="ToggleSelectMode"/>
-                                    <Button x:Name="DeleteAllBtn" Content="Clear all" Style="{StaticResource HistoryDangerButton}"
-                                            Services:LocalizationService.SourceText="Clear all"
+                                    <Button x:Name="SelectBtn" Style="{StaticResource HistoryActionButton}"
+                                            MinWidth="0" Width="38" Padding="0" Margin="0,0,6,0"
+                                            ToolTip="Select history items"
+                                            AutomationProperties.Name="Select history items"
+                                            AutomationProperties.HelpText="Select history items"
+                                            Cursor="Hand" Click="ToggleSelectMode">
+                                        <Image x:Name="SelectBtnIcon" Width="16" Height="16" Stretch="Uniform"
+                                               IsHitTestVisible="False"/>
+                                    </Button>
+                                    <Button x:Name="DeleteAllBtn" Style="{StaticResource HistoryDangerButton}"
+                                            MinWidth="0" Width="38" Padding="0"
                                             ToolTip="Delete all items in the current filter (one click + confirmation)"
                                             AutomationProperties.Name="Clear current history tab"
                                             AutomationProperties.HelpText="Delete all items in the current history tab"
-                                            Cursor="Hand" Click="DeleteAllClick"/>
+                                            Cursor="Hand" Click="DeleteAllClick">
+                                        <Image x:Name="DeleteAllBtnIcon" Width="16" Height="16" Stretch="Uniform"
+                                               IsHitTestVisible="False"/>
+                                    </Button>
                                 </StackPanel>
                                 <!-- The ComboBox is kept collapsed as the selection state holder so the
                                      existing SelectionChanged flow (persist, reset, load) stays untouched. -->
@@ -532,7 +554,7 @@
                                                   ToolTip="Show color history"
                                                   AutomationProperties.Name="Color history"
                                                   AutomationProperties.HelpText="Show saved color picks."/>
-                                    <ComboBoxItem Content="QR &amp; Barcodes"
+                                    <ComboBoxItem Content="Codes"
                                                   ToolTip="Show QR and barcode history"
                                                   AutomationProperties.Name="QR &amp; Barcode history"
                                                   AutomationProperties.HelpText="Show saved QR and barcode scans."/>
@@ -570,33 +592,25 @@
                                                     </ControlTemplate>
                                                 </TextBox.Template>
                                                 <TextBox.ContextMenu>
-                                                    <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
+                                                    <ContextMenu Placement="Bottom"
                                                                  Style="{StaticResource HistoryActionsMenuStyle}"
                                                                  AutomationProperties.Name="Search options">
-                                                        <MenuItem Header="Select all" InputGestureText="Ctrl+A"
+                                                        <MenuItem x:Name="ImageSearchSelectAllItem" Header="Select all" InputGestureText="Ctrl+A"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
                                                                   Click="ImageSearchSelectAll_Click"/>
                                                         <Separator/>
-                                                        <MenuItem Header="Cut" InputGestureText="Ctrl+X"
+                                                        <MenuItem x:Name="ImageSearchCutItem" Header="Cut" InputGestureText="Ctrl+X"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
                                                                   Click="ImageSearchCut_Click"/>
-                                                        <MenuItem Header="Copy" InputGestureText="Ctrl+C"
+                                                        <MenuItem x:Name="ImageSearchCopyItem" Header="Copy" InputGestureText="Ctrl+C"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
                                                                   Click="ImageSearchCopy_Click"/>
-                                                        <MenuItem Header="Paste" InputGestureText="Ctrl+V"
+                                                        <MenuItem x:Name="ImageSearchPasteItem" Header="Paste" InputGestureText="Ctrl+V"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
                                                                   Click="ImageSearchPaste_Click"/>
-                                                        <MenuItem Header="Delete" InputGestureText="Del"
+                                                        <MenuItem x:Name="ImageSearchDeleteTextItem" Header="Delete" InputGestureText="Del"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
                                                                   Click="ImageSearchDeleteText_Click"/>
-                                                        <Separator/>
-                                                        <MenuItem Header="Filters">
-                                                            <MenuItem x:Name="ImageSearchFileNameCheck" Header="Search file names" IsCheckable="True"
-                                                                      ToolTip="Include screenshot file names in search"
-                                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                            <MenuItem x:Name="ImageSearchOcrCheck" Header="Search OCR text" IsCheckable="True"
-                                                                      ToolTip="Include recognized screenshot text in search"
-                                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                            <Separator/>
-                                                            <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
-                                                                      ToolTip="Require exact phrase/token matches"
-                                                                      Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
-                                                        </MenuItem>
                                                     </ContextMenu>
                                                 </TextBox.ContextMenu>
                                             </TextBox>
@@ -610,31 +624,36 @@
                                             <TextBlock x:Name="ImageSearchPlaceholder" Grid.Column="1" Text="Search..."
                                                        FontSize="12" Opacity="0.28" VerticalAlignment="Center"
                                                        IsHitTestVisible="False" Margin="8,0,0,0"/>
-                                            <!-- Dropdown chevron, only visible when focused, clickable -->
-                                            <TextBlock x:Name="ImageSearchChevron" Grid.Column="2" Text="▾" FontSize="20" Height="20"
-                                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.45"
-                                                       VerticalAlignment="Center" Margin="4,-2,0,0" Cursor="Hand"
-                                                       Visibility="Collapsed" ToolTip="Search filters"
-                                                       MouseLeftButtonDown="ImageSearchChevron_Click"/>
+                                            <!-- Filter button: always visible, opens the search scope menu -->
+                                            <Image x:Name="ImageSearchFilterBtn" Grid.Column="2" Width="16" Height="16"
+                                                   Stretch="Uniform" VerticalAlignment="Center" Margin="6,0,0,0"
+                                                   Cursor="Hand" ToolTip="Search filters"
+                                                   AutomationProperties.Name="Search filters"
+                                                   MouseLeftButtonDown="ImageSearchFilterBtn_Click">
+                                                <Image.ContextMenu>
+                                                    <ContextMenu Placement="Bottom"
+                                                                 Style="{StaticResource HistoryActionsMenuStyle}"
+                                                                 AutomationProperties.Name="Search filters">
+                                                        <MenuItem x:Name="ImageSearchFileNameCheck" Header="Search file names" IsCheckable="True"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
+                                                                  ToolTip="Include screenshot file names in search"
+                                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                        <MenuItem x:Name="ImageSearchOcrCheck" Header="Search OCR text" IsCheckable="True"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
+                                                                  ToolTip="Include recognized screenshot text in search"
+                                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                        <Separator/>
+                                                        <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
+                                                                  Style="{StaticResource HistoryActionsMenuItem}"
+                                                                  ToolTip="Require exact phrase/token matches"
+                                                                  Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
+                                                    </ContextMenu>
+                                                </Image.ContextMenu>
+                                            </Image>
                                         </Grid>
                                     </Border>
                                 </Grid>
                             </Grid>
-
-                            <!-- Status line (count + status), centered above the tabs -->
-                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,8,0,0">
-                                <TextBlock x:Name="HistoryCountText" FontSize="12" Opacity="0.5" VerticalAlignment="Center"
-                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.Name="History item count"
-                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                                <TextBlock x:Name="HistorySearchStatusText" FontSize="12" Opacity="0.4" VerticalAlignment="Center"
-                                           Margin="12,0,0,0"
-                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.Name="History status"
-                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                            </StackPanel>
 
                             <!-- Category tabs on their own row (icon + label + count pills) -->
                             <ScrollViewer x:Name="GalleryTabScroller" Margin="0,6,0,0"

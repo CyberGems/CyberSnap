@@ -26,7 +26,7 @@ public partial class HistoryWindow
         ("filmstrip", "Videos/GIFs", "videos & GIFs"),
         ("ocr", "Text", "text captures"),
         ("picker", "Colors", "colors"),
-        ("scan", "QR & Barcodes", "QR & Barcode scans"),
+        ("scan", "Codes", "QR & Barcode scans"),
     ];
 
     private readonly List<Button> _galleryTabButtons = new();

@@ -73,6 +73,23 @@ public partial class HistoryWindow : Window
 
         InitializeComponent();
         BuildGalleryTabs();
+        ApplyIdleSearchBorder();
+        // Clicking outside the search row releases the caret: most gallery surfaces
+        // (scroll backgrounds, stacks) are not focusable, so keyboard focus would
+        // otherwise stay trapped in the search box forever.
+        PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (ImageSearchBox == null || !ImageSearchBox.IsKeyboardFocused)
+                return;
+            DependencyObject? d = e.OriginalSource as DependencyObject;
+            while (d != null)
+            {
+                if (ReferenceEquals(d, ImageSearchRow))
+                    return;
+                d = VisualTreeHelper.GetParent(d);
+            }
+            Keyboard.ClearFocus();
+        };
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         var lang = _settingsService.Settings.InterfaceLanguage;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Gallery, lang);
@@ -358,9 +375,23 @@ public partial class HistoryWindow : Window
     private void LoadStaticFluentIcons()
     {
         var c = Theme.TextSecondary;
-        ImageSearchIcon.Source = Helpers.FluentIcons.RenderWpf(
-            "search", System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B), 18);
+        var secondary = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
+        ImageSearchIcon.Source = Helpers.FluentIcons.RenderWpf("search", secondary, 18);
         ImageSearchIcon.Opacity = 0.55;
+        SelectBtnIcon.Source = Helpers.FluentIcons.RenderWpf("select", secondary, 16);
+        DeleteAllBtnIcon.Source = Helpers.FluentIcons.RenderWpf("trash", secondary, 16);
+        RefreshSelectBtnIcon();
+        UpdateSearchFilterIcon();
+    }
+
+    /// <summary>Select button icon: accent tint while selecting, neutral otherwise.</summary>
+    private void RefreshSelectBtnIcon()
+    {
+        if (SelectBtnIcon == null)
+            return;
+        var c = _selectMode ? Theme.Accent : Theme.TextSecondary;
+        SelectBtnIcon.Source = Helpers.FluentIcons.RenderWpf(
+            "select", System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B), 16);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -865,7 +896,7 @@ public partial class HistoryWindow : Window
         var textBase = LocalizationService.Translate(lang, "Text");
         var mediaBase = LocalizationService.Translate(lang, "Videos/GIFs");
         var colorsBase = LocalizationService.Translate(lang, "Colors");
-        var codesBase = LocalizationService.Translate(lang, "QR & Barcodes");
+        var codesBase = LocalizationService.Translate(lang, "Codes");
 
         var imagesCount = _historyService.ImageEntries.Count;
         var textCount = _historyService.OcrEntries.Count;

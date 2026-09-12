@@ -144,6 +144,59 @@ public partial class HistoryWindow
             parts.Add("Exact");
 
         ImageSearchFiltersSummaryText.Text = parts.Count == 0 ? "None" : string.Join(", ", parts);
+        UpdateSearchFilterIcon();
+    }
+
+    /// <summary>
+    /// Localizes the search menus in code: XAML MenuItem headers are not covered by
+    /// LocalizationService.ApplyTo, so they would otherwise stay in English forever.
+    /// </summary>
+    private void RefreshSearchMenuLabels()
+    {
+        var lang = _settingsService.Settings.InterfaceLanguage;
+        ImageSearchSelectAllItem.Header = LocalizationService.Translate(lang, "Select all");
+        ImageSearchCutItem.Header = LocalizationService.Translate(lang, "Cut");
+        ImageSearchCopyItem.Header = LocalizationService.Translate(lang, "Copy");
+        ImageSearchPasteItem.Header = LocalizationService.Translate(lang, "Paste");
+        ImageSearchDeleteTextItem.Header = LocalizationService.Translate(lang, "Delete");
+        ImageSearchFileNameCheck.Header = LocalizationService.Translate(lang, "Search file names");
+        ImageSearchFileNameCheck.ToolTip = LocalizationService.Translate(lang, "Include screenshot file names in search");
+        ImageSearchOcrCheck.Header = LocalizationService.Translate(lang, "Search OCR text");
+        ImageSearchOcrCheck.ToolTip = LocalizationService.Translate(lang, "Include recognized screenshot text in search");
+        ImageSearchExactMatchCheck.Header = LocalizationService.Translate(lang, "Exact match");
+        ImageSearchExactMatchCheck.ToolTip = LocalizationService.Translate(lang, "Require exact phrase/token matches");
+        ImageSearchFilterBtn.ToolTip = LocalizationService.Translate(lang, "Search filters");
+        AutomationProperties.SetName(ImageSearchFilterBtn, LocalizationService.Translate(lang, "Search filters"));
+    }
+
+    /// <summary>
+    /// Funnel icon state: neutral normally, accent when the scope differs from the default
+    /// (file names + OCR, no exact match) so a narrowed search is visible at a glance.
+    /// </summary>
+    private void UpdateSearchFilterIcon()
+    {
+        if (ImageSearchFilterBtn == null)
+            return;
+
+        var s = _settingsService.Settings;
+        var isDefault = !s.ImageSearchExactMatch &&
+                        s.ImageSearchSources.HasFlag(ImageSearchSourceOptions.FileName) &&
+                        s.ImageSearchSources.HasFlag(ImageSearchSourceOptions.Ocr);
+        var c = isDefault ? Theme.TextSecondary : Theme.Accent;
+        ImageSearchFilterBtn.Source = FluentIcons.RenderWpf(
+            "filter", System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B), 16);
+        ImageSearchFilterBtn.Opacity = isDefault ? 0.55 : 1;
+    }
+
+    /// <summary>Neutral idle border for the search box (no cyan tint).</summary>
+    private void ApplyIdleSearchBorder()
+    {
+        if (ImageSearchBorder == null)
+            return;
+
+        var c = Theme.TextSecondary;
+        ImageSearchBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
+            System.Windows.Media.Color.FromArgb(36, c.R, c.G, c.B));
     }
 
     private void LoadImageSearchSources()
@@ -281,7 +334,6 @@ public partial class HistoryWindow
                 _codeSearchQuery = text;
 
             ImageSearchClearBtn.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
-            ImageSearchChevron.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
             ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(text) && !ImageSearchBox.IsKeyboardFocused
                 ? Visibility.Visible
                 : Visibility.Collapsed;
@@ -353,7 +405,7 @@ public partial class HistoryWindow
         }
         else
         {
-            ImageSearchBorder.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
+            ApplyIdleSearchBorder();
         }
 
         ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(ImageSearchBox.Text) && !ImageSearchBox.IsKeyboardFocused
@@ -422,11 +474,18 @@ public partial class HistoryWindow
         }
     }
 
-    private void ImageSearchChevron_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void ImageSearchFilterBtn_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         e.Handled = true;
-        ImageSearchFiltersMenu.PlacementTarget = ImageSearchBox;
-        ImageSearchFiltersMenu.IsOpen = true;
+        var menu = ImageSearchFilterBtn.ContextMenu;
+        if (menu == null)
+            return;
+        // Close the tooltip if it is showing so it doesn't linger over the menu.
+        if (ImageSearchFilterBtn.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
+            tt.IsOpen = false;
+        menu.PlacementTarget = ImageSearchFilterBtn;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
     }
 
     private void ImageSearchIcon_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
