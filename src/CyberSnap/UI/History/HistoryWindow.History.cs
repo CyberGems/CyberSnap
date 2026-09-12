@@ -316,7 +316,7 @@ public partial class HistoryWindow
         EnsureMaterializedImageHistoryItems(_allImageHistoryEntries.Count);
     }
 
-    private async Task LoadHistoryAsync()
+    private async Task LoadHistoryAsync(bool preserveScroll = false, double savedOffset = 0)
     {
         var loadSw = System.Diagnostics.Stopwatch.StartNew();
         _historyLoadCts?.Cancel();
@@ -327,6 +327,7 @@ public partial class HistoryWindow
         _historyLoadInProgress = true;
         _imageHistoryLoadFailed = false;
         _deferHistoryMonitor = true;
+        var loadStartOffset = preserveScroll ? savedOffset : ImagesPanel.VerticalOffset;
         HistoryStack.Children.Clear();
         HideHistoryEmptyState();
         HistoryCountText.Text = "Loading captures...";
@@ -354,6 +355,10 @@ public partial class HistoryWindow
             _historyImageCacheReady = true;
             PrimeHistoryFingerprint();
             UpdateHistoryActionButtons();
+            // Same-filter background reload rebuilt the tree: restore scroll unless this
+            // load was superseded or a navigate-to-item has its own scroll target.
+            if (preserveScroll && version == _historyLoadVersion && _pendingNavigateToPath == null)
+                RestoreGalleryScroll(ImagesPanel, loadStartOffset);
             if (_settingsService.Settings.AutoIndexImages)
             {
                 _ = Dispatcher.BeginInvoke(() =>
@@ -775,6 +780,9 @@ public partial class HistoryWindow
         if (vm.Card is null)
             return;
 
+        // Central store is authoritative; keep the VM flag in sync for legacy readers.
+        SyncVmFromStore(vm);
+
         // Update card tooltip based on select mode
         if (_selectMode)
         {
@@ -809,25 +817,7 @@ public partial class HistoryWindow
         }
 
         if (vm.SelectionBadge is Border badge)
-        {
-            badge.Visibility = _selectMode || vm.IsSelected ? Visibility.Visible : Visibility.Collapsed;
-            badge.Opacity = vm.IsSelected ? 1 : 0.45;
-            if (vm.IsSelected)
-            {
-                badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
-                badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
-                badge.BorderThickness = new Thickness(1.5);
-            }
-            else
-            {
-                badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20));
-                badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
-                badge.BorderThickness = new Thickness(2);
-            }
-            UpdateSelectionBadgeAccessibility(badge, vm.IsSelected);
-            if (badge.Tag is UIElement check)
-                check.Visibility = vm.IsSelected ? Visibility.Visible : Visibility.Hidden;
-        }
+            ApplyGalleryBadgeWithMode(badge, vm.IsSelected);
     }
 
     private void ToggleSelectMode(object sender, RoutedEventArgs e)
@@ -839,12 +829,7 @@ public partial class HistoryWindow
         {
             ClearCurrentHistorySelections();
         }
-        else
-        {
-            // Clear search when entering select mode to avoid search+select bugs
-            CancelImageSearchWork();
-            if (ImageSearchBox != null) ImageSearchBox.Text = "";
-        }
+        // Keep search text/layout stable: selection works on the filtered set.
 
         UpdateSelectModeControls();
         RefreshVisibleCardSelections();
@@ -854,58 +839,8 @@ public partial class HistoryWindow
     private void SelectAllClick(object sender, RoutedEventArgs e)
     {
         _wasSelectAllDelete = true;
-        _selectAllActive = true;
-
-        // Select all image/GIF VMs
-        foreach (var item in GetCurrentHistorySelectionItems())
-            item.IsSelected = true;
-
-        // Select all unified cards (All tab)
-        if (HistoryCategoryCombo.SelectedIndex == 0)
-        {
-            _selectedCardsInAllTab.Clear();
-            WalkVisualBorders(HistoryStack, border =>
-            {
-                if (border.Tag is bool selected)
-                {
-                    border.Tag = true;
-                    _selectedCardsInAllTab.Add(border);
-                    UpdateUnifiedCardSelectionVisual(border, true);
-                }
-                else if (border.Tag is HistoryItemVM vm)
-                {
-                    vm.IsSelected = true;
-                    UpdateCardSelection(vm);
-                }
-            });
-        }
-
-        // Select all cards in specific tabs (GIF, OCR, Color, Code)
-        if (HistoryCategoryCombo.SelectedIndex == 2)
-        {
-            foreach (var item in _filteredGifItems)
-                item.IsSelected = true;
-            WalkVisualBorders(GifsPanel, border =>
-            {
-                if (border.Tag is HistoryItemVM vm)
-                    UpdateCardSelection(vm);
-            });
-        }
-
-        // Select all OCR/Color/Code cards in their tabs
-        var selectableCards = GetCurrentSelectableCards().ToList();
-        foreach (var card in selectableCards)
-        {
-            if (HistoryCategoryCombo.SelectedIndex == 3)
-                card.Tag = true;
-            else if (HistoryCategoryCombo.SelectedIndex == 4)
-                card.Tag = card.DataContext is ColorHistoryEntry entry ? entry : null;
-            else if (HistoryCategoryCombo.SelectedIndex == 5)
-                card.Tag = card.DataContext is CodeHistoryEntry codeEntry ? codeEntry : null;
-            RefreshSelectableCardSelection(card);
-        }
-
-        UpdateHistoryActionButtons();
+        RebuildSelectionStoreFromCards();
+        SelectAllInCategory();
     }
 
     private void UnselectClick(object sender, RoutedEventArgs e)
@@ -921,11 +856,13 @@ public partial class HistoryWindow
     {
         SelectBtn.Content = LocalizationService.Translate(_selectMode ? "Done" : "Select");
         SelectAllBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
-        SelectAllBtn.ToolTip = LocalizationService.Translate("Select all items");
+        SelectAllBtn.Content = LocalizationService.Translate("Select all");
+        SelectAllBtn.ToolTip = LocalizationService.Translate("Select all items in the current filter");
         UnselectBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
+        UnselectBtn.Content = LocalizationService.Translate("Clear");
         UnselectBtn.ToolTip = LocalizationService.Translate("Clear selection");
-        // Hide search bar in select mode to save space and avoid search+select bugs
-        ImageSearchRow.Visibility = _selectMode ? Visibility.Collapsed : Visibility.Visible;
+        SelectionBar.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
+        // Keep search + prune rows mounted so the gallery grid doesn't jump.
         UpdateHistoryActionButtons();
     }
 
@@ -937,14 +874,19 @@ public partial class HistoryWindow
         var visibleCount = GetCurrentVisibleHistoryItemCount();
         var totalCount = GetCurrentTotalHistoryItemCount();
         var selectedCount = GetCurrentSelectedHistoryItemCount();
+        var deletableCount = DeletableCountInCategory();
         var historyUnavailable = HistoryCategoryCombo.SelectedIndex == 0 && _imageHistoryLoadFailed;
         var categoryLabel = GetCurrentHistoryCategoryLabel(2);
         var totalCategoryLabel = GetCurrentHistoryCategoryLabel(totalCount);
         var selectedCategoryLabel = GetCurrentHistoryCategoryLabel(selectedCount);
 
         SelectBtn.IsEnabled = !historyUnavailable && (visibleCount > 0 || _selectMode);
-        DeleteAllBtn.Visibility = _selectMode ? Visibility.Collapsed : Visibility.Visible;
-        DeleteAllBtn.IsEnabled = !historyUnavailable && totalCount > 0;
+        // "Vaciar categoría/filtro en un click": always visible, single confirm (not hidden in select mode).
+        DeleteAllBtn.Visibility = Visibility.Visible;
+        DeleteAllBtn.IsEnabled = !historyUnavailable && deletableCount > 0;
+        DeleteAllBtn.Content = deletableCount > 0
+            ? $"{LocalizationService.Translate("Clear all")} ({deletableCount})"
+            : LocalizationService.Translate("Clear all");
         DeleteSelectedBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
         DeleteSelectedBtn.IsEnabled = !historyUnavailable && _selectMode && selectedCount > 0;
         DeleteSelectedBtn.Content = selectedCount > 0
@@ -1030,16 +972,9 @@ public partial class HistoryWindow
 
     private int GetCurrentSelectedHistoryItemCount()
     {
-        return HistoryCategoryCombo.SelectedIndex switch
-        {
-            0 => _selectedCardsInAllTab.Count,
-            1 => CountAllSelectedCardsInVisualTree(HistoryStack),
-            2 => CountSelectedCardsInVisualTree(GifsPanel),
-            3 => OcrStack.Children.OfType<Border>().Count(card => card.Tag is true),
-            4 => ColorStack.Children.OfType<Border>().Count(card => card.Tag is ColorHistoryEntry),
-            5 => CodeStack.Children.OfType<Border>().Count(card => card.Tag is CodeHistoryEntry),
-            _ => 0
-        };
+        // Authoritative store; falls back to visual walk only before first sync.
+        try { return SelectedCountInCategory(); }
+        catch { return 0; }
     }
 
     private static int CountAllCardsInVisualTree(System.Windows.DependencyObject root)
@@ -1104,53 +1039,13 @@ public partial class HistoryWindow
 
     private void ClearCurrentHistorySelections()
     {
-        foreach (var item in GetCurrentHistorySelectionItems())
-            item.IsSelected = false;
-
-        if (HistoryCategoryCombo.SelectedIndex is 0 or 2)
-        {
-            var root = HistoryCategoryCombo.SelectedIndex == 0
-                ? (System.Windows.DependencyObject)HistoryStack
-                : GifsPanel;
-            WalkVisualBorders(root, border =>
-            {
-                if (border.Tag is HistoryItemVM vm)
-                    vm.IsSelected = false;
-                else if (border.Tag is bool)
-                {
-                    border.Tag = false;
-                    UpdateUnifiedCardSelectionVisual(border, false);
-                }
-            });
-            if (HistoryCategoryCombo.SelectedIndex == 0)
-                _selectedCardsInAllTab.Clear();
-        }
-
-        foreach (var card in GetCurrentSelectableCards())
-            ClearSelectableCardSelection(card);
+        ClearGallerySelection();
+        PushStoreToVisibleCards();
     }
 
     private void RefreshVisibleCardSelections()
     {
-        foreach (var item in GetCurrentHistorySelectionItems())
-            UpdateCardSelection(item);
-
-        if (HistoryCategoryCombo.SelectedIndex is 0 or 2)
-        {
-            var root = HistoryCategoryCombo.SelectedIndex == 0
-                ? (System.Windows.DependencyObject)HistoryStack
-                : GifsPanel;
-            WalkVisualBorders(root, border =>
-            {
-                if (border.Tag is HistoryItemVM vm)
-                    UpdateCardSelection(vm);
-                else if (border.Tag is bool selected)
-                    UpdateUnifiedCardSelectionVisual(border, selected);
-            });
-        }
-
-        foreach (var card in GetCurrentSelectableCards())
-            RefreshSelectableCardSelection(card);
+        PushStoreToVisibleCards();
     }
 
     private IEnumerable<HistoryItemVM> GetCurrentHistorySelectionItems()
@@ -1168,7 +1063,8 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            3 => OcrStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
+            // Text cards live inside WrapPanels (same as Colors/Codes), not as direct children.
+            3 => GetWrappedSelectableCards(OcrStack),
             4 => GetWrappedSelectableCards(ColorStack),
             5 => GetWrappedSelectableCards(CodeStack),
             _ => Enumerable.Empty<Border>()
@@ -1192,7 +1088,7 @@ public partial class HistoryWindow
     private static bool IsSelectableHistoryCard(Border card)
     {
         return card.Child is Grid root &&
-               root.Children.OfType<Border>().Any(badge => badge.Tag is UIElement);
+               FindSelectableBadge(root) is not null;
     }
 
     private void ClearSelectableCardSelection(Border card)
@@ -1212,41 +1108,79 @@ public partial class HistoryWindow
         if (card.Child is not Grid root)
             return;
 
-        var badge = root.Children.OfType<Border>().FirstOrDefault(candidate =>
-            candidate.Tag is UIElement);
+        var badge = FindSelectableBadge(root);
         if (badge is null)
             return;
 
-        var selected = HistoryCategoryCombo.SelectedIndex switch
+        // Fixed mapping (was 1/3/4 -> always false for Text/Colors/Codes).
+        var cat = CurrentGalleryCategory();
+        bool selected;
+        if (cat == GalleryCategory.Text && card.DataContext is OcrHistoryEntry ocr)
         {
-            1 => card.Tag is true,
-            3 => card.Tag is ColorHistoryEntry,
-            4 => card.Tag is CodeHistoryEntry,
-            _ => false
-        };
+            selected = _selectedOcr.Contains(ocr);
+            card.Tag = selected;
+        }
+        else if (cat == GalleryCategory.Colors && card.DataContext is ColorHistoryEntry color)
+        {
+            selected = card.Tag is ColorHistoryEntry tagged && ReferenceEquals(tagged, color)
+                       || _selectedColor.Contains(color);
+            card.Tag = selected ? color : null;
+        }
+        else if (cat == GalleryCategory.Codes && card.DataContext is CodeHistoryEntry code)
+        {
+            selected = card.Tag is CodeHistoryEntry tagged && ReferenceEquals(tagged, code)
+                       || _selectedCode.Contains(code);
+            card.Tag = selected ? code : null;
+        }
+        else if (card.Tag is bool b && cat == GalleryCategory.Text)
+        {
+            selected = b;
+        }
+        else
+        {
+            selected = false;
+        }
 
         UpdateSelectableCardSelection(card, badge, selected);
-        UpdateHistoryActionButtons();
     }
 
     private void DeleteAllClick(object sender, RoutedEventArgs e)
     {
         try
         {
-            var totalCount = GetCurrentTotalHistoryItemCount();
-            var tab = GetCurrentHistoryCategoryLabel(totalCount);
-            if (totalCount <= 0)
+            var cat = CurrentGalleryCategory();
+            var searchActive = !string.IsNullOrWhiteSpace(ImageSearchBox?.Text);
+            var deletableCount = DeletableCountInCategory();
+            var tab = GetCurrentHistoryCategoryLabel(deletableCount);
+            if (deletableCount <= 0)
             {
                 SetHistoryDeleteStatus($"No {tab} to delete.");
                 UpdateHistoryActionButtons();
                 return;
             }
 
-            if (!ConfirmDeleteAllStep(1, totalCount, tab)) return;
-            if (!ConfirmDeleteAllStep(2, totalCount, tab)) return;
+            // Single confirmation (was 2-step). Filtered delete is explicit in the title.
+            var scope = searchActive
+                ? LocalizationService.Translate("matching the current filter")
+                : LocalizationService.Translate("in the current category");
+            var title = string.Format(LocalizationService.Translate("Delete {0} {1} {2}?"), deletableCount, tab, scope);
+            var body = LocalizationService.Translate("This action CANNOT be undone. Source files on disk will also be deleted.");
+            if (!ThemedConfirmDialog.Confirm(this, title, body,
+                    LocalizationService.Translate("Delete"), LocalizationService.Translate("Cancel")))
+            {
+                SetHistoryDeleteStatus($"{LocalizationService.Translate("Delete canceled")}. {LocalizationService.Translate("Kept")} {deletableCount} {tab}.");
+                UpdateHistoryActionButtons();
+                return;
+            }
 
             CancelImageSearchWork();
-            if (HistoryCategoryCombo.SelectedIndex == 0)
+            if (searchActive && (cat == GalleryCategory.All || cat == GalleryCategory.Images ||
+                                 cat == GalleryCategory.Text || cat == GalleryCategory.Colors ||
+                                 cat == GalleryCategory.Codes))
+            {
+                DeleteFilteredCategory(cat);
+            }
+            else if (HistoryCategoryCombo.SelectedIndex == 0)
             {
                 // "All" tab: clear everything across all categories
                 _historyService.ClearImages();
@@ -1266,6 +1200,7 @@ public partial class HistoryWindow
             else if (HistoryCategoryCombo.SelectedIndex == 4) _historyService.ClearColors();
             else if (HistoryCategoryCombo.SelectedIndex == 5) _historyService.ClearCodes();
 
+            ClearGallerySelection();
             _selectMode = false;
             UpdateSelectModeControls();
 
@@ -1293,60 +1228,77 @@ public partial class HistoryWindow
         {
             // Capture selections before showing the dialog. ShowDialog pumps dispatcher messages,
             // so a pending history refresh can rebuild the All view and clear selected card state.
+            RebuildSelectionStoreFromCards();
+            var cat = CurrentGalleryCategory();
             List<HistoryEntry> fileEntriesToDelete = new();
             List<OcrHistoryEntry> ocrEntriesToDelete = new();
             List<ColorHistoryEntry> colorEntriesToDelete = new();
             List<CodeHistoryEntry> codeEntriesToDelete = new();
             List<HistoryItemVM> mediaItemsToDelete = new();
 
-            if (HistoryCategoryCombo.SelectedIndex == 0)
+            if (cat == GalleryCategory.All)
             {
+                var files = _selectedFilePaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var u in _filteredUnifiedEntries)
+                {
+                    switch (u.RawEntry)
+                    {
+                        case HistoryEntry fe when files.Contains(fe.FilePath):
+                            fileEntriesToDelete.Add(fe);
+                            break;
+                        case OcrHistoryEntry ocr when _selectedOcr.Contains(ocr):
+                            ocrEntriesToDelete.Add(ocr);
+                            break;
+                        case ColorHistoryEntry color when _selectedColor.Contains(color):
+                            colorEntriesToDelete.Add(color);
+                            break;
+                        case CodeHistoryEntry code when _selectedCode.Contains(code):
+                            codeEntriesToDelete.Add(code);
+                            break;
+                    }
+                }
+                // Fallback for cards materialized outside the filtered list (legacy visual set).
                 foreach (var card in _selectedCardsInAllTab)
                 {
-                    if (card.Tag is HistoryItemVM vm)
+                    if (card.Tag is HistoryItemVM vm && vm.Entry != null && files.Contains(vm.Entry.FilePath)
+                        && !fileEntriesToDelete.Contains(vm.Entry))
                         fileEntriesToDelete.Add(vm.Entry);
                     else if (_unifiedCardEntries.TryGetValue(card, out var entry))
                     {
-                        if (entry is HistoryEntry fileEntry)
+                        if (entry is HistoryEntry fileEntry && files.Contains(fileEntry.FilePath) && !fileEntriesToDelete.Contains(fileEntry))
                             fileEntriesToDelete.Add(fileEntry);
-                        else if (entry is OcrHistoryEntry ocr)
+                        else if (entry is OcrHistoryEntry ocr && _selectedOcr.Contains(ocr) && !ocrEntriesToDelete.Contains(ocr))
                             ocrEntriesToDelete.Add(ocr);
-                        else if (entry is ColorHistoryEntry color)
+                        else if (entry is ColorHistoryEntry color && _selectedColor.Contains(color) && !colorEntriesToDelete.Contains(color))
                             colorEntriesToDelete.Add(color);
-                        else if (entry is CodeHistoryEntry code)
+                        else if (entry is CodeHistoryEntry code && _selectedCode.Contains(code) && !codeEntriesToDelete.Contains(code))
                             codeEntriesToDelete.Add(code);
                     }
                 }
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 1)
+            else if (cat == GalleryCategory.Images)
             {
                 foreach (var vm in _filteredHistoryItems)
                 {
-                    if (vm.IsSelected)
+                    if (IsFileSelected(vm.Entry))
                         fileEntriesToDelete.Add(vm.Entry);
                 }
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 2)
+            else if (cat == GalleryCategory.Media)
             {
-                mediaItemsToDelete = _filteredGifItems.Where(i => i.IsSelected).ToList();
+                mediaItemsToDelete = _filteredGifItems.Where(i => IsFileSelected(i.Entry)).ToList();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 3)
+            else if (cat == GalleryCategory.Text)
             {
-                ocrEntriesToDelete = OcrStack.Children.OfType<Border>()
-                    .Where(b => b.Tag is true)
-                    .Select(card => card.DataContext)
-                    .OfType<OcrHistoryEntry>()
-                    .ToList();
+                ocrEntriesToDelete = _selectedOcr.ToList();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 4)
+            else if (cat == GalleryCategory.Colors)
             {
-                colorEntriesToDelete = ColorStack.Children.OfType<Border>()
-                    .Select(s => s.Tag).OfType<ColorHistoryEntry>().ToList();
+                colorEntriesToDelete = _selectedColor.ToList();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 5)
+            else if (cat == GalleryCategory.Codes)
             {
-                codeEntriesToDelete = CodeStack.Children.OfType<Border>()
-                    .Select(s => s.Tag).OfType<CodeHistoryEntry>().ToList();
+                codeEntriesToDelete = _selectedCode.ToList();
             }
 
             var selectedCount = fileEntriesToDelete.Count
@@ -1364,8 +1316,8 @@ public partial class HistoryWindow
 
             if (!ConfirmDeleteSelected(selectedCount, selectedLabel))
             {
-                // When "Select All" was used, cancel means clear everything
-                if (_wasSelectAllDelete)
+                // When "Select All" was used, cancel exits select mode cleanly.
+                if (_wasSelectAllDelete || _selectAllActive)
                 {
                     _wasSelectAllDelete = false;
                     _selectAllActive = false;
@@ -1382,6 +1334,7 @@ public partial class HistoryWindow
             CancelImageSearchWork();
 
             // ── Now clear UI selection state ──
+            ClearGallerySelection();
             _selectMode = false;
             UpdateSelectModeControls();
 

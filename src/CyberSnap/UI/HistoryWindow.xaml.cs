@@ -122,8 +122,15 @@ public partial class HistoryWindow : Window
 
         SizeChanged += (_, _) =>
         {
+            AppDiagnostics.LogInfo("history.window-geometry",
+                $"size left={Left:F0} top={Top:F0} w={Width:F0} h={Height:F0} active={IsActive} state={WindowState}");
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex <= 1)
                 UpdateVirtualizedHistoryViewport();
+        };
+        LocationChanged += (_, _) =>
+        {
+            AppDiagnostics.LogInfo("history.window-geometry",
+                $"move left={Left:F0} top={Top:F0} w={Width:F0} h={Height:F0} active={IsActive} state={WindowState}");
         };
 
         Closed += (_, _) =>
@@ -740,7 +747,8 @@ public partial class HistoryWindow : Window
         _settingsService.Settings.HistoryCategoryFilter = HistoryCategoryCombo.SelectedIndex;
         _settingsService.Save();
         UpdateImageSearchUi();
-        ScheduleHistoryTabLoad(preserveTransientState: true);
+        // Switching filters always starts clean: no select mode, no carried-over selection.
+        ScheduleHistoryTabLoad(preserveTransientState: false);
     }
 
     private void HistoryCategoryCombo_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -755,14 +763,34 @@ public partial class HistoryWindow : Window
         e.Handled = true;
     }
 
+    private int _lastLoadedHistoryCategory = -1;
+
     private void LoadCurrentHistoryTab(bool preserveTransientState = false)
     {
         var loadSw = System.Diagnostics.Stopwatch.StartNew();
         var selectedCategory = HistoryCategoryCombo.SelectedIndex;
+        // Same-filter background refresh (new capture, index update, re-activation) rebuilds
+        // the card tree, which resets scroll to 0. Remember the offset so it can be restored;
+        // fresh filter switches always start at the top (and clear the selection above).
+        var sameCategoryAsLastLoad = selectedCategory == _lastLoadedHistoryCategory;
+        var savedViewer = CurrentGalleryScrollViewer();
+        var savedOffset = savedViewer?.VerticalOffset ?? 0;
         if (!preserveTransientState)
         {
-            _selectMode = false;
-            UpdateSelectModeControls();
+            // Fresh filter/view: exit select mode and drop any selection so deletes
+            // can never mix items across categories. Counts are suppressed while the
+            // panels still show the previous filter (see _suppressSelectionRebuild).
+            _suppressSelectionRebuild = true;
+            try
+            {
+                _selectMode = false;
+                ClearGallerySelection();
+                UpdateSelectModeControls();
+            }
+            finally
+            {
+                _suppressSelectionRebuild = false;
+            }
             _ocrSearchQuery = "";
             _colorSearchQuery = "";
             _codeSearchQuery = "";
@@ -793,15 +821,27 @@ public partial class HistoryWindow : Window
                     // Reset render count to initial page size when switching to Images filter
                     _historyRenderCount = Math.Min(ImageHistoryPageSize, _allImageHistoryEntries.Count);
                     ApplyImageSearchFilter();
+                    // Synchronous path: restore here (the async path restores on completion).
+                    if (preserveTransientState && sameCategoryAsLastLoad && _pendingNavigateToPath == null)
+                        RestoreGalleryScroll(ImagesPanel, savedOffset);
                 }
                 else
-                    _ = LoadHistoryAsync();
+                    _ = LoadHistoryAsync(preserveScroll: preserveTransientState && sameCategoryAsLastLoad && _pendingNavigateToPath == null,
+                        savedOffset: savedOffset);
                 break;
             case 2: GifsPanel.Visibility = Visibility.Visible; LoadMediaHistory(); break;
             case 3: TextPanel.Visibility = Visibility.Visible; LoadOcrHistory(); break;
             case 4: ColorsPanel.Visibility = Visibility.Visible; LoadColorHistory(); break;
             case 5: CodesPanel.Visibility = Visibility.Visible; LoadCodeHistory(); break;
         }
+
+        _lastLoadedHistoryCategory = selectedCategory;
+        // Async Images load restores its own scroll on completion; every other tab rendered
+        // synchronously above. Never restore for filter switches, and never fight an
+        // intentional navigate-to-item scroll.
+        if (preserveTransientState && sameCategoryAsLastLoad && _pendingNavigateToPath == null &&
+            selectedCategory != 1 && savedViewer != null)
+            RestoreGalleryScroll(savedViewer, savedOffset);
 
         UpdateHistoryMonitorState();
         UpdateHistoryActionButtons();

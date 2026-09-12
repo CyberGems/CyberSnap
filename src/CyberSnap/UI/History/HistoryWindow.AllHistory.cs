@@ -178,7 +178,10 @@ public partial class HistoryWindow
         var page = _filteredUnifiedEntries.GetRange(0, pageSize);
         AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard);
         _allLastAppendIndex = pageSize;
-        UpdateHistoryActionButtons();
+        if (_selectMode)
+            PushStoreToVisibleCards();
+        else
+            UpdateHistoryActionButtons();
     }
 
     // ── Infinite scroll ──
@@ -196,21 +199,11 @@ public partial class HistoryWindow
         // Update fingerprint after appending more items
         PrimeHistoryFingerprint();
 
-        // Refresh selection visuals for newly loaded cards when in select mode
+        // Refresh selection visuals for newly loaded cards when in select mode.
+        // Store is authoritative: "Select all" already selected the filtered set,
+        // so just push it to the new cards (covers file + OCR/Color/Code cards).
         if (_selectMode)
-        {
-            WalkVisualBorders(HistoryStack, border =>
-            {
-                if (_selectAllActive && border.Tag is bool)
-                {
-                    // Auto-select new cards loaded during "Select All"
-                    border.Tag = true;
-                    _selectedCardsInAllTab.Add(border);
-                }
-                if (border.Tag is bool selected)
-                    UpdateUnifiedCardSelectionVisual(border, selected);
-            });
-        }
+            PushStoreToVisibleCards();
 
         _ = Dispatcher.BeginInvoke(() =>
         {
@@ -300,7 +293,8 @@ public partial class HistoryWindow
         var vm = new HistoryItemVM();
         UpdateHistoryItemViewModel(vm, entry, isSelected: false, hydrateSearchMetadata: false);
 
-        // Register VM so Images view can reuse cached thumbnails
+        // Register VM so Images view can reuse cached thumbnails; sync selection from store.
+        vm.IsSelected = IsFileSelected(entry);
         _allHistoryItems.Add(vm);
         if (!string.IsNullOrEmpty(entry.FilePath))
             _allHistoryItemsByPath[entry.FilePath] = vm;
@@ -447,9 +441,15 @@ public partial class HistoryWindow
                 var selected = card.Tag is not true;
                 card.Tag = selected;
                 if (selected)
+                {
                     _selectedCardsInAllTab.Add(card);
+                    _selectedOcr.Add(entry);
+                }
                 else
+                {
                     _selectedCardsInAllTab.Remove(card);
+                    _selectedOcr.Remove(entry);
+                }
                 UpdateUnifiedCardSelectionVisual(card, selected);
                 UpdateHistoryActionButtons();
                 return;
@@ -537,9 +537,15 @@ public partial class HistoryWindow
                 var selected = card.Tag is not true;
                 card.Tag = selected;
                 if (selected)
+                {
                     _selectedCardsInAllTab.Add(card);
+                    _selectedColor.Add(entry);
+                }
                 else
+                {
                     _selectedCardsInAllTab.Remove(card);
+                    _selectedColor.Remove(entry);
+                }
                 UpdateUnifiedCardSelectionVisual(card, selected);
                 UpdateHistoryActionButtons();
                 return;
@@ -621,9 +627,15 @@ public partial class HistoryWindow
                 var selected = card.Tag is not true;
                 card.Tag = selected;
                 if (selected)
+                {
                     _selectedCardsInAllTab.Add(card);
+                    _selectedCode.Add(entry);
+                }
                 else
+                {
                     _selectedCardsInAllTab.Remove(card);
+                    _selectedCode.Remove(entry);
+                }
                 UpdateUnifiedCardSelectionVisual(card, selected);
                 UpdateHistoryActionButtons();
                 return;
@@ -682,7 +694,7 @@ public partial class HistoryWindow
         return tb;
     }
 
-    /// <summary>Creates a centered checkmark badge for select mode (same style as image cards).</summary>
+    /// <summary>Creates a checkmark badge for select mode (same style as image cards, top-left).</summary>
     private static Border CreateUnifiedSelectionBadge()
     {
         var checkPath = new System.Windows.Shapes.Path
@@ -693,25 +705,27 @@ public partial class HistoryWindow
             StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
             StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
             Stretch = Stretch.Uniform,
-            Margin = new Thickness(8),
+            Margin = new Thickness(7),
             Visibility = Visibility.Hidden
         };
 
         var badge = new Border
         {
-            Width = 36, Height = 36,
-            CornerRadius = new CornerRadius(18),
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20)),
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255)),
+            Width = 30, Height = 30,
+            CornerRadius = new CornerRadius(15),
+            // Dark scrim + white ring: visible on white previews (QR) and dark shots alike.
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(170, 12, 12, 14)),
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(230, 255, 255, 255)),
             BorderThickness = new Thickness(2),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(6),
             IsHitTestVisible = false,
             Visibility = Visibility.Collapsed,
             Child = checkPath,
             Tag = (UIElement)checkPath
         };
-        System.Windows.Controls.Panel.SetZIndex(badge, 20);
+        System.Windows.Controls.Panel.SetZIndex(badge, 30);
         return badge;
     }
 
@@ -721,22 +735,7 @@ public partial class HistoryWindow
         if (card.Child is not Grid root) return;
         var badge = FindUnifiedSelectionBadge(root);
         if (badge is null) return;
-        badge.Visibility = (_selectMode || selected) ? Visibility.Visible : Visibility.Collapsed;
-        badge.Opacity = selected ? 1 : 0.45;
-        if (selected)
-        {
-            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
-            badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
-            badge.BorderThickness = new Thickness(1.5);
-        }
-        else
-        {
-            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20));
-            badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
-            badge.BorderThickness = new Thickness(2);
-        }
-        if (badge.Tag is UIElement check)
-            check.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
+        ApplyGalleryBadgeWithMode(badge, selected);
 
         // Update card tooltip for select mode + suppress child tooltips
         card.ToolTip = _selectMode

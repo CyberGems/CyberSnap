@@ -59,7 +59,10 @@ public partial class HistoryWindow
         _codeRenderCount = Math.Min(HistoryInitialPageSize, _filteredCodeEntries.Count);
 
         AppendCodeHistoryEntries(_filteredCodeEntries, 0, _codeRenderCount);
-        UpdateHistoryActionButtons();
+        if (_selectMode)
+            PushStoreToVisibleCards();
+        else
+            UpdateHistoryActionButtons();
         sw.Stop();
         AppDiagnostics.LogInfo(
             "history.load-codes",
@@ -81,6 +84,8 @@ public partial class HistoryWindow
         var previousCount = _codeRenderCount;
         _codeRenderCount = Math.Min(_codeRenderCount + HistoryAppendPageSize, _filteredCodeEntries.Count);
         AppendCodeHistoryEntries(_filteredCodeEntries, previousCount, _codeRenderCount - previousCount);
+        if (_selectMode)
+            PushStoreToVisibleCards();
         _ = Dispatcher.BeginInvoke(() =>
         {
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 5)
@@ -241,6 +246,10 @@ public partial class HistoryWindow
             var selected = card.Tag is CodeHistoryEntry;
             selected = !selected;
             card.Tag = selected ? entry : null;
+            if (selected)
+                _selectedCode.Add(entry);
+            else
+                _selectedCode.Remove(entry);
             UpdateSelectableCardSelection(card, selBadge, selected);
             UpdateHistoryActionButtons();
         }

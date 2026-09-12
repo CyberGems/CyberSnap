@@ -413,53 +413,30 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Top bar: category dropdown + count + actions -->
+                    <!-- Top bar: stable 2-row toolbar (filter row + selection row) -->
                     <Border Grid.Row="0" Padding="0,0,0,6">
                         <StackPanel>
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="SelectBtn" Content="Select" Style="{StaticResource HistoryActionButton}"
                                             Services:LocalizationService.SourceText="Select"
                                              Margin="0,0,6,0" ToolTip="Select history items"
                                              AutomationProperties.Name="Select history items"
                                              AutomationProperties.HelpText="Select history items"
                                              Cursor="Hand" Click="ToggleSelectMode"/>
-                                    <Button x:Name="SelectAllBtn" Content="☑" Style="{StaticResource HistoryActionButton}"
-                                             Width="36" Padding="0" Margin="0,0,4,0"
-                                             Visibility="Collapsed"
-                                             FontSize="16"
-                                             ToolTip="Select all items"
-                                             AutomationProperties.Name="Select all history items"
-                                             Cursor="Hand" Click="SelectAllClick"/>
-                                    <Button x:Name="UnselectBtn" Content="✕" Style="{StaticResource HistoryActionButton}"
-                                             Width="36" Padding="0" Margin="0,0,6,0"
-                                             Visibility="Collapsed"
-                                             FontSize="14"
-                                             ToolTip="Clear selection"
-                                             AutomationProperties.Name="Clear history selection"
-                                             Cursor="Hand" Click="UnselectClick"/>
-                                    <TextBlock x:Name="SelectionCountLabel"
-                                               VerticalAlignment="Center"
-                                               Margin="6,0,10,0"
-                                               FontSize="13" FontWeight="Bold"
-                                               Foreground="{DynamicResource ThemeAccentBrush}"
-                                               Visibility="Collapsed"
-                                               Text=""/>
                                     <Button x:Name="DeleteAllBtn" Content="Clear all" Style="{StaticResource HistoryDangerButton}"
                                             Services:LocalizationService.SourceText="Clear all"
-                                            ToolTip="Delete all items in the current history tab"
+                                            ToolTip="Delete all items in the current filter (one click + confirmation)"
                                             AutomationProperties.Name="Clear current history tab"
                                             AutomationProperties.HelpText="Delete all items in the current history tab"
                                             Cursor="Hand" Click="DeleteAllClick"/>
-                                    <Button x:Name="DeleteSelectedBtn" Content="Delete selected" Style="{StaticResource HistoryDangerButton}"
-                                            Services:LocalizationService.SourceText="Delete selected"
-                                             Margin="6,0,0,0" Visibility="Collapsed"
-                                             ToolTip="Delete selected history items"
-                                             AutomationProperties.Name="Delete selected history items"
-                                             AutomationProperties.HelpText="Delete selected history items"
-                                             Cursor="Hand" Click="DeleteSelectedClick"/>
                                 </StackPanel>
-                                <ComboBox x:Name="HistoryCategoryCombo"
+                                <ComboBox x:Name="HistoryCategoryCombo" Grid.Column="1"
                                           MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
                                           ToolTip="Choose the history category"
                                           AutomationProperties.Name="History category"
@@ -492,7 +469,7 @@
                                 </ComboBox>
 
                                 <!-- Inline search bar -->
-                                <Grid x:Name="ImageSearchRow" VerticalAlignment="Center" Margin="8,0,8,0">
+                                <Grid x:Name="ImageSearchRow" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="160">
                                     <Border x:Name="ImageSearchBorder" Background="Transparent"
                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                             BorderThickness="1" CornerRadius="7" Padding="8,5"
@@ -572,7 +549,37 @@
                                         </Grid>
                                     </Border>
                                 </Grid>
-                            </DockPanel>
+                            </Grid>
+
+                            <!-- Selection bar: stable second row, only in select mode -->
+                            <StackPanel x:Name="SelectionBar" Orientation="Horizontal" VerticalAlignment="Center"
+                                        Margin="0,8,0,0" Visibility="Collapsed">
+                                <Button x:Name="SelectAllBtn" Content="Select all" Style="{StaticResource HistoryActionButton}"
+                                        Services:LocalizationService.SourceText="Select all"
+                                        Margin="0,0,6,0"
+                                        ToolTip="Select all items in the current filter"
+                                        AutomationProperties.Name="Select all history items"
+                                        Cursor="Hand" Click="SelectAllClick"/>
+                                <Button x:Name="UnselectBtn" Content="Clear" Style="{StaticResource HistoryActionButton}"
+                                        Services:LocalizationService.SourceText="Clear"
+                                        Margin="0,0,6,0"
+                                        ToolTip="Clear selection"
+                                        AutomationProperties.Name="Clear history selection"
+                                        Cursor="Hand" Click="UnselectClick"/>
+                                <TextBlock x:Name="SelectionCountLabel"
+                                           VerticalAlignment="Center"
+                                           Margin="6,0,10,0" MinWidth="90"
+                                           FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource ThemeAccentBrush}"
+                                           Visibility="Collapsed"
+                                           Text=""/>
+                                <Button x:Name="DeleteSelectedBtn" Content="Delete selected" Style="{StaticResource HistoryDangerButton}"
+                                        Services:LocalizationService.SourceText="Delete selected"
+                                        ToolTip="Delete selected history items (one click + confirmation)"
+                                        AutomationProperties.Name="Delete selected history items"
+                                        AutomationProperties.HelpText="Delete selected history items"
+                                        Cursor="Hand" Click="DeleteSelectedClick"/>
+                            </StackPanel>
 
                             <!-- Item count + status (centered, moved from old bottom bar) -->
                             <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,6,0,0">

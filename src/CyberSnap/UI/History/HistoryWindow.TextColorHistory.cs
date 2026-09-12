@@ -84,7 +84,10 @@ public partial class HistoryWindow
         _ocrRenderCount = Math.Min(HistoryInitialPageSize, _filteredOcrEntries.Count);
 
         AppendOcrHistoryEntries(_filteredOcrEntries, 0, _ocrRenderCount);
-        UpdateHistoryActionButtons();
+        if (_selectMode)
+            PushStoreToVisibleCards();
+        else
+            UpdateHistoryActionButtons();
         sw.Stop();
         AppDiagnostics.LogInfo(
             "history.load-text",
@@ -121,7 +124,10 @@ public partial class HistoryWindow
         _filteredColorEntries = entries;
         _colorRenderCount = Math.Min(HistoryInitialPageSize, _filteredColorEntries.Count);
         AppendColorHistoryEntries(_filteredColorEntries, 0, _colorRenderCount);
-        UpdateHistoryActionButtons();
+        if (_selectMode)
+            PushStoreToVisibleCards();
+        else
+            UpdateHistoryActionButtons();
         sw.Stop();
         AppDiagnostics.LogInfo(
             "history.load-colors",
@@ -149,6 +155,8 @@ public partial class HistoryWindow
         var previousCount = _ocrRenderCount;
         _ocrRenderCount = Math.Min(_ocrRenderCount + HistoryAppendPageSize, _filteredOcrEntries.Count);
         AppendOcrHistoryEntries(_filteredOcrEntries, previousCount, _ocrRenderCount - previousCount);
+        if (_selectMode)
+            PushStoreToVisibleCards();
         _ = Dispatcher.BeginInvoke(() =>
         {
                 if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 3)
@@ -165,6 +173,8 @@ public partial class HistoryWindow
         var previousCount = _colorRenderCount;
         _colorRenderCount = Math.Min(_colorRenderCount + HistoryAppendPageSize, _filteredColorEntries.Count);
         AppendColorHistoryEntries(_filteredColorEntries, previousCount, _colorRenderCount - previousCount);
+        if (_selectMode)
+            PushStoreToVisibleCards();
         _ = Dispatcher.BeginInvoke(() =>
         {
                 if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 4)
@@ -346,6 +356,13 @@ public partial class HistoryWindow
             var selected = card.Tag is true;
             selected = !selected;
             card.Tag = selected;
+            if (card.DataContext is OcrHistoryEntry ocrEntry)
+            {
+                if (selected)
+                    _selectedOcr.Add(ocrEntry);
+                else
+                    _selectedOcr.Remove(ocrEntry);
+            }
             UpdateSelectableCardSelection(card, selBadge, selected);
             UpdateHistoryActionButtons();
         }
@@ -602,6 +619,10 @@ public partial class HistoryWindow
             var selected = card.Tag is ColorHistoryEntry;
             selected = !selected;
             card.Tag = selected ? entry : null;
+            if (selected)
+                _selectedColor.Add(entry);
+            else
+                _selectedColor.Remove(entry);
             UpdateSelectableCardSelection(card, selBadge, selected);
             UpdateHistoryActionButtons();
         }
@@ -903,22 +924,6 @@ public partial class HistoryWindow
             }
         }
 
-        badge.Visibility = _selectMode || selected ? Visibility.Visible : Visibility.Collapsed;
-        badge.Opacity = selected ? 1 : 0.45;
-        if (selected)
-        {
-            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
-            badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
-            badge.BorderThickness = new Thickness(1.5);
-        }
-        else
-        {
-            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20));
-            badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
-            badge.BorderThickness = new Thickness(2);
-        }
-        UpdateSelectionBadgeAccessibility(badge, selected);
-        if (badge.Tag is UIElement check)
-            check.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
+        ApplyGalleryBadgeWithMode(badge, selected);
     }
 }

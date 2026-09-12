@@ -119,13 +119,11 @@ public partial class HistoryWindow
         };
         card.PreviewMouseLeftButtonDown += (_, e) =>
         {
-            if (!_selectMode || HistoryCategoryCombo.SelectedIndex != 0)
+            // Selection is committed on click-up via ActivateCard through the central
+            // store; no pre-tracking here (avoids double bookkeeping in the All tab).
+            if (!_selectMode)
                 return;
-            // Track selection explicitly for the All tab; let the existing MouseLeftButtonUp handler toggle vm.IsSelected
-            if (_selectedCardsInAllTab.Contains(card))
-                _selectedCardsInAllTab.Remove(card);
-            else
-                _selectedCardsInAllTab.Add(card);
+            e.Handled = false;
         };
         AutomationProperties.SetName(card, $"{kindLabel} history item");
         AutomationProperties.SetHelpText(card, "Press Enter or Space to open this history item. Press Ctrl+C to copy it. In select mode, press Enter or Space to select it.");
@@ -620,7 +618,16 @@ public partial class HistoryWindow
                 return;
             }
 
-            vm.IsSelected = !vm.IsSelected;
+            var next = !IsFileSelected(vm.Entry);
+            SetFileSelected(vm.Entry, next);
+            vm.IsSelected = next;
+            if (HistoryCategoryCombo.SelectedIndex == 0)
+            {
+                if (next)
+                    _selectedCardsInAllTab.Add(card);
+                else
+                    _selectedCardsInAllTab.Remove(card);
+            }
             UpdateCardSelection(vm);
             UpdateImageSearchActionButtons();
             UpdateHistoryActionButtons();
@@ -795,7 +802,7 @@ public partial class HistoryWindow
         return item;
     }
 
-    private static Border CreateSelectionBadge(bool isSelected)
+    private Border CreateSelectionBadge(bool isSelected)
     {
         var checkPath = new System.Windows.Shapes.Path
         {
@@ -805,25 +812,27 @@ public partial class HistoryWindow
             StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
             StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
             Stretch = Stretch.Uniform,
-            Margin = new Thickness(8),
+            Margin = new Thickness(7),
             Visibility = isSelected ? Visibility.Visible : Visibility.Hidden
         };
 
         var selectedBg = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
         var selectedBorder = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
-        var ringBg = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20));
-        var ringBorder = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
+        // Dark scrim + white ring so the badge reads on white previews (QR) and dark shots alike.
+        var ringBg = new SolidColorBrush(System.Windows.Media.Color.FromArgb(170, 12, 12, 14));
+        var ringBorder = new SolidColorBrush(System.Windows.Media.Color.FromArgb(230, 255, 255, 255));
 
         var badge = new Border
         {
-            Width = 36,
-            Height = 36,
-            CornerRadius = new CornerRadius(18),
+            Width = 30,
+            Height = 30,
+            CornerRadius = new CornerRadius(15),
             Background = isSelected ? selectedBg : ringBg,
             BorderBrush = isSelected ? selectedBorder : ringBorder,
             BorderThickness = new Thickness(isSelected ? 1.5 : 2),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(6),
             IsHitTestVisible = false,
             Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed,
             Opacity = isSelected ? 1 : 0.45,
@@ -832,7 +841,7 @@ public partial class HistoryWindow
         };
         UpdateSelectionBadgeAccessibility(badge, isSelected);
         Grid.SetRowSpan(badge, 2);
-        System.Windows.Controls.Panel.SetZIndex(badge, 20);
+        System.Windows.Controls.Panel.SetZIndex(badge, 30);
         return badge;
     }
 
