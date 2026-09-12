@@ -314,9 +314,9 @@ public partial class HistoryWindow
         var lang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
         bool es = lang == "es";
         if (span.TotalMinutes < 1) return es ? "Ahora" : "Just now";
-        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}{(es ? "min" : "m")} {(es ? "atrás" : "ago")}";
-        if (span.TotalHours < 24) return $"{(int)span.TotalHours}{(es ? "h" : "h")} {(es ? "atrás" : "ago")}";
-        if (span.TotalDays < 7) return $"{(int)span.TotalDays}{(es ? "d" : "d")} {(es ? "atrás" : "ago")}";
+        if (span.TotalMinutes < 60) return es ? $"hace {(int)span.TotalMinutes} min" : $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return es ? $"hace {(int)span.TotalHours} h" : $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return es ? $"hace {(int)span.TotalDays} d" : $"{(int)span.TotalDays}d ago";
         return dt.ToString("MMM d");
     }
 }

@@ -483,22 +483,6 @@
                     <!-- Top bar: status line, actions + search row, tabs, selection row -->
                     <Border Grid.Row="0" Padding="0,0,0,6">
                         <StackPanel>
-                            <!-- Status line (count + status), centered on top -->
-                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock x:Name="HistoryCountText" FontSize="12" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.85"
-                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.Name="History item count"
-                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                                <TextBlock x:Name="HistorySearchStatusText" FontSize="12" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.7"
-                                           Margin="12,0,0,0"
-                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.Name="History status"
-                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                            </StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -524,6 +508,23 @@
                                         <Image x:Name="DeleteAllBtnIcon" Width="16" Height="16" Stretch="Uniform"
                                                IsHitTestVisible="False"/>
                                     </Button>
+                                </StackPanel>
+                                <!-- Status line (count + status), centered at search-bar level -->
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Orientation="Horizontal" Margin="8,0">
+                                    <TextBlock x:Name="HistoryCountText" FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.85"
+                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                               AutomationProperties.Name="History item count"
+                                               AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                               AutomationProperties.LiveSetting="Polite"/>
+                                    <TextBlock x:Name="HistorySearchStatusText" FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.7"
+                                               Margin="12,0,0,0"
+                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                               AutomationProperties.Name="History status"
+                                               AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                               AutomationProperties.LiveSetting="Polite"/>
                                 </StackPanel>
                                 <!-- The ComboBox is kept collapsed as the selection state holder so the
                                      existing SelectionChanged flow (persist, reset, load) stays untouched. -->
