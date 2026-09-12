@@ -270,7 +270,7 @@ public partial class HistoryWindow
 
             var text = ImageSearchBox.Text ?? "";
 
-            // Sync backing search query fields immediately before triggering any UI/AutoPrune updates
+            // Sync backing search query fields immediately
             if (HistoryCategoryCombo.SelectedIndex <= 1)  // All (0) or Images (1)
                 _imageSearchQuery = text;
             else if (HistoryCategoryCombo.SelectedIndex == 3)
@@ -279,8 +279,6 @@ public partial class HistoryWindow
                 _colorSearchQuery = text;
             else if (HistoryCategoryCombo.SelectedIndex == 5)
                 _codeSearchQuery = text;
-
-            SetAutoPruneRowAutoHidden(false);
 
             ImageSearchClearBtn.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
             ImageSearchChevron.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
@@ -348,9 +346,10 @@ public partial class HistoryWindow
     {
         if (ImageSearchBox.IsKeyboardFocused)
         {
-            SetAutoPruneRowAutoHidden(false);
+            // Sober focus cue (no cyan glow): slightly lifted neutral border.
+            var c = Theme.TextSecondary;
             ImageSearchBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(60, 0, 255, 255));  // very soft cyan
+                System.Windows.Media.Color.FromArgb(90, c.R, c.G, c.B));
         }
         else
         {
@@ -489,10 +488,6 @@ public partial class HistoryWindow
 
     private void HistoryPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        // Auto-hide pruning card on scroll
-        var shouldHidePrune = e.VerticalOffset > 18;
-        SetAutoPruneRowAutoHidden(shouldHidePrune);
-
         // All view: infinite scroll
         if (HistoryCategoryCombo.SelectedIndex == 0)
         {
@@ -536,100 +531,14 @@ public partial class HistoryWindow
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
+    /// <summary>
+    /// Applies the stored retention/count limits on gallery open. The pruning controls
+    /// themselves live in Configuration → Gallery; the gallery no longer edits them.
+    /// </summary>
     private void LoadPruneSettings()
     {
-        _suppressPrunePreferenceChange = true;
-        try
-        {
-            var s = _settingsService.Settings;
-            HistoryRetentionCombo.SelectedIndex = Math.Clamp((int)s.HistoryRetention, 0, 4);
-            HistoryCountLimitCombo.SelectedIndex = s.HistoryCountLimit switch
-            {
-                50 => 1,
-                100 => 2,
-                250 => 3,
-                500 => 4,
-                1000 => 5,
-                _ => 0
-            };
-            HistoryDeleteOriginalOnPruneCheck.IsChecked = s.HistoryDeleteOriginalOnPrune;
-        }
-        finally
-        {
-            _suppressPrunePreferenceChange = false;
-        }
-
         // Apply pruning on startup so limits take effect immediately
         _historyService.PruneByRetention(_settingsService.Settings.HistoryRetention);
         _historyService.PruneByCount(_settingsService.Settings.HistoryCountLimit, _settingsService.Settings.HistoryDeleteOriginalOnPrune);
-    }
-
-    private void HistoryRetentionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded || _suppressPrunePreferenceChange) return;
-
-        try
-        {
-            var selected = (HistoryRetentionPeriod)Math.Clamp(HistoryRetentionCombo.SelectedIndex, 0, 4);
-            _settingsService.Settings.HistoryRetention = selected;
-            _settingsService.Save();
-            _historyService.PruneByRetention(selected);
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.history-retention", ex);
-        }
-    }
-
-    private void HistoryCountLimitCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded || _suppressPrunePreferenceChange) return;
-
-        try
-        {
-            var selected = HistoryCountLimitCombo.SelectedIndex switch
-            {
-                1 => 50,
-                2 => 100,
-                3 => 250,
-                4 => 500,
-                5 => 1000,
-                _ => 0
-            };
-            _settingsService.Settings.HistoryCountLimit = selected;
-            _historyService.HistoryCountLimit = selected;
-            _settingsService.Save();
-            _historyService.PruneByCount(selected, _settingsService.Settings.HistoryDeleteOriginalOnPrune);
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.history-count-limit", ex);
-        }
-    }
-
-    private void HistoryDeleteOriginalOnPruneCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressPrunePreferenceChange) return;
-
-        try
-        {
-            var selected = HistoryDeleteOriginalOnPruneCheck.IsChecked == true;
-            _settingsService.Settings.HistoryDeleteOriginalOnPrune = selected;
-            _historyService.HistoryDeleteOriginalOnPrune = selected;
-            _settingsService.Save();
-            if (selected && _settingsService.Settings.HistoryCountLimit > 0)
-            {
-                _historyService.PruneByCount(_settingsService.Settings.HistoryCountLimit, true);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.history-delete-original-on-prune", ex);
-        }
-    }
-
-    private void DeleteOriginalLabel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        HistoryDeleteOriginalOnPruneCheck.IsChecked = HistoryDeleteOriginalOnPruneCheck.IsChecked != true;
     }
 }

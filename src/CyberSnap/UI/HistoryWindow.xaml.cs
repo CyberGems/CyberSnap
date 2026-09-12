@@ -62,7 +62,6 @@ public partial class HistoryWindow : Window
     private int _historyTabLoadVersion;
     private bool _historyTabLoadScheduled;
     private bool _historyTabLoadPreserveTransientState;
-    private bool _suppressPrunePreferenceChange;
     private string? _pendingNavigateToPath;
     private WindowState _lastNonMinimizedState = WindowState.Normal;
 
@@ -358,8 +357,9 @@ public partial class HistoryWindow : Window
 
     private void LoadStaticFluentIcons()
     {
-        var accentColor = System.Drawing.Color.FromArgb(Theme.Accent.A, Theme.Accent.R, Theme.Accent.G, Theme.Accent.B);
-        ImageSearchIcon.Source = Helpers.FluentIcons.RenderWpf("search", accentColor, 18);
+        var c = Theme.TextSecondary;
+        ImageSearchIcon.Source = Helpers.FluentIcons.RenderWpf(
+            "search", System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B), 18);
         ImageSearchIcon.Opacity = 0.55;
     }
 

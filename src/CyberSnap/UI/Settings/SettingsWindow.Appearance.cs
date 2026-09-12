@@ -249,6 +249,16 @@ public partial class SettingsWindow
             SaveHistoryCheck.IsChecked = s.SaveHistory;
             SaveStandaloneToHistoryCheck.IsChecked = s.SaveStandaloneToHistory;
             HistoryRetentionCombo.SelectedIndex = (int)s.HistoryRetention;
+            HistoryCountLimitCombo.SelectedIndex = s.HistoryCountLimit switch
+            {
+                50 => 1,
+                100 => 2,
+                250 => 3,
+                500 => 4,
+                1000 => 5,
+                _ => 0
+            };
+            HistoryDeleteOriginalOnPruneCheck.IsChecked = s.HistoryDeleteOriginalOnPrune;
             HistoryClickActionCombo.SelectedIndex = (int)s.HistoryClickAction;
             ShowImageSearchBarCheck.IsChecked = s.ShowImageSearchBar;
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;

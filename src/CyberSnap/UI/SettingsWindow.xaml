@@ -4015,7 +4015,7 @@
             </ScrollViewer>
 
             <!-- Gallery -->
-            <ScrollViewer x:Name="HistoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,44">
+            <ScrollViewer x:Name="HistoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Storage &amp; Retention" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -4033,7 +4033,7 @@
                                     <TextBlock Text="Save captures to Gallery" Style="{StaticResource SettingTitle}"
                                                Services:LocalizationService.SourceText="Save captures to Gallery"/>
                                     <TextBlock Text="When enabled, captures saved to your save folder are listed in the Gallery."
-                                               Style="{StaticResource SettingDescription}"
+                                               Style="{StaticResource SettingDescription}" TextWrapping="Wrap"
                                                Services:LocalizationService.SourceText="When enabled, captures saved to your save folder are listed in the Gallery."/>
                                 </StackPanel>
                                 <CheckBox x:Name="SaveHistoryCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
@@ -4055,7 +4055,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Save standalone tools to Gallery" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="When enabled, results from Color Picker, OCR, and QR/Barcode tools will be saved in the Gallery." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="When enabled, results from Color Picker, OCR, and QR/Barcode tools will be saved in the Gallery." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <CheckBox x:Name="SaveStandaloneToHistoryCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           ToolTip="When enabled, results from Color Picker, OCR, and QR/Barcode tools will be saved in the Gallery."
@@ -4074,7 +4074,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Auto-delete old captures" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Automatically removes old items from the Gallery." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Automatically removes old items from the Gallery." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ComboBox x:Name="HistoryRetentionCombo" Grid.Column="2" MinWidth="125"
                                           VerticalAlignment="Center"
@@ -4103,6 +4103,58 @@
                                                   AutomationProperties.HelpText="Automatically remove capture gallery older than 3 months."/>
                                 </ComboBox>
                             </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Limit captures" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Limit captures"/>
+                                    <TextBlock Text="Keep only the newest captures. Oldest items are removed first." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"
+                                               Services:LocalizationService.SourceText="Keep only the newest captures. Oldest items are removed first."/>
+                                </StackPanel>
+                                <ComboBox x:Name="HistoryCountLimitCombo" Grid.Column="2" MinWidth="125"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Limit captures"
+                                          ToolTip="Maximum captures to keep. Oldest items are removed first."
+                                          Services:LocalizationService.SourceToolTip="Maximum captures to keep. Oldest items are removed first."
+                                          SelectionChanged="HistoryCountLimitCombo_SelectionChanged">
+                                    <ComboBoxItem Content="No limit" Services:LocalizationService.SourceContent="No limit"/>
+                                    <ComboBoxItem Content="50 captures" Services:LocalizationService.SourceContent="50 captures"/>
+                                    <ComboBoxItem Content="100 captures" Services:LocalizationService.SourceContent="100 captures"/>
+                                    <ComboBoxItem Content="250 captures" Services:LocalizationService.SourceContent="250 captures"/>
+                                    <ComboBoxItem Content="500 captures" Services:LocalizationService.SourceContent="500 captures"/>
+                                    <ComboBoxItem Content="1000 captures" Services:LocalizationService.SourceContent="1000 captures"/>
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE74D;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                    <TextBlock Text="Delete original files" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Delete original files"/>
+                                    <TextBlock Text="Also delete screenshot and recording files from disk when pruning. When off, pruned items are hidden from the Gallery but files are kept." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"
+                                               Services:LocalizationService.SourceText="Also delete screenshot and recording files from disk when pruning. When off, pruned items are hidden from the Gallery but files are kept."/>
+                                </StackPanel>
+                                <CheckBox x:Name="HistoryDeleteOriginalOnPruneCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Also delete screenshot and recording files from disk when pruning."
+                                          Services:LocalizationService.SourceToolTip="Also delete screenshot and recording files from disk when pruning."
+                                          AutomationProperties.Name="Delete original files"
+                                          Checked="HistoryDeleteOriginalOnPruneCheck_Changed" Unchecked="HistoryDeleteOriginalOnPruneCheck_Changed"/>
+                            </Grid>
                             <TextBlock x:Name="HistoryPreferenceStatusText"
                                        Style="{StaticResource SettingsStatusText}"
                                        Visibility="Collapsed"
@@ -4124,7 +4176,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Thumbnail click action" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Action performed when clicking a capture thumbnail in the Gallery." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Action performed when clicking a capture thumbnail in the Gallery." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ComboBox x:Name="HistoryClickActionCombo" Grid.Column="2" MinWidth="145"
                                           VerticalAlignment="Center"
@@ -4162,7 +4214,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Show image search bar" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Display the search bar in the Capture Gallery window." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Display the search bar in the Capture Gallery window." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <CheckBox x:Name="ShowImageSearchBarCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Show image search bar"
@@ -4181,7 +4233,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Auto-index images" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Automatically index new images for search." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Automatically index new images for search." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <CheckBox x:Name="AutoIndexImagesCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Auto-index images"
@@ -4200,7 +4252,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Image search index" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="OCR-extracted text index for searching within screenshots." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="OCR-extracted text index for searching within screenshots." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                                     <TextBlock x:Name="ImageIndexMaintenanceStatusText"
                                                Style="{StaticResource SettingsStatusText}"
                                                Visibility="Collapsed"

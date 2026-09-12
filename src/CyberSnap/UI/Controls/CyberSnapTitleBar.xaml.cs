@@ -430,31 +430,20 @@ public partial class CyberSnapTitleBar : UserControl
             searchToggle.Unchecked += (_, _) => ToggleSetting("ShowImageSearchBar", false);
             menu.Items.Add(searchToggle);
 
-            var pruneToggle = new MenuItem
-            {
-                Header = LocalizationService.Translate("Auto-Pruning"),
-                IsCheckable = true,
-                ToolTip = LocalizationService.Translate("Show or hide the auto-pruning controls")
-            };
-            pruneToggle.Checked += (_, _) => ToggleSetting("ShowAutoPrune", true);
-            pruneToggle.Unchecked += (_, _) => ToggleSetting("ShowAutoPrune", false);
-            menu.Items.Add(pruneToggle);
-
             menu.Opened += (_, _) =>
             {
                 ApplyButtonHoverVisual(ActionBtn, true);
                 var settings = ((App)Application.Current).GetSettings();
                 searchToggle.IsChecked = settings.ShowImageSearchBar;
-                pruneToggle.IsChecked = settings.ShowAutoPrune;
             };
 
             menu.Items.Add(new Separator());
 
             var configItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Configuration..."),
+                Header = WithEllipsis(LocalizationService.Translate("Gallery settings")),
                 Icon = CreateMenuIcon("gear", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open the full Configuration window")
+                ToolTip = LocalizationService.Translate("Open Gallery settings")
             };
             configItem.Click += (_, _) =>
             {

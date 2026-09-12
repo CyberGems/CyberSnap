@@ -68,6 +68,66 @@ public partial class SettingsWindow
             value => _historyService.PruneByRetention(value));
     }
 
+    private void HistoryCountLimitCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressHistoryPreferenceChange) return;
+
+        var previous = _settingsService.Settings.HistoryCountLimit;
+        var selected = HistoryCountLimitCombo.SelectedIndex switch
+        {
+            1 => 50,
+            2 => 100,
+            3 => 250,
+            4 => 500,
+            5 => 1000,
+            _ => 0
+        };
+        UpdateHistoryPreference(
+            "settings.history-count-limit",
+            "History count limit",
+            previous,
+            selected,
+            value => _settingsService.Settings.HistoryCountLimit = value,
+            value =>
+            {
+                HistoryCountLimitCombo.SelectedIndex = value switch
+                {
+                    50 => 1,
+                    100 => 2,
+                    250 => 3,
+                    500 => 4,
+                    1000 => 5,
+                    _ => 0
+                };
+                _historyService.HistoryCountLimit = value;
+            },
+            value => _historyService.PruneByCount(value, _settingsService.Settings.HistoryDeleteOriginalOnPrune));
+    }
+
+    private void HistoryDeleteOriginalOnPruneCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressHistoryPreferenceChange) return;
+
+        var previous = _settingsService.Settings.HistoryDeleteOriginalOnPrune;
+        var selected = HistoryDeleteOriginalOnPruneCheck.IsChecked == true;
+        UpdateHistoryPreference(
+            "settings.history-delete-original-on-prune",
+            "Delete original files on prune",
+            previous,
+            selected,
+            value => _settingsService.Settings.HistoryDeleteOriginalOnPrune = value,
+            value =>
+            {
+                HistoryDeleteOriginalOnPruneCheck.IsChecked = value;
+                _historyService.HistoryDeleteOriginalOnPrune = value;
+            },
+            value =>
+            {
+                if (value && _settingsService.Settings.HistoryCountLimit > 0)
+                    _historyService.PruneByCount(_settingsService.Settings.HistoryCountLimit, true);
+            });
+    }
+
     private void HistoryClickActionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || _suppressHistoryPreferenceChange) return;
