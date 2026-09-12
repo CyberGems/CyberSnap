@@ -2,10 +2,10 @@
   <img src="src/CyberSnap/Assets/CyberSnap_square.png" width="120" alt="CyberSnap logo" />
 </p>
 
-<h1 align="center">CyberSnap — Screenshot & Screen Recorder</h1>
+<h1 align="center">CyberSnap: Screenshot & Screen Recorder</h1>
 
 <p align="center">
-  <strong>A full-featured screenshot, annotation, OCR, and screen-recording tool</strong> — capture anything, edit everything, and share anywhere. Built with .NET 9 and WPF.
+  <strong>A full-featured screenshot, annotation, OCR, and screen-recording tool</strong>: capture anything, edit everything, and share anywhere. Built with .NET 9 and WPF.
 </p>
 
 <p align="center">
@@ -20,15 +20,15 @@
   <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/%F0%9F%93%96_Wiki-Documentation-222222?style=flat-square&logo=github&logoColor=white" alt="Wiki" height="24" /></a>
 </p>
 
-A full-featured **screenshot, annotation, OCR, translation, screen-recording and sharing tool** for Windows. CyberSnap combines a floating capture widget, an annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload — all in a single .NET 9 / WPF desktop application.
+A full-featured **screenshot, annotation, OCR, translation, screen-recording and sharing tool** for Windows. CyberSnap combines a floating capture widget, an annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload, all in a single .NET 9 / WPF desktop application.
 
-*Free and open source (GPLv3) — no ads, no tracking, and no data collection. Just enjoy it.*
+*Free and open source (GPLv3): no ads, no tracking, and no data collection. Just enjoy it.*
 
 ---
 
 ## 📸 Why CyberSnap?
 
-Most screenshot tools either do too little or bury features behind a paywall. CyberSnap gives you **professional-grade capture, editing, and sharing** — including OCR, translation, and 7 upload destinations — all in a free, open-source package with a polished, modern design.
+Most screenshot tools either do too little or bury features behind a paywall. CyberSnap gives you **professional-grade capture, editing, and sharing**, including OCR, translation, and 7 upload destinations, all in a free, open-source package with a polished, modern design.
 
 | Need | Solution |
 |---|---|
@@ -142,7 +142,7 @@ Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/relea
 
 ### 🛡️ Windows SmartScreen
 
-Windows may show a SmartScreen warning the first time you run the CyberSnap installer — this is an unsigned hobby app, so Windows hasn't built reputation for the file yet. This is expected; the source is public so you can inspect exactly what it does. The same can appear when launching the portable build.
+Windows may show a SmartScreen warning the first time you run the CyberSnap installer: this is an unsigned hobby app, so Windows hasn't built reputation for the file yet. This is expected; the source is public so you can inspect exactly what it does. The same can appear when launching the portable build.
 
 To continue:
 
@@ -199,7 +199,7 @@ Contributions are welcome. Please open an issue describing the change before sta
 
 Originally forked from [OddSnap](https://github.com/jasperdevs/odd-snap) by [jasperdevs](https://github.com/jasperdevs). CyberSnap has since been extensively rewritten and expanded by [CyberGems](https://cybergems.org/).
 
-This project also builds on open-source components including Tesseract OCR, ZXing, SQLite, and Inno Setup — thanks to their authors and maintainers.
+This project also builds on open-source components including Tesseract OCR, ZXing, SQLite, and Inno Setup, thanks to their authors and maintainers.
 
 ---
 
@@ -264,12 +264,12 @@ Made by [**CyberGems**](https://cybergems.org)
 
 </div>
 <p align="center">
-  <a href="https://twitter.com/intent/tweet?text=CyberSnap%20%E2%80%94%20free%20%26%20open-source%20desktop%20tool%20for%20Windows&url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Share_on_X-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Share on X" /></a>
+  <a href="https://twitter.com/intent/tweet?text=CyberSnap%3A%20free%20%26%20open-source%20desktop%20tool%20for%20Windows&url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Share_on_X-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Share on X" /></a>
   &nbsp;<a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Share_on_Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white" alt="Share on Facebook" /></a>
-  &nbsp;<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F&title=CyberSnap%20%E2%80%94%20free%20%26%20open-source%20desktop%20tool%20for%20Windows"><img src="https://img.shields.io/badge/Share_on_Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Share on Reddit" /></a>
-  &nbsp;<a href="https://t.me/share/url?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F&text=CyberSnap%20%E2%80%94%20free%20%26%20open-source%20desktop%20tool%20for%20Windows"><img src="https://img.shields.io/badge/Share_on_Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Share on Telegram" /></a>
+  &nbsp;<a href="https://www.reddit.com/submit?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F&title=CyberSnap%3A%20free%20%26%20open-source%20desktop%20tool%20for%20Windows"><img src="https://img.shields.io/badge/Share_on_Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Share on Reddit" /></a>
+  &nbsp;<a href="https://t.me/share/url?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F&text=CyberSnap%3A%20free%20%26%20open-source%20desktop%20tool%20for%20Windows"><img src="https://img.shields.io/badge/Share_on_Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Share on Telegram" /></a>
   &nbsp;<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Share_on_LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Share on LinkedIn" /></a>
-  &nbsp;<a href="mailto:?subject=CyberSnap%20%E2%80%94%20free%20%26%20open-source%20desktop%20tool%20for%20Windows&body=CyberSnap%20%E2%80%94%20free%20%26%20open-source%20desktop%20tool%20for%20Windows%20https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Share_by_Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Share by Email" /></a>
+  &nbsp;<a href="mailto:?subject=CyberSnap%3A%20free%20%26%20open-source%20desktop%20tool%20for%20Windows&body=CyberSnap%3A%20free%20%26%20open-source%20desktop%20tool%20for%20Windows%20https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Share_by_Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Share by Email" /></a>
 </p>
 
 ---
@@ -283,7 +283,7 @@ More free, open-source, privacy-first apps from [**CyberGems**](https://github.c
 | 🕐&nbsp;[**CyberClock**](https://github.com/CyberGems/CyberClock#readme) | Desktop clock with analog & digital display, calendar, timer, stopwatch and relaxation module. |
 | 📢&nbsp;[**CyberFeeds**](https://github.com/CyberGems/CyberFeeds#readme) | High-performance, local-first RSS and Atom reader built for speed, privacy and clean reading. |
 | 🚀&nbsp;[**CyberLauncher**](https://github.com/CyberGems/CyberLauncher#readme) | Windows application launcher with hot corners, scheduler, system monitor and integrated terminal. |
-| 💻&nbsp;[**CyberManager**](https://github.com/CyberGems/CyberManager#readme) | Lightweight, high-performance task manager, virtualized and NT-native — a powerful Task Manager alternative. |
+| 💻&nbsp;[**CyberManager**](https://github.com/CyberGems/CyberManager#readme) | Lightweight, high-performance task manager, virtualized and NT-native, a powerful Task Manager alternative. |
 | 📝&nbsp;[**CyberNotes**](https://github.com/CyberGems/CyberNotes#readme) | Privacy-focused note-taking app with rich text, folders, tabs and bcrypt-protected local storage. |
 | ⚡&nbsp;[**CyberPaste**](https://github.com/CyberGems/CyberPaste#readme) | Privacy-first clipboard manager for text, code, images, HTML and files. |
 | ⭐&nbsp;[**CyberTray**](https://github.com/CyberGems/CyberTray#readme) | High-performance tray launcher with hotspots, system monitoring, process manager and PIN-protected file vault. |
