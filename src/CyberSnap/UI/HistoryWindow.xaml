@@ -79,6 +79,73 @@
         <sys:Double x:Key="SettingsControlFontSize">12</sys:Double>
         <sys:Double x:Key="SettingsControlMinWidth">88</sys:Double>
 
+        <Style x:Key="GalleryTabButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="15" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Thin horizontal scrollbar for the tab strip (only when tabs overflow) -->
+        <Style x:Key="GalleryTabScrollBarStyle" TargetType="{x:Type ScrollBar}">
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0.55"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Background="Transparent" Height="{TemplateBinding Height}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="False" Margin="8,0,8,0">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageLeftCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Opacity="0.5">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="{x:Type Thumb}">
+                                                <Border CornerRadius="3" Background="{DynamicResource ThemeTextSecondaryBrush}" Margin="2,1,2,1"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageRightCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="HistoryActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
@@ -413,7 +480,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Top bar: stable 2-row toolbar (filter row + selection row) -->
+                    <!-- Top bar: actions + search row, category tabs on their own row -->
                     <Border Grid.Row="0" Padding="0,0,0,6">
                         <StackPanel>
                             <Grid>
@@ -436,7 +503,10 @@
                                             AutomationProperties.HelpText="Delete all items in the current history tab"
                                             Cursor="Hand" Click="DeleteAllClick"/>
                                 </StackPanel>
-                                <ComboBox x:Name="HistoryCategoryCombo" Grid.Column="1"
+                                <!-- The ComboBox is kept collapsed as the selection state holder so the
+                                     existing SelectionChanged flow (persist, reset, load) stays untouched. -->
+                                <ComboBox x:Name="HistoryCategoryCombo"
+                                          Visibility="Collapsed"
                                           MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
                                           ToolTip="Choose the history category"
                                           AutomationProperties.Name="History category"
@@ -550,6 +620,18 @@
                                     </Border>
                                 </Grid>
                             </Grid>
+
+                            <!-- Category tabs on their own row (icon + label + count pills) -->
+                            <ScrollViewer x:Name="GalleryTabScroller" Margin="0,8,0,0"
+                                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                                          VerticalAlignment="Center" Focusable="False"
+                                          AutomationProperties.Name="History category">
+                                <ScrollViewer.Resources>
+                                    <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource GalleryTabScrollBarStyle}"/>
+                                </ScrollViewer.Resources>
+                                <StackPanel x:Name="GalleryTabStrip" Orientation="Horizontal"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </ScrollViewer>
 
                             <!-- Selection bar: stable second row, only in select mode -->
                             <StackPanel x:Name="SelectionBar" Orientation="Horizontal" VerticalAlignment="Center"

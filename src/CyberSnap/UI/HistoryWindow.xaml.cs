@@ -73,6 +73,7 @@ public partial class HistoryWindow : Window
         _imageSearchIndexService = imageSearchIndexService;
 
         InitializeComponent();
+        BuildGalleryTabs();
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         var lang = _settingsService.Settings.InterfaceLanguage;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Gallery, lang);
@@ -93,6 +94,7 @@ public partial class HistoryWindow : Window
                 HistoryCategoryCombo.SelectionChanged -= HistoryCategoryCombo_Changed;
                 HistoryCategoryCombo.SelectedIndex = savedFilter;
                 HistoryCategoryCombo.SelectionChanged += HistoryCategoryCombo_Changed;
+                UpdateGalleryTabCounts();
             }
             ApplyMicaBackdrop();
         };
@@ -893,5 +895,7 @@ public partial class HistoryWindow : Window
             HistoryCategoryCombo.SelectedIndex = selectedIndex;
             HistoryCategoryCombo.SelectionChanged += HistoryCategoryCombo_Changed;
         }
+
+        UpdateGalleryTabCounts();
     }
 }
