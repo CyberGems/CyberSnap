@@ -852,15 +852,11 @@ public partial class HistoryWindow
 
     private void UpdateSelectModeControls()
     {
-        RefreshSelectBtnIcon();
+        RefreshSelectBtnVisual();
         SelectAllBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
-        SelectAllBtn.Content = LocalizationService.Translate("Select all");
         SelectAllBtn.ToolTip = LocalizationService.Translate("Select all items in the current filter");
         UnselectBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
-        UnselectBtn.Content = LocalizationService.Translate("Clear");
         UnselectBtn.ToolTip = LocalizationService.Translate("Clear selection");
-        SelectionBar.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
-        // Keep search + prune rows mounted so the gallery grid doesn't jump.
         UpdateHistoryActionButtons();
     }
 
@@ -885,14 +881,9 @@ public partial class HistoryWindow
         DeleteAllBtn.IsEnabled = !historyUnavailable && deletableCount > 0;
         DeleteSelectedBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
         DeleteSelectedBtn.IsEnabled = !historyUnavailable && _selectMode && selectedCount > 0;
-        DeleteSelectedBtn.Content = selectedCount > 0
-            ? LocalizationService.Translate("Delete selected") + $" ({selectedCount})"
-            : LocalizationService.Translate("Delete selected");
-
-        // Selection count label (prominent accent text between buttons)
-        SelectionCountLabel.Visibility = _selectMode && selectedCount > 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (selectedCount > 0)
-            SelectionCountLabel.Text = string.Format(LocalizationService.Translate("{0} selected"), selectedCount);
+        // Count badge on the button: distinguishes it from Clear-all at a glance.
+        DeleteSelectedCountBadge.Visibility = selectedCount > 0 ? Visibility.Visible : Visibility.Collapsed;
+        DeleteSelectedCountText.Text = selectedCount > 0 ? selectedCount.ToString() : "";
 
         var selectHelp = _selectMode
             ? string.Format(LocalizationService.Translate("Finish selecting {0}"), categoryLabel)

@@ -379,19 +379,28 @@ public partial class HistoryWindow : Window
         ImageSearchIcon.Source = Helpers.FluentIcons.RenderWpf("search", secondary, 18);
         ImageSearchIcon.Opacity = 0.55;
         SelectBtnIcon.Source = Helpers.FluentIcons.RenderWpf("select", secondary, 16);
+        SelectAllBtnIcon.Source = Helpers.FluentIcons.RenderWpf("check", secondary, 16);
+        UnselectBtnIcon.Source = Helpers.FluentIcons.RenderWpf("close", secondary, 16);
+        DeleteSelectedBtnIcon.Source = Helpers.FluentIcons.RenderWpf("trash", secondary, 16);
         DeleteAllBtnIcon.Source = Helpers.FluentIcons.RenderWpf("trash", secondary, 16);
-        RefreshSelectBtnIcon();
+        RefreshSelectBtnVisual();
         UpdateSearchFilterIcon();
     }
 
-    /// <summary>Select button icon: accent tint while selecting, neutral otherwise.</summary>
-    private void RefreshSelectBtnIcon()
+    /// <summary>
+    /// Select button state: accent icon + tinted highlight while selecting (mirrors the
+    /// danger-button highlight), neutral otherwise.
+    /// </summary>
+    private void RefreshSelectBtnVisual()
     {
-        if (SelectBtnIcon == null)
+        if (SelectBtnIcon == null || SelectBtn == null)
             return;
         var c = _selectMode ? Theme.Accent : Theme.TextSecondary;
         SelectBtnIcon.Source = Helpers.FluentIcons.RenderWpf(
             "select", System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B), 16);
+        SelectBtn.Background = _selectMode
+            ? Theme.Brush(Theme.AccentSubtle)
+            : System.Windows.Media.Brushes.Transparent;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
