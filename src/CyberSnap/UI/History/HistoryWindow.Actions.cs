@@ -582,7 +582,7 @@ public partial class HistoryWindow
         var appended = _filteredHistoryItems.GetRange(previousCount, appendCount);
 
         _historyItems.AddRange(appended);
-        AppendGroupedHistoryItems(HistoryStack, appended, CreateHistoryCard);
+        AppendGroupedHistoryItems(HistoryStack, appended, CreateHistoryCard, _filteredHistoryItems);
         _ = Dispatcher.BeginInvoke(() =>
         {
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)

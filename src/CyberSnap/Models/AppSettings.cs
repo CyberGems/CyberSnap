@@ -648,6 +648,8 @@ public sealed class AppSettings
     public bool HistoryDeleteOriginalOnPrune { get; set; }
     public ImageSearchSourceOptions ImageSearchSources { get; set; } = ImageSearchSourceOptions.All;
     public bool ShowImageSearchBar { get; set; } = true;
+    /// <summary>Gallery date groups collapsed by the user, as yyyy-MM-dd keys.</summary>
+    public List<string> CollapsedHistoryDates { get; set; } = new();
     public bool ShowAutoPrune { get; set; }
     public bool ImageSearchExactMatch { get; set; }
     public bool AutoIndexImages { get; set; } = false;

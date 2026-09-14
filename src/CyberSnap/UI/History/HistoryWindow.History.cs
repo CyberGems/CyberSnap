@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -10,6 +11,7 @@ using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using Image = System.Windows.Controls.Image;
+using WpfButton = System.Windows.Controls.Button;
 using WpfPoint = System.Windows.Point;
 
 namespace CyberSnap.UI;
@@ -425,7 +427,7 @@ public partial class HistoryWindow
 
         HistoryStack.Children.Clear();
         _historyItems = _filteredHistoryItems.GetRange(0, _historyRenderCount);
-        AppendGroupedHistoryItems(HistoryStack, _historyItems, CreateHistoryCard);
+        AppendGroupedHistoryItems(HistoryStack, _historyItems, CreateHistoryCard, _filteredHistoryItems);
         var renderLookahead = Math.Min(HistoryLookaheadCount, _allHistoryItems.Count - _historyRenderCount);
         PrimeHistoryThumbnailLoads(_historyItems, _allHistoryItems, _historyRenderCount, Math.Max(0, renderLookahead));
         sw.Stop();
@@ -452,7 +454,7 @@ public partial class HistoryWindow
 
         _filteredHistoryItems.AddRange(appended);
         _historyItems.AddRange(appended);
-        AppendGroupedHistoryItems(HistoryStack, appended, CreateHistoryCard);
+        AppendGroupedHistoryItems(HistoryStack, appended, CreateHistoryCard, _filteredHistoryItems);
         var lookaheadCount = Math.Min(HistoryLookaheadCount, _allHistoryItems.Count - _historyRenderCount);
         PrimeHistoryThumbnailLoads(appended, _allHistoryItems, _historyRenderCount, Math.Max(0, lookaheadCount));
         UpdateLoadedImageHistoryCountText();
@@ -1406,50 +1408,86 @@ public partial class HistoryWindow
         };
     }
 
-    private void AppendGroupedHistoryItems(System.Windows.Controls.Panel target, IEnumerable<HistoryItemVM> items, Func<HistoryItemVM, Border> cardFactory)
+    /// <summary>Live state of one gallery date group (collapsible header + cards).</summary>
+    private sealed class HistoryDateGroupState
     {
+        public DateTime Date;
+        public int Total;
+        public bool Collapsed;
+        public WpfButton Header = null!;
+        public TextBlock DateText = null!;
+        public TextBlock CountText = null!;
+        public TextBlock Chevron = null!;
+        public RotateTransform ChevronRotation = null!;
+        public Border? Separator;
+        public WrapPanel Wrap = null!;
+    }
+
+    private static string HistoryDateKey(DateTime date) =>
+        date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private bool IsHistoryDateCollapsed(DateTime date) =>
+        _settingsService.Settings.CollapsedHistoryDates.Contains(HistoryDateKey(date));
+
+    private void SetHistoryDateCollapsed(DateTime date, bool collapsed)
+    {
+        var list = _settingsService.Settings.CollapsedHistoryDates;
+        var key = HistoryDateKey(date);
+        if (collapsed)
+        {
+            if (!list.Contains(key))
+                list.Add(key);
+            while (list.Count > 120)
+                list.RemoveAt(0);
+        }
+        else
+        {
+            list.Remove(key);
+        }
+        _settingsService.Save();
+    }
+
+    private static Dictionary<DateTime, int> CountHistoryDateTotals(IEnumerable<HistoryItemVM> source)
+    {
+        var totals = new Dictionary<DateTime, int>();
+        foreach (var vm in source)
+        {
+            var date = vm.Entry.CapturedAt.Date;
+            totals[date] = totals.TryGetValue(date, out var count) ? count + 1 : 1;
+        }
+        return totals;
+    }
+
+    private void AppendGroupedHistoryItems(System.Windows.Controls.Panel target, IEnumerable<HistoryItemVM> items, Func<HistoryItemVM, Border> cardFactory, IReadOnlyList<HistoryItemVM>? totalsSource = null)
+    {
+        var materialized = items as IReadOnlyList<HistoryItemVM> ?? items.ToList();
+        var totals = CountHistoryDateTotals(totalsSource ?? materialized);
+
         WrapPanel? currentWrap = target.Children.Count > 0 ? target.Children[target.Children.Count - 1] as WrapPanel : null;
         DateTime? currentDate = currentWrap?.Tag is DateTime tagDate ? tagDate : null;
 
         var updatedWraps = new HashSet<WrapPanel>();
-        foreach (var item in items)
+        foreach (var item in materialized)
         {
             var itemDate = item.Entry.CapturedAt.Date;
             if (currentWrap is null || currentDate != itemDate)
             {
+                Border? separator = null;
                 if (target.Children.Count > 0)
                 {
-                    target.Children.Add(new Border
+                    separator = new Border
                     {
                         Height = 1,
                         Background = Theme.Brush(Theme.BorderSubtle),
                         Margin = new Thickness(6, 26, 6, 0)
-                    });
+                    };
+                    target.Children.Add(separator);
                 }
 
-                var dateLabelText = new TextBlock
-                {
-                    Text = FormatHistoryGroupLabel(itemDate).ToUpperInvariant(),
-                    FontSize = 12,
-                    FontWeight = FontWeights.Bold,
-                    FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
-                    Foreground = Theme.Brush(Theme.Accent),
-                    VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                    Opacity = 0.9,
-                };
-                var dateLabelPill = new Border
-                {
-                    Background = Theme.Brush(Theme.AccentSubtle),
-                    CornerRadius = new CornerRadius(7),
-                    Padding = new Thickness(14, 6, 14, 6),
-                    Margin = new Thickness(6, 18, 0, 12),
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
-                    Child = dateLabelText
-                };
-                target.Children.Add(dateLabelPill);
+                totals.TryGetValue(itemDate, out int total);
+                var state = CreateHistoryDateGroup(target, itemDate, total, separator);
 
-                currentWrap = CreateHistoryWrapPanel(itemDate);
-                target.Children.Add(currentWrap);
+                currentWrap = state.Wrap;
                 currentDate = itemDate;
             }
 
@@ -1459,6 +1497,165 @@ public partial class HistoryWindow
 
         foreach (var wrap in updatedWraps)
             UpdateHistoryWrapPanelCardWidths(wrap);
+    }
+
+    private HistoryDateGroupState CreateHistoryDateGroup(System.Windows.Controls.Panel target, DateTime date, int total, Border? separator)
+    {
+        var state = new HistoryDateGroupState
+        {
+            Date = date,
+            Total = total,
+            Collapsed = IsHistoryDateCollapsed(date),
+            Separator = separator,
+        };
+
+        state.ChevronRotation = new RotateTransform(0);
+        state.Chevron = new TextBlock
+        {
+            Text = "›",
+            FontSize = 15,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            Foreground = Theme.Brush(Theme.Accent),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+            RenderTransformOrigin = new WpfPoint(0.5, 0.5),
+            RenderTransform = state.ChevronRotation,
+        };
+        state.DateText = new TextBlock
+        {
+            Text = FormatHistoryGroupLabel(date).ToUpperInvariant(),
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            Foreground = Theme.Brush(Theme.Accent),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Opacity = 0.9,
+        };
+        state.CountText = new TextBlock
+        {
+            Text = total.ToString(CultureInfo.InvariantCulture),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            Foreground = Theme.Brush(Theme.Accent),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+        };
+        var countPill = new Border
+        {
+            Background = Theme.Brush(Theme.AccentSubtle),
+            CornerRadius = new CornerRadius(9),
+            Padding = new Thickness(9, 2, 9, 2),
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Child = state.CountText,
+        };
+        var row = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Children = { state.Chevron, state.DateText, countPill },
+        };
+
+        state.Header = new WpfButton
+        {
+            Content = row,
+            Background = System.Windows.Media.Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(14, 6, 14, 6),
+            Margin = new Thickness(6, 18, 0, 12),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+            HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            FocusVisualStyle = null,
+            Tag = state,
+        };
+        state.Header.Template = CreateHistoryGroupHeaderTemplate();
+        state.Header.Click += (_, _) => ToggleHistoryDateGroup(state);
+        ApplyHistoryDateGroupLabel(state);
+        target.Children.Add(state.Header);
+
+        state.Wrap = CreateHistoryWrapPanel(date);
+        state.Wrap.Visibility = state.Collapsed ? Visibility.Collapsed : Visibility.Visible;
+        if (state.Separator is not null)
+            state.Separator.Visibility = state.Wrap.Visibility;
+        target.Children.Add(state.Wrap);
+        ApplyHistoryDateGroupChevron(state, animate: false);
+        return state;
+    }
+
+    private static ControlTemplate CreateHistoryGroupHeaderTemplate()
+    {
+        var border = new FrameworkElementFactory(typeof(Border), "Bd");
+        border.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(7));
+        border.SetBinding(Border.PaddingProperty, new System.Windows.Data.Binding(nameof(WpfButton.Padding)) { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+        border.AppendChild(new FrameworkElementFactory(typeof(ContentPresenter)));
+        var template = new ControlTemplate(typeof(WpfButton)) { VisualTree = border };
+        var hover = new Trigger { Property = WpfButton.IsMouseOverProperty, Value = true };
+        hover.Setters.Add(new Setter(Border.BackgroundProperty, Theme.Brush(Theme.TabHoverBg), "Bd"));
+        template.Triggers.Add(hover);
+        var pressed = new Trigger { Property = WpfButton.IsPressedProperty, Value = true };
+        pressed.Setters.Add(new Setter(Border.BackgroundProperty, Theme.Brush(Theme.TabActiveBg), "Bd"));
+        template.Triggers.Add(pressed);
+        return template;
+    }
+
+    private void ToggleHistoryDateGroup(HistoryDateGroupState state)
+    {
+        state.Collapsed = !state.Collapsed;
+        SetHistoryDateCollapsed(state.Date, state.Collapsed);
+        state.Wrap.Visibility = state.Collapsed ? Visibility.Collapsed : Visibility.Visible;
+        if (state.Separator is not null)
+            state.Separator.Visibility = state.Wrap.Visibility;
+        ApplyHistoryDateGroupLabel(state);
+        ApplyHistoryDateGroupChevron(state, animate: true);
+        if (!state.Collapsed)
+        {
+            // Layout just ran with width 0 while collapsed; recompute card widths once visible.
+            _ = Dispatcher.BeginInvoke(
+                () => UpdateHistoryWrapPanelCardWidths(state.Wrap),
+                System.Windows.Threading.DispatcherPriority.Background);
+        }
+    }
+
+    private void ApplyHistoryDateGroupLabel(HistoryDateGroupState state)
+    {
+        state.DateText.Text = FormatHistoryGroupLabel(state.Date).ToUpperInvariant();
+        string action = LocalizationService.Translate(state.Collapsed ? "Expand group" : "Collapse group");
+        state.Header.ToolTip = action;
+        AutomationProperties.SetName(state.Header, $"{state.DateText.Text}, {state.Total}");
+        AutomationProperties.SetHelpText(state.Header, action);
+    }
+
+    private void ApplyHistoryDateGroupChevron(HistoryDateGroupState state, bool animate)
+    {
+        double target = state.Collapsed ? 0d : 90d;
+        if (animate && !Motion.Disabled)
+        {
+            state.ChevronRotation.BeginAnimation(
+                RotateTransform.AngleProperty, Motion.To(target, 140, Motion.SmoothOut));
+        }
+        else
+        {
+            state.ChevronRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+            state.ChevronRotation.Angle = target;
+        }
+    }
+
+    /// <summary>Re-translates date group headers (e.g. after a language switch) without rebuilding cards.</summary>
+    private void RefreshHistoryGroupHeaderLabels()
+    {
+        foreach (var panel in new System.Windows.Controls.Panel[] { HistoryStack, GifStack })
+        {
+            if (panel is null)
+                continue;
+            foreach (var child in panel.Children)
+            {
+                if (child is WpfButton header && header.Tag is HistoryDateGroupState state)
+                    ApplyHistoryDateGroupLabel(state);
+            }
+        }
     }
 
     private WrapPanel CreateHistoryWrapPanel(DateTime itemDate)

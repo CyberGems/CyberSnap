@@ -506,6 +506,7 @@ public partial class HistoryWindow
         UpdateHistoryActionButtons();
 
         RefreshSearchMenuLabels();
+        RefreshHistoryGroupHeaderLabels();
     }
 
     private void SetImageSearchRowAutoHidden(bool hidden)

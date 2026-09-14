@@ -289,7 +289,7 @@ public partial class HistoryWindow : Window
                 if (appendCount <= 0) break;
                 var appended = _filteredHistoryItems.GetRange(prevCount, appendCount);
                 _historyItems.AddRange(appended);
-                AppendGroupedHistoryItems(HistoryStack, appended, CreateHistoryCard);
+                AppendGroupedHistoryItems(HistoryStack, appended, CreateHistoryCard, _filteredHistoryItems);
             }
             vm.Card?.BringIntoView();
         }

@@ -157,7 +157,7 @@ public partial class HistoryWindow
         var sw = System.Diagnostics.Stopwatch.StartNew();
         GifStack.Children.Clear();
         _gifItems = _filteredGifItems.Take(_gifRenderCount).ToList();
-        AppendGroupedHistoryItems(GifStack, _gifItems, CreateMediaCard);
+        AppendGroupedHistoryItems(GifStack, _gifItems, CreateMediaCard, _filteredGifItems);
         PrimeMediaThumbnailLoads(_gifItems);
         sw.Stop();
         AppDiagnostics.LogInfo(
@@ -186,7 +186,7 @@ public partial class HistoryWindow
         var appended = _filteredGifItems.GetRange(previousCount, appendCount);
 
         _gifItems.AddRange(appended);
-        AppendGroupedHistoryItems(GifStack, appended, CreateMediaCard);
+        AppendGroupedHistoryItems(GifStack, appended, CreateMediaCard, _filteredGifItems);
         PrimeMediaThumbnailLoads(appended);
 
         _ = Dispatcher.BeginInvoke(() =>
