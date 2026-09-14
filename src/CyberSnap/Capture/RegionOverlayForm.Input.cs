@@ -105,7 +105,15 @@ public sealed partial class RegionOverlayForm
         // annotation tool draw instead of dragging the crop.
         if (_isConfirmingSelection)
         {
-            if (_menuActivatorRect.Contains(e.Location)
+            // Handles and action pills take priority over the toolbar-rect fallthrough:
+            // an expanded (or stale) annotation-strip rect can otherwise claim dock
+            // points and silently eat the click — e.g. Cancel dead while the
+            // annotation flyout is open. Dock chrome never legitimately overlaps
+            // toolbar controls, so a dock hit always wins.
+            bool dockPoint = HitTestConfirmHandle(e.Location) >= 0
+                || HitTestConfirmButton(e.Location) >= 0;
+            if (!dockPoint
+                && (_menuActivatorRect.Contains(e.Location)
                 || _logoRect.Contains(e.Location)
                 || _brandRect.Contains(e.Location)
                 || GetToolbarButtonAt(e.Location) >= 0
@@ -114,7 +122,7 @@ public sealed partial class RegionOverlayForm
                 || (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
                 || (_strokePickerOpen && _strokePickerRect.Contains(e.Location))
                 || (_fontPickerOpen && _fontPickerRect.Contains(e.Location))
-                || (_emojiPickerOpen && _emojiPickerRect.Contains(e.Location)))
+                || (_emojiPickerOpen && _emojiPickerRect.Contains(e.Location))))
             {
                 // Fall through to the normal toolbar / picker handlers below.
             }

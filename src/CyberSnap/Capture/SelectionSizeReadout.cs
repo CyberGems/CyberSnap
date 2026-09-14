@@ -907,7 +907,8 @@ internal static class SelectionSizeReadout
         }
 
         int contentW = rect.Width - PadX * 2;
-        var textColor = Color.FromArgb(245, 255, 255, 255);
+        // Theme text (near-black on light) — hardcoded white had no contrast on light docks.
+        var textColor = UiChrome.SurfaceTextPrimary;
 
         for (int li = 0; li < pill.Lines.Count; li++)
         {
