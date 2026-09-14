@@ -1698,16 +1698,33 @@ public partial class HistoryWindow
         return AppendNextFilteredImagePage();
     }
 
+    private bool _galleryFillScheduled;
+
     /// <summary>
     /// Collapsing groups can leave the viewport unfilled with no scrollbar (so infinite
-    /// scroll never fires). Top it up automatically until content overflows or pages run out.
+    /// scroll never fires). Top it up with a few pages so navigation can continue.
+    /// Strictly bounded and coalesced: background refreshes rebuild to the first page,
+    /// and without this an unbounded fill would fight them in a loop, materializing
+    /// thousands of hidden cards. Stops early when pages land in collapsed groups
+    /// (no visible growth), since further pages would be invisible work.
     /// </summary>
     private void EnsureGalleryViewportFilled()
     {
+        if (_galleryFillScheduled)
+            return;
+        _galleryFillScheduled = true;
         _ = Dispatcher.BeginInvoke(() =>
         {
-            for (int i = 0; i < 25 && GalleryViewportNeedsFill() && TryAppendNextGalleryPage(); i++)
-                ActiveGalleryScrollPanel()?.UpdateLayout();
+            _galleryFillScheduled = false;
+            for (int i = 0; i < 6 && GalleryViewportNeedsFill() && TryAppendNextGalleryPage(); i++)
+            {
+                var panel = ActiveGalleryScrollPanel();
+                double before = panel?.ExtentHeight ?? 0;
+                panel?.UpdateLayout();
+                double after = panel?.ExtentHeight ?? 0;
+                if (after - before < 8)
+                    break;
+            }
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
