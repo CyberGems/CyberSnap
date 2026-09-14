@@ -579,7 +579,7 @@ internal static class SelectionSizeReadout
         float stepX = UiChrome.ScaleFloat(4.2f);
         float stepY = UiChrome.ScaleFloat(4.2f);
         float r = UiChrome.ScaleFloat(1.35f);
-        int a = hovered ? 190 : (int)((UiChrome.IsDark ? 0.28f : 0.32f) * 255);
+        int a = hovered ? 190 : (int)((UiChrome.IsDark ? 0.22f : 0.26f) * 255);
         using var dot = new SolidBrush(Color.FromArgb(a, gripBase));
         for (int row = -1; row <= 1; row++)
         {

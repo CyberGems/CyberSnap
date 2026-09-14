@@ -422,7 +422,7 @@ public sealed partial class RegionOverlayForm
         float stepY = UiChrome.ScaleFloat(4.2f);
         float dotRadius = UiChrome.ScaleFloat(1.2f);
 
-        int alpha = (int)((UiChrome.IsDark ? 0.28f : 0.32f) * 255);
+        int alpha = (int)((UiChrome.IsDark ? 0.22f : 0.26f) * 255);
         using var dotBrush = new SolidBrush(Color.FromArgb(alpha, UiChrome.SurfaceTextPrimary));
 
         bool horizontal = rect.Width >= rect.Height;
