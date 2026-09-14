@@ -430,6 +430,21 @@ public sealed partial class RegionOverlayForm
                 return;
             }
 
+            // Single-click principle: the click that dismisses a popup can still land
+            // on a dock pill beneath (e.g. Cancel/Done under a picker flyout). Don't
+            // eat it — let it press the pill instead of demanding a second click.
+            if (_isConfirmingSelection)
+            {
+                int dismissedBtn = HitTestConfirmButton(e.Location);
+                if (dismissedBtn >= 0)
+                {
+                    RefreshToolbar();
+                    Invalidate();
+                    StartConfirmPress(dismissedBtn);
+                    return;
+                }
+            }
+
             RefreshToolbar();
             Invalidate();
             return;

@@ -2468,7 +2468,7 @@ public sealed partial class RegionOverlayForm : Form
             {
                 if (_hoverButtonStartTime != DateTime.MinValue)
                 {
-                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 450)
+                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 650)
                         ShowConfirmOptionsTooltip();
                 }
                 else
@@ -2488,8 +2488,8 @@ public sealed partial class RegionOverlayForm : Form
             {
                 if (_hoverButtonStartTime != DateTime.MinValue)
                 {
-                    // Match toolbar discoverability (~450ms); icon-only pills need a quicker hint.
-                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 450)
+                    // Match toolbar discoverability (~650ms); icon-only pills need a quicker hint.
+                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 650)
                     {
                         ShowConfirmTooltip();
                     }
@@ -2527,7 +2527,7 @@ public sealed partial class RegionOverlayForm : Form
                 {
                     if (_hoverButtonStartTime != DateTime.MinValue)
                     {
-                        if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 500)
+                        if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 700)
                         {
                             ShowToolbarTooltip();
                         }

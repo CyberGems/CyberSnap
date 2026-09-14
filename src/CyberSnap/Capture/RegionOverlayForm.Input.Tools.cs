@@ -1687,6 +1687,13 @@ public sealed partial class RegionOverlayForm
             _hoveredBrand = false;
             _hoveredBrandDragArea = false;
             _hoveredMenuActivator = false;
+            // Stale confirm/alt hover otherwise keeps tooltips alive (and re-showing)
+            // long after the cursor left the form.
+            _hoveredConfirmButton = -1;
+            _hoveredConfirmOptionsPill = false;
+            _hoveredAltCaptureBtn = false;
+            _hoveredAltSlotIndex = -1;
+            HideToolbarTooltip();
             if (_hoveredTextBtn >= 0)
             {
                 _hoveredTextBtn = -1;
