@@ -1417,33 +1417,35 @@ public sealed partial class RegionOverlayForm
         var accent = UiChrome.AccentColor;
 
         // ── Drop shadow (same offset/alpha recipe as DrawDragGrip) ────────────
-        int shadowAlpha = (int)((hover ? 100 : 70) * opacity);
+        int shadowAlpha = (int)((hover ? 90 : 60) * opacity);
         using (var shadowBrush = new SolidBrush(Color.FromArgb(shadowAlpha, 0, 0, 0)))
             g.FillEllipse(shadowBrush,
                 drawRect.X, drawRect.Y + 1.5f, drawRect.Width, drawRect.Height);
 
-        // ── Dark body (18, 18, 20) ─────────────────────────────────────────
-        int bgA = (int)((hover ? 240 : 225) * opacity);
-        using (var bgBrush = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20)))
+        // ── Elegant semi-transparent dark body (same pill language as the
+        // size readout grip; translucent so the wallpaper bleeds through) ──
+        int bgA = (int)((hover ? 190 : 150) * opacity);
+        using (var bgBrush = new SolidBrush(Color.FromArgb(bgA, 24, 26, 32)))
             g.FillEllipse(bgBrush, drawRect);
 
         // ── Accent border ─────────────────────────────────────────────────
         float borderW = hover ? 1.4f : 1f;
-        int borderA = (int)((hover ? 220 : 150) * opacity);
+        int borderA = (int)((hover ? 190 : 110) * opacity);
         using (var borderPen = new Pen(Color.FromArgb(borderA, accent), borderW))
             g.DrawEllipse(borderPen,
                 drawRect.X + 0.5f, drawRect.Y + 0.5f,
                 drawRect.Width - 1f, drawRect.Height - 1f);
 
-        // ── 4-directional move icon (accent-colored, same alpha as grip dots) ───
+        // ── 4-directional move icon (neutral light instead of accent: calmer on
+        // the dark pill and readable in every theme) ─────────────────────────
         float iconSz  = UiChrome.ScaleFloat(12f);  // arm half-extent
         float stemW   = UiChrome.ScaleFloat(1.8f); // stem thickness
         float arrowH  = UiChrome.ScaleFloat(4.8f); // arrowhead depth
         float arrowHW = UiChrome.ScaleFloat(3.2f); // arrowhead half-width
         float stemEnd = iconSz - arrowH;            // stem stops here
 
-        int iconA = (int)((hover ? 240 : 190) * opacity);
-        Color iconColor = Color.FromArgb(iconA, accent);
+        int iconA = (int)((hover ? 235 : 200) * opacity);
+        Color iconColor = Color.FromArgb(iconA, 232, 236, 242);
 
         using (var iconBrush = new SolidBrush(iconColor))
         using (var stemPen   = new Pen(iconColor, stemW)
