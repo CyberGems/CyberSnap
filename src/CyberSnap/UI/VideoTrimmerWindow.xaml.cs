@@ -684,6 +684,7 @@ namespace CyberSnap.UI
         private void RestartPreviewLoop()
         {
             _lastTargetSeekSeconds = _startTimeSeconds;
+            _gifTimelinePaused = false;
             ResetGifPlayAnchor(_startTimeSeconds);
             UpdatePreviewFrameDisplay(_startTimeSeconds, force: true);
             if (!_isGif)

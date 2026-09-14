@@ -1,4 +1,5 @@
-﻿using NAudio.CoreAudioApi;
+﻿using CyberSnap.Helpers;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace CyberSnap.Services;
@@ -8,8 +9,21 @@ public static class AudioService
 {
     public sealed record AudioDevice(string Id, string Name, bool IsInput);
 
+    // NOTE: the public wrappers below must not reference NAudio types themselves.
+    // A missing NAudio.Wasapi.dll makes the runtime throw while JITting such a
+    // method, before any try/catch inside it runs. The Inner methods are only
+    // invoked (and JITted) when the probe succeeded.
+
     /// <summary>Get all active microphone input devices.</summary>
     public static List<AudioDevice> GetMicrophones()
+    {
+        if (!AudioDependencies.AreAvailable())
+            return new List<AudioDevice>();
+
+        return GetMicrophonesInner();
+    }
+
+    private static List<AudioDevice> GetMicrophonesInner()
     {
         var list = new List<AudioDevice>();
         try
@@ -28,6 +42,14 @@ public static class AudioService
     /// <summary>Get all active audio output devices (for desktop audio capture via loopback).</summary>
     public static List<AudioDevice> GetDesktopAudioDevices()
     {
+        if (!AudioDependencies.AreAvailable())
+            return new List<AudioDevice>();
+
+        return GetDesktopAudioDevicesInner();
+    }
+
+    private static List<AudioDevice> GetDesktopAudioDevicesInner()
+    {
         var list = new List<AudioDevice>();
         try
         {
@@ -45,6 +67,14 @@ public static class AudioService
     /// <summary>Get the default microphone device ID, or null.</summary>
     public static string? GetDefaultMicrophoneId()
     {
+        if (!AudioDependencies.AreAvailable())
+            return null;
+
+        return GetDefaultMicrophoneIdInner();
+    }
+
+    private static string? GetDefaultMicrophoneIdInner()
+    {
         try
         {
             using var enumerator = new MMDeviceEnumerator();
@@ -56,6 +86,14 @@ public static class AudioService
 
     /// <summary>Get the default desktop audio device ID, or null.</summary>
     public static string? GetDefaultDesktopAudioId()
+    {
+        if (!AudioDependencies.AreAvailable())
+            return null;
+
+        return GetDefaultDesktopAudioIdInner();
+    }
+
+    private static string? GetDefaultDesktopAudioIdInner()
     {
         try
         {

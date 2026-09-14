@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using CyberSnap.Helpers;
 using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
@@ -55,7 +56,7 @@ public sealed class VideoRecorder : IDisposable
     private int _initialCaptureDelayMs = DefaultInitialCaptureDelayMs;
     private Thread? _delayedAudioStartThread;
 
-    // Audio capture
+    // Audio capture (see Helpers.AudioDependencies for the missing-assembly story).
     private WaveInEvent? _micCapture;
     private WasapiLoopbackCapture? _desktopCapture;
     private WaveFileWriter? _micWriter;
@@ -219,6 +220,38 @@ public sealed class VideoRecorder : IDisposable
     }
 
     private void StartAudioCapture(string outputPath)
+    {
+        // This wrapper must not reference NAudio types itself: it has to JIT
+        // even when the assemblies are missing. The inner method below is only
+        // invoked (and therefore only JITted) when the probe succeeded.
+        if (!AudioDependencies.AreAvailable())
+        {
+            AppDiagnostics.LogWarning(
+                "recorder.audio-unavailable",
+                "NAudio assemblies missing from the deployment; recording video only.");
+            return;
+        }
+
+        try
+        {
+            StartAudioCaptureInner(outputPath);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning(
+                "recorder.audio-start",
+                $"Audio capture failed; recording video only: {ex.Message}",
+                ex);
+            _desktopCapture = null;
+            _desktopWriter = null;
+            _desktopWavPath = null;
+            _micCapture = null;
+            _micWriter = null;
+            _micWavPath = null;
+        }
+    }
+
+    private void StartAudioCaptureInner(string outputPath)
     {
         string dir = Path.GetDirectoryName(outputPath) ?? Path.GetTempPath();
 
@@ -482,6 +515,16 @@ public sealed class VideoRecorder : IDisposable
     }
 
     private void StopAudioCapture()
+    {
+        // See StartAudioCapture: keep NAudio references out of this wrapper so a
+        // partial deployment degrades instead of throwing during JIT.
+        if (!AudioDependencies.AreAvailable())
+            return;
+
+        StopAudioCaptureInner();
+    }
+
+    private void StopAudioCaptureInner()
     {
         StopCaptureAndWait(_micCapture);
         StopCaptureAndWait(_desktopCapture);
