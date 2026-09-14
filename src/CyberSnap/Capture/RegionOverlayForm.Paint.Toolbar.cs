@@ -396,18 +396,22 @@ public sealed partial class RegionOverlayForm
 
         if (ShowAnnotationChrome && !_annotationGripRect.IsEmpty)
         {
-            DrawToolbarGripDots(g, _annotationGripRect, UiChrome.AccentColor, isAnnotationBar: true);
+            DrawToolbarGripDots(g, _annotationGripRect);
         }
         else if (!ShowAnnotationChrome && !_captureGripRect.IsEmpty)
         {
-            DrawToolbarGripDots(g, _captureGripRect, UiChrome.AccentColor, isAnnotationBar: false);
+            DrawToolbarGripDots(g, _captureGripRect);
         }
 
         g.SmoothingMode = SmoothingMode.Default;
         g.PixelOffsetMode = PixelOffsetMode.Default;
     }
 
-    private static void DrawToolbarGripDots(Graphics g, Rectangle rect, Color accent, bool isAnnotationBar = false)
+    /// <summary>
+    /// Shared dot-grip recipe for the capture bar, annotation bar and confirm dock:
+    /// primary text at one alpha per theme so all grips read the same.
+    /// </summary>
+    private static void DrawToolbarGripDots(Graphics g, Rectangle rect)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
@@ -417,13 +421,8 @@ public sealed partial class RegionOverlayForm
         float stepX = UiChrome.ScaleFloat(4.2f);
         float stepY = UiChrome.ScaleFloat(4.2f);
         float dotRadius = UiChrome.ScaleFloat(1.2f);
-        
-        float baseAlpha = UiChrome.IsDark ? 0.28f : 0.32f;
-        if (isAnnotationBar)
-        {
-            baseAlpha = UiChrome.IsDark ? 0.22f : 0.26f;
-        }
-        int alpha = (int)(baseAlpha * 255);
+
+        int alpha = (int)((UiChrome.IsDark ? 0.28f : 0.32f) * 255);
         using var dotBrush = new SolidBrush(Color.FromArgb(alpha, UiChrome.SurfaceTextPrimary));
 
         bool horizontal = rect.Width >= rect.Height;

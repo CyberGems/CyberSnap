@@ -542,7 +542,7 @@ public sealed partial class RegionOverlayForm
 
         if (!_confirmGripRect.IsEmpty)
         {
-            DrawToolbarGripDots(g, _confirmGripRect, UiChrome.AccentColor);
+            DrawToolbarGripDots(g, _confirmGripRect);
         }
     }
 

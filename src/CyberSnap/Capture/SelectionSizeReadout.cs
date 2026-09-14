@@ -571,16 +571,16 @@ internal static class SelectionSizeReadout
             g.DrawPath(border, path);
         }
 
-        // 2×3 grip dots (reorder / drag affordance) — neutral gray like the neighboring gear,
-        // not the accent, so it doesn't read as a brand-colored control.
-        var gripGray = UiChrome.SurfaceTextSecondary;
+        // 2×3 grip dots — same recipe as the bar/dock grips (primary text, one alpha
+        // per theme) so all flow grips share one tonality; brighter on hover.
+        var gripBase = UiChrome.SurfaceTextPrimary;
         float cx = rect.X + rect.Width / 2f;
         float cy = rect.Y + rect.Height / 2f;
         float stepX = UiChrome.ScaleFloat(4.2f);
         float stepY = UiChrome.ScaleFloat(4.2f);
         float r = UiChrome.ScaleFloat(1.35f);
-        int a = hovered ? 240 : 190;
-        using var dot = new SolidBrush(Color.FromArgb(a, gripGray));
+        int a = hovered ? 190 : (int)((UiChrome.IsDark ? 0.28f : 0.32f) * 255);
+        using var dot = new SolidBrush(Color.FromArgb(a, gripBase));
         for (int row = -1; row <= 1; row++)
         {
             for (int col = -1; col <= 0; col++)
