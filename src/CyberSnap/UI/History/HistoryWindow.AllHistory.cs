@@ -748,20 +748,12 @@ public partial class HistoryWindow
         }
     }
 
-    private static Border? FindUnifiedSelectionBadge(Grid root)
-    {
-        foreach (var child in root.Children)
-        {
-            if (child is Border b && System.Windows.Controls.Panel.GetZIndex(b) == 20)
-                return b;
-            if (child is Grid g)
-            {
-                var found = FindUnifiedSelectionBadge(g);
-                if (found is not null) return found;
-            }
-        }
-        return null;
-    }
+    /// <summary>
+    /// Finds the selection badge under a unified card root. Badges are identified by their
+    /// Tag (the checkmark element), never by ZIndex — the Z value changed when badges moved
+    /// to the top-left corner, and the old ZIndex check silently matched nothing.
+    /// </summary>
+    private static Border? FindUnifiedSelectionBadge(Grid root) => FindSelectableBadge(root);
 
     private Border CreateBaseUnifiedCard(string automationName, string tooltip)
     {

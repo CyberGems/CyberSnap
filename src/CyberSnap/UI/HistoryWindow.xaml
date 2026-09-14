@@ -693,6 +693,21 @@
                                 </Grid>
                             </Grid>
 
+                            <!-- Indexing status: transient, tucked under the search box (right).
+                                 Zero footprint while collapsed; replaces the old strip above the date groups. -->
+                            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel x:Name="ReindexAllProgressPanel" Orientation="Horizontal"
+                                            VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,8,0">
+                                    <ProgressBar x:Name="ReindexAllProgressBar" Width="60" Height="3" IsIndeterminate="True" Visibility="Collapsed" VerticalAlignment="Center"/>
+                                    <Button x:Name="ReindexAllBtn" Content="Index" Style="{StaticResource HistoryActionButton}"
+                                            ToolTip="Refresh the image search index"
+                                            AutomationProperties.Name="Refresh image search index"
+                                            Cursor="Hand" Click="ReindexAllBtn_Click"/>
+                                </StackPanel>
+                                <ProgressBar x:Name="ImageSearchLoadingBar" Width="110" Height="3"
+                                             IsIndeterminate="True" Visibility="Collapsed" VerticalAlignment="Center"/>
+                            </StackPanel>
+
                             <!-- Category tabs on their own row (icon + label + count pills) -->
                             <ScrollViewer x:Name="GalleryTabScroller" Margin="0,6,0,0"
                                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
@@ -707,16 +722,6 @@
 
                             <!-- Search status line -->
                             <TextBlock x:Name="ImageSearchFiltersSummaryText" Visibility="Collapsed" Margin="0,4,0,0"/>
-                            <StackPanel x:Name="ReindexAllProgressPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="0,4,0,0">
-                                <ProgressBar x:Name="ReindexAllProgressBar" Width="60" Height="3" IsIndeterminate="True" Visibility="Collapsed"/>
-                                <Button x:Name="ReindexAllBtn" Content="Index" Style="{StaticResource HistoryActionButton}"
-                                        ToolTip="Refresh the image search index"
-                                        AutomationProperties.Name="Refresh image search index"
-                                        Cursor="Hand" Click="ReindexAllBtn_Click"/>
-                            </StackPanel>
-                            <ProgressBar x:Name="ImageSearchLoadingBar" Width="110" Height="3"
-                                         IsIndeterminate="True" Visibility="Collapsed"
-                                         Margin="22,4,0,0" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Border>
 
