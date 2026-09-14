@@ -391,141 +391,10 @@ public partial class HistoryWindow
             actionMenu.IsOpen = true;
         };
 
-        var badgeHoverColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(240, 80, 180)
-            : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60)
-            : System.Windows.Media.Color.FromRgb(100, 180, 255);
-        var badgeHoverBrush = new SolidColorBrush(badgeHoverColor);
-        var defaultChevronBrush = new SolidColorBrush(Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(80, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(80, 0, 0, 0));
-
-        var menuChevronPath = new System.Windows.Shapes.Path
-        {
-            Data = System.Windows.Media.Geometry.Parse("M 0 0 L 6 0 L 3 4.5 Z"),
-            Fill = defaultChevronBrush,
-            Width = 7, Height = 5,
-            Stretch = Stretch.Uniform,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        var menuChevron = new Border
-        {
-            Width = 20, Height = 18,
-            CornerRadius = new CornerRadius(3),
-            Background = Brushes.Transparent,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 5, 5, 0),
-            Cursor = Cursors.Hand,
-            IsHitTestVisible = true,
-            Visibility = Visibility.Collapsed,
-            Child = menuChevronPath,
-            ToolTip = new System.Windows.Controls.ToolTip { Content = LocalizationService.Translate("Actions") }
-        };
-        System.Windows.Controls.Panel.SetZIndex(menuChevron, 999);
-
-        bool chevronHovered = false;
-
-        var chevronHoverBg = new SolidColorBrush(Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(40, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(40, 0, 0, 0));
-        var chevronIdleBg = new SolidColorBrush(Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(12, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(12, 0, 0, 0));
-
-        void UpdateChevronVisibility()
-        {
-            if (actionMenu.IsOpen)
-            {
-                menuChevron.Visibility = Visibility.Visible;
-                menuChevron.Background = chevronHoverBg;
-                menuChevronPath.Fill = badgeHoverBrush;
-                return;
-            }
-
-            if (card.IsMouseOver)
-            {
-                menuChevron.Visibility = Visibility.Visible;
-                if (chevronHovered)
-                {
-                    menuChevron.Background = chevronHoverBg;
-                    menuChevronPath.Fill = badgeHoverBrush;
-                }
-                else
-                {
-                    menuChevron.Background = chevronIdleBg;
-                    menuChevronPath.Fill = defaultChevronBrush;
-                }
-            }
-            else
-            {
-                menuChevron.Visibility = Visibility.Collapsed;
-                chevronHovered = false;
-            }
-        }
-
-        menuChevron.PreviewMouseLeftButtonDown += (_, e) =>
-        {
-            e.Handled = true;
-        };
-
-        DateTime actionMenuClosedAt = DateTime.MinValue;
-        bool closingActionMenuFromChevron = false;
-
-        menuChevron.PreviewMouseLeftButtonUp += (_, e) =>
-        {
-            e.Handled = true;
-            if (menuChevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
-                tt.IsOpen = false;
-
-            if (actionMenu.IsOpen)
-            {
-                closingActionMenuFromChevron = true;
-                actionMenu.IsOpen = false;
-                UpdateChevronVisibility();
-                return;
-            }
-
-            if ((DateTime.UtcNow - actionMenuClosedAt).TotalMilliseconds < 250)
-                return;
-
-            actionMenu.PlacementTarget = menuChevron;
-            actionMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-            actionMenu.HorizontalOffset = 0;
-            actionMenu.VerticalOffset = 2;
-            actionMenu.IsOpen = true;
-        };
-
-        menuChevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisibility(); };
-        menuChevron.MouseLeave += (_, _) => { chevronHovered = false; UpdateChevronVisibility(); };
-
-        actionMenu.Opened += (_, _) =>
-        {
-            if (menuChevron.ToolTip is System.Windows.Controls.ToolTip tt)
-                tt.IsOpen = false;
-            ToolTipService.SetIsEnabled(menuChevron, false);
-        };
-
-        menuChevron.ToolTipOpening += (_, e) =>
-        {
-            if (actionMenu.IsOpen)
-                e.Handled = true;
-        };
-
-        actionMenu.Closed += (_, _) =>
-        {
-            ToolTipService.SetIsEnabled(menuChevron, true);
-            if (closingActionMenuFromChevron)
-                closingActionMenuFromChevron = false;
-            else
-                actionMenuClosedAt = DateTime.UtcNow;
-
-            chevronHovered = false;
-            UpdateChevronVisibility();
-        };
-
-        Grid.SetRow(menuChevron, 1);
-        root.Children.Add(menuChevron);
+        var overflowBtn = CreateCardOverflowButton(actionMenu, card);
+        Grid.SetRow(overflowBtn, 0);
+        root.Children.Add(overflowBtn);
+        AddCardPressAnimation(card);
 
         card.SizeChanged += (s, _) =>
         {
@@ -542,22 +411,18 @@ public partial class HistoryWindow
         card.MouseEnter += (s, _) =>
         {
             card.BorderBrush = hoverBorderBrush;
-            UpdateChevronVisibility();
         };
         card.MouseLeave += (s, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
                 card.BorderBrush = normalBorderBrush;
-            UpdateChevronVisibility();
         };
         card.GotKeyboardFocus += (_, _) =>
         {
             card.BorderBrush = hoverBorderBrush;
-            UpdateChevronVisibility();
         };
         card.LostKeyboardFocus += (_, _) =>
         {
-            UpdateChevronVisibility();
             if (card.IsKeyboardFocusWithin)
                 return;
 
@@ -800,6 +665,168 @@ public partial class HistoryWindow
             action();
         };
         return item;
+    }
+
+    /// <summary>
+    /// Shared card "more" (⋯) overflow button: ghost idle state (bare dots with a twin
+    /// offset shadow so they read on any content without a backing pill), pill background
+    /// fading in when the card or the button is hovered (or the menu is open), and menu
+    /// toggle with the same contract as the title-bar burgers (a second click closes
+    /// instead of reopening). Replaces the old hover-only chevron in both card factories.
+    /// </summary>
+    private static Border CreateCardOverflowButton(ContextMenu menu, Border card)
+    {
+        // Twin icon: near-black copy offset 1px behind the light dots = cheap drop shadow
+        // with no DropShadowEffect cost (effects would hurt scroll performance over many cards).
+        var iconGrid = new Grid
+        {
+            Width = 14,
+            Height = 14,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
+        };
+        iconGrid.Children.Add(new Image
+        {
+            Source = Helpers.FluentIcons.RenderWpf(
+                "moreVertical", System.Drawing.Color.FromArgb(200, 8, 8, 10), 14),
+            Stretch = Stretch.Uniform,
+            Margin = new Thickness(0.8, 0.8, 0, 0),
+            IsHitTestVisible = false,
+        });
+        iconGrid.Children.Add(new Image
+        {
+            Source = Helpers.FluentIcons.RenderWpf(
+                "moreVertical", System.Drawing.Color.FromArgb(230, 238, 241, 245), 14),
+            Stretch = Stretch.Uniform,
+            Margin = new Thickness(0, 0, 0.8, 0.8),
+            IsHitTestVisible = false,
+        });
+
+        var pillBg = new Border
+        {
+            CornerRadius = new CornerRadius(6),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(175, 12, 12, 14)),
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Opacity = 0,
+            IsHitTestVisible = false,
+        };
+
+        var content = new Grid { IsHitTestVisible = false };
+        content.Children.Add(pillBg);
+        content.Children.Add(iconGrid);
+
+        var button = new Border
+        {
+            Width = 26,
+            Height = 24,
+            CornerRadius = new CornerRadius(6),
+            Background = System.Windows.Media.Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 6, 6, 0),
+            Cursor = Cursors.Hand,
+            Opacity = 0.7,
+            Child = content,
+            ToolTip = new System.Windows.Controls.ToolTip { Content = LocalizationService.Translate("Actions") },
+        };
+        System.Windows.Controls.Panel.SetZIndex(button, 999);
+
+        bool hovered = false;
+        bool cardHovered = false;
+        void Refresh()
+        {
+            var active = hovered || cardHovered || menu.IsOpen;
+            pillBg.BeginAnimation(
+                UIElement.OpacityProperty,
+                Motion.FromTo(pillBg.Opacity, active ? 1d : 0d, 140, Motion.SmoothOut));
+            button.BeginAnimation(
+                UIElement.OpacityProperty,
+                Motion.FromTo(button.Opacity, active ? 1d : 0.7d, 140, Motion.SmoothOut));
+        }
+
+        button.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
+        button.PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            ToggleCardMenu(menu, button);
+            Refresh();
+        };
+        button.MouseEnter += (_, _) => { hovered = true; Refresh(); };
+        button.MouseLeave += (_, _) => { hovered = false; Refresh(); };
+        card.MouseEnter += (_, _) => { cardHovered = true; Refresh(); };
+        card.MouseLeave += (_, _) => { cardHovered = false; Refresh(); };
+
+        menu.Opened += (_, _) =>
+        {
+            if (button.ToolTip is System.Windows.Controls.ToolTip tt)
+                tt.IsOpen = false;
+            ToolTipService.SetIsEnabled(button, false);
+            Refresh();
+        };
+        button.ToolTipOpening += (_, e) =>
+        {
+            if (menu.IsOpen)
+                e.Handled = true;
+        };
+        menu.Closed += (_, _) =>
+        {
+            ToolTipService.SetIsEnabled(button, true);
+            menu.Tag = DateTime.UtcNow;
+            Refresh();
+        };
+
+        return button;
+    }
+
+    /// <summary>Same toggle contract as the title-bar burgers.</summary>
+    private static void ToggleCardMenu(ContextMenu menu, FrameworkElement target)
+    {
+        if (menu.IsOpen)
+        {
+            menu.IsOpen = false;
+            return;
+        }
+
+        // The outside-click that just closed the menu reaches this handler next;
+        // treat it as a toggle-off instead of reopening.
+        if (menu.Tag is DateTime closedAt && (DateTime.UtcNow - closedAt).TotalMilliseconds < 250)
+            return;
+
+        menu.PlacementTarget = target;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.HorizontalOffset = 0;
+        menu.VerticalOffset = 2;
+        menu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// Subtle press feedback for cards: quick shrink on mouse-down, smooth release.
+    /// RenderTransform only (no layout shift), safe for virtualized/recycled cards.
+    /// </summary>
+    private static void AddCardPressAnimation(Border card)
+    {
+        var scale = new ScaleTransform(1, 1);
+        card.RenderTransform = scale;
+        card.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+        card.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ChangedButton != MouseButton.Left)
+                return;
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                Motion.FromTo(scale.ScaleX, 0.97d, 110, Motion.SmoothOut));
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty,
+                Motion.FromTo(scale.ScaleY, 0.97d, 110, Motion.SmoothOut));
+        };
+        card.PreviewMouseLeftButtonUp += (_, _) =>
+        {
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                Motion.FromTo(scale.ScaleX, 1d, 160, Motion.SmoothOut));
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty,
+                Motion.FromTo(scale.ScaleY, 1d, 160, Motion.SmoothOut));
+        };
     }
 
     private Border CreateSelectionBadge(bool isSelected)

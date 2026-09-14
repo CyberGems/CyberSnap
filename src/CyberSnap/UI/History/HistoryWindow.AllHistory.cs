@@ -406,7 +406,7 @@ public partial class HistoryWindow
         };
         // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(ocrContainer);
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(80, 190, 180), () => { var window = new OcrResultWindow(text, _settingsService); window.Show(); });
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), () => { var window = new OcrResultWindow(text, _settingsService); window.Show(); });
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
@@ -479,7 +479,7 @@ public partial class HistoryWindow
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth, Background = Theme.CreateCheckerboardBrush() };
         var selBadge = CreateUnifiedSelectionBadge();
         swatchArea.Children.Add(selBadge);
-        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(160, 225, 40));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -589,7 +589,7 @@ public partial class HistoryWindow
         var img = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry), System.Windows.Media.Color.FromRgb(176, 136, 240));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
@@ -772,6 +772,7 @@ public partial class HistoryWindow
         AutomationProperties.SetName(card, automationName);
 
         card.Tag = false;
+        AddCardPressAnimation(card);
 
         return card;
     }
@@ -838,7 +839,7 @@ public partial class HistoryWindow
 
     // ── Hover action menu (matches existing card menu style) ──
 
-    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? badgeColor = null, Action? onViewText = null)
+    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, Action? onViewText = null)
     {
         var menu = CreateCardActionMenu();
         if (onViewText is not null)
@@ -858,136 +859,9 @@ public partial class HistoryWindow
             menu.IsOpen = true;
         };
 
-        // Chevron button
-        var defaultChevronBrush = new SolidColorBrush(Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(80, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(80, 0, 0, 0));
-        var badgeHoverBrush = badgeColor.HasValue ? new SolidColorBrush(badgeColor.Value) : defaultChevronBrush;
-        var chevronHoverBg = new SolidColorBrush(Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(40, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(40, 0, 0, 0));
-        var chevronIdleBg = new SolidColorBrush(Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(12, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(12, 0, 0, 0));
-
-        var chevronPath = new System.Windows.Shapes.Path
-        {
-            Data = System.Windows.Media.Geometry.Parse("M 0 0 L 6 0 L 3 4.5 Z"),
-            Fill = defaultChevronBrush,
-            Width = 7, Height = 5,
-            Stretch = Stretch.Uniform,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        var chevron = new Border
-        {
-            Width = 20, Height = 18,
-            CornerRadius = new CornerRadius(3),
-            Background = Brushes.Transparent,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 5, 5, 0),
-            Cursor = Cursors.Hand,
-            IsHitTestVisible = true,
-            Visibility = Visibility.Collapsed,
-            Child = chevronPath,
-            ToolTip = new System.Windows.Controls.ToolTip { Content = LocalizationService.Translate("Actions") }
-        };
-        System.Windows.Controls.Panel.SetZIndex(chevron, 999);
-
-        bool chevronHovered = false;
-
-        void UpdateChevronVisual()
-        {
-            if (menu.IsOpen)
-            {
-                chevron.Visibility = Visibility.Visible;
-                chevron.Background = chevronHoverBg;
-                chevronPath.Fill = badgeHoverBrush;
-                return;
-            }
-
-            if (card.IsMouseOver)
-            {
-                chevron.Visibility = Visibility.Visible;
-                chevron.Background = chevronHovered ? chevronHoverBg : chevronIdleBg;
-                chevronPath.Fill = chevronHovered ? badgeHoverBrush : defaultChevronBrush;
-            }
-            else
-            {
-                chevron.Visibility = Visibility.Collapsed;
-                chevronHovered = false;
-            }
-        }
-
-        chevron.PreviewMouseLeftButtonDown += (_, e) =>
-        {
-            e.Handled = true;
-        };
-
-        DateTime menuClosedAt = DateTime.MinValue;
-        bool closingMenuFromChevron = false;
-
-        chevron.PreviewMouseLeftButtonUp += (_, e) =>
-        {
-            e.Handled = true;
-            if (chevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
-                tt.IsOpen = false;
-
-            if (menu.IsOpen)
-            {
-                closingMenuFromChevron = true;
-                menu.IsOpen = false;
-                UpdateChevronVisual();
-                return;
-            }
-
-            if ((DateTime.UtcNow - menuClosedAt).TotalMilliseconds < 250)
-                return;
-
-            menu.PlacementTarget = chevron;
-            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-            menu.HorizontalOffset = 0;
-            menu.VerticalOffset = 2;
-            menu.IsOpen = true;
-        };
-
-        // Hover tracking
-        chevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisual(); };
-        chevron.MouseLeave += (_, _) => { chevronHovered = false; UpdateChevronVisual(); };
-
-        menu.Opened += (_, _) =>
-        {
-            if (chevron.ToolTip is System.Windows.Controls.ToolTip tt)
-                tt.IsOpen = false;
-            ToolTipService.SetIsEnabled(chevron, false);
-        };
-
-        chevron.ToolTipOpening += (_, e) =>
-        {
-            if (menu.IsOpen)
-                e.Handled = true;
-        };
-
-        // Menu closed → update visual state
-        menu.Closed += (_, _) =>
-        {
-            ToolTipService.SetIsEnabled(chevron, true);
-            if (closingMenuFromChevron)
-                closingMenuFromChevron = false;
-            else
-                menuClosedAt = DateTime.UtcNow;
-
-            chevronHovered = false;
-            UpdateChevronVisual();
-        };
-
-        // Card hover shows/hides chevron
-        card.MouseEnter += (_, _) => UpdateChevronVisual();
-        card.MouseLeave += (_, _) => UpdateChevronVisual();
-
-        Grid.SetRow(chevron, 1);
-        rootGrid.Children.Add(chevron);
+        var overflowBtn = CreateCardOverflowButton(menu, card);
+        Grid.SetRow(overflowBtn, 0);
+        rootGrid.Children.Add(overflowBtn);
     }
 
     private void DeleteOcrEntry(OcrHistoryEntry entry)
