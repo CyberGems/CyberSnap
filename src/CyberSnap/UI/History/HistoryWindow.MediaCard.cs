@@ -391,7 +391,10 @@ public partial class HistoryWindow
             actionMenu.IsOpen = true;
         };
 
-        var overflowBtn = CreateCardOverflowButton(actionMenu, card);
+        var kindColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(240, 80, 180)
+            : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60)
+            : System.Windows.Media.Color.FromRgb(100, 180, 255);
+        var overflowBtn = CreateCardOverflowButton(actionMenu, card, kindColor);
         Grid.SetRow(overflowBtn, 0);
         root.Children.Add(overflowBtn);
         AddCardPressAnimation(card);
@@ -669,12 +672,12 @@ public partial class HistoryWindow
 
     /// <summary>
     /// Shared card "more" (⋯) overflow button: ghost idle state (bare dots with a twin
-    /// offset shadow so they read on any content without a backing pill), pill background
-    /// fading in when the card or the button is hovered (or the menu is open), and menu
+    /// offset shadow so they read on any content without a backing pill), category-tinted
+    /// pill fading in when the card or the button is hovered (or the menu is open), and menu
     /// toggle with the same contract as the title-bar burgers (a second click closes
     /// instead of reopening). Replaces the old hover-only chevron in both card factories.
     /// </summary>
-    private static Border CreateCardOverflowButton(ContextMenu menu, Border card)
+    private static Border CreateCardOverflowButton(ContextMenu menu, Border card, System.Windows.Media.Color? accent = null)
     {
         // Twin icon: near-black copy offset 1px behind the light dots = cheap drop shadow
         // with no DropShadowEffect cost (effects would hurt scroll performance over many cards).
@@ -706,7 +709,9 @@ public partial class HistoryWindow
         var pillBg = new Border
         {
             CornerRadius = new CornerRadius(6),
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(175, 12, 12, 14)),
+            Background = new SolidColorBrush(accent.HasValue
+                ? System.Windows.Media.Color.FromArgb(190, accent.Value.R, accent.Value.G, accent.Value.B)
+                : System.Windows.Media.Color.FromArgb(175, 12, 12, 14)),
             BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, 255, 255, 255)),
             BorderThickness = new Thickness(1),
             Opacity = 0,

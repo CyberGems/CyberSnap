@@ -199,7 +199,7 @@ public partial class HistoryWindow
         var img = new System.Windows.Controls.Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
-        AttachCardMenu(card, root, () => { ClipboardService.CopyTextToClipboard(text); ToastWindow.Show("Copied", "Text copied"); }, () => DeleteCodeEntryFromCodesTab(entry));
+        AttachCardMenu(card, root, () => { ClipboardService.CopyTextToClipboard(text); ToastWindow.Show("Copied", "Text copied"); }, () => DeleteCodeEntryFromCodesTab(entry), System.Windows.Media.Color.FromRgb(176, 136, 240));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 

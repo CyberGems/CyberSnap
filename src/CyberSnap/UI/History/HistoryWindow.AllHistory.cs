@@ -406,7 +406,7 @@ public partial class HistoryWindow
         };
         // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(ocrContainer);
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), () => { var window = new OcrResultWindow(text, _settingsService); window.Show(); });
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(80, 190, 180), () => { var window = new OcrResultWindow(text, _settingsService); window.Show(); });
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
@@ -426,11 +426,7 @@ public partial class HistoryWindow
         var capturedText = text;
         card.Child = root;
         SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(80, 190, 180));
-        textArea.ToolTip = new System.Windows.Controls.ToolTip
-        {
-            Content = text.Length > 500 ? text[..500] + "..." : text,
-            MaxWidth = 400
-        };
+        textArea.ToolTip = CreateOcrTextTooltip(text);
         textArea.Cursor = Cursors.Hand;
         textArea.MouseLeftButtonDown += (_, e) =>
         {
@@ -479,7 +475,7 @@ public partial class HistoryWindow
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth, Background = Theme.CreateCheckerboardBrush() };
         var selBadge = CreateUnifiedSelectionBadge();
         swatchArea.Children.Add(selBadge);
-        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(160, 225, 40));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -589,7 +585,7 @@ public partial class HistoryWindow
         var img = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry), System.Windows.Media.Color.FromRgb(176, 136, 240));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
@@ -839,7 +835,7 @@ public partial class HistoryWindow
 
     // ── Hover action menu (matches existing card menu style) ──
 
-    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, Action? onViewText = null)
+    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? accent = null, Action? onViewText = null)
     {
         var menu = CreateCardActionMenu();
         if (onViewText is not null)
@@ -859,9 +855,31 @@ public partial class HistoryWindow
             menu.IsOpen = true;
         };
 
-        var overflowBtn = CreateCardOverflowButton(menu, card);
+        var overflowBtn = CreateCardOverflowButton(menu, card, accent);
         Grid.SetRow(overflowBtn, 0);
         rootGrid.Children.Add(overflowBtn);
+    }
+
+    /// <summary>
+    /// OCR tooltip with an explicitly wrapping TextBlock. A raw string Content gets an
+    /// auto-generated TextBlock with NoWrap, so long text was clipped mid-line at the
+    /// tooltip's MaxWidth instead of flowing onto the next lines.
+    /// </summary>
+    private static System.Windows.Controls.ToolTip CreateOcrTextTooltip(string text)
+    {
+        return new System.Windows.Controls.ToolTip
+        {
+            MaxWidth = 400,
+            Padding = new Thickness(8),
+            Content = new TextBlock
+            {
+                Text = text.Length > 500 ? text[..500] + "..." : text,
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 380,
+                FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                Foreground = Theme.Brush(Theme.TextPrimary),
+            },
+        };
     }
 
     private void DeleteOcrEntry(OcrHistoryEntry entry)
