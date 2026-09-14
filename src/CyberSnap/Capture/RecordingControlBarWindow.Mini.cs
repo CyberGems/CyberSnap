@@ -468,8 +468,12 @@ public sealed partial class RecordingControlBarWindow
 
     private Color MiniShineStrokeColor()
     {
+        // Paused reads as muted slate in every theme: near-white is invisible on the
+        // light surface, so use a darker slate there.
         if (_isPaused)
-            return Color.FromArgb(170, 210, 215, 222);
+            return Theme.IsDark
+                ? Color.FromArgb(170, 210, 215, 222)
+                : Color.FromArgb(170, 110, 120, 132);
         return Color.FromArgb(150, _accent.R, _accent.G, _accent.B);
     }
 

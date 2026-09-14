@@ -1397,9 +1397,7 @@ public sealed partial class ScrollingCaptureForm : Form
             UiChrome.IsGray
                 ? ScrollAccentHover
                 : Color.FromArgb(255, 0xD4, 0x82, 0x18);
-        private static readonly Color StartShineGlow = Color.FromArgb(168, 174, 184);
-        private static readonly Color StartShineCore = Color.FromArgb(210, 215, 222);
-        private const float StartShineThicknessScale = 0.55f;
+        private const float BarShineThicknessScale = 1f;
 
         private static int BarWidth => UiChrome.ScaleInt(520);
         private static int BarHeight => UiChrome.ScaleInt(58);
@@ -1436,8 +1434,8 @@ public sealed partial class ScrollingCaptureForm : Form
         private readonly Font _startFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
         private WindowsToolTip? _chromeToolTip;
         private Rectangle? _tooltipAnchor;
-        private readonly System.Windows.Forms.Timer _startShineTimer;
-        private float _startShinePhase;
+        private readonly System.Windows.Forms.Timer _barShineTimer;
+        private float _barShinePhase;
 
         private static readonly StringFormat _singleLineFmt = new()
         {
@@ -1481,8 +1479,8 @@ public sealed partial class ScrollingCaptureForm : Form
             CalcLayout();
             ApplyRoundedChromeRegion();
 
-            _startShineTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
-            _startShineTimer.Tick += (_, _) => StartShineTick();
+            _barShineTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+            _barShineTimer.Tick += (_, _) => BarShineTick();
         }
 
         private void ApplyRoundedChromeRegion()
@@ -1566,24 +1564,22 @@ public sealed partial class ScrollingCaptureForm : Form
             _isCapturing = true;
             _frameCount = 0;
             _statusOverride = null;
-            _startShineTimer.Stop();
+            _barShineTimer.Stop();
             CalcLayout();
             Invalidate();
         }
 
-        private void StartShineTick()
+        private void BarShineTick()
         {
-            if (UI.Motion.Disabled || _isCapturing || _startBtnRect.IsEmpty)
+            if (UI.Motion.Disabled || _isCapturing)
             {
-                _startShineTimer.Stop();
+                _barShineTimer.Stop();
                 return;
             }
 
-            bool hovered = _hoveredRect == _startBtnRect;
-            float delta = (float)(UiChrome.FrameIntervalMs / 2600.0) * (hovered ? 2f : 1f);
-            _startShinePhase += delta;
-            if (_startShinePhase >= 1f) _startShinePhase -= 1f;
-            InvalidateStartShine();
+            _barShinePhase += (float)(UiChrome.FrameIntervalMs / 4000.0);
+            if (_barShinePhase >= 1f) _barShinePhase -= 1f;
+            Invalidate();
         }
 
         public void Reposition(Rectangle captureRegion)
@@ -1640,6 +1636,20 @@ public sealed partial class ScrollingCaptureForm : Form
             using (var bp = new Pen(UiChrome.SurfaceBorder, 1f))
                 g.DrawPath(bp, bgPath);
 
+            // Traveling beam on the bar border (never on buttons): theme-aware via
+            // UiChrome.AccentColor, white-hot core only on dark docks.
+            if (!UI.Motion.Disabled && !_isCapturing)
+            {
+                var accent = UiChrome.AccentColor;
+                var core = Color.FromArgb(
+                    Math.Min(255, accent.R + 80),
+                    Math.Min(255, accent.G + 80),
+                    Math.Min(255, accent.B + 80));
+                var center = UiChrome.IsDark ? Color.White : accent;
+                WindowsDockRenderer.PaintBorderShine(
+                    g, barRect, CornerR, _barShinePhase, accent, core, 1f, BarShineThicknessScale, center);
+            }
+
             float centerY = BarHeight / 2f;
             float dotX = _recDotRect.X;
             float dotY = centerY - DotSize / 2f;
@@ -1682,8 +1692,7 @@ public sealed partial class ScrollingCaptureForm : Form
             if (!_startBtnRect.IsEmpty)
             {
                 DrawPrimaryTextBtn(g, _startBtnRect, LocalizationService.Translate("Start scrolling capture"),
-                    _hoveredRect == _startBtnRect, ScrollAccent, ScrollAccentHover,
-                    withShine: true, shinePhase: _startShinePhase);
+                    _hoveredRect == _startBtnRect, ScrollAccent, ScrollAccentHover);
             }
             if (!_stopBtnRect.IsEmpty)
             {
@@ -1728,7 +1737,7 @@ public sealed partial class ScrollingCaptureForm : Form
 
         private void DrawPrimaryTextBtn(
             Graphics g, Rectangle rect, string text, bool hovered,
-            Color normal, Color hoverFill, bool withShine = false, float shinePhase = 0f)
+            Color normal, Color hoverFill)
         {
             var rectF = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
             using var path = WindowsDockRenderer.RoundedRect(rectF, CornerR);
@@ -1740,15 +1749,6 @@ public sealed partial class ScrollingCaptureForm : Form
 
             using var textBrush = new SolidBrush(GetButtonTextColor(fillColor));
             g.DrawString(text, _startFont, textBrush, rectF, _centerFmt);
-
-            if (withShine && !UI.Motion.Disabled)
-            {
-                var clipState = g.Save();
-                g.ResetClip();
-                WindowsDockRenderer.PaintBorderShine(
-                    g, rectF, CornerR, shinePhase, StartShineGlow, StartShineCore, 1f, StartShineThicknessScale);
-                g.Restore(clipState);
-            }
         }
 
         private static Color GetButtonTextColor(Color fill)
@@ -1757,15 +1757,6 @@ public sealed partial class ScrollingCaptureForm : Form
             return luminance >= 150
                 ? Color.FromArgb(255, 7, 18, 28)
                 : Color.White;
-        }
-
-        private void InvalidateStartShine()
-        {
-            if (_startBtnRect.IsEmpty)
-                return;
-
-            int pad = UiChrome.ScaleInt(10);
-            Invalidate(Rectangle.Inflate(_startBtnRect, pad, pad));
         }
 
         private void DrawIconBtn(Graphics g, Rectangle r, string iconId, bool hovered, Color iconColor)
@@ -1983,7 +1974,7 @@ public sealed partial class ScrollingCaptureForm : Form
             catch { /* optional DWM polish */ }
 
             if (!UI.Motion.Disabled && !_isCapturing)
-                _startShineTimer.Start();
+                _barShineTimer.Start();
         }
 
         protected override void OnVisibleChanged(EventArgs e)
@@ -1993,17 +1984,17 @@ public sealed partial class ScrollingCaptureForm : Form
                 return;
 
             if (Visible && !UI.Motion.Disabled && !_isCapturing)
-                _startShineTimer.Start();
+                _barShineTimer.Start();
             else
-                _startShineTimer.Stop();
+                _barShineTimer.Stop();
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _startShineTimer.Stop();
-                _startShineTimer.Dispose();
+                _barShineTimer.Stop();
+                _barShineTimer.Dispose();
                 _modeMenu?.Dispose();
                 _modeMenu = null;
                 _chromeToolTip?.Dispose();

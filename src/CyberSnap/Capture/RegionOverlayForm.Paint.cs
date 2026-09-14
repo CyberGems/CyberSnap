@@ -283,7 +283,6 @@ public sealed partial class RegionOverlayForm
                 DrawConfirmChromeWrapper(g);
                 using (var btnFont = CreateConfirmButtonFont())
                 {
-                    bool shineOn = _confirmShineTimer.Enabled && !UI.Motion.Disabled;
                     int primaryIdx = IndexOfPrimaryConfirmAction();
 
                     for (int i = 0; i < _confirmChromeKinds.Length && i < _confirmChromeRects.Length; i++)
@@ -302,10 +301,6 @@ public sealed partial class RegionOverlayForm
                             continue;
                         }
 
-                        // Per-button shine only while that button is hovered (never group dim/shine).
-                        float shine = !disabled && shineOn && hover && i < ConfirmShineSlots ? _shinePhase[i] : -1f;
-                        float main = 1f;
-                        float dup = (!disabled && hover && i < ConfirmShineSlots) ? _shineDup[i] : 0f;
                         float factor = 1f;
                         float opacity = 1f;
 
@@ -313,7 +308,6 @@ public sealed partial class RegionOverlayForm
                         {
                             factor = 0f;
                             opacity = hover ? 0.4f : 0.28f;
-                            shine = -1f;
                             press = 0f;
                         }
 
@@ -337,8 +331,8 @@ public sealed partial class RegionOverlayForm
                         string? fluentIcon = kind == ConfirmChromeKind.Retry ? null : ConfirmChromeFluentIcon(effectiveKind);
                         string label = ConfirmChromeDrawLabel(effectiveKind);
 
-                        DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
-                            hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest, kind: effectiveKind);
+                        DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, opacity,
+                            fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest, kind: effectiveKind);
                     }
 
                     Color sep = UiChrome.IsDark
@@ -561,8 +555,8 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     private void DrawConfirmActionPill(
         Graphics g, Rectangle rect, Color baseColor, string label, Font font,
-        bool hover, int iconType, float pressAmt, float shinePhase, float shineMain, float shineDup,
-        float opacity, bool hasShine, string? fluentIconId = null, Color? accent = null,
+        bool hover, int iconType, float pressAmt,
+        float opacity, string? fluentIconId = null, Color? accent = null,
         bool isPrimary = false, ConfirmChromeKind kind = ConfirmChromeKind.Done)
     {
         float hoverCorner = UiChrome.ScaleFloat(5f); // match annotation toolbar corner radius
@@ -577,15 +571,8 @@ public sealed partial class RegionOverlayForm
         bool isSelectedMode = kind == SelectedConfirmModeKind();
         WindowsDockRenderer.PaintButton(g, face, active: isSelectedMode, hovered: hover, radius: hoverCorner, accent: accentColor);
 
-        if (hasShine && shinePhase >= 0f && !UI.Motion.Disabled)
-        {
-            var shineCore = Color.FromArgb(
-                Math.Min(255, accentColor.R + 80),
-                Math.Min(255, accentColor.G + 80),
-                Math.Min(255, accentColor.B + 80));
-            DrawBorderShine(g, face, hoverCorner, shinePhase, accentColor, shineCore,
-                intensity: shineMain * 0.45f, thicknessScale: 0.32f);
-        }
+        // NOTE: no traveling shine on pills by design — the beam lives on the dock
+        // wrapper border (DrawDockWrapperShine) so it reads the same in every theme.
 
         // ── Label + icon laid out as a single centered group ──
         bool useFluent = !string.IsNullOrEmpty(fluentIconId);
@@ -795,7 +782,10 @@ public sealed partial class RegionOverlayForm
             Math.Min(255, accent.R + 80),
             Math.Min(255, accent.G + 80),
             Math.Min(255, accent.B + 80));
-        DrawBorderShine(g, face, corner, phase, accent, core, intensity: 1f);
+        // A white-hot core pops on dark docks but washes out on light ones — there the
+        // hottest pass stays accent so the beam reads in every theme.
+        var center = UiChrome.IsDark ? Color.White : accent;
+        DrawBorderShine(g, face, corner, phase, accent, core, intensity: 1f, centerColor: center);
     }
 
     /// <summary>
@@ -803,9 +793,9 @@ public sealed partial class RegionOverlayForm
     /// Delegates to <see cref="WindowsDockRenderer.PaintBorderShine"/> so capture, confirm, and
     /// scrolling-capture chrome share one perimeter sampler (no GDI+ flatten seams).
     /// </summary>
-    private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f)
+    private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f, Color? centerColor = null)
     {
-        WindowsDockRenderer.PaintBorderShine(g, face, corner, phase, glowColor, coreColor, intensity, thicknessScale);
+        WindowsDockRenderer.PaintBorderShine(g, face, corner, phase, glowColor, coreColor, intensity, thicknessScale, centerColor);
     }
 
     /// <summary>Clamp a rectangle so it stays 2px inside the client area (prevents dashes from being cut off at screen edges).</summary>

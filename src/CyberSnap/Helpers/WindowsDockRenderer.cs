@@ -176,11 +176,14 @@ public static class WindowsDockRenderer
     }
 
     /// <summary>
-    /// Traveling border glint for pill buttons. <paramref name="thicknessScale"/> &lt; 1 draws a finer beam.
+    /// Traveling border glint for dock wrappers. <paramref name="thicknessScale"/> &lt; 1 draws a finer beam.
+    /// <paramref name="centerColor"/> defaults to white; pass the accent on light
+    /// surfaces where a white-hot core would wash out.
     /// </summary>
     public static void PaintBorderShine(
         Graphics g, RectangleF face, float corner, float phase,
-        Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f)
+        Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f,
+        Color? centerColor = null)
     {
         var (total, pointAt) = CreateRoundedRectPerimeter(face, corner);
         if (total <= 0f)
@@ -241,7 +244,7 @@ public static class WindowsDockRenderer
 
         DrawShinePass(glowWidth, glowColor, 1);
         DrawShinePass(coreWidth, coreColor, 2);
-        DrawShinePass(centerWidth, Color.White, 3);
+        DrawShinePass(centerWidth, centerColor ?? Color.White, 3);
     }
 
     private readonly record struct PerimeterSegment(float Length, Func<float, PointF> Evaluate);

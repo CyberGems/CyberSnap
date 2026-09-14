@@ -1492,13 +1492,6 @@ public sealed partial class RegionOverlayForm
         // the user just finished selecting a region and should only see Confirm/Retry chrome.
         TryRestoreLastAnnotationTool();
         HideToolBannerImmediate();
-        for (int i = 0; i < ConfirmShineSlots; i++)
-        {
-            _shinePhase[i] = 0f;
-            // Buttons start fully visible, no traveling shine until individually hovered.
-            _shineMain[i] = 1f;
-            _shineDup[i] = 0f;
-        }
         _dockShinePhase = 0f;
         _hoveredConfirmSizeReadout = false;
         ResetConfirmModesExpanded(collapsed: true);
@@ -2997,26 +2990,6 @@ public sealed partial class RegionOverlayForm
 
         if (!_isConfirmingSelection)
             return;
-
-        int hov = _hoveredConfirmButton;
-        float baseDelta = (float)(UiChrome.FrameIntervalMs / 2200.0);
-        int count = Math.Min(ConfirmShineSlots, Math.Max(3, _confirmChromeKinds.Length));
-        for (int i = 0; i < count; i++)
-        {
-            // Buttons stay fully visible (no group dim). Only the hovered one animates a comet.
-            _shineMain[i] = 1f;
-            if (hov == i)
-            {
-                _shinePhase[i] += baseDelta * 0.85f;
-                if (_shinePhase[i] >= 1f) _shinePhase[i] -= 1f;
-                _shineDup[i] += (1f - _shineDup[i]) * 0.3f;
-            }
-            else
-            {
-                _shineDup[i] += (0f - _shineDup[i]) * 0.3f;
-                if (_shineDup[i] < 0.01f) _shineDup[i] = 0f;
-            }
-        }
 
         // Full chrome union (includes wrapper) so soft glow never leaves a partial smear.
         InvalidateConfirmChromeHover();

@@ -88,10 +88,6 @@ public sealed partial class RegionOverlayForm : Form
     private int _pendingConfirmAction = -1; // action to run when the squash finishes
     private float _confirmPressAmt;          // 0→1→0 squash progress for the pressed button
     private DateTime _pressAnimStart;
-    private const int ConfirmShineSlots = 10;
-    private readonly float[] _shinePhase = new float[ConfirmShineSlots]; // per-button glint position
-    private readonly float[] _shineMain = new float[ConfirmShineSlots]; // primary comet intensity
-    private readonly float[] _shineDup = new float[ConfirmShineSlots];  // duplicate comet intensity (hover)
 
     // Confirm chrome: Cancel / Retry / modes (built in RebuildConfirmChrome).
     // Overflow / "More options" lives on the top-edge gear pill, not on this dock.
