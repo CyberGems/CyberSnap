@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
@@ -56,6 +57,7 @@ public partial class CyberSnapTitleBar : UserControl
     public CyberSnapTitleBar()
     {
         InitializeComponent();
+        AttachTactileFeedback();
         Loaded += (s, e) =>
         {
             if (OwnerWindow is { } window)
@@ -715,6 +717,7 @@ public partial class CyberSnapTitleBar : UserControl
             return;
 
         ApplyButtonHoverVisual(border, true);
+        PlayHoverPop(border, true);
     }
 
     private void TitleBtn_MouseLeave(object sender, MouseEventArgs e)
@@ -728,6 +731,9 @@ public partial class CyberSnapTitleBar : UserControl
             return;
 
         ApplyButtonHoverVisual(border, false);
+        // The pointer may leave mid-press (release happens outside); always settle.
+        PlayHoverPop(border, false);
+        ReleasePressScale(border, hovered: false);
     }
 
     private void ApplyButtonHoverVisual(Border border, bool hovered)
@@ -767,6 +773,186 @@ public partial class CyberSnapTitleBar : UserControl
         else if (ReferenceEquals(border, CloseBtn))
             CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", iconColor, 18, active);
     }
+
+    #region Tactile micro-animations (visual-haptic feedback)
+
+    // Shared by every window: all title-bar buttons live in this control, so wiring
+    // press/hover scale here covers Settings, History, About, OCR, QR, Trimmer,
+    // Capture Preview and Achievements at once.
+    private const double PressedButtonScale = 0.88;
+    private const double PressedIconScale = 0.84;
+    private const double HoverIconScale = 1.1;
+    private const double PressedIconOpacity = 0.7;
+    private const double RestIconOpacity = 0.95;
+    private const int PressMs = 90;
+    private const int HoverMs = 120;
+    private const int ReleaseMs = 200;
+
+    private IEnumerable<(Border Button, System.Windows.Controls.Image Icon)> TitleButtons()
+    {
+        yield return (DonateBtn, DonateIcon);
+        yield return (BurgerBtn, BurgerIcon);
+        yield return (AnnotationBtn, AnnotationIcon);
+        yield return (ActionBtn, ActionIcon);
+        yield return (PinBtn, PinIcon);
+        yield return (MinimizeBtn, MinimizeIcon);
+        yield return (MaximizeBtn, MaximizeIcon);
+        yield return (CloseBtn, CloseIcon);
+    }
+
+    private void AttachTactileFeedback()
+    {
+        foreach (var (button, icon) in TitleButtons())
+        {
+            if (button is null || icon is null)
+                continue;
+
+            EnsureScale(button);
+            EnsureScale(icon);
+            icon.Opacity = RestIconOpacity;
+
+            button.PreviewMouseLeftButtonDown += TitleBtn_Press;
+            button.PreviewMouseLeftButtonUp += TitleBtn_Release;
+            button.PreviewTouchDown += TitleBtn_Press;
+            button.PreviewTouchUp += TitleBtn_Release;
+            button.PreviewStylusDown += TitleBtn_Press;
+            button.PreviewStylusUp += TitleBtn_Release;
+            button.Unloaded += TitleBtn_ClearAnimations;
+        }
+    }
+
+    private void TitleBtn_Press(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Border border)
+            return;
+
+        var icon = IconFor(border);
+        AnimateScale(border, PressedButtonScale, PressMs, Motion.SmoothOut);
+        if (icon is not null)
+        {
+            AnimateScale(icon, PressedIconScale, PressMs, Motion.SmoothOut);
+            AnimateOpacity(icon, PressedIconOpacity, PressMs, Motion.SmoothOut);
+        }
+    }
+
+    private void TitleBtn_Release(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Border border)
+            return;
+
+        ReleasePressScale(border, hovered: border.IsMouseOver);
+    }
+
+    private void TitleBtn_ClearAnimations(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Border border)
+            return;
+
+        border.BeginAnimation(UIElement.OpacityProperty, null);
+        border.RenderTransform.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        border.RenderTransform.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        if (border.RenderTransform is ScaleTransform buttonScale)
+            buttonScale.ScaleX = buttonScale.ScaleY = 1.0;
+
+        var icon = IconFor(border);
+        if (icon is null)
+            return;
+        icon.BeginAnimation(UIElement.OpacityProperty, null);
+        icon.Opacity = RestIconOpacity;
+        icon.RenderTransform.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        icon.RenderTransform.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        if (icon.RenderTransform is ScaleTransform iconScale)
+            iconScale.ScaleX = iconScale.ScaleY = 1.0;
+    }
+
+    private void PlayHoverPop(Border border, bool hovered)
+    {
+        var icon = IconFor(border);
+        if (icon is null)
+            return;
+
+        // A gentle icon swell on hover plus a settle back on leave. Skipped while
+        // pressed so the press squash wins over the hover swell.
+        if (IsPressed(border))
+            return;
+
+        AnimateScale(icon, hovered ? HoverIconScale : 1.0, HoverMs, Motion.SmoothOut);
+    }
+
+    private void ReleasePressScale(Border border, bool hovered)
+    {
+        var releaseEase = Motion.Disabled
+            ? null
+            : new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.45 };
+        AnimateScale(border, 1.0, ReleaseMs, releaseEase);
+
+        var icon = IconFor(border);
+        if (icon is null)
+            return;
+        AnimateScale(icon, hovered ? HoverIconScale : 1.0, ReleaseMs, releaseEase);
+        AnimateOpacity(icon, RestIconOpacity, ReleaseMs, Motion.SmoothOut);
+    }
+
+    private System.Windows.Controls.Image? IconFor(Border border)
+    {
+        if (ReferenceEquals(border, DonateBtn)) return DonateIcon;
+        if (ReferenceEquals(border, BurgerBtn)) return BurgerIcon;
+        if (ReferenceEquals(border, AnnotationBtn)) return AnnotationIcon;
+        if (ReferenceEquals(border, ActionBtn)) return ActionIcon;
+        if (ReferenceEquals(border, PinBtn)) return PinIcon;
+        if (ReferenceEquals(border, MinimizeBtn)) return MinimizeIcon;
+        if (ReferenceEquals(border, MaximizeBtn)) return MaximizeIcon;
+        if (ReferenceEquals(border, CloseBtn)) return CloseIcon;
+        return null;
+    }
+
+    private static bool IsPressed(Border border) =>
+        Mouse.LeftButton == MouseButtonState.Pressed && border.IsMouseOver;
+
+    private static void EnsureScale(FrameworkElement element)
+    {
+        if (element.RenderTransform is not ScaleTransform)
+        {
+            element.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+            element.RenderTransform = new ScaleTransform(1.0, 1.0);
+        }
+        else if (element.RenderTransformOrigin == new System.Windows.Point(0, 0))
+        {
+            element.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+        }
+    }
+
+    private static void AnimateScale(FrameworkElement element, double scale, int milliseconds, IEasingFunction? easing)
+    {
+        EnsureScale(element);
+        if (Motion.Disabled)
+        {
+            element.RenderTransform.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            element.RenderTransform.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            if (element.RenderTransform is ScaleTransform st)
+                st.ScaleX = st.ScaleY = scale;
+            return;
+        }
+
+        element.RenderTransform.BeginAnimation(
+            ScaleTransform.ScaleXProperty, Motion.To(scale, milliseconds, easing ?? Motion.SmoothOut));
+        element.RenderTransform.BeginAnimation(
+            ScaleTransform.ScaleYProperty, Motion.To(scale, milliseconds, easing ?? Motion.SmoothOut));
+    }
+
+    private static void AnimateOpacity(UIElement element, double opacity, int milliseconds, IEasingFunction? easing)
+    {
+        if (Motion.Disabled)
+        {
+            element.BeginAnimation(UIElement.OpacityProperty, null);
+            element.Opacity = opacity;
+            return;
+        }
+
+        element.BeginAnimation(UIElement.OpacityProperty, Motion.To(opacity, milliseconds, easing ?? Motion.SmoothOut));
+    }
+
+    #endregion
 
     private static System.Drawing.Color TitleBarIconColor =>
         System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);

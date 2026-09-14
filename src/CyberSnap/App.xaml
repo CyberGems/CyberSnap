@@ -66,6 +66,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         </Style>
 
         <Style x:Key="CyberSnapTitleCloseButton" TargetType="Border" BasedOn="{StaticResource CyberSnapTitleButton}">
