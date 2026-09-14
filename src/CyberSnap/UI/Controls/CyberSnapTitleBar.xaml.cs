@@ -53,6 +53,14 @@ public partial class CyberSnapTitleBar : UserControl
     /// mixed/150% DPI + AllowsTransparency windows.
     /// </summary>
     private DateTime _contextMenuClosedAt = DateTime.MinValue;
+    /// <summary>
+    /// Which title button received the current press. Set on preview-down (which runs
+    /// before bubble handlers act). Menu buttons only toggle on mouse-up when the press
+    /// started on them: acting on mouse-down (e.g. maximize resizes the window
+    /// synchronously) can shift buttons under a stationary cursor, otherwise delivering
+    /// the up to a neighbor that would wrongly open its menu.
+    /// </summary>
+    private Border? _pressOrigin;
 
     public CyberSnapTitleBar()
     {
@@ -826,6 +834,7 @@ public partial class CyberSnapTitleBar : UserControl
         if (sender is not Border border)
             return;
 
+        _pressOrigin = border;
         var icon = IconFor(border);
         AnimateScale(border, PressedButtonScale, PressMs, Motion.SmoothOut);
         if (icon is not null)
@@ -972,6 +981,9 @@ public partial class CyberSnapTitleBar : UserControl
     private void BurgerBtn_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
+        if (!ReferenceEquals(_pressOrigin, BurgerBtn))
+            return;
+        _pressOrigin = null;
         ToggleContextMenu(BurgerBtn.ContextMenu, BurgerBtn);
     }
 
@@ -997,6 +1009,9 @@ public partial class CyberSnapTitleBar : UserControl
     private void ActionBtn_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
+        if (!ReferenceEquals(_pressOrigin, ActionBtn))
+            return;
+        _pressOrigin = null;
         if (OwnerWindow is HistoryWindow)
             ToggleContextMenu(ActionBtn.ContextMenu, ActionBtn);
     }
