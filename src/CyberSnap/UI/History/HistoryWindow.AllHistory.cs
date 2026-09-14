@@ -176,7 +176,8 @@ public partial class HistoryWindow
 
         var pageSize = Math.Min(HistoryInitialPageSize, _filteredUnifiedEntries.Count);
         var page = _filteredUnifiedEntries.GetRange(0, pageSize);
-        AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard);
+        AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard, _filteredUnifiedEntries);
+        EnsureGalleryViewportFilled();
         _allLastAppendIndex = pageSize;
         if (_selectMode)
             PushStoreToVisibleCards();
@@ -195,7 +196,7 @@ public partial class HistoryWindow
         var prevCount = _allLastAppendIndex;
         _allLastAppendIndex = Math.Min(_allLastAppendIndex + HistoryAppendPageSize, _filteredUnifiedEntries.Count);
         var added = _filteredUnifiedEntries.GetRange(prevCount, _allLastAppendIndex - prevCount);
-        AppendGroupedUnifiedItems(HistoryStack, added, CreateUnifiedCard);
+        AppendGroupedUnifiedItems(HistoryStack, added, CreateUnifiedCard, _filteredUnifiedEntries);
         // Update fingerprint after appending more items
         PrimeHistoryFingerprint();
 
@@ -214,8 +215,10 @@ public partial class HistoryWindow
 
     // ── Grouped grid rendering (WrapPanels + date pills, same as image history) ──
 
-    private void AppendGroupedUnifiedItems(System.Windows.Controls.Panel target, IReadOnlyList<UnifiedHistoryItem> items, Func<UnifiedHistoryItem, Border> cardFactory)
+    private void AppendGroupedUnifiedItems(System.Windows.Controls.Panel target, IReadOnlyList<UnifiedHistoryItem> items, Func<UnifiedHistoryItem, Border> cardFactory, IReadOnlyList<UnifiedHistoryItem>? totalsSource = null)
     {
+        var totals = CountHistoryDateTotals(totalsSource ?? items, static item => item.CapturedAt);
+
         WrapPanel? currentWrap = target.Children.Count > 0 ? target.Children[target.Children.Count - 1] as WrapPanel : null;
         DateTime? currentDate = currentWrap?.Tag is DateTime tagDate ? tagDate : null;
         var updatedWraps = new HashSet<WrapPanel>();
@@ -226,39 +229,22 @@ public partial class HistoryWindow
             if (currentWrap is null || currentDate != itemDate)
             {
                 // Date separator line
+                Border? separator = null;
                 if (target.Children.Count > 0)
                 {
-                    target.Children.Add(new Border
+                    separator = new Border
                     {
                         Height = 1,
                         Background = Theme.Brush(Theme.BorderSubtle),
                         Margin = new Thickness(6, 26, 6, 0)
-                    });
+                    };
+                    target.Children.Add(separator);
                 }
 
-                // Date label pill
-                var dateLabel = new TextBlock
-                {
-                    Text = FormatHistoryGroupLabel(itemDate).ToUpperInvariant(),
-                    FontSize = 12,
-                    FontWeight = FontWeights.Bold,
-                    FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
-                    Foreground = Theme.Brush(Theme.Accent),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Opacity = 0.9
-                };
-                target.Children.Add(new Border
-                {
-                    Background = Theme.Brush(Theme.AccentSubtle),
-                    CornerRadius = new CornerRadius(7),
-                    Padding = new Thickness(14, 6, 14, 6),
-                    Margin = new Thickness(6, 18, 0, 12),
-                    HorizontalAlignment = HorizontalAlignment.Left,
-                    Child = dateLabel
-                });
+                totals.TryGetValue(itemDate, out int total);
+                var state = CreateHistoryDateGroup(target, itemDate, total, separator);
 
-                currentWrap = CreateHistoryWrapPanel(itemDate);
-                target.Children.Add(currentWrap);
+                currentWrap = state.Wrap;
                 currentDate = itemDate;
             }
 

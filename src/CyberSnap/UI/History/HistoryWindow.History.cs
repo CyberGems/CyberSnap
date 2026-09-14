@@ -428,6 +428,7 @@ public partial class HistoryWindow
         HistoryStack.Children.Clear();
         _historyItems = _filteredHistoryItems.GetRange(0, _historyRenderCount);
         AppendGroupedHistoryItems(HistoryStack, _historyItems, CreateHistoryCard, _filteredHistoryItems);
+        EnsureGalleryViewportFilled();
         var renderLookahead = Math.Min(HistoryLookaheadCount, _allHistoryItems.Count - _historyRenderCount);
         PrimeHistoryThumbnailLoads(_historyItems, _allHistoryItems, _historyRenderCount, Math.Max(0, renderLookahead));
         sw.Stop();
@@ -1447,12 +1448,12 @@ public partial class HistoryWindow
         _settingsService.Save();
     }
 
-    private static Dictionary<DateTime, int> CountHistoryDateTotals(IEnumerable<HistoryItemVM> source)
+    private static Dictionary<DateTime, int> CountHistoryDateTotals<T>(IEnumerable<T> source, Func<T, DateTime> dateOf)
     {
         var totals = new Dictionary<DateTime, int>();
-        foreach (var vm in source)
+        foreach (var item in source)
         {
-            var date = vm.Entry.CapturedAt.Date;
+            var date = dateOf(item).Date;
             totals[date] = totals.TryGetValue(date, out var count) ? count + 1 : 1;
         }
         return totals;
@@ -1461,7 +1462,7 @@ public partial class HistoryWindow
     private void AppendGroupedHistoryItems(System.Windows.Controls.Panel target, IEnumerable<HistoryItemVM> items, Func<HistoryItemVM, Border> cardFactory, IReadOnlyList<HistoryItemVM>? totalsSource = null)
     {
         var materialized = items as IReadOnlyList<HistoryItemVM> ?? items.ToList();
-        var totals = CountHistoryDateTotals(totalsSource ?? materialized);
+        var totals = CountHistoryDateTotals(totalsSource ?? materialized, static vm => vm.Entry.CapturedAt);
 
         WrapPanel? currentWrap = target.Children.Count > 0 ? target.Children[target.Children.Count - 1] as WrapPanel : null;
         DateTime? currentDate = currentWrap?.Tag is DateTime tagDate ? tagDate : null;
@@ -1604,19 +1605,25 @@ public partial class HistoryWindow
     private void ToggleHistoryDateGroup(HistoryDateGroupState state)
     {
         state.Collapsed = !state.Collapsed;
-        SetHistoryDateCollapsed(state.Date, state.Collapsed);
         state.Wrap.Visibility = state.Collapsed ? Visibility.Collapsed : Visibility.Visible;
         if (state.Separator is not null)
             state.Separator.Visibility = state.Wrap.Visibility;
         ApplyHistoryDateGroupLabel(state);
         ApplyHistoryDateGroupChevron(state, animate: true);
-        if (!state.Collapsed)
+        // Persist off the critical path: the settings save hits disk and made the toggle lag.
+        var date = state.Date;
+        bool collapsed = state.Collapsed;
+        _ = Dispatcher.BeginInvoke(
+            () => SetHistoryDateCollapsed(date, collapsed),
+            System.Windows.Threading.DispatcherPriority.Background);
+        if (!collapsed)
         {
             // Layout just ran with width 0 while collapsed; recompute card widths once visible.
             _ = Dispatcher.BeginInvoke(
                 () => UpdateHistoryWrapPanelCardWidths(state.Wrap),
                 System.Windows.Threading.DispatcherPriority.Background);
         }
+        EnsureGalleryViewportFilled();
     }
 
     private void ApplyHistoryDateGroupLabel(HistoryDateGroupState state)
@@ -1656,6 +1663,52 @@ public partial class HistoryWindow
                     ApplyHistoryDateGroupLabel(state);
             }
         }
+    }
+
+    private System.Windows.Controls.ScrollViewer? ActiveGalleryScrollPanel() =>
+        HistoryCategoryCombo.SelectedIndex == 2 ? GifsPanel : ImagesPanel;
+
+    /// <summary>True when the active gallery viewport isn't filled (same 360px threshold as infinite scroll).</summary>
+    private bool GalleryViewportNeedsFill()
+    {
+        var panel = ActiveGalleryScrollPanel();
+        return panel is not null && panel.ExtentHeight <= panel.ViewportHeight + 360;
+    }
+
+    /// <summary>Appends one more page on the active tab; false when there's nothing left to load.</summary>
+    private bool TryAppendNextGalleryPage()
+    {
+        if (HistoryCategoryCombo.SelectedIndex == 0)
+        {
+            if (_allLastAppendIndex >= _filteredUnifiedEntries.Count)
+                return false;
+            AppendNextAllPage();
+            return true;
+        }
+        if (HistoryCategoryCombo.SelectedIndex == 2)
+            return AppendNextMediaHistoryPage();
+        if (_useVirtualizedImageHistory)
+            return false;
+        if (HistoryCategoryCombo.SelectedIndex == 1 && string.IsNullOrWhiteSpace(_imageSearchQuery))
+        {
+            int before = _historyRenderCount;
+            AppendNextImageHistoryPage();
+            return _historyRenderCount > before;
+        }
+        return AppendNextFilteredImagePage();
+    }
+
+    /// <summary>
+    /// Collapsing groups can leave the viewport unfilled with no scrollbar (so infinite
+    /// scroll never fires). Top it up automatically until content overflows or pages run out.
+    /// </summary>
+    private void EnsureGalleryViewportFilled()
+    {
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            for (int i = 0; i < 25 && GalleryViewportNeedsFill() && TryAppendNextGalleryPage(); i++)
+                ActiveGalleryScrollPanel()?.UpdateLayout();
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private WrapPanel CreateHistoryWrapPanel(DateTime itemDate)

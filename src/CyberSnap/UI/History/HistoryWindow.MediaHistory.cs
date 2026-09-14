@@ -158,6 +158,7 @@ public partial class HistoryWindow
         GifStack.Children.Clear();
         _gifItems = _filteredGifItems.Take(_gifRenderCount).ToList();
         AppendGroupedHistoryItems(GifStack, _gifItems, CreateMediaCard, _filteredGifItems);
+        EnsureGalleryViewportFilled();
         PrimeMediaThumbnailLoads(_gifItems);
         sw.Stop();
         AppDiagnostics.LogInfo(
@@ -171,10 +172,10 @@ public partial class HistoryWindow
         AppendNextMediaHistoryPage();
     }
 
-    private void AppendNextMediaHistoryPage()
+    private bool AppendNextMediaHistoryPage()
     {
         if (_gifRenderCount >= _filteredGifItems.Count)
-            return;
+            return false;
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var previousOffset = GifsPanel.VerticalOffset;
@@ -182,7 +183,7 @@ public partial class HistoryWindow
         _gifRenderCount = Math.Min(_gifRenderCount + HistoryAppendPageSize, _filteredGifItems.Count);
         var appendCount = _gifRenderCount - previousCount;
         if (appendCount <= 0)
-            return;
+            return false;
         var appended = _filteredGifItems.GetRange(previousCount, appendCount);
 
         _gifItems.AddRange(appended);
@@ -198,6 +199,7 @@ public partial class HistoryWindow
         AppDiagnostics.LogInfo(
             "history.append-media",
             $"appended={appended.Count} loaded={_gifRenderCount}/{_filteredGifItems.Count} elapsedMs={sw.ElapsedMilliseconds}");
+        return true;
     }
 
     private Border CreateMediaCard(HistoryItemVM item)

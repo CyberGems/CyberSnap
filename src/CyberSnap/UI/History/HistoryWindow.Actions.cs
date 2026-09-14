@@ -570,15 +570,21 @@ public partial class HistoryWindow
             return;
         }
 
+        AppendNextFilteredImagePage();
+    }
+
+    /// <summary>Appends the next filtered-images page; false when there's nothing left to load.</summary>
+    private bool AppendNextFilteredImagePage()
+    {
         if (_historyRenderCount >= _filteredHistoryItems.Count)
-            return;
+            return false;
 
         var previousOffset = ImagesPanel.VerticalOffset;
         var previousCount = _historyRenderCount;
         _historyRenderCount = Math.Min(_historyRenderCount + HistoryAppendPageSize, _filteredHistoryItems.Count);
         var appendCount = _historyRenderCount - previousCount;
         if (appendCount <= 0)
-            return;
+            return false;
         var appended = _filteredHistoryItems.GetRange(previousCount, appendCount);
 
         _historyItems.AddRange(appended);
@@ -588,6 +594,7 @@ public partial class HistoryWindow
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)
                 ImagesPanel.ScrollToVerticalOffset(previousOffset);
         }, System.Windows.Threading.DispatcherPriority.Background);
+        return true;
     }
 
     /// <summary>
