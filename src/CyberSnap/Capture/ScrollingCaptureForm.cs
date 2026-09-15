@@ -1419,6 +1419,7 @@ public sealed partial class ScrollingCaptureForm : Form
 
         private Rectangle _startBtnRect;
         private Rectangle _stopBtnRect;
+        private Rectangle _helpBtnRect;
         private Rectangle _cancelBtnRect;
         private Rectangle _manualFrameBtnRect;
         private Rectangle _modeComboRect;
@@ -1530,11 +1531,12 @@ public sealed partial class ScrollingCaptureForm : Form
             int secY = (BarHeight - SecondaryBtnSize) / 2;
             int priY = (BarHeight - PrimaryBtnHeight) / 2;
             _cancelBtnRect = new Rectangle(BarWidth - btnPad - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize);
+            _helpBtnRect = new Rectangle(_cancelBtnRect.X - btnGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize);
 
             if (!_isCapturing)
             {
                 _startBtnRect = new Rectangle(
-                    _cancelBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
+                    _helpBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
                 _stopBtnRect = Rectangle.Empty;
                 _manualFrameBtnRect = Rectangle.Empty;
             }
@@ -1542,7 +1544,7 @@ public sealed partial class ScrollingCaptureForm : Form
             {
                 _startBtnRect = Rectangle.Empty;
                 _stopBtnRect = new Rectangle(
-                    _cancelBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
+                    _helpBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
                 _manualFrameBtnRect = _mode == ScrollingCaptureMode.Manual
                     ? new Rectangle(_stopBtnRect.X - btnGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize)
                     : Rectangle.Empty;
@@ -1565,6 +1567,8 @@ public sealed partial class ScrollingCaptureForm : Form
             _frameCount = 0;
             _statusOverride = null;
             _barShineTimer.Stop();
+            _tipDelayTimer?.Stop();
+            HideChromeToolTip();
             CalcLayout();
             Invalidate();
         }
@@ -1707,6 +1711,13 @@ public sealed partial class ScrollingCaptureForm : Form
                 ? Color.FromArgb(255, 255, 80, 80)
                 : UiChrome.SurfaceTextPrimary;
             DrawIconBtn(g, _cancelBtnRect, "close", cancelHovered, cancelColor);
+
+            if (!_helpBtnRect.IsEmpty)
+            {
+                bool helpHovered = _hoveredRect == _helpBtnRect;
+                var helpColor = helpHovered ? ScrollAccent : UiChrome.SurfaceTextPrimary;
+                DrawIconBtn(g, _helpBtnRect, "question", helpHovered, helpColor);
+            }
         }
 
         private void DrawModeCombo(Graphics g)
@@ -1824,7 +1835,41 @@ public sealed partial class ScrollingCaptureForm : Form
             if (_modeComboHovered != prevCombo)
                 Invalidate(_modeComboRect);
 
-            UpdateToolTip(e.Location);
+            // Delayed tips instead of instant-on-hover: re-arm only on target change.
+            bool tipTargetChanged = _hoveredRect != prev || _modeComboHovered != prevCombo;
+            if (tipTargetChanged)
+            {
+                HideChromeToolTip();
+                if (_hoveredRect != null || _modeComboHovered)
+                {
+                    _tipDelayPos = e.Location;
+                    RestartTipDelayTimer();
+                }
+                else
+                {
+                    _tipDelayTimer?.Stop();
+                }
+            }
+        }
+
+        private System.Windows.Forms.Timer? _tipDelayTimer;
+        private Point _tipDelayPos;
+
+        private void RestartTipDelayTimer()
+        {
+            _tipDelayTimer ??= new System.Windows.Forms.Timer { Interval = 700 };
+            _tipDelayTimer.Tick -= TipDelayTick;
+            _tipDelayTimer.Tick += TipDelayTick;
+            _tipDelayTimer.Stop();
+            _tipDelayTimer.Start();
+        }
+
+        private void TipDelayTick(object? sender, EventArgs e)
+        {
+            _tipDelayTimer?.Stop();
+            if (IsDisposed || Disposing)
+                return;
+            UpdateToolTip(_tipDelayPos);
         }
 
         private Rectangle? HitTestInteractive(Point p)
@@ -1832,8 +1877,28 @@ public sealed partial class ScrollingCaptureForm : Form
             if (!_startBtnRect.IsEmpty && _startBtnRect.Contains(p)) return _startBtnRect;
             if (!_stopBtnRect.IsEmpty && _stopBtnRect.Contains(p)) return _stopBtnRect;
             if (!_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(p)) return _manualFrameBtnRect;
+            if (!_helpBtnRect.IsEmpty && _helpBtnRect.Contains(p)) return _helpBtnRect;
             if (_cancelBtnRect.Contains(p)) return _cancelBtnRect;
             return null;
+        }
+
+        private QuickStartGuide? _guide;
+
+        private void ToggleHelpGuide()
+        {
+            if (_guide is { Visible: true })
+            {
+                _guide.Close();
+                return;
+            }
+            // QuickStartGuide disposes itself on close — recreate on next open.
+            if (_guide is { IsDisposed: true })
+                _guide = null;
+            if (_helpBtnRect.IsEmpty || IsDisposed)
+                return;
+            _guide ??= new QuickStartGuide();
+            _guide.ShowNear(this, GetScreenBounds(_helpBtnRect),
+                QuickStartGuide.TailDirection.Up, QuickStartGuide.GuideMode.Scrolling);
         }
 
         private void UpdateToolTip(Point location)
@@ -1862,6 +1927,11 @@ public sealed partial class ScrollingCaptureForm : Form
             {
                 tip = LocalizationService.Translate("Scroll capture manual frame");
                 anchor = _manualFrameBtnRect;
+            }
+            else if (!_helpBtnRect.IsEmpty && _helpBtnRect.Contains(location))
+            {
+                tip = LocalizationService.Translate("How to use scroll capture");
+                anchor = _helpBtnRect;
             }
             else if (_cancelBtnRect.Contains(location))
             {
@@ -1910,6 +1980,7 @@ public sealed partial class ScrollingCaptureForm : Form
                 _modeComboHovered = false;
                 Invalidate(_modeComboRect);
             }
+            _tipDelayTimer?.Stop();
             HideChromeToolTip();
         }
 
@@ -1927,6 +1998,8 @@ public sealed partial class ScrollingCaptureForm : Form
                 StopClicked?.Invoke();
             else if (!_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(e.Location))
                 ManualFrameClicked?.Invoke();
+            else if (!_helpBtnRect.IsEmpty && _helpBtnRect.Contains(e.Location))
+                ToggleHelpGuide();
             else if (_cancelBtnRect.Contains(e.Location))
                 CancelClicked?.Invoke();
         }
@@ -1995,6 +2068,16 @@ public sealed partial class ScrollingCaptureForm : Form
             {
                 _barShineTimer.Stop();
                 _barShineTimer.Dispose();
+                _tipDelayTimer?.Stop();
+                _tipDelayTimer?.Dispose();
+                _tipDelayTimer = null;
+                try
+                {
+                    if (_guide is { IsDisposed: false })
+                        _guide.Close();
+                }
+                catch { }
+                _guide = null;
                 _modeMenu?.Dispose();
                 _modeMenu = null;
                 _chromeToolTip?.Dispose();

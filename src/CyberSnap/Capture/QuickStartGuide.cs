@@ -12,7 +12,7 @@ namespace CyberSnap.Capture;
 /// </summary>
 public sealed class QuickStartGuide : Form
 {
-    public enum GuideMode { Capture, Annotation }
+    public enum GuideMode { Capture, Annotation, Scrolling }
 
     public enum TailDirection { Up, Down, Left, Right }
 
@@ -423,6 +423,10 @@ public sealed class QuickStartGuide : Form
         {
             LoadAnnotationStrings(T);
         }
+        else if (_guideMode == GuideMode.Scrolling)
+        {
+            LoadScrollingStrings(T);
+        }
         else
         {
             LoadCaptureStrings(T);
@@ -492,6 +496,36 @@ public sealed class QuickStartGuide : Form
             new ShortcutDef("Ctrl+S", T("Save")),
             new ShortcutDef("Ctrl+C", T("Copy")),
             new ShortcutDef("Del", T("Delete object")),
+        ];
+    }
+
+    private void LoadScrollingStrings(Func<string, string> T)
+    {
+        _title = T("Scroll Capture");
+        _stepsTitle = T("HOW TO SCROLL");
+        _menuTitle = T("SCROLL MODES");
+        _shortcutsTitle = T("KEYBOARD SHORTCUTS");
+        _footerText = T("Click or Esc to close");
+
+        _steps =
+        [
+            new StepDef(T("Select the scrollable area and press Start (Enter)")),
+            new StepDef(T("Auto scrolls and stitches the page for you — hands off the mouse")),
+            new StepDef(T("Press Stop when done — Esc cancels at any time")),
+        ];
+
+        _tips =
+        [
+            new TipDef("scrollCapture", T("Full-width window selections stitch best")),
+            new TipDef("select", T("Manual mode: scroll with the wheel, then press Space to grab each frame")),
+            new TipDef("record", T("While Auto scrolls, don't touch the mouse or keyboard")),
+        ];
+
+        _shortcuts =
+        [
+            new ShortcutDef("Enter", T("Start / Stop")),
+            new ShortcutDef("Space", T("Grab frame")),
+            new ShortcutDef("Esc", T("Cancel")),
         ];
     }
 
