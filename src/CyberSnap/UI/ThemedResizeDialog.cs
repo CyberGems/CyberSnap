@@ -144,7 +144,7 @@ internal sealed class ThemedResizeDialog : Window
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape) { e.Handled = true; Close(); }
-            else if (e.Key == Key.Enter) { e.Handled = true; Commit(); }
+            else if (e.Key is Key.Enter or Key.Return) { e.Handled = true; Commit(); }
         };
     }
 

@@ -1072,7 +1072,7 @@ public partial class OcrResultWindow : Window
 
     private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        if (e.Key is Key.Enter or Key.Return)
         {
             e.Handled = true;
             MoveToSearchMatch(Keyboard.Modifiers == ModifierKeys.Shift ? -1 : 1);

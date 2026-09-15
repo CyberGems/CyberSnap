@@ -1183,7 +1183,7 @@ public partial class ToastWindow : Window
     }
 
     private static bool IsKeyboardActivateKey(System.Windows.Input.KeyEventArgs e) =>
-        e.Key is Key.Enter or Key.Space;
+        e.Key is Key.Enter or Key.Return or Key.Space;
 
     private static bool CanActivateKeyboardControl(object sender, System.Windows.Input.KeyEventArgs e) =>
         IsKeyboardActivateKey(e) && sender is not UIElement { IsEnabled: false };

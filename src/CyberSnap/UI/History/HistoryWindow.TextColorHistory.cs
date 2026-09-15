@@ -783,7 +783,7 @@ public partial class HistoryWindow
     }
 
     private static bool IsHistoryCardActivationKey(KeyEventArgs e)
-        => e.Key is Key.Enter or Key.Space;
+        => e.Key is Key.Enter or Key.Return or Key.Space;
 
     private static void UpdateShowMoreTextButtonLabel(Button button, bool expanded)
     {

@@ -108,7 +108,7 @@ internal sealed class ThemedNewCanvasDialog : Window
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape) { e.Handled = true; Close(); }
-            else if (e.Key == Key.Enter)
+            else if (e.Key is Key.Enter or Key.Return)
             {
                 if (_isOversized) return;
                 e.Handled = true;

@@ -977,7 +977,7 @@ internal sealed class ColorDetailWindow : Window
             e.Handled = true;
             Close();
         }
-        else if (e.Key == Key.Enter)
+        else if (e.Key is Key.Enter or Key.Return)
         {
             e.Handled = true;
             CopyFavorite();

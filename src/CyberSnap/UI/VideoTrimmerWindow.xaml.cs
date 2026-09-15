@@ -1988,7 +1988,7 @@ namespace CyberSnap.UI
             if (sender is not System.Windows.Controls.TextBox textBox)
                 return;
 
-            if (e.Key == Key.Enter)
+            if (e.Key is Key.Enter or Key.Return)
             {
                 CommitTimeInput(textBox);
                 e.Handled = true;
@@ -2137,7 +2137,7 @@ namespace CyberSnap.UI
                 e.Handled = true;
                 return;
             }
-            if (ctrl && (e.Key == Key.T || e.Key == Key.Enter))
+            if (ctrl && (e.Key == Key.T || e.Key is Key.Enter or Key.Return))
             {
                 if (TrimBtn.IsEnabled)
                     TrimBtn_Click(TrimBtn, new RoutedEventArgs());

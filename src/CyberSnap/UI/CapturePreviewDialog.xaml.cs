@@ -2736,7 +2736,8 @@ namespace CyberSnap.UI
             // Plain keys (no modifier) ─────────────────────────────────────
             if (mods == ModifierKeys.None)
             {
-                if (e.Key == Key.Enter)
+                // Numpad Enter reports as Key.Return — accept both.
+                if (e.Key is Key.Enter or Key.Return)
                 {
                     CancelBtn_Click(CancelBtn, new RoutedEventArgs());
                     e.Handled = true;

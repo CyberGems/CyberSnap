@@ -882,7 +882,7 @@ public partial class SettingsWindow
 
     private static void OpenSupportUrlFromKeyboard(string url, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key is not (System.Windows.Input.Key.Enter or System.Windows.Input.Key.Space))
+        if (e.Key is not (System.Windows.Input.Key.Enter or System.Windows.Input.Key.Return or System.Windows.Input.Key.Space))
             return;
 
         OpenSupportUrl(url);
