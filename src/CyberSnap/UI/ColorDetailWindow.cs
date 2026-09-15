@@ -204,13 +204,20 @@ internal sealed class ColorDetailWindow : Window
         grid.MouseLeftButtonDown += OnHeaderDrag;
         _headerBar = grid;
 
+        var iconSource = new System.Windows.Media.Imaging.BitmapImage();
+        iconSource.BeginInit();
+        iconSource.UriSource = new Uri("pack://application:,,,/Assets/Icons/ColorPicker.ico");
+        iconSource.DecodePixelWidth = 64;
+        iconSource.EndInit();
+        iconSource.Freeze();
         var icon = new System.Windows.Controls.Image
         {
-            Source = FluentIcons.RenderWpf("picker", ToDrawing(accentFg: true), 36),
-            Width = 18,
-            Height = 18,
+            Source = iconSource,
+            Width = 20,
+            Height = 20,
             VerticalAlignment = VerticalAlignment.Center,
         };
+        System.Windows.Media.RenderOptions.SetBitmapScalingMode(icon, System.Windows.Media.BitmapScalingMode.HighQuality);
         Grid.SetColumn(icon, 0);
         grid.Children.Add(icon);
 

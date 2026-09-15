@@ -572,7 +572,7 @@ public sealed partial class EditorForm
             double dpiScale = DeviceDpi / 96.0;
             double totalScale = dpiScale * UiChrome.UiScale;
 
-            int iconSize = Math.Max(18, (int)Math.Round(17.5 * totalScale));
+            int iconSize = Math.Max(21, (int)Math.Round(20.5 * totalScale));
             int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
             int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
             int cy = brandPanel.Height / 2;
@@ -898,7 +898,7 @@ public sealed partial class EditorForm
     {
         double dpiScale = DeviceDpi / 96.0;
         double totalScale = dpiScale * UiChrome.UiScale;
-        int iconSize = Math.Max(18, (int)Math.Round(17.5 * totalScale));
+        int iconSize = Math.Max(21, (int)Math.Round(20.5 * totalScale));
         int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
         int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
         var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
