@@ -1696,7 +1696,7 @@ public sealed partial class ScrollingCaptureForm : Form
             if (!_startBtnRect.IsEmpty)
             {
                 DrawPrimaryTextBtn(g, _startBtnRect, LocalizationService.Translate("Start scrolling capture"),
-                    _hoveredRect == _startBtnRect, ScrollAccent, ScrollAccentHover);
+                    _hoveredRect == _startBtnRect, ScrollAccent, ScrollAccentHover, withScrollHint: true);
             }
             if (!_stopBtnRect.IsEmpty)
             {
@@ -1748,7 +1748,7 @@ public sealed partial class ScrollingCaptureForm : Form
 
         private void DrawPrimaryTextBtn(
             Graphics g, Rectangle rect, string text, bool hovered,
-            Color normal, Color hoverFill)
+            Color normal, Color hoverFill, bool withScrollHint = false)
         {
             var rectF = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
             using var path = WindowsDockRenderer.RoundedRect(rectF, CornerR);
@@ -1758,8 +1758,34 @@ public sealed partial class ScrollingCaptureForm : Form
             using (var border = new Pen(Color.FromArgb(hovered ? 220 : 160, Color.White), 1f))
                 g.DrawPath(border, path);
 
-            using var textBrush = new SolidBrush(GetButtonTextColor(fillColor));
-            g.DrawString(text, _startFont, textBrush, rectF, _centerFmt);
+            var ink = GetButtonTextColor(fillColor);
+            using var textBrush = new SolidBrush(ink);
+            if (!withScrollHint)
+            {
+                g.DrawString(text, _startFont, textBrush, rectF, _centerFmt);
+                return;
+            }
+
+            // Down chevron reinforcing the scroll direction, optically centered with the label.
+            var textSize = g.MeasureString(text, _startFont);
+            float chevronW = UiChrome.ScaleFloat(10f);
+            float gap = UiChrome.ScaleFloat(7f);
+            float startX = rect.X + (rect.Width - chevronW - gap - textSize.Width) / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (var chevronPen = new Pen(ink, UiChrome.ScaleFloat(2f))
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round,
+            })
+            {
+                float half = chevronW / 2f;
+                g.DrawLine(chevronPen, startX, cy - 3f, startX + half, cy + 2f);
+                g.DrawLine(chevronPen, startX + half, cy + 2f, startX + chevronW, cy - 3f);
+            }
+            var textRect = new RectangleF(startX + chevronW + gap, rect.Y,
+                Math.Max(0, rect.Right - startX - chevronW - gap), rect.Height);
+            g.DrawString(text, _startFont, textBrush, textRect, _singleLineFmt);
         }
 
         private static Color GetButtonTextColor(Color fill)
