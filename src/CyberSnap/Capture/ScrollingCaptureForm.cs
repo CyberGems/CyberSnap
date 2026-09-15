@@ -241,21 +241,18 @@ public sealed partial class ScrollingCaptureForm : Form
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
         menu.Font = UiChrome.ChromeFont(11.0f);
 
-        var isSpanish = string.Equals(
-            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
-            "es", StringComparison.OrdinalIgnoreCase);
-
-        var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
-        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
-        cancelItem.Click += (_, _) => Cancel();
-        menu.Items.Add(cancelItem);
+        // Same order as the mp4/gif menu: Continue first, destructive Cancel last.
+        var continueItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Continue"), iconId: "undo", iconSize: 24);
+        continueItem.Click += (_, _) => menu.Close();
+        menu.Items.Add(continueItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var closeLabel = isSpanish ? "Continuar editando" : "Continue editing";
-        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "undo", iconSize: 24);
-        closeItem.Click += (_, _) => menu.Close();
-        menu.Items.Add(closeItem);
+        var cancelItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Cancel scroll capture"), iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
+        cancelItem.Click += (_, _) => Cancel();
+        menu.Items.Add(cancelItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
         menu.Show(PointToScreen(clickLocation));
@@ -269,8 +266,20 @@ public sealed partial class ScrollingCaptureForm : Form
             Cancel();
     }
 
+    /// <summary>Keeps the control bar above the overlay: clicking the main form
+    /// activates it and can bury the bar in TopMost z-order (bar "disappears").</summary>
+    private void AssertControlBarTopmost()
+    {
+        if (_controlBar is null || _controlBar.IsDisposed || !_controlBar.IsHandleCreated)
+            return;
+        Native.User32.SetWindowPos(_controlBar.Handle, Native.User32.HWND_TOPMOST,
+            0, 0, 0, 0, Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_SHOWWINDOW);
+    }
+
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        if (_controlBar is not null)
+            AssertControlBarTopmost();
         if (e.Button == MouseButtons.Right)
         {
             if (_state == State.Capturing && _frameCount > 1)
@@ -1089,6 +1098,14 @@ public sealed partial class ScrollingCaptureForm : Form
             if (_state == State.Selecting && _controlBar is not null)
                 SelectionFrameRenderer.DrawConfirmHandles(g, GetHandleRects(borderRect));
             g.Restore(clipState);
+
+            if (_state == State.Selecting && _controlBar is not null && _moveBadgeVisible)
+            {
+                var badgeSmoothing = g.SmoothingMode;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                MoveBadgeRenderer.Paint(g, MoveBadgeRenderer.BadgeRectFor(_selection), _moveBadgeHovered);
+                g.SmoothingMode = badgeSmoothing;
+            }
         }
     }
 
@@ -1594,8 +1611,17 @@ public sealed partial class ScrollingCaptureForm : Form
             }
             else
             {
-                _manualFrameBtnRect = new Rectangle(x, secY, SecondaryBtnSize, SecondaryBtnSize);
-                x += SecondaryBtnSize + btnGap;
+                // Manual frame grab belongs to the legacy true-Manual flow (unreachable
+                // from current UI — settings migrates it away). Kept for correctness.
+                if (_mode == ScrollingCaptureMode.Manual)
+                {
+                    _manualFrameBtnRect = new Rectangle(x, secY, SecondaryBtnSize, SecondaryBtnSize);
+                    x += SecondaryBtnSize + btnGap;
+                }
+                else
+                {
+                    _manualFrameBtnRect = Rectangle.Empty;
+                }
                 _stopBtnRect = new Rectangle(x, secY, SecondaryBtnSize, SecondaryBtnSize);
                 x += SecondaryBtnSize + btnGap;
             }
@@ -2210,7 +2236,7 @@ public sealed partial class ScrollingCaptureForm : Form
                 StartClicked?.Invoke();
                 return true;
             }
-            if (_isCapturing && IsUserScrollMode && (key == Keys.Space || key == Keys.Enter))
+            if (_isCapturing && _mode == ScrollingCaptureMode.Manual && (key == Keys.Space || key == Keys.Enter))
             {
                 ManualFrameClicked?.Invoke();
                 return true;
