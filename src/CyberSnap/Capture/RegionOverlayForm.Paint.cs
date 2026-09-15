@@ -335,9 +335,10 @@ public sealed partial class RegionOverlayForm
                             fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest, kind: effectiveKind);
                     }
 
+                    // Discreet in light (strong black bars read as heavy dividers).
                     Color sep = UiChrome.IsDark
                         ? Color.FromArgb(90, 255, 255, 255)
-                        : Color.FromArgb(90, 0, 0, 0);
+                        : Color.FromArgb(36, 0, 0, 0);
                     using (var sepBrush = new SolidBrush(sep))
                     {
                         if (!_confirmChromeSeparatorRect1.IsEmpty)
