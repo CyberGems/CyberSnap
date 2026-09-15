@@ -182,5 +182,10 @@ public partial class QrResultWindow : Window
             Close();
             e.Handled = true;
         }
+        else if (e.Key is Key.Enter or Key.Return)
+        {
+            CopyButton_Click(CopyButton, new RoutedEventArgs());
+            e.Handled = true;
+        }
     }
 }

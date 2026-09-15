@@ -862,12 +862,39 @@ internal sealed class ColorDetailWindow : Window
         var label = (TextBlock)btn.Content;
         if (isAccent)
         {
-            var baseBg = WithAlpha(accent, Theme.IsDark ? (byte)40 : (byte)28);
-            btn.Background = Theme.Brush(baseBg);
-            btn.BorderBrush = Theme.Brush(WithAlpha(accent, 170));
-            label.Foreground = Theme.Brush(WpfColor.FromRgb(accent.R, accent.G, accent.B));
-            btn.MouseEnter += (_, _) => { btn.Background = Theme.Brush(accent); label.Foreground = Theme.Brush(Theme.AccentForeground); };
-            btn.MouseLeave += (_, _) => { btn.Background = Theme.Brush(baseBg); label.Foreground = Theme.Brush(WpfColor.FromRgb(accent.R, accent.G, accent.B)); };
+            // Consolidated shared style owns every visual: its template triggers beat
+            // the default Button hover chrome that used to swallow these colors and
+            // break contrast. Trailing Enter glyph matches the QR/OCR copy buttons.
+            btn.SetResourceReference(FrameworkElement.StyleProperty, "CyberSnapAccentButton");
+            var row = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = WpfHAlign.Center,
+            };
+            row.Children.Add(label);
+            var enterGlyph = new System.Windows.Shapes.Path
+            {
+                Data = System.Windows.Media.Geometry.Parse("M4,6 H17 V17 M12.5,12.5 L17,17 L12.5,21.5"),
+                StrokeThickness = 2.2,
+                StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
+                StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
+                StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
+                Width = 12,
+                Height = 12,
+                Stretch = System.Windows.Media.Stretch.Uniform,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(6, 0, 0, 0),
+            };
+            enterGlyph.SetBinding(
+                System.Windows.Shapes.Shape.StrokeProperty,
+                new System.Windows.Data.Binding(nameof(WpfButton.Foreground))
+                {
+                    RelativeSource = new System.Windows.Data.RelativeSource(
+                        System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(WpfButton), 1),
+                });
+            row.Children.Add(enterGlyph);
+            btn.Content = row;
         }
         else
         {

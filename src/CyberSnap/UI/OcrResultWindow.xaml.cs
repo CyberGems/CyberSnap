@@ -12,6 +12,7 @@ using CyberSnap.Helpers;
 using CyberSnap.Services;
 using ComboBox = System.Windows.Controls.ComboBox;
 using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
+using TextBox = System.Windows.Controls.TextBox;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
@@ -451,11 +452,22 @@ public partial class OcrResultWindow : Window
 
     private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key != Key.Escape)
+        if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            CloseWindow();
             return;
+        }
 
-        e.Handled = true;
-        CloseWindow();
+        // Enter copies + closes, but never hijacks text inputs (search box commits
+        // its own search, combos handle their own selection).
+        if (e.Key is Key.Enter or Key.Return
+            && FocusManager.GetFocusedElement(this) is not TextBox
+            && FocusManager.GetFocusedElement(this) is not ComboBox)
+        {
+            e.Handled = true;
+            CopyBtn_Click(CopyBtn, new RoutedEventArgs());
+        }
     }
 
 
