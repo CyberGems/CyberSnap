@@ -1430,7 +1430,7 @@ public sealed partial class ScrollingCaptureForm : Form
         private Rectangle? _hoveredRect;
         private bool _isDraggingBar;
         private bool _barDragMoved;
-        private bool _barCustomPlaced;
+        private Point? _customLocation;
         private Point _barDragOffset;
         private float _startAppear;
 
@@ -1460,9 +1460,7 @@ public sealed partial class ScrollingCaptureForm : Form
 
         public CaptureControlBar(Rectangle captureRegion, ScrollingCaptureMode mode)
         {
-            _mode = mode == ScrollingCaptureMode.AssistAutoscroll
-                ? ScrollingCaptureMode.AssistAutoscroll
-                : ScrollingCaptureMode.Automatic;
+            _mode = mode;
             _captureRegion = captureRegion;
 
             FormBorderStyle = FormBorderStyle.None;
@@ -1584,8 +1582,7 @@ public sealed partial class ScrollingCaptureForm : Form
             _tipDelayTimer?.Stop();
             HideChromeToolTip();
             CalcLayout();
-            if (!_isDraggingBar && !_barCustomPlaced)
-                PositionAboveRegion(_captureRegion);
+            RestoreCustomLocation();
             Invalidate();
         }
 
@@ -1607,10 +1604,21 @@ public sealed partial class ScrollingCaptureForm : Form
         public void Reposition(Rectangle captureRegion)
         {
             if (InvokeRequired) { BeginInvoke(() => Reposition(captureRegion)); return; }
-            _barCustomPlaced = false;
+            _customLocation = null;
             CalcLayout();
             PositionAboveRegion(captureRegion);
             Invalidate();
+        }
+
+        /// <summary>Restores a user-dragged position after relayout; otherwise recenters.</summary>
+        private void RestoreCustomLocation()
+        {
+            if (_isDraggingBar)
+                return;
+            if (_customLocation.HasValue)
+                Location = _customLocation.Value;
+            else
+                PositionAboveRegion(_captureRegion);
         }
 
         public void SetFrameCount(int count)
@@ -1627,8 +1635,7 @@ public sealed partial class ScrollingCaptureForm : Form
             _frameCount = count;
             _statusOverride = FormatPartialFrameStatus(count);
             CalcLayout();
-            if (!_isDraggingBar && !_barCustomPlaced)
-                PositionAboveRegion(_captureRegion);
+            RestoreCustomLocation();
             Invalidate();
         }
 
@@ -1637,8 +1644,7 @@ public sealed partial class ScrollingCaptureForm : Form
             if (InvokeRequired) { BeginInvoke(() => SetStatus(text)); return; }
             _statusOverride = text;
             CalcLayout();
-            if (!_isDraggingBar && !_barCustomPlaced)
-                PositionAboveRegion(_captureRegion);
+            RestoreCustomLocation();
             Invalidate();
         }
 
@@ -1932,7 +1938,7 @@ public sealed partial class ScrollingCaptureForm : Form
             {
                 _isDraggingBar = false;
                 if (_barDragMoved)
-                    _barCustomPlaced = true;
+                    _customLocation = Location;
                 try { Capture = false; } catch { }
                 Cursor = Cursors.Default;
             }
@@ -1946,6 +1952,9 @@ public sealed partial class ScrollingCaptureForm : Form
                 if (Math.Abs(e.X - _barDragOffset.X) + Math.Abs(e.Y - _barDragOffset.Y) > 3)
                     _barDragMoved = true;
                 Location = new Point(Left + e.X - _barDragOffset.X, Top + e.Y - _barDragOffset.Y);
+                // Commit continuously: MouseUp can be lost without mouse capture
+                // (TransparencyKey form), which used to snap the bar back on Start.
+                _customLocation = Location;
                 Cursor = CursorFactory.GrabbingCursor;
                 return;
             }
