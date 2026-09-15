@@ -1430,13 +1430,13 @@ public sealed partial class ScrollingCaptureForm : Form
         private Rectangle? _hoveredRect;
         private bool _isDraggingBar;
         private bool _barDragMoved;
+        private bool _barCustomPlaced;
         private Point _barDragOffset;
         private float _startAppear;
 
         private readonly Font _statusFont = UiChrome.ChromeFont(10f, FontStyle.Bold);
         private readonly Font _counterFont = UiChrome.ChromeFont(15f, FontStyle.Bold);
         private readonly Font _comboFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
-        private readonly Font _startFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
         private WindowsToolTip? _chromeToolTip;
         private Rectangle? _tooltipAnchor;
         private readonly System.Windows.Forms.Timer _barShineTimer;
@@ -1545,25 +1545,20 @@ public sealed partial class ScrollingCaptureForm : Form
             x += StartPillWidth + gap;
 
             int secY = (BarHeight - SecondaryBtnSize) / 2;
-            int priY = (BarHeight - StartPillHeight) / 2;
-            if (!_isCapturing)
+            // Stop (finish now) lives only in Manual: Auto ends alone on no-progress
+            // timeout and Esc still finishes early, so Auto needs no Stop button.
+            bool showStop = _isCapturing && _mode == ScrollingCaptureMode.Manual;
+            if (!showStop)
             {
                 _stopBtnRect = Rectangle.Empty;
                 _manualFrameBtnRect = Rectangle.Empty;
             }
             else
             {
-                _stopBtnRect = new Rectangle(x, priY, PrimaryBtnWidth, StartPillHeight);
-                x += PrimaryBtnWidth + btnGap;
-                if (_mode == ScrollingCaptureMode.Manual)
-                {
-                    _manualFrameBtnRect = new Rectangle(x, secY, SecondaryBtnSize, SecondaryBtnSize);
-                    x += SecondaryBtnSize + btnGap;
-                }
-                else
-                {
-                    _manualFrameBtnRect = Rectangle.Empty;
-                }
+                _manualFrameBtnRect = new Rectangle(x, secY, SecondaryBtnSize, SecondaryBtnSize);
+                x += SecondaryBtnSize + btnGap;
+                _stopBtnRect = new Rectangle(x, secY, SecondaryBtnSize, SecondaryBtnSize);
+                x += SecondaryBtnSize + btnGap;
             }
             _cancelBtnRect = new Rectangle(x, secY, SecondaryBtnSize, SecondaryBtnSize);
             x += SecondaryBtnSize + pad;
@@ -1589,7 +1584,7 @@ public sealed partial class ScrollingCaptureForm : Form
             _tipDelayTimer?.Stop();
             HideChromeToolTip();
             CalcLayout();
-            if (!_isDraggingBar)
+            if (!_isDraggingBar && !_barCustomPlaced)
                 PositionAboveRegion(_captureRegion);
             Invalidate();
         }
@@ -1612,6 +1607,7 @@ public sealed partial class ScrollingCaptureForm : Form
         public void Reposition(Rectangle captureRegion)
         {
             if (InvokeRequired) { BeginInvoke(() => Reposition(captureRegion)); return; }
+            _barCustomPlaced = false;
             CalcLayout();
             PositionAboveRegion(captureRegion);
             Invalidate();
@@ -1631,7 +1627,7 @@ public sealed partial class ScrollingCaptureForm : Form
             _frameCount = count;
             _statusOverride = FormatPartialFrameStatus(count);
             CalcLayout();
-            if (!_isDraggingBar)
+            if (!_isDraggingBar && !_barCustomPlaced)
                 PositionAboveRegion(_captureRegion);
             Invalidate();
         }
@@ -1641,7 +1637,7 @@ public sealed partial class ScrollingCaptureForm : Form
             if (InvokeRequired) { BeginInvoke(() => SetStatus(text)); return; }
             _statusOverride = text;
             CalcLayout();
-            if (!_isDraggingBar)
+            if (!_isDraggingBar && !_barCustomPlaced)
                 PositionAboveRegion(_captureRegion);
             Invalidate();
         }
@@ -1704,8 +1700,7 @@ public sealed partial class ScrollingCaptureForm : Form
             }
             if (!_stopBtnRect.IsEmpty)
             {
-                DrawPrimaryTextBtn(g, _stopBtnRect, LocalizationService.Translate("Scroll capture done"),
-                    _hoveredRect == _stopBtnRect, DoneAccent, DoneAccentHover);
+                DrawStopButton(g, _stopBtnRect, _hoveredRect == _stopBtnRect);
             }
             if (!_manualFrameBtnRect.IsEmpty)
                 DrawIconBtn(g, _manualFrameBtnRect, "record", _hoveredRect == _manualFrameBtnRect, UiChrome.SurfaceTextPrimary);
@@ -1799,14 +1794,16 @@ public sealed partial class ScrollingCaptureForm : Form
             float half = UiChrome.ScaleFloat(9f) * appear;
             float rise = UiChrome.ScaleFloat(6f) * appear;
             float dy = UiChrome.ScaleFloat(7f) * appear;
+            // Optical centering: the double glyph reads top-heavy, so nudge it down.
+            float nudge = UiChrome.ScaleFloat(2.5f) * appear;
             using var pen = new Pen(ink, UiChrome.ScaleFloat(2.6f))
             {
                 StartCap = LineCap.Round,
                 EndCap = LineCap.Round,
                 LineJoin = LineJoin.Round,
             };
-            DrawDownChevron(g, pen, cx, cy - dy / 2f, half, rise);
-            DrawDownChevron(g, pen, cx, cy + dy / 2f, half, rise);
+            DrawDownChevron(g, pen, cx, cy - dy / 2f + nudge, half, rise);
+            DrawDownChevron(g, pen, cx, cy + dy / 2f + nudge, half, rise);
         }
 
         private static void DrawDownChevron(Graphics g, Pen pen, float cx, float apexY, float half, float rise)
@@ -1831,20 +1828,31 @@ public sealed partial class ScrollingCaptureForm : Form
                 _counterFont, textBrush, rectF, _centerFmt);
         }
 
-        private void DrawPrimaryTextBtn(
-            Graphics g, Rectangle rect, string text, bool hovered,
-            Color normal, Color hoverFill)
+        /// <summary>Manual-mode finish button: accent fill + white check (confirm-dock language).</summary>
+        private void DrawStopButton(Graphics g, Rectangle rect, bool hovered)
         {
             var rectF = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+            var fill = hovered ? DoneAccentHover : DoneAccent;
             using var path = WindowsDockRenderer.RoundedRect(rectF, CornerR);
-            var fillColor = hovered ? hoverFill : normal;
-            using (var brush = new SolidBrush(fillColor))
+            using (var brush = new SolidBrush(fill))
                 g.FillPath(brush, path);
             using (var border = new Pen(Color.FromArgb(hovered ? 220 : 160, Color.White), 1f))
                 g.DrawPath(border, path);
 
-            using var textBrush = new SolidBrush(GetButtonTextColor(fillColor));
-            g.DrawString(text, _startFont, textBrush, rectF, _centerFmt);
+            using var pen = new Pen(GetButtonTextColor(fill), UiChrome.ScaleFloat(2.6f))
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round,
+            };
+            float x1 = rect.X + rect.Width * 0.32f;
+            float y1 = rect.Y + rect.Height * 0.54f;
+            float x2 = rect.X + rect.Width * 0.46f;
+            float y2 = rect.Y + rect.Height * 0.67f;
+            float x3 = rect.X + rect.Width * 0.70f;
+            float y3 = rect.Y + rect.Height * 0.35f;
+            g.DrawLine(pen, x1, y1, x2, y2);
+            g.DrawLine(pen, x2, y2, x3, y3);
         }
 
         private static Color GetButtonTextColor(Color fill)
@@ -1923,6 +1931,8 @@ public sealed partial class ScrollingCaptureForm : Form
             if (_isDraggingBar)
             {
                 _isDraggingBar = false;
+                if (_barDragMoved)
+                    _barCustomPlaced = true;
                 try { Capture = false; } catch { }
                 Cursor = Cursors.Default;
             }
@@ -2217,7 +2227,6 @@ public sealed partial class ScrollingCaptureForm : Form
                 _statusFont.Dispose();
                 _counterFont.Dispose();
                 _comboFont.Dispose();
-                _startFont.Dispose();
             }
             base.Dispose(disposing);
         }
