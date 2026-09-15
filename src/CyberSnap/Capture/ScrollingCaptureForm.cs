@@ -51,6 +51,11 @@ public sealed partial class ScrollingCaptureForm : Form
     /// <summary>Monitor that owns the current selection, in overlay client coords.</summary>
     private Rectangle _selectionMonitorClientBounds;
 
+    // Center move badge (same look as the capture flow): interior drag already moves
+    // the selection — the badge is purely a visual affordance.
+    private bool _moveBadgeVisible;
+    private bool _moveBadgeHovered;
+
     // Handle resize/move during ready phase (after drag-release, before START)
     private int _handleDragIndex = -1; // -1=none, 4=top, 5=left, 6=right, 7=bottom, 8=move
     private bool _isHandleDragging;
@@ -345,6 +350,7 @@ public sealed partial class ScrollingCaptureForm : Form
                 Cursor = CursorFactory.GrabCursor;
             else
                 Cursor = Cursors.Default;
+            UpdateMoveBadgeHover(e.Location);
             return;
         }
 
@@ -362,7 +368,31 @@ public sealed partial class ScrollingCaptureForm : Form
                 Invalidate(); // full repaint for correct dim overlay
             }
             _magHelper?.Update(e.Location, this, _virtualBounds, _isDragging ? GetMagnifierAvoidBounds() : Rectangle.Empty);
+            UpdateMoveBadgeHover(e.Location);
         }
+    }
+
+    /// <summary>Tracks center move badge visibility/hover (paint is purely affordance).</summary>
+    private void UpdateMoveBadgeHover(Point location)
+    {
+        bool visible = _state == State.Selecting
+            && _selection.Width > 2 && _selection.Height > 2
+            && _selection.Contains(location);
+        bool hovered = visible && MoveBadgeRenderer.BadgeRectFor(_selection).Contains(location);
+        if (visible == _moveBadgeVisible && hovered == _moveBadgeHovered)
+            return;
+        var dirty = Rectangle.Empty;
+        if (_moveBadgeVisible)
+            dirty = MoveBadgeRenderer.BadgeRectFor(_selection);
+        _moveBadgeVisible = visible;
+        _moveBadgeHovered = hovered;
+        if (visible)
+        {
+            var now = MoveBadgeRenderer.BadgeRectFor(_selection);
+            dirty = dirty.IsEmpty ? now : Rectangle.Union(dirty, now);
+        }
+        if (!dirty.IsEmpty)
+            Invalidate(Rectangle.Inflate(dirty, 10, 10));
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -1228,6 +1258,14 @@ public sealed partial class ScrollingCaptureForm : Form
                 accentOverride: ScrollingAccent,
                 bracketAccentOverride: UiChrome.AccentColor);
             g.Restore(clipState);
+
+            if (_moveBadgeVisible)
+            {
+                var badgeSmoothing = g.SmoothingMode;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                MoveBadgeRenderer.Paint(g, MoveBadgeRenderer.BadgeRectFor(_selection), _moveBadgeHovered);
+                g.SmoothingMode = badgeSmoothing;
+            }
         }
 
         // Keep painting while fading out (Dismiss keeps the instance; opacity gates visibility).
@@ -1428,6 +1466,8 @@ public sealed partial class ScrollingCaptureForm : Form
         private Rectangle _modeComboRect;
         private Rectangle _statusRect;
         private Rectangle? _hoveredRect;
+        /// <summary>User-scrolls mode (combo "Manual"). AssistAutoscroll ends alone.</summary>
+        private bool IsUserScrollMode => _mode != ScrollingCaptureMode.AssistAutoscroll;
         private bool _isDraggingBar;
         private bool _barDragMoved;
         private Point? _customLocation;
@@ -1543,9 +1583,10 @@ public sealed partial class ScrollingCaptureForm : Form
             x += StartPillWidth + gap;
 
             int secY = (BarHeight - SecondaryBtnSize) / 2;
-            // Stop (finish now) lives only in Manual: Auto ends alone on no-progress
-            // timeout and Esc still finishes early, so Auto needs no Stop button.
-            bool showStop = _isCapturing && _mode == ScrollingCaptureMode.Manual;
+            // Stop (finish now) lives only in the user-scrolls mode. Note the legacy
+            // naming trap: the combo's "Manual" is the Automatic enum member (the Manual
+            // member is dead — settings migrates it to AssistAutoscroll on load).
+            bool showStop = _isCapturing && IsUserScrollMode;
             if (!showStop)
             {
                 _stopBtnRect = Rectangle.Empty;
@@ -2169,7 +2210,7 @@ public sealed partial class ScrollingCaptureForm : Form
                 StartClicked?.Invoke();
                 return true;
             }
-            if (_isCapturing && _mode == ScrollingCaptureMode.Manual && (key == Keys.Space || key == Keys.Enter))
+            if (_isCapturing && IsUserScrollMode && (key == Keys.Space || key == Keys.Enter))
             {
                 ManualFrameClicked?.Invoke();
                 return true;
