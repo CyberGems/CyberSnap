@@ -1399,7 +1399,7 @@ public sealed partial class ScrollingCaptureForm : Form
                 : Color.FromArgb(255, 0xD4, 0x82, 0x18);
         private const float BarShineThicknessScale = 1f;
 
-        private static int BarWidth => UiChrome.ScaleInt(520);
+        private static int BarWidth => UiChrome.ScaleInt(600);
         private static int BarHeight => UiChrome.ScaleInt(58);
         private static int PrimaryBtnHeight => UiChrome.ScaleInt(40);
         private static int SecondaryBtnSize => UiChrome.ScaleInt(38);
@@ -1423,6 +1423,7 @@ public sealed partial class ScrollingCaptureForm : Form
         private Rectangle _cancelBtnRect;
         private Rectangle _manualFrameBtnRect;
         private Rectangle _modeComboRect;
+        private Rectangle _modeLabelRect;
         private Rectangle _phaseLabelRect;
         private Rectangle _statusRect;
         private Rectangle _recDotRect;
@@ -1525,13 +1526,17 @@ public sealed partial class ScrollingCaptureForm : Form
             int phaseX = _recDotRect.Right + UiChrome.ScaleInt(8);
             _phaseLabelRect = new Rectangle(phaseX, 0, phaseWidth, BarHeight);
 
+            int modeLabelW = MeasureModeLabelWidth();
+            _modeLabelRect = new Rectangle(_phaseLabelRect.Right + gap, 0, modeLabelW, BarHeight);
             int comboY = (BarHeight - ModeComboHeight) / 2;
-            _modeComboRect = new Rectangle(_phaseLabelRect.Right + gap, comboY, ModeComboWidth, ModeComboHeight);
+            _modeComboRect = new Rectangle(_modeLabelRect.Right + UiChrome.ScaleInt(4), comboY, ModeComboWidth, ModeComboHeight);
 
             int secY = (BarHeight - SecondaryBtnSize) / 2;
             int priY = (BarHeight - PrimaryBtnHeight) / 2;
             _cancelBtnRect = new Rectangle(BarWidth - btnPad - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize);
-            _helpBtnRect = new Rectangle(_cancelBtnRect.X - btnGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize);
+            int helpSize = UiChrome.ScaleInt(28);
+            int helpY = (BarHeight - helpSize) / 2;
+            _helpBtnRect = new Rectangle(_cancelBtnRect.X - btnGap - helpSize, helpY, helpSize, helpSize);
 
             if (!_isCapturing)
             {
@@ -1556,6 +1561,10 @@ public sealed partial class ScrollingCaptureForm : Form
             int statusX = _modeComboRect.Right + gap;
             _statusRect = new Rectangle(statusX, 0, Math.Max(0, firstBtnX - gap - statusX), BarHeight);
         }
+
+        private int MeasureModeLabelWidth() =>
+            TextRenderer.MeasureText(LocalizationService.Translate("Mode"), _comboFont, new Size(int.MaxValue, BarHeight),
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
 
         private int MeasurePhaseLabelWidth(string text) =>
             TextRenderer.MeasureText(text, _phaseFont, new Size(int.MaxValue, BarHeight),
@@ -1683,6 +1692,12 @@ public sealed partial class ScrollingCaptureForm : Form
                 g.DrawString(PhaseLabel(), _phaseFont, labelBrush, phaseRect, _singleLineFmt);
             }
 
+            if (!_modeLabelRect.IsEmpty)
+            {
+                using var modeBrush = new SolidBrush(UiChrome.SurfaceTextSecondary);
+                g.DrawString(LocalizationService.Translate("Mode"), _comboFont, modeBrush, _modeLabelRect, _singleLineFmt);
+            }
+
             DrawModeCombo(g);
 
             var statusText = StatusDisplayText();
@@ -1715,7 +1730,7 @@ public sealed partial class ScrollingCaptureForm : Form
             if (!_helpBtnRect.IsEmpty)
             {
                 bool helpHovered = _hoveredRect == _helpBtnRect;
-                var helpColor = helpHovered ? ScrollAccent : UiChrome.SurfaceTextPrimary;
+                var helpColor = helpHovered ? ScrollAccent : UiChrome.SurfaceTextSecondary;
                 DrawIconBtn(g, _helpBtnRect, "question", helpHovered, helpColor);
             }
         }
@@ -2123,13 +2138,8 @@ public sealed partial class ScrollingCaptureForm : Form
                 return _statusOverride;
             if (_isCapturing && _frameCount > 0)
                 return FormatFrameStatus(_frameCount);
-            if (!_isCapturing)
-            {
-                return _mode == ScrollingCaptureMode.AssistAutoscroll
-                    ? LocalizationService.Translate("Scroll capture ready hint auto")
-                    : LocalizationService.Translate("Scroll capture ready hint manual");
-            }
-
+            // Ready state stays clean: the mode combo already shows the mode and the
+            // "?" guide covers instructions (no duplicated, clipped hint text).
             return string.Empty;
         }
 

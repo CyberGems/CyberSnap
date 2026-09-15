@@ -68,6 +68,7 @@ public sealed class QuickStartGuide : Form
     private int _shortcutColWidth;
     private int[] _stepHeights = Array.Empty<int>();
     private int[] _tipHeights = Array.Empty<int>();
+    private int[] _shortcutRowHeights = Array.Empty<int>();
     private Rectangle _closeRect;
     private bool _closeHovered;
     private TailDirection _tailDirection = TailDirection.Down;
@@ -587,7 +588,27 @@ public sealed class QuickStartGuide : Form
         y += tipsBlock + SectionGap;
         y += SectionLabelHeight + 10;
         int shortcutRows = (_shortcuts.Length + 1) / 2;
-        y += shortcutRows * ShortcutRowHeight + 10;
+        _shortcutRowHeights = new int[shortcutRows];
+        for (int r = 0; r < shortcutRows; r++)
+        {
+            // Long labels (other languages) wrap instead of clipping with ellipsis.
+            int rowH = ShortcutRowHeight;
+            for (int c = 0; c < 2; c++)
+            {
+                int i = r * 2 + c;
+                if (i >= _shortcuts.Length)
+                    break;
+                int kbdW = ShortcutKbdWidth(g, _shortcuts[i], _shortcutColWidth);
+                int labelW = Math.Max(8, _shortcutColWidth - kbdW - KbdLabelGap);
+                int labelH = TextRenderer.MeasureText(g, _shortcuts[i].Label, _bodyFont,
+                    new Size(labelW, 0),
+                    TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
+                rowH = Math.Max(rowH, labelH + 8);
+            }
+            _shortcutRowHeights[r] = rowH;
+            y += rowH;
+        }
+        y += 10;
         y += 1 + 10 + FooterHeight + PadY;
         _bodyHeight = y;
     }
@@ -923,28 +944,40 @@ public sealed class QuickStartGuide : Form
         return curY;
     }
 
+    private int ShortcutRowHeightAt(int row) =>
+        row >= 0 && row < _shortcutRowHeights.Length ? _shortcutRowHeights[row] : ShortcutRowHeight;
+
+    private int ShortcutKbdWidth(Graphics g, ShortcutDef sc, int colWidth)
+    {
+        int keyW = TextRenderer.MeasureText(g, sc.Key, _keyFont,
+            new Size(0, 0), TextFormatFlags.NoPadding).Width;
+        return Math.Min(colWidth - 48, Math.Max(44, keyW + KbdPadH * 2 + 4));
+    }
+
     private int PaintShortcutGrid(Graphics g, int startY)
     {
         var accent = UiChrome.AccentColor;
+        int y = startY;
         for (int i = 0; i < _shortcuts.Length; i++)
         {
             int col = i % 2;
             int row = i / 2;
+            if (col == 0 && i > 0)
+                y += ShortcutRowHeightAt(row - 1);
             int cellX = _contentLeft + col * (_shortcutColWidth + ShortcutColGap);
-            int cellY = startY + row * ShortcutRowHeight;
-            PaintShortcutCell(g, _shortcuts[i], cellX, cellY, accent);
+            PaintShortcutCell(g, _shortcuts[i], cellX, y, ShortcutRowHeightAt(row), accent);
         }
         int rows = (_shortcuts.Length + 1) / 2;
-        return startY + rows * ShortcutRowHeight;
+        int total = startY;
+        for (int r = 0; r < rows; r++)
+            total += ShortcutRowHeightAt(r);
+        return total;
     }
 
-    private void PaintShortcutCell(Graphics g, ShortcutDef sc, int x, int y, Color accent)
+    private void PaintShortcutCell(Graphics g, ShortcutDef sc, int x, int y, int rowH, Color accent)
     {
-        int keyW = TextRenderer.MeasureText(g, sc.Key, _keyFont,
-            new Size(0, 0), TextFormatFlags.NoPadding).Width;
-
-        int kbdW = Math.Min(_shortcutColWidth - 48, Math.Max(44, keyW + KbdPadH * 2 + 4));
-        int kbdH = ShortcutRowHeight - 8;
+        int kbdW = ShortcutKbdWidth(g, sc, _shortcutColWidth);
+        int kbdH = rowH - 8;
         var kbdRect = new RectangleF(x, y + 4, kbdW, kbdH);
 
         using (var kbdPath = WindowsDockRenderer.RoundedRect(kbdRect, 6f))
@@ -965,7 +998,7 @@ public sealed class QuickStartGuide : Form
         TextRenderer.DrawText(g, sc.Label, _bodyFont,
             new Rectangle(labelX, y + 4, labelW, kbdH),
             UiChrome.SurfaceTextSecondary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.WordBreak);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
