@@ -106,6 +106,8 @@ public sealed partial class RecordingForm : Form
     private Rectangle _recordingSizeChipRect = Rectangle.Empty;
     private Rectangle _recordingSettingsPillRect = Rectangle.Empty;
     private bool _hoveredRecordingSettings;
+    private bool _moveBadgeVisible;
+    private bool _moveBadgeHovered;
     private WindowsToolTip? _recordingChromeToolTip;
     private CancellationTokenSource? _recordingStartCts;
 
@@ -607,8 +609,15 @@ public sealed partial class RecordingForm : Form
             if (settingsHover || overSize)
             {
                 Cursor = settingsHover ? Cursors.Hand : Cursors.Default;
+                UpdateMoveBadgeHover(false, false);
                 return;
             }
+
+            UpdateMoveBadgeHover(
+                _state == State.PreRecording && _recordRegion.Contains(e.Location),
+                _state == State.PreRecording
+                    && !_recordRegion.IsEmpty
+                    && MoveBadgeRenderer.BadgeRectFor(_recordRegion).Contains(e.Location));
 
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
@@ -791,6 +800,16 @@ public sealed partial class RecordingForm : Form
             DrawCircularHandles(g, _recordRegion, accentColor);
         }
 
+        // Center move badge (same look as the capture flow): dragging still works
+        // anywhere inside the region — the badge is purely a visual affordance.
+        if (_moveBadgeVisible && !_recordRegion.IsEmpty)
+        {
+            var oldSmoothing = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            MoveBadgeRenderer.Paint(g, MoveBadgeRenderer.BadgeRectFor(_recordRegion), _moveBadgeHovered);
+            g.SmoothingMode = oldSmoothing;
+        }
+
         if (!_isHandleDragging && (!_recordingSizeChipRect.IsEmpty || !_recordingSettingsPillRect.IsEmpty))
         {
             SelectionSizeReadout.DrawConfirmDragPillCached(
@@ -811,6 +830,24 @@ public sealed partial class RecordingForm : Form
 
         if (_state == State.PreRecording && !_isHandleDragging)
             KeepControlBarAboveOverlay();
+    }
+
+    /// <summary>Tracks center move badge visibility/hover (paint is purely affordance).</summary>
+    private void UpdateMoveBadgeHover(bool visible, bool hovered)
+    {
+        if (visible == _moveBadgeVisible && hovered == _moveBadgeHovered)
+            return;
+        var dirty = Rectangle.Empty;
+        if (_moveBadgeVisible && !_recordRegion.IsEmpty)
+            dirty = MoveBadgeRenderer.BadgeRectFor(_recordRegion);
+        _moveBadgeVisible = visible;
+        _moveBadgeHovered = hovered;
+        if (visible && !_recordRegion.IsEmpty)
+            dirty = dirty.IsEmpty
+                ? MoveBadgeRenderer.BadgeRectFor(_recordRegion)
+                : Rectangle.Union(dirty, MoveBadgeRenderer.BadgeRectFor(_recordRegion));
+        if (!dirty.IsEmpty)
+            Invalidate(Rectangle.Inflate(dirty, 10, 10));
     }
 
     /// <summary>
