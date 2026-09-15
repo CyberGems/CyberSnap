@@ -90,12 +90,7 @@ public partial class OcrResultWindow : Window
             OcrTextBox.CaretIndex = OcrTextBox.Text.Length;
 
             // Force window to foreground on show, even if the user switched to another app
-            Topmost = true;
-            Activate();
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                Topmost = false;
-            }), DispatcherPriority.Background);
+            CyberSnapWindowChrome.EnsureForeground(this);
         };
 
         TranslationService.SetGoogleApiKey(settingsService.Settings.GoogleTranslateApiKey);

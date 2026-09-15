@@ -90,11 +90,7 @@ internal sealed class ColorDetailWindow : Window
         PreviewKeyDown += OnPreviewKeyDown;
         Activated += (_, _) => RefreshLiveState();
         ContentRendered += (_, _) => ClampToMonitor();
-        Loaded += (_, _) =>
-        {
-            Activate();
-            _copyCloseBtn?.Focus();
-        };
+        Loaded += (_, _) => CyberSnapWindowChrome.EnsureForeground(this, _copyCloseBtn);
     }
 
     private void SnapshotLiveState()

@@ -40,17 +40,7 @@ public partial class QrResultWindow : Window
 
         Activated += (_, _) => ApplyTheme();
 
-        Loaded += (_, _) =>
-        {
-            Topmost = true;
-            Activate();
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                Topmost = false;
-                if (IsActive)
-                    CopyButton.Focus();
-            }));
-        };
+        Loaded += (_, _) => CyberSnapWindowChrome.EnsureForeground(this, CopyButton);
     }
 
     protected override void OnSourceInitialized(EventArgs e)

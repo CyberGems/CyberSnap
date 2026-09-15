@@ -1,6 +1,8 @@
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Shell;
+using System.Windows.Threading;
 using CyberSnap.Native;
 
 namespace CyberSnap.UI;
@@ -8,6 +10,61 @@ namespace CyberSnap.UI;
 public static class CyberSnapWindowChrome
 {
     private const double DefaultCornerRadius = 10;
+
+    /// <summary>
+    /// Brings a freshly shown result window to the foreground. A single Activate()
+    /// fails silently when another app still owns the foreground (then Enter/Escape
+    /// never reach the window), so retry briefly until it sticks.
+    /// </summary>
+    public static void EnsureForeground(Window window, IInputElement? focusTarget = null)
+    {
+        if (window is null)
+            return;
+
+        int remaining = 4;
+        DispatcherTimer? timer = null;
+        timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        timer.Tick += (_, _) =>
+        {
+            try
+            {
+                if (!window.IsLoaded)
+                    return;
+                if (window.IsActive)
+                {
+                    timer?.Stop();
+                    try { window.Topmost = false; } catch { }
+                    if (focusTarget is not null)
+                    {
+                        try { focusTarget.Focus(); } catch { }
+                    }
+                    return;
+                }
+                window.Topmost = true;
+                window.Activate();
+                if (window.IsActive)
+                {
+                    timer?.Stop();
+                    try { window.Topmost = false; } catch { }
+                    if (focusTarget is not null)
+                    {
+                        try { focusTarget.Focus(); } catch { }
+                    }
+                    return;
+                }
+                if (--remaining <= 0)
+                {
+                    timer?.Stop();
+                    try { window.Topmost = false; } catch { }
+                }
+            }
+            catch
+            {
+                timer?.Stop();
+            }
+        };
+        timer.Start();
+    }
 
     public static void Apply(Window window)
     {
