@@ -43,6 +43,7 @@
     <Resource Include="Assets\Icons\Achievements.ico" />
     <Resource Include="Assets\Icons\About.ico" />
     <Resource Include="Assets\Icons\Configuration.ico" />
+    <Resource Include="Assets\Icons\ColorPicker.ico" />
     <Resource Include="Assets\Icons\CyberSnap.ico" />
     <Resource Include="Assets\Icons\Editor.ico" />
     <Resource Include="Assets\Icons\Gallery.ico" />

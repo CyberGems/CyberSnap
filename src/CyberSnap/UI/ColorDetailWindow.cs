@@ -69,6 +69,7 @@ internal sealed class ColorDetailWindow : Window
         LoadPrefs();
 
         Title = LocalizationService.Translate("Color picker");
+        try { Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/Icons/ColorPicker.ico")); } catch { }
         Width = 400;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
