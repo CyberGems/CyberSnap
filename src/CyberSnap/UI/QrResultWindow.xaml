@@ -189,6 +189,7 @@
                                    Margin="0,0,10,0"/>
                         <Button x:Name="CopyButton"
                                 Click="CopyButton_Click"
+                                IsDefault="True"
                                 Style="{StaticResource CyberSnapAccentButton}">
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="CopyIcon"

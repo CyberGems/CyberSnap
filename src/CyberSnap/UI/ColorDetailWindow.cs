@@ -48,6 +48,7 @@ internal sealed class ColorDetailWindow : Window
     private WpfComboBox _formatCombo = null!;
     private System.Windows.Controls.Image _expanderIcon = null!;
     private WpfButton _expanderBtn = null!;
+    private WpfButton _copyCloseBtn = null!;
     private Grid _headerBar = null!;
     private TextBlock _titleBlock = null!;
 
@@ -89,6 +90,11 @@ internal sealed class ColorDetailWindow : Window
         PreviewKeyDown += OnPreviewKeyDown;
         Activated += (_, _) => RefreshLiveState();
         ContentRendered += (_, _) => ClampToMonitor();
+        Loaded += (_, _) =>
+        {
+            Activate();
+            _copyCloseBtn?.Focus();
+        };
     }
 
     private void SnapshotLiveState()
@@ -551,14 +557,17 @@ internal sealed class ColorDetailWindow : Window
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var closeBtn = StyledButton(T("Close"), isAccent: false);
+        closeBtn.IsCancel = true;
         closeBtn.Click += (_, _) => Close();
         Grid.SetColumn(closeBtn, 0);
         actions.Children.Add(closeBtn);
 
         var copyClose = StyledButton(T("Copy & close"), isAccent: true);
+        copyClose.IsDefault = true;
         copyClose.Click += (_, _) => { CopyFavorite(); Close(); };
         Grid.SetColumn(copyClose, 2);
         actions.Children.Add(copyClose);
+        _copyCloseBtn = copyClose;
 
         stack.Children.Add(actions);
         return stack;
@@ -874,6 +883,30 @@ internal sealed class ColorDetailWindow : Window
             };
             // Detach first: as Button.Content the label is already a logical child.
             btn.Content = null;
+            // Leading copy glyph like the QR/OCR buttons (shared App.xaml geometry).
+            if (TryFindResource("CopyIconGeometry") is System.Windows.Media.Geometry copyData)
+            {
+                var copyGlyph = new System.Windows.Shapes.Path
+                {
+                    Data = copyData,
+                    StrokeThickness = 2.2,
+                    StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
+                    Width = 12,
+                    Height = 12,
+                    Stretch = System.Windows.Media.Stretch.Uniform,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 0, 0),
+                };
+                copyGlyph.SetBinding(
+                    System.Windows.Shapes.Shape.StrokeProperty,
+                    new System.Windows.Data.Binding(nameof(WpfButton.Foreground))
+                    {
+                        RelativeSource = new System.Windows.Data.RelativeSource(
+                            System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(WpfButton), 1),
+                    });
+                row.Children.Add(copyGlyph);
+                label.Margin = new Thickness(6, 0, 0, 0);
+            }
             row.Children.Add(label);
             // Same return-arrow glyph as the confirm dock Done pill (FluentIcons "enter").
             var enterGlyph = new System.Windows.Shapes.Path

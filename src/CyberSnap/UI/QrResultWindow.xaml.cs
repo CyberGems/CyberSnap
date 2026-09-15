@@ -44,7 +44,12 @@ public partial class QrResultWindow : Window
         {
             Topmost = true;
             Activate();
-            Dispatcher.BeginInvoke(new Action(() => Topmost = false));
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                Topmost = false;
+                if (IsActive)
+                    CopyButton.Focus();
+            }));
         };
     }
 
