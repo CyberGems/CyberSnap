@@ -86,7 +86,8 @@
 
         <!-- Shared copy/action glyphs (moved here from QR/OCR windows for consolidation). -->
         <Geometry x:Key="CopyIconGeometry">M10,8 H20 A2,2 0 0 1 22,10 V20 A2,2 0 0 1 20,22 H10 A2,2 0 0 1 8,20 V10 A2,2 0 0 1 10,8 Z M4,16 A2,2 0 0 1 2,14 V4 A2,2 0 0 1 4,2 H14 A2,2 0 0 1 16,4</Geometry>
-        <Geometry x:Key="EnterIconGeometry">M4,6 H17 V17 M12.5,12.5 L17,17 L12.5,21.5</Geometry>
+        <!-- Return-arrow glyph, same data as FluentIcons "enter" (confirm dock Done pill). -->
+        <Geometry x:Key="EnterIconGeometry">M2 10.5 L7 5.2 L4.8 9 L14.6 9 L14.6 2.5 L17.4 2.5 L17.4 9 A2.8 2.8 0 0 1 14.6 11.8 L4.8 11.8 L7 15.8 Z</Geometry>
 
         <!-- Single consolidated accent action button (copy & close family). Template
              triggers own the hover/pressed visuals: code-behind MouseEnter coloring

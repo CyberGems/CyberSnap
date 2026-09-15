@@ -872,22 +872,21 @@ internal sealed class ColorDetailWindow : Window
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = WpfHAlign.Center,
             };
+            // Detach first: as Button.Content the label is already a logical child.
+            btn.Content = null;
             row.Children.Add(label);
+            // Same return-arrow glyph as the confirm dock Done pill (FluentIcons "enter").
             var enterGlyph = new System.Windows.Shapes.Path
             {
-                Data = System.Windows.Media.Geometry.Parse("M4,6 H17 V17 M12.5,12.5 L17,17 L12.5,21.5"),
-                StrokeThickness = 2.2,
-                StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
-                StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
-                StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
-                Width = 12,
-                Height = 12,
+                Data = System.Windows.Media.Geometry.Parse("M2 10.5 L7 5.2 L4.8 9 L14.6 9 L14.6 2.5 L17.4 2.5 L17.4 9 A2.8 2.8 0 0 1 14.6 11.8 L4.8 11.8 L7 15.8 Z"),
+                Width = 13,
+                Height = 13,
                 Stretch = System.Windows.Media.Stretch.Uniform,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(6, 0, 0, 0),
+                Margin = new Thickness(7, 0, 0, 0),
             };
             enterGlyph.SetBinding(
-                System.Windows.Shapes.Shape.StrokeProperty,
+                System.Windows.Shapes.Shape.FillProperty,
                 new System.Windows.Data.Binding(nameof(WpfButton.Foreground))
                 {
                     RelativeSource = new System.Windows.Data.RelativeSource(

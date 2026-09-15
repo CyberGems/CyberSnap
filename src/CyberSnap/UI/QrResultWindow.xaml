@@ -205,13 +205,10 @@
                                            Margin="6,0,0,0"
                                            VerticalAlignment="Center"/>
                                 <Path Data="{StaticResource EnterIconGeometry}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="2.2"
-                                      StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                      Fill="Transparent"
-                                      Width="12" Height="12"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      Width="13" Height="13"
                                       Stretch="Uniform"
-                                      Margin="6,0,0,0"
+                                      Margin="7,0,0,0"
                                       VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
