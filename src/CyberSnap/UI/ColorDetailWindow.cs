@@ -90,6 +90,11 @@ internal sealed class ColorDetailWindow : Window
         PreviewKeyDown += OnPreviewKeyDown;
         Activated += (_, _) => RefreshLiveState();
         ContentRendered += (_, _) => ClampToMonitor();
+        // Window-level drag covers the header plus its surrounding margin/padding,
+        // which otherwise form a dead strip above the title.
+        PreviewMouseLeftButtonDown += OnWindowDragDown;
+        PreviewMouseMove += OnHeaderDragMove;
+        PreviewMouseLeftButtonUp += OnHeaderDragEnd;
         Loaded += (_, _) => CyberSnapWindowChrome.EnsureForeground(this, _copyCloseBtn);
     }
 
@@ -203,9 +208,6 @@ internal sealed class ColorDetailWindow : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.MouseLeftButtonDown += OnHeaderDrag;
-        grid.MouseMove += OnHeaderDragMove;
-        grid.MouseLeftButtonUp += OnHeaderDragEnd;
         _headerBar = grid;
 
         var iconSource = new System.Windows.Media.Imaging.BitmapImage();
@@ -345,23 +347,38 @@ internal sealed class ColorDetailWindow : Window
     /// <summary>
     /// Manual header drag (instead of blocking DragMove, which misbehaves on this
     /// layered window: mouse-capture loss and mid-drag rebuilds could stall it).
+    /// Covers the header and its surrounding margin/padding; interactive controls
+    /// (buttons, text fields, combos) keep their own behavior.
     /// </summary>
-    private void OnHeaderDrag(object sender, MouseButtonEventArgs e)
+    private void OnWindowDragDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Left)
+        if (e.ChangedButton != MouseButton.Left || _headerBar is null)
+            return;
+
+        double headerBottom;
+        try
+        {
+            var topLeft = _headerBar.TranslatePoint(new System.Windows.Point(0, 0), this);
+            headerBottom = topLeft.Y + _headerBar.ActualHeight;
+        }
+        catch { return; }
+
+        if (e.GetPosition(this).Y > headerBottom)
             return;
 
         DependencyObject? current = e.OriginalSource as DependencyObject;
-        while (current is not null && !ReferenceEquals(current, _headerBar))
+        while (current is not null)
         {
-            if (current is WpfButton)
+            if (current is WpfButton
+                || current is System.Windows.Controls.TextBox
+                || current is WpfComboBox)
                 return;
             current = VisualTreeHelper.GetParent(current);
         }
 
         _headerDragging = true;
         _headerDragOffset = e.GetPosition(this);
-        try { Mouse.Capture(_headerBar, System.Windows.Input.CaptureMode.Element); } catch { }
+        try { Mouse.Capture(this, System.Windows.Input.CaptureMode.Element); } catch { }
         Cursor = System.Windows.Input.Cursors.SizeAll;
     }
 
@@ -385,7 +402,7 @@ internal sealed class ColorDetailWindow : Window
         _headerDragging = false;
         try
         {
-            if (Mouse.Captured == _headerBar)
+            if (ReferenceEquals(Mouse.Captured, this))
                 Mouse.Capture(null);
         }
         catch { }
