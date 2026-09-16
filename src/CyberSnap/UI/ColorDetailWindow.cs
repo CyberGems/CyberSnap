@@ -204,6 +204,8 @@ internal sealed class ColorDetailWindow : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.MouseLeftButtonDown += OnHeaderDrag;
+        grid.MouseMove += OnHeaderDragMove;
+        grid.MouseLeftButtonUp += OnHeaderDragEnd;
         _headerBar = grid;
 
         var iconSource = new System.Windows.Media.Imaging.BitmapImage();
@@ -337,7 +339,13 @@ internal sealed class ColorDetailWindow : Window
         Dispatcher.BeginInvoke(new Action(ClampToMonitor), System.Windows.Threading.DispatcherPriority.Background);
     }
 
-    /// <summary>Drags the window from the whole header bar (SizeAll cursor on the title, grabbing while dragging).</summary>
+    private bool _headerDragging;
+    private System.Windows.Point _headerDragOffset;
+
+    /// <summary>
+    /// Manual header drag (instead of blocking DragMove, which misbehaves on this
+    /// layered window: mouse-capture loss and mid-drag rebuilds could stall it).
+    /// </summary>
     private void OnHeaderDrag(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left)
@@ -351,10 +359,38 @@ internal sealed class ColorDetailWindow : Window
             current = VisualTreeHelper.GetParent(current);
         }
 
+        _headerDragging = true;
+        _headerDragOffset = e.GetPosition(this);
+        try { Mouse.Capture(_headerBar, System.Windows.Input.CaptureMode.Element); } catch { }
         Cursor = System.Windows.Input.Cursors.SizeAll;
-        try { DragMove(); }
+    }
+
+    private void OnHeaderDragMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_headerDragging)
+            return;
+        try
+        {
+            var pos = e.GetPosition(this);
+            Left += pos.X - _headerDragOffset.X;
+            Top += pos.Y - _headerDragOffset.Y;
+        }
         catch (Exception ex) { AppDiagnostics.LogError("color-detail.drag", ex); }
-        finally { ClearValue(CursorProperty); }
+    }
+
+    private void OnHeaderDragEnd(object sender, MouseButtonEventArgs e)
+    {
+        if (!_headerDragging)
+            return;
+        _headerDragging = false;
+        try
+        {
+            if (Mouse.Captured == _headerBar)
+                Mouse.Capture(null);
+        }
+        catch { }
+        ClearValue(CursorProperty);
+        Dispatcher.BeginInvoke(new Action(ClampToMonitor), System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private FrameworkElement? _footer;
