@@ -207,7 +207,7 @@ This project also builds on open-source components including Tesseract OCR, ZXin
 
 I’ve spent countless hours building and refining **CyberSnap** for my own use. I recently decided to share it with the world as part of the [CyberGems](https://github.com/CyberGems#-all-apps--repositories) set of free and open-source tools.
 
-If you’d like to support future updates, I’d truly appreciate it. You can also show your support by [starring the repo on GitHub](https://github.com/CyberGems/CyberSnap). Thank you! 🙏
+If you’d like to support future updates, I’d truly appreciate it. Your donation helps keep development going (☕), roll out new features (🚀), speed up updates and bug resolution (⚡), and enhance documentation quality (📚). You can also show your support by [starring the repo on GitHub](https://github.com/CyberGems/CyberSnap). Thank you! 🙏
 
 <p align="center">
   <a href="https://www.paypal.com/donate/?hosted_button_id=M4PY3UPJA5Y6Q"><img src="https://img.shields.io/badge/Donate-PayPal-0070BA?style=for-the-badge&logo=paypal" alt="Donate via PayPal" /></a>
