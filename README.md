@@ -5,7 +5,7 @@
 <h1 align="center">CyberSnap: Screenshot & Screen Recorder</h1>
 
 <p align="center">
-  <strong>A full-featured screenshot, annotation, OCR, and screen-recording tool</strong>: capture anything, edit everything, and share anywhere. Built with .NET 9 and WPF.
+  <strong>A screen capture and annotation suite with vector tools, high-speed OCR, screen recording, and color picker</strong>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
   <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/%F0%9F%93%96_Wiki-Documentation-222222?style=flat-square&logo=github&logoColor=white" alt="Wiki" height="24" /></a>
 </p>
 
-A full-featured **screenshot, annotation, OCR, translation, screen-recording and sharing tool** for Windows. CyberSnap combines a floating capture widget, an annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload, all in a single .NET 9 / WPF desktop application.
+A **screen capture and annotation suite** for Windows with vector tools, high-speed OCR, screen recording, and a color picker, built for casual and power users with .NET 9 and WPF. CyberSnap combines a floating capture widget, rich annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload.
 
 *Free and open source (GPLv3): no ads, no tracking, and no data collection. Just enjoy it.*
 
@@ -28,7 +28,7 @@ A full-featured **screenshot, annotation, OCR, translation, screen-recording and
 
 ## 📸 Why CyberSnap?
 
-Most screenshot tools either do too little or bury features behind a paywall. CyberSnap gives you **professional-grade capture, editing, and sharing**, including OCR, translation, and 7 upload destinations, all in a free, open-source package with a polished, modern design.
+Most screenshot tools either do too little or bury features behind a paywall. CyberSnap gives you **professional-grade capture, editing, and sharing**, including vector tools, high-speed OCR, screen recording, and a color picker, all in a free, open-source package with a polished, modern design.
 
 | Need | Solution |
 |---|---|
@@ -36,7 +36,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 | Edit and annotate | Full-featured editor with shapes, text, rulers, colors, frames |
 | Extract text from images | Multilingual OCR with Tesseract + integrated translation |
 | Find past captures | Local SQLite index with full-text search across OCR content |
-| Share anywhere | FTP, SFTP, S3, ImgBB, Imgur, Webhook, or CyberSnap Share |
+| Multi-destination export | FTP, SFTP, S3, ImgBB, Imgur, Webhook, or CyberSnap Share |
 | Work efficiently | Configurable hotkeys, floating widget, auto-start, system tray |
 
 ---
@@ -44,59 +44,59 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 ## ✨ Key Features
 
 ### 📷 Capture
-- **Floating Capture Widget** — Always-available on-screen widget for one-click capture
-- **Flexible Capture Modes** — Area, active window, full screen, and scroll capture (long pages stitched into one image)
-- **Screen Recording** — Record to MP4 or GIF with a full video trimmer (filmstrip, waveform, precise cut)
-- **Precision Tools** — Crosshair guides, capture magnifier, and smart window detection
-- **Scroll Capture** — Automatically stitches long scrollable pages into a single image
+- **Floating Capture Widget**: Always-available on-screen widget for one-click capture
+- **Flexible Capture Modes**: Area, active window, full screen, and scroll capture (long pages stitched into one image)
+- **Screen Recording**: Record to MP4 or GIF with a full video trimmer (filmstrip, waveform, precise cut)
+- **Precision Tools**: Crosshair guides, capture magnifier, and smart window detection
+- **Scroll Capture**: Automatically stitches long scrollable pages into a single image
 
 ### ✏️ Annotation Editor
-- **Rich Canvas** — Shapes, text, image paste, rulers, custom colors, and frames
-- **Auto-Open** — Opens automatically after each capture (configurable)
-- **Undo/Redo** — Configurable history limit (1–200 steps)
-- **Resize Handles** — Scale content or extend canvas
-- **Pan Mode** — With optional object lock
+- **Rich Canvas**: Shapes, text, image paste, rulers, custom colors, and frames
+- **Auto-Open**: Opens automatically after each capture (configurable)
+- **Undo/Redo**: Configurable history limit (1–200 steps)
+- **Resize Handles**: Scale content or extend canvas
+- **Pan Mode**: With optional object lock
 
 ### 🔤 OCR & Translation
-- **Multilingual OCR** — Extract text from images with Tesseract
-- **Language Auto-Detection** — Based on Windows display language
-- **Integrated Translation** — Translate OCR-extracted text with configurable source/target languages
-- **Local Search** — Full-text search across all OCR content in your capture history
+- **Multilingual OCR**: Extract text from images with Tesseract
+- **Language Auto-Detection**: Based on Windows display language
+- **Integrated Translation**: Translate OCR-extracted text with configurable source/target languages
+- **Local Search**: Full-text search across all OCR content in your capture history
 
 ### 📊 Gallery & History
-- **Persistent History** — Captures, OCR text, barcodes, and colors with configurable retention
-- **Search** — Find past captures by content, OCR text, or metadata
-- **Click Actions** — Open in editor, copy to clipboard, or open in default viewer
-- **Auto-Indexing** — SQLite local index with configurable search sources
+- **Persistent History**: Captures, OCR text, barcodes, and colors with configurable retention
+- **Search**: Find past captures by content, OCR text, or metadata
+- **Click Actions**: Open in editor, copy to clipboard, or open in default viewer
+- **Auto-Indexing**: SQLite local index with configurable search sources
 
 ### 📤 Upload & Share
-- **7 Destinations** — FTP, SFTP, S3-compatible, ImgBB, Imgur, Webhook, or CyberSnap Share
-- **Encrypted Credentials** — AES-GCM encryption for upload provider credentials
-- **Configurable Format** — PNG or JPEG with quality control
-- **Post-Upload Actions** — Open URL in browser after successful upload
+- **7 Destinations**: FTP, SFTP, S3-compatible, ImgBB, Imgur, Webhook, or CyberSnap Share
+- **Encrypted Credentials**: AES-GCM encryption for upload provider credentials
+- **Configurable Format**: PNG or JPEG with quality control
+- **Post-Upload Actions**: Open URL in browser after successful upload
 
 ### 🛠️ Standalone Tools
-- **Color Picker** — Sample any color on screen with HEX/RGB/HSL detail view and per-row copy
-- **Ruler** — On-screen measurement tool
-- **Barcode / QR Scanner** — Scan codes standalone or on top of a capture
+- **Color Picker**: Sample any color on screen with HEX/RGB/HSL detail view and per-row copy
+- **Ruler**: On-screen measurement tool
+- **Barcode / QR Scanner**: Scan codes standalone or on top of a capture
 
 ### 🖥️ Desktop Integration
-- **System Tray** — Runs in background with custom context menu
-- **Configurable Hotkeys** — Capture, OCR, recording, ruler, color picker, repeat-last-area
-- **Auto-Start** — Launch at Windows sign-in
-- **Auto-Update** — Built-in updater with toast notifications, changelog preview, and per-version skip
-- **Setup Wizard** — First-run configuration assistant
+- **System Tray**: Runs in background with custom context menu
+- **Configurable Hotkeys**: Capture, OCR, recording, ruler, color picker, repeat-last-area
+- **Auto-Start**: Launch at Windows sign-in
+- **Auto-Update**: Built-in updater with toast notifications, changelog preview, and per-version skip
+- **Setup Wizard**: First-run configuration assistant
 
 ### 🎨 Customization
-- **28 Languages** — Full UI localization (including English and Spanish)
-- **4 Themes** — Signature dark, grayscale, light, and system-following
-- **Adjustable UI Scale** — Adapt to any display
+- **28 Languages**: Full UI localization (including English and Spanish)
+- **4 Themes**: Signature dark, grayscale, light, and system-following
+- **Adjustable UI Scale**: Adapt to any display
 
 ---
 
 ## 🛠️ Tech Stack & Architecture
 
-- **Platform:** Windows 10 (build 19041) or later — x64, x86, ARM64
+- **Platform:** Windows 10 (build 19041) or later: x64, x86, ARM64
 - **Framework:** .NET 9 + WPF (PerMonitorV2 high DPI)
 - **Database:** SQLite (local history and search index)
 - **Capture:** DirectX via Vortice.Direct2D1 / Vortice.Direct3D11
@@ -224,7 +224,7 @@ If you’d like to support future updates, I’d truly appreciate it. Your donat
 <div align="center">
 
 <details>
-<summary><b>Crypto donations (BTC, ETH, USDT, LTC) — click to view addresses</b></summary>
+<summary><b>Crypto donations (BTC, ETH, USDT, LTC): click to view addresses</b></summary>
 
 | Asset | Address | QR |
 |---|---|---|
