@@ -71,7 +71,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ### 📤 Upload & Share
 - **7 Destinations**: FTP, SFTP, S3-compatible, ImgBB, Imgur, Webhook, or CyberSnap Share
-- **Encrypted Credentials**: AES-GCM encryption for upload provider credentials
+- **Encrypted Credentials**: OS-protected storage (Windows DPAPI) for upload provider credentials
 - **Configurable Format**: PNG or JPEG with quality control
 - **Post-Upload Actions**: Open URL in browser after successful upload
 
