@@ -2505,5 +2505,10 @@
   "Dark pink": "Rosa oscuro",
   "Scroll capture ready hint auto": "Modo automático",
   "Scroll capture ready hint manual": "Modo manual",
-  "Select all items in the current filter": "Seleccionar todos los elementos del filtro actual"
+  "Select all items in the current filter": "Seleccionar todos los elementos del filtro actual",
+  "View Release": "Ver release",
+  "Skip this version": "Omitir esta versión",
+  "What's New": "Novedades",
+  "What's New in {0}": "Novedades de {0}",
+  "Update {0} skipped": "Actualización {0} omitida"
 }

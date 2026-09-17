@@ -334,6 +334,25 @@
                                     AutomationProperties.Name="Check for Updates"/>
                         </Grid>
 
+                        <StackPanel x:Name="UpdateAvailablePanel" Visibility="Collapsed" Margin="38,2,0,4">
+                            <TextBlock x:Name="UpdatePeekTitle" Text="What's New" Style="{StaticResource SettingTitle}" FontSize="12" Margin="0,0,0,2" Services:LocalizationService.SourceText="What's New"/>
+                            <TextBlock x:Name="UpdatePeekText" Text="" Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button x:Name="ViewReleaseBtn" Content="View Release" MinWidth="96"
+                                        Services:LocalizationService.SourceContent="View Release"
+                                        VerticalAlignment="Center" Margin="0,0,8,0" Click="ViewReleaseBtn_Click" Cursor="Hand"
+                                        ToolTip="View releases and changelogs"
+                                        Services:LocalizationService.SourceToolTip="View releases and changelogs"
+                                        AutomationProperties.Name="View Release"/>
+                                <Button x:Name="SkipVersionBtn" Content="Skip this version" MinWidth="108"
+                                        Services:LocalizationService.SourceContent="Skip this version"
+                                        VerticalAlignment="Center" Click="SkipVersionBtn_Click" Cursor="Hand"
+                                        ToolTip="Skip this version"
+                                        Services:LocalizationService.SourceToolTip="Skip this version"
+                                        AutomationProperties.Name="Skip this version"/>
+                            </StackPanel>
+                        </StackPanel>
+
                         <StackPanel x:Name="UpdateProgressPanel" Visibility="Collapsed" Margin="38,8,0,8">
                             <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingsProgressText}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Downloading update..."/>
                             <ProgressBar x:Name="UpdateProgressBar" Height="4" Minimum="0" Maximum="100" Value="0" Foreground="{DynamicResource ThemeAccentBrush}"/>

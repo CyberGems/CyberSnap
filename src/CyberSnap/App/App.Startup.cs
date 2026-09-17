@@ -272,7 +272,21 @@ public partial class App
 
                 var result = await UpdateService.CheckForUpdatesAsync();
                 if (!result.IsUpdateAvailable)
+                {
+                    ClearSkippedUpdateVersion();
                     return;
+                }
+
+                // A skipped version stays silent: no toast, no badge/LED. A newer
+                // release re-arms notifications automatically.
+                if (IsUpdateVersionSkipped(result.LatestVersionLabel))
+                {
+                    LatestUpdateResult = null;
+                    if (Application.Current is not null)
+                        RefreshWidgetUpdateBadge();
+                    return;
+                }
+                ClearSkippedUpdateVersion();
 
                 LatestUpdateResult = result;
 

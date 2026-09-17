@@ -2241,5 +2241,10 @@
   "Dark pink": "Dark pink",
   "Scroll capture ready hint auto": "Automatic mode",
   "Scroll capture ready hint manual": "Manual mode",
-  "Select all items in the current filter": "Select all items in the current filter"
+  "Select all items in the current filter": "Select all items in the current filter",
+  "View Release": "View Release",
+  "Skip this version": "Skip this version",
+  "What's New": "What's New",
+  "What's New in {0}": "What's New in {0}",
+  "Update {0} skipped": "Update {0} skipped"
 }

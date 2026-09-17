@@ -22,6 +22,7 @@ public partial class AboutWindow : Window
     private readonly SettingsService _settingsService;
     private bool _suppressAutoCheckUpdateChange;
     private DropShadowEffect? _aboutLogoGlow;
+    private UpdateCheckResult? _availableUpdate;
 
     public AboutWindow(SettingsService settingsService)
     {
@@ -160,19 +161,7 @@ public partial class AboutWindow : Window
             AboutAutoUpdateDesc.Text = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
             AutoCheckUpdateCheck.ToolTip = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
             AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
-            var app = Application.Current as App;
-            if (app?.LatestUpdateResult?.IsUpdateAvailable == true)
-            {
-                AboutUpdateDesc.Text = app.LatestUpdateResult.StatusMessage;
-                UpdateBtn.Content = LocalizationService.Translate("Update Now");
-                UpdateBtn.ToolTip = LocalizationService.Translate("View update details and changelog");
-            }
-            else
-            {
-                AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
-                UpdateBtn.Content = LocalizationService.Translate("Check Now");
-                UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
-            }
+            RefreshUpdateSection();
             UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
             AboutTitleBar.Title = LocalizationService.Translate("About CyberSnap");
             AboutFooterCopyright.ToolTip = LocalizationService.Translate("Visit CyberGems website");
@@ -283,17 +272,84 @@ public partial class AboutWindow : Window
     private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
     {
         var app = Application.Current as App;
-        if (app?.LatestUpdateResult?.IsUpdateAvailable == true)
+        var result = _availableUpdate ?? app?.LatestUpdateResult;
+        if (result?.IsUpdateAvailable == true)
         {
-            ThemedUpdateDialog.Show(this, app.LatestUpdateResult);
+            // Downloading re-arms notifications for this version (also on failure).
+            app?.ClearSkippedUpdateVersion();
+            await StartUpdateDownloadAsync(result);
             return;
         }
 
         await RunUpdateCheckAsync();
     }
 
+    /// <summary>Shows the inline available-update state: changelog peek plus
+    /// View Release / Skip actions. The main button downloads. Nothing downloads by itself.</summary>
+    private void ShowUpdateAvailable(UpdateCheckResult result)
+    {
+        _availableUpdate = result;
+        AboutUpdateDesc.Text = result.StatusMessage;
+        UpdateBtn.Content = LocalizationService.Translate("Update Now");
+        UpdateBtn.ToolTip = LocalizationService.Translate("View update details and changelog");
+        UpdatePeekTitle.Text = string.Format(LocalizationService.Translate("What's New in {0}"), result.LatestVersionLabel);
+        var peek = UpdateService.PeekReleaseNotes(result.ReleaseNotes, 280);
+        UpdatePeekText.Text = string.IsNullOrWhiteSpace(peek) ? result.StatusMessage : peek;
+        ViewReleaseBtn.Content = LocalizationService.Translate("View Release");
+        ViewReleaseBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
+        SkipVersionBtn.Content = LocalizationService.Translate("Skip this version");
+        SkipVersionBtn.ToolTip = LocalizationService.Translate("Skip this version");
+        UpdateAvailablePanel.Visibility = Visibility.Visible;
+    }
+
+    private void HideUpdateAvailable()
+    {
+        _availableUpdate = null;
+        UpdateAvailablePanel.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>Applies the current update state to the About section:
+    /// available (peek + actions), skipped, or default check prompt.</summary>
+    private void RefreshUpdateSection()
+    {
+        var app = Application.Current as App;
+        var result = app?.LatestUpdateResult;
+        if (result?.IsUpdateAvailable == true)
+        {
+            ShowUpdateAvailable(result);
+            return;
+        }
+
+        HideUpdateAvailable();
+        var skipped = _settingsService.Settings.SkippedUpdateVersion;
+        if (!string.IsNullOrEmpty(skipped))
+            AboutUpdateDesc.Text = string.Format(LocalizationService.Translate("Update {0} skipped"), skipped);
+        else
+            AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
+        UpdateBtn.Content = LocalizationService.Translate("Check Now");
+        UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
+    }
+
+    private void ViewReleaseBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var url = _availableUpdate?.ReleaseUrl;
+        if (!string.IsNullOrWhiteSpace(url))
+            OpenUrl(url);
+    }
+
+    private void SkipVersionBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var app = Application.Current as App;
+        var result = _availableUpdate ?? app?.LatestUpdateResult;
+        if (result?.IsUpdateAvailable != true)
+            return;
+        app?.SkipUpdateVersion(result.LatestVersionLabel);
+        RefreshUpdateSection();
+    }
+
     /// <summary>Runs a manual update check and prompts the user with the result.
-    /// Shared by the About window's "Check Now" button and the "Check for Updates..." menu items.</summary>
+    /// Shared by the About window's "Check Now" button and the "Check for Updates..." menu items.
+    /// Manual checks always report; a newer release than the skipped one re-arms notifications.</summary>
     public async Task RunUpdateCheckAsync()
     {
         var result = await UpdateService.CheckForUpdatesAsync();
@@ -301,19 +357,16 @@ public partial class AboutWindow : Window
         {
             app.LatestUpdateResult = result;
             app.RefreshWidgetUpdateBadge();
+            if (!result.IsUpdateAvailable || !app.IsUpdateVersionSkipped(result.LatestVersionLabel))
+                app.ClearSkippedUpdateVersion();
         }
         if (result.IsUpdateAvailable)
         {
-            AboutUpdateDesc.Text = result.StatusMessage;
-            UpdateBtn.Content = LocalizationService.Translate("Update Now");
-            UpdateBtn.ToolTip = LocalizationService.Translate("View update details and changelog");
-            ThemedUpdateDialog.Show(this, result);
+            ShowUpdateAvailable(result);
         }
         else
         {
-            AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
-            UpdateBtn.Content = LocalizationService.Translate("Check Now");
-            UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
+            RefreshUpdateSection();
             ThemedConfirmDialog.Alert(this,
                 LocalizationService.Translate("Check for Updates"),
                 result.StatusMessage,

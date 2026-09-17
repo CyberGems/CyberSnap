@@ -1790,11 +1790,9 @@ public partial class ToastWindow : Window
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     var app = (App)Application.Current;
-                    var result = app.LatestUpdateResult;
-                    if (result != null)
-                    {
-                        app.ShowUpdateDialog(result);
-                    }
+                    // The About update section hosts the changelog peek plus
+                    // View Release / Download / Skip actions. Nothing downloads here.
+                    app.ShowAbout();
                 });
                 return;
             }

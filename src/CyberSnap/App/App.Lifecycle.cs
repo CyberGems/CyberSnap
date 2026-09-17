@@ -141,21 +141,48 @@ public partial class App
         }, DispatcherPriority.Background);
     }
 
-    public void ShowUpdateDialog(UpdateCheckResult result)
+    /// <summary>True when the user skipped this release label in the About update section.
+    /// Skipped versions stay silent (no toast, no badge/LED) until a newer release appears.</summary>
+    public bool IsUpdateVersionSkipped(string? versionLabel)
     {
-        Dispatcher.Invoke(() =>
-        {
-            var activeEditor = UI.Editor.EditorForm.ActiveInstance;
-            IntPtr ownerHandle = activeEditor != null && !activeEditor.IsDisposed && activeEditor.Visible
-                ? activeEditor.Handle
-                : IntPtr.Zero;
-            UI.ThemedUpdateDialog.Show(ownerHandle, result);
-        });
+        if (string.IsNullOrWhiteSpace(versionLabel))
+            return false;
+        return string.Equals(_settingsService?.Settings.SkippedUpdateVersion, versionLabel, StringComparison.Ordinal);
     }
 
-    public void ShowAboutAndDownloadUpdate(UpdateCheckResult result)
+    /// <summary>Persists a skipped release and clears any visible update state for it.</summary>
+    public void SkipUpdateVersion(string? versionLabel)
     {
-        ShowUpdateDialog(result);
+        if (_settingsService is null || string.IsNullOrWhiteSpace(versionLabel))
+            return;
+        try
+        {
+            _settingsService.Settings.SkippedUpdateVersion = versionLabel;
+            _settingsService.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("app.skip-update-version", ex.Message, ex);
+        }
+        if (string.Equals(LatestUpdateResult?.LatestVersionLabel, versionLabel, StringComparison.Ordinal))
+            LatestUpdateResult = null;
+        RefreshWidgetUpdateBadge();
+    }
+
+    /// <summary>Clears the skipped version (e.g. when the user starts a download or a newer release appears).</summary>
+    public void ClearSkippedUpdateVersion()
+    {
+        if (_settingsService is null || string.IsNullOrEmpty(_settingsService.Settings.SkippedUpdateVersion))
+            return;
+        try
+        {
+            _settingsService.Settings.SkippedUpdateVersion = string.Empty;
+            _settingsService.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("app.clear-skipped-update-version", ex.Message, ex);
+        }
     }
 
     /// <summary>Opens the About window and runs a manual update check once it is visible.

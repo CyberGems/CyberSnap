@@ -550,6 +550,9 @@ public sealed class AppSettings
     public bool StartWithWindows { get; set; } = true;
 
     public bool AutoCheckForUpdates { get; set; } = true;
+    /// <summary>Release label (e.g. "v1.16.0") the user chose to skip. Skipped versions
+    /// produce no toast or badge until a newer release appears or the user checks manually.</summary>
+    public string SkippedUpdateVersion { get; set; } = "";
     public CaptureMode LastCaptureMode { get; set; } = CaptureMode.Rectangle;
     public bool HasLastCaptureRect { get; set; }
     public int LastCaptureRectX { get; set; }
