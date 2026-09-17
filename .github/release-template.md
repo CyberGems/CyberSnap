@@ -28,18 +28,22 @@ Welcome to the official **CyberSnap {{VERSION}}** release! CyberSnap is a featur
 
 ### 📦 Downloads & Packages
 
+> ⬇️ **Direct download:** click a file name to download it now. Same files as in **Assets** at the bottom of this page.
+
 | File | Description | Platform |
 | :--- | :--- | :--- |
-| **`CyberSnap-Setup-{{VERSION}}.exe`** | 🚀 **Recommended Installer** (Inno Setup with Start Menu, Desktop & Startup options) | Windows 10 / 11 (x64) |
-| **`CyberSnap-{{VERSION}}-Portable-win-x64.zip`** | 💼 **Portable Archive** (Extract and run without installation) | Windows 10 / 11 (x64) |
+| **[`CyberSnap-Setup-{{VERSION}}.exe`](https://github.com/CyberGems/CyberSnap/releases/download/{{VERSION}}/CyberSnap-Setup-{{VERSION}}.exe)** | 🚀 **Recommended Installer** (Inno Setup with Start Menu, Desktop & Startup options) | Windows 10 / 11 (x64) |
+| **[`CyberSnap-{{VERSION}}-Portable-win-x64.zip`](https://github.com/CyberGems/CyberSnap/releases/download/{{VERSION}}/CyberSnap-{{VERSION}}-Portable-win-x64.zip)** | 💼 **Portable Archive** (Extract and run without installation) | Windows 10 / 11 (x64) |
 
 ---
 
 ### 🔍 VirusTotal Scan Results (70+ Antivirus Engines)
 
-- 🛡️ **Setup Installer**: [View VirusTotal Inspection Report](https://www.virustotal.com/gui/file/{{INSTALLER_HASH}})  
+> ℹ️ These links open the security report on VirusTotal in a new tab, they do not download the app.
+
+- 🛡️ **Setup Installer**: [View security report on VirusTotal](https://www.virustotal.com/gui/file/{{INSTALLER_HASH}})  
   *(SHA256: `{{INSTALLER_HASH}}`)*
-- 💼 **Portable Archive**: [View VirusTotal Inspection Report](https://www.virustotal.com/gui/file/{{PORTABLE_HASH}})  
+- 💼 **Portable Archive**: [View security report on VirusTotal](https://www.virustotal.com/gui/file/{{PORTABLE_HASH}})  
   *(SHA256: `{{PORTABLE_HASH}}`)*
 
 ---
