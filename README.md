@@ -46,7 +46,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 ### 📷 Capture
 - **Floating Capture Widget** — Always-available on-screen widget for one-click capture
 - **Flexible Capture Modes** — Area, active window, full screen, and scroll capture (long pages stitched into one image)
-- **Screen Recording** — Record to MP4 or GIF with built-in video trimming
+- **Screen Recording** — Record to MP4 or GIF with a full video trimmer (filmstrip, waveform, precise cut)
 - **Precision Tools** — Crosshair guides, capture magnifier, and smart window detection
 - **Scroll Capture** — Automatically stitches long scrollable pages into a single image
 
@@ -76,7 +76,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Post-Upload Actions** — Open URL in browser after successful upload
 
 ### 🛠️ Standalone Tools
-- **Color Picker** — Sample any color on screen
+- **Color Picker** — Sample any color on screen with HEX/RGB/HSL detail view and per-row copy
 - **Ruler** — On-screen measurement tool
 - **Barcode / QR Scanner** — Scan codes standalone or on top of a capture
 
@@ -84,12 +84,12 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **System Tray** — Runs in background with custom context menu
 - **Configurable Hotkeys** — Capture, OCR, recording, ruler, color picker, repeat-last-area
 - **Auto-Start** — Launch at Windows sign-in
-- **Auto-Update** — Built-in updater with toast notifications
+- **Auto-Update** — Built-in updater with toast notifications, changelog preview, and per-version skip
 - **Setup Wizard** — First-run configuration assistant
 
 ### 🎨 Customization
-- **29 Languages** — Full UI localization (including English and Spanish)
-- **3 Themes** — Light, dark, and system-following
+- **28 Languages** — Full UI localization (including English and Spanish)
+- **4 Themes** — Signature dark, grayscale, light, and system-following
 - **Adjustable UI Scale** — Adapt to any display
 
 ---
@@ -122,7 +122,7 @@ CyberSnap/
 │   │   │   ├── Settings/       Settings window
 │   │   │   ├── History/        Gallery/history window
 │   │   │   └── Share/          Share dialogs
-│   │   ├── Localization/       29 language JSON files
+│   │   ├── Localization/       28 language JSON files
 │   │   ├── Models/             Data models
 │   │   ├── Helpers/            Utility helpers
 │   │   └── Native/             Native interop
