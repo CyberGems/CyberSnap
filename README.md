@@ -5,18 +5,18 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/CyberGems/CyberSnap/releases/latest"><img src="https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fraw.githubusercontent.com%2FCyberGems%2FCyberSnap%2Fmain%2Fsrc%2FCyberSnap%2FCyberSnap.csproj&query=%2FProject%2FPropertyGroup%2FVersion&prefix=%E2%9A%A1%20RELEASE%20v&style=for-the-badge&label=&labelColor=555555&color=555555" alt="Download Latest Release" /><img src="https://img.shields.io/badge/-(WINDOWS_64--BIT)-0047B3?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 64-bit" /></a>
-  &nbsp;<a href="https://github.com/CyberGems/CyberSnap/releases"><img src="https://img.shields.io/badge/All_Releases-Changelog-18181B?style=for-the-badge&logo=github&logoColor=white" alt="All Releases" /></a>
+  <a href="https://github.com/CyberGems/CyberSnap/releases/latest"><img src="https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fraw.githubusercontent.com%2FCyberGems%2FCyberSnap%2Fmain%2Fsrc%2FCyberSnap%2FCyberSnap.csproj&query=%2FProject%2FPropertyGroup%2FVersion&prefix=%20Download%20CyberSnap%20v&suffix=%20&style=for-the-badge&label=&labelColor=0E7490&color=0E7490" alt="Download Latest Release" /><img src="https://img.shields.io/badge/Windows_64--bit-0078D4?style=for-the-badge" alt="Windows 64-bit" /></a>
+  &nbsp;<a href="https://github.com/CyberGems/CyberSnap/releases"><img src="https://img.shields.io/badge/All_releases-2B3137?style=for-the-badge&logo=github&logoColor=white" alt="All Releases" /><img src="https://img.shields.io/badge/Changelog-3B444B?style=for-the-badge" alt="Changelog" /></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License" height="24" />&nbsp;
-  <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4.svg?logo=windows&logoColor=white" alt="Platform" height="24" />&nbsp;
-  <img src="https://img.shields.io/badge/.NET-9-512BD4.svg?logo=dotnet&logoColor=white" alt=".NET" height="24" />&nbsp;
-  <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/%F0%9F%93%96_Wiki-Documentation-222222?style=flat-square&logo=github&logoColor=white" alt="Wiki" height="24" /></a>
+  <img src="https://img.shields.io/badge/License-GPL--3.0-1F2428.svg?style=flat-square&color=0E7490" alt="License" />&nbsp;
+  <img src="https://img.shields.io/badge/Platform-Windows_10+-1F2428.svg?style=flat-square&color=0078D4" alt="Platform" />&nbsp;
+  <img src="https://img.shields.io/badge/.NET-9-1F2428.svg?style=flat-square&logo=dotnet&logoColor=white&color=47848F" alt=".NET" />&nbsp;
+  <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/Wiki-Documentation-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=0E7490" alt="Wiki" /></a>
 </p>
 
-A **screen capture and annotation suite** for Windows with vector tools, high-speed OCR, screen recording, and a color picker, built for casual and power users with .NET 9 and WPF. CyberSnap combines a floating capture widget, rich annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload.
+A **screen capture and annotation suite** for Windows with vector tools, high-speed OCR, screen recording, and a color picker. CyberSnap combines a floating capture widget, rich annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload. Built for casual and power users with **.NET 9** and **WPF**.
 
 *Free and open source (GPLv3): no ads, no tracking, and no data collection. Just enjoy it.*
 
