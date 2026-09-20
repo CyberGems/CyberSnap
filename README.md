@@ -16,7 +16,11 @@
   <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/Wiki-Documentation-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=334155" alt="Wiki" /></a>
 </p>
 
-A **screen capture and annotation suite** for Windows with vector tools, high-speed OCR, screen recording, and a color picker. CyberSnap combines a floating capture widget, rich annotation editor, multilingual text recognition, local image search, video trimming, and multi-destination upload. Built for casual and power users with **.NET 9** and **WPF**.
+---
+
+## What is CyberSnap?
+
+CyberSnap is an all-in-one **screen capture and annotation suite** for Windows, built to take a capture from first click to finished result without interrupting your workflow. Capture areas, windows, full screens, or scrolling content; record MP4 or GIF; annotate with vector tools; extract and translate text with OCR; and sample on-screen colors. A searchable local gallery, built-in video trimming, and multiple upload destinations make past captures easy to find, refine, and share. Built with **.NET 9** and **WPF**.
 
 *Free and open source (GPLv3): no ads, no tracking, and no data collection. Just enjoy it.*
 
