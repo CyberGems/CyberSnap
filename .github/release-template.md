@@ -1,6 +1,13 @@
-## 📸 CyberSnap {{VERSION}} — Release Notes
+## 📸 CyberSnap {{VERSION}}: Release Notes
 
-Welcome to the official **CyberSnap {{VERSION}}** release! CyberSnap is a feature-rich, high-performance desktop screenshot, annotation, OCR text recognition, QR scanner, screen recording, and sharing powerhouse for Windows.
+### 🚀 What's new in this release
+
+<!-- Maintainer: Rewrite the marked paragraph for every release. Use 25-45 words, lead with user-facing changes, and do not repeat the app name or version. -->
+<!-- changelog-summary:start -->
+The annotation editor is easier to enter and navigate, with a clearer welcome experience, sharper action icons, extended zoom, and better guidance. Capture widgets, previews, measurement labels, and contribution links also receive focused polish.
+<!-- changelog-summary:end -->
+
+> **New to CyberSnap?** A fast, privacy-focused Windows toolkit for screenshots, annotation, OCR, QR scanning, screen recording, and sharing.
 
 ---
 
