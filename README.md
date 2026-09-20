@@ -1,11 +1,7 @@
 <p align="center">
-  <img src="src/CyberSnap/Assets/CyberSnap_square.png" width="120" alt="CyberSnap logo" />
-</p>
-
-<h1 align="center">CyberSnap: Screenshot & Screen Recorder</h1>
-
-<p align="center">
-  <strong>A screen capture and annotation suite with vector tools, high-speed OCR, screen recording, and color picker</strong>
+  <a href="https://cybergems.org/apps/cybersnap/">
+    <img src="https://cybergems.org/banners/cybersnap.png" alt="CyberSnap — capture, annotate and share screenshots, recordings, text and color with speed" />
+  </a>
 </p>
 
 <p align="center">
