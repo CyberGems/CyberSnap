@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/CyberGems/CyberSnap/main/services/cybersnap-share/public/logo.png" width="120" alt="CyberSnap">
+</p>
+
 ## 📸 CyberSnap {{VERSION}}: Release Notes
 
 ### 🚀 What's new in this release
