@@ -2955,7 +2955,8 @@
                                     <TextBlock Text="Keep CyberSnap visible in the tray"
                                                Services:LocalizationService.SourceText="Keep CyberSnap visible in the tray"
                                                Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings."
+                                    <TextBlock x:Name="TrayPinDescription"
+                                               Text="Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings."
                                                Services:LocalizationService.SourceText="Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings."
                                                Style="{StaticResource SettingDescription}"
                                                TextWrapping="Wrap"/>
