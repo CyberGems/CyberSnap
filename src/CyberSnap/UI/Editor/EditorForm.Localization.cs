@@ -41,8 +41,6 @@ public sealed partial class EditorForm
         if (_toggleFrameSwitch is not null)
             _toggleFrameSwitch.LabelText = LocalizationService.Translate("Outline");
 
-        if (_scaleLabel is not null)
-            _scaleLabel.Text = LocalizationService.Translate("Scale");
         UpdateScaleControls();
 
         if (_closeButton is not null)

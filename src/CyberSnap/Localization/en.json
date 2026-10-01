@@ -2027,6 +2027,7 @@
   "Capture current screen": "Capture current screen",
   "Delete ruler": "Delete ruler",
   "Scale": "Scale",
+  "Change the image size in pixels. Zoom only changes the view.": "Change the image size in pixels. Zoom only changes the view.",
   "Original size": "Original size",
   "Scale to 2x": "Scale to 2×",
   "Scale to 4x": "Scale to 4×",

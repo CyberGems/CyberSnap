@@ -1890,6 +1890,7 @@
   "Alteration:": "Alteración:",
   "Result:": "Resultado:",
   "Scale": "Escala",
+  "Change the image size in pixels. Zoom only changes the view.": "Cambia el tamaño de la imagen en píxeles. El zoom solo cambia la vista.",
   "Don't show again": "No mostrar más",
   "Reset suppressed dialogs": "Restablecer diálogos suprimidos",
   "Restore any confirmation dialogs you previously hid with 'Don't show again'.": "Restaura los diálogos de confirmación que ocultaste con 'No mostrar más'.",

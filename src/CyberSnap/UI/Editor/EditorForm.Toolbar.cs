@@ -26,11 +26,9 @@ public sealed partial class EditorForm
     private DoubleBufferedPanel _titleFileNameLabel = null!;
     private string _titleFileNameText = "";
     private Label _zoomLabel = null!;
-    private DoubleBufferedLabel _scaleLabel = null!;
-    private EditorScaleFactorButton _scale1Button = null!;
-    private EditorScaleFactorButton _scale2Button = null!;
-    private EditorScaleFactorButton _scale4Button = null!;
+    private EditorScaleMenuButton _scaleButton = null!;
     private bool _applyingEditorScale;
+    private DateTime _scaleMenuLastClosed = DateTime.MinValue;
     private EditorZoomSlider _zoomSlider = null!;
     private bool _suppressZoomSliderChange;
     private EditorCommandButton _undoButton = null!;
@@ -511,9 +509,7 @@ public sealed partial class EditorForm
             return WithShortcut("Fit to window", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomFit") ?? "9");
         });
         RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", $"{EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomIn") ?? "8"} / {EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomOut") ?? "7"}"));
-        RegisterHoverTooltip(_scale1Button, () => ScaleFactorTooltip(1));
-        RegisterHoverTooltip(_scale2Button, () => ScaleFactorTooltip(2));
-        RegisterHoverTooltip(_scale4Button, () => ScaleFactorTooltip(4));
+        RegisterHoverTooltip(_scaleButton, "Change the image size in pixels. Zoom only changes the view.");
 
         RegisterHoverTooltip(_liveStatusLabel, () =>
         {
@@ -1576,76 +1572,63 @@ public sealed partial class EditorForm
 
     private Control BuildScaleHost()
     {
-        var host = new FlowLayoutPanel
+        _scaleButton = new EditorScaleMenuButton
         {
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.Transparent,
+            Height = 42,
             Margin = new Padding(0, 0, 16, 0),
-            Padding = new Padding(0),
-            Height = 42,
         };
-
-        _scaleLabel = new DoubleBufferedLabel
-        {
-            AutoSize = true,
-            Text = LocalizationService.Translate("Scale"),
-            ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleLeft,
-            Margin = new Padding(0, 12, 6, 0),
-            BackColor = Color.Transparent,
-        };
-
-        _scale1Button = CreateScaleButton(1);
-        _scale2Button = CreateScaleButton(2);
-        _scale4Button = CreateScaleButton(4);
-
-        host.Controls.Add(_scaleLabel);
-        host.Controls.Add(_scale1Button);
-        host.Controls.Add(_scale2Button);
-        host.Controls.Add(_scale4Button);
-        return host;
+        _scaleButton.Click += (_, _) => ShowScaleMenu();
+        UpdateScaleControls();
+        return _scaleButton;
     }
 
-    private EditorScaleFactorButton CreateScaleButton(int factor)
+    private void ShowScaleMenu()
     {
-        var button = new EditorScaleFactorButton
-        {
-            Factor = factor,
-            Text = $"{factor}×",
-            Width = 40,
-            Height = 42,
-            Margin = new Padding(0),
-            AccessibleName = $"{factor}x",
-        };
-        button.Click += (_, _) => ApplyEditorScale(factor);
-        return button;
-    }
+        if (_scaleButton is null || _activeDocument is null || _canvas.IsDisposed)
+            return;
+        if (DateTime.UtcNow - _scaleMenuLastClosed < TimeSpan.FromMilliseconds(200))
+            return;
 
-    private string? ScaleFactorTooltip(int factor)
-    {
-        if (factor == 1)
-            return LocalizationService.Translate("Original size");
-
+        DismissVisibleHoverTooltips();
+        SyncScaleBaseline(_activeDocument);
         var doc = _activeDocument;
-        if (doc is null || doc.Canvas.IsDisposed)
-            return LocalizationService.Translate(factor == 2 ? "Scale to 2x" : "Scale to 4x");
 
-        if (!ImageScaleService.IsFactorAvailable(doc.ScaleBaseWidth, doc.ScaleBaseHeight, factor))
+        var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 220);
+        menu.ShowItemToolTips = true;
+        foreach (int factor in new[] { 1, 2, 4 })
         {
-            string key = factor == 2
-                ? "Scaling to 2× would exceed limit ({0}px / {1} MP)"
-                : "Scaling to 4× would exceed limit ({0}px / {1} MP)";
-            return string.Format(
-                LocalizationService.Translate(key),
-                ImageScaleService.MaxDimension,
-                ImageScaleService.MaxPixels / 1_000_000);
+            bool available = factor == 1 || ImageScaleService.IsFactorAvailable(doc.ScaleBaseWidth, doc.ScaleBaseHeight, factor);
+            long width = (long)doc.ScaleBaseWidth * factor;
+            long height = (long)doc.ScaleBaseHeight * factor;
+            string size = width <= int.MaxValue && height <= int.MaxValue ? $"{width} × {height}" : "";
+            var item = WindowsMenuRenderer.Item($"{factor}×", shortcut: size, active: doc.ScaleFactor == factor);
+            item.Enabled = available;
+            if (!available)
+            {
+                string key = factor == 2
+                    ? "Scaling to 2× would exceed limit ({0}px / {1} MP)"
+                    : "Scaling to 4× would exceed limit ({0}px / {1} MP)";
+                item.ToolTipText = string.Format(
+                    LocalizationService.Translate(key),
+                    ImageScaleService.MaxDimension,
+                    ImageScaleService.MaxPixels / 1_000_000);
+            }
+
+            int chosen = factor;
+            item.Click += (_, _) => ApplyEditorScale(chosen);
+            menu.Items.Add(item);
         }
 
-        return LocalizationService.Translate(factor == 2 ? "Scale to 2x" : "Scale to 4x");
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220);
+        _scaleButton.MenuOpen = true;
+        menu.Closed += (_, _) =>
+        {
+            _scaleMenuLastClosed = DateTime.UtcNow;
+            if (_scaleButton is { IsDisposed: false })
+                _scaleButton.MenuOpen = false;
+            menu.Dispose();
+        };
+        menu.Show(_scaleButton.PointToScreen(Point.Empty), ToolStripDropDownDirection.AboveRight);
     }
 
     private void ApplyEditorScale(int factor)
@@ -1703,21 +1686,13 @@ public sealed partial class EditorForm
 
     private void UpdateScaleControls()
     {
-        if (_scale1Button is null || _activeDocument is null || _canvas.IsDisposed)
+        if (_scaleButton is null || _activeDocument is null || _canvas.IsDisposed)
             return;
 
         if (!_applyingEditorScale)
             SyncScaleBaseline(_activeDocument);
 
-        var doc = _activeDocument;
-        bool can2 = ImageScaleService.IsFactorAvailable(doc.ScaleBaseWidth, doc.ScaleBaseHeight, 2);
-        bool can4 = ImageScaleService.IsFactorAvailable(doc.ScaleBaseWidth, doc.ScaleBaseHeight, 4);
-        _scale1Button.Active = doc.ScaleFactor == 1;
-        _scale1Button.Available = true;
-        _scale2Button.Active = doc.ScaleFactor == 2;
-        _scale2Button.Available = can2;
-        _scale4Button.Active = doc.ScaleFactor == 4;
-        _scale4Button.Available = can4;
+        _scaleButton.SetCaption($"{LocalizationService.Translate("Scale")}  {_activeDocument.ScaleFactor}×");
     }
 
     private static void SyncScaleBaseline(EditorDocument doc)
@@ -4176,14 +4151,13 @@ internal static class EditorPaint
     }
 }
 
-internal sealed class EditorScaleFactorButton : Button
+internal sealed class EditorScaleMenuButton : Button
 {
     private bool _hover;
     private bool _pressed;
-    private bool _active;
-    private bool _available = true;
+    private bool _menuOpen;
 
-    public EditorScaleFactorButton()
+    public EditorScaleMenuButton()
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
@@ -4196,33 +4170,31 @@ internal sealed class EditorScaleFactorButton : Button
         Cursor = Cursors.Hand;
         Font = UiChrome.ChromeFont(10f, FontStyle.Bold);
         TabStop = true;
+        AccessibleName = "Scale";
+        Height = 42;
+        Width = 118;
     }
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int Factor { get; set; }
-
-    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public bool Active
+    public bool MenuOpen
     {
-        get => _active;
+        get => _menuOpen;
         set
         {
-            if (_active == value) return;
-            _active = value;
+            if (_menuOpen == value) return;
+            _menuOpen = value;
             Invalidate();
         }
     }
 
-    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public bool Available
+    public void SetCaption(string caption)
     {
-        get => _available;
-        set
-        {
-            if (_available == value) return;
-            _available = value;
-            Invalidate();
-        }
+        if (Text == caption && Width > 0) return;
+        Text = caption;
+        AccessibleName = caption;
+        int textWidth = TextRenderer.MeasureText(caption, Font).Width;
+        Width = textWidth + 34;
+        Invalidate();
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -4236,26 +4208,39 @@ internal sealed class EditorScaleFactorButton : Button
         var rect = new Rectangle(1, 4, Width - 3, Height - 9);
         if (rect.Width <= 0 || rect.Height <= 0) return;
 
-        bool lit = _available && (_active || _hover || _pressed);
-        Color content = !_available
-            ? Color.FromArgb(88, 105, 128)
-            : lit ? EditorColors.Accent : EditorColors.TextPrimary;
-
-        if (_available && (_active || _pressed || _hover))
+        bool lit = _menuOpen || _hover || _pressed;
+        Color content = lit ? EditorColors.Accent : EditorColors.TextPrimary;
+        if (lit)
         {
-            int alpha = _active ? 36 : _pressed ? 28 : 16;
+            int alpha = _menuOpen || _pressed ? 32 : 16;
             using var path = EditorPaint.RoundedRect(rect, 6);
             using var brush = new SolidBrush(Color.FromArgb(alpha, EditorColors.Accent));
             g.FillPath(brush, path);
         }
 
+        var textRect = new Rectangle(rect.Left + 8, rect.Top, rect.Width - 26, rect.Height);
         TextRenderer.DrawText(
             g,
             Text,
             Font,
-            rect,
+            textRect,
             content,
-            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+
+        int cx = rect.Right - 12;
+        int cy = rect.Top + rect.Height / 2;
+        using var pen = new Pen(content, 1.6f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round,
+        };
+        g.DrawLines(pen, new[]
+        {
+            new Point(cx - 4, cy - 1),
+            new Point(cx, cy + 3),
+            new Point(cx + 4, cy - 1),
+        });
     }
 
     protected override void OnMouseEnter(EventArgs e)

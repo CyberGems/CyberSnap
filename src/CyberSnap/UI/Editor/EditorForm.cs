@@ -927,7 +927,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             if (label == _zoomLabel)
                 label.ForeColor = EditorColors.Accent;
-            else if (label == _coordsLabel || label == _fileNameLabel || label == _liveStatusLabel || label == _scaleLabel)
+            else if (label == _coordsLabel || label == _fileNameLabel || label == _liveStatusLabel)
                 label.ForeColor = EditorColors.TextSecondary;
             else
                 label.ForeColor = EditorColors.TextPrimary;
