@@ -48,9 +48,10 @@ Name: "{group}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; IconFilename: "{app}
 Name: "{group}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; IconFilename: "{app}\Assets\Icons\Editor.ico"
 Name: "{autodesktop}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: desktopicon; IconFilename: "{app}\Assets\Icons\CyberSnap.ico"
 Name: "{autodesktop}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; Tasks: editordesktopicon; IconFilename: "{app}\Assets\Icons\Editor.ico"
-Name: "{userstartup}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: startup
 
 [Registry]
+; Same slot the app writes. A Startup-folder shortcut as well made Windows list CyberSnap twice.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "CyberSnap"; ValueData: """{app}\CyberSnap.exe"""; Tasks: startup; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\.csnp"; ValueType: string; ValueName: ""; ValueData: "CyberSnap.Project"; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\.csnp\OpenWithProgids"; ValueType: string; ValueName: "CyberSnap.Project"; ValueData: ""; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\CyberSnap.Project"; ValueType: string; ValueName: ""; ValueData: "CyberSnap Project"; Flags: uninsdeletekey

@@ -132,6 +132,8 @@ public static class UninstallService
 
     public static void RemoveStartupEntry()
     {
+        RemoveStartupShortcut();
+
         const string rk = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
         using var key = Registry.CurrentUser.OpenSubKey(rk, writable: true);
         if (key is null)
@@ -145,28 +147,163 @@ public static class UninstallService
         key.DeleteValue("CyberSnap", throwOnMissingValue: false);
     }
 
+    /// <summary>
+    /// One startup registration only: the Run key. The installer used to also drop a
+    /// Startup-folder shortcut, and a dev build used to retarget Run at bin\Debug.
+    /// Both showed up as "CyberSnap" and Windows launched them together.
+    /// </summary>
     public static void SetStartupEntry(bool enabled)
     {
+        var shortcutTarget = TryReadStartupShortcutTarget();
+        RemoveStartupShortcut();
+
         const string rk = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
-        if (!enabled)
-        {
-            using var existingKey = Registry.CurrentUser.OpenSubKey(rk, writable: true);
-            if (existingKey is null)
-                throw new InvalidOperationException("Windows startup registry key could not be opened.");
-
-            existingKey.DeleteValue("CyberSnap", throwOnMissingValue: false);
-            return;
-        }
-
         using var key = Registry.CurrentUser.CreateSubKey(rk);
         if (key is null)
             throw new InvalidOperationException("Windows startup registry key could not be opened.");
 
-        var exe = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(exe))
-            throw new InvalidOperationException("CyberSnap could not resolve its executable path for startup.");
+        if (!enabled)
+        {
+            key.DeleteValue("CyberSnap", throwOnMissingValue: false);
+            return;
+        }
 
-        key.SetValue("CyberSnap", $"\"{exe}\"", RegistryValueKind.String);
+        var exe = ResolveStartupExecutable(shortcutTarget);
+        var desired = $"\"{exe}\"";
+        var existing = key.GetValue("CyberSnap") as string;
+        if (string.Equals(existing, desired, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        key.SetValue("CyberSnap", desired, RegistryValueKind.String);
+        var current = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(current)
+            && LooksLikeBuildOutputPath(current)
+            && !LooksLikeBuildOutputPath(exe))
+        {
+            AppDiagnostics.LogWarning(
+                "startup.entry",
+                $"Launch on startup stays on the installed copy: {exe}");
+        }
+    }
+
+    /// <summary>Deletes the installer Startup-folder shortcut so it cannot launch a second copy.</summary>
+    public static void RemoveStartupShortcut()
+    {
+        try
+        {
+            var path = StartupShortcutPath();
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("startup.remove-shortcut", ex.Message, ex);
+        }
+    }
+
+    private static string ResolveStartupExecutable(string? shortcutTarget)
+    {
+        var current = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(current)
+            && File.Exists(current)
+            && !LooksLikeBuildOutputPath(current))
+            return current;
+
+        foreach (var candidate in EnumerateInstalledExecutables(shortcutTarget))
+        {
+            if (File.Exists(candidate) && !LooksLikeBuildOutputPath(candidate))
+                return candidate;
+        }
+
+        if (!string.IsNullOrWhiteSpace(current) && File.Exists(current))
+            return current;
+
+        throw new InvalidOperationException("CyberSnap could not resolve its executable path for startup.");
+    }
+
+    private static IEnumerable<string> EnumerateInstalledExecutables(string? shortcutTarget)
+    {
+        foreach (var hive in new[] { RegistryHive.CurrentUser, RegistryHive.LocalMachine })
+        {
+            foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
+            {
+                string? location = null;
+                string? icon = null;
+                try
+                {
+                    using var baseKey = RegistryKey.OpenBaseKey(hive, view);
+                    using var key = baseKey.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\CyberSnap");
+                    location = key?.GetValue("InstallLocation") as string;
+                    icon = key?.GetValue("DisplayIcon") as string;
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(location))
+                    yield return Path.Combine(location, "CyberSnap.exe");
+                if (!string.IsNullOrWhiteSpace(icon))
+                {
+                    var exe = icon.Split(',')[0].Trim().Trim('"');
+                    if (exe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        yield return exe;
+                }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(shortcutTarget))
+            yield return shortcutTarget.Trim().Trim('"');
+
+        yield return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "CyberSnap",
+            "CyberSnap.exe");
+        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        if (!string.IsNullOrWhiteSpace(programFilesX86))
+        {
+            yield return Path.Combine(programFilesX86, "CyberSnap", "CyberSnap.exe");
+        }
+
+        yield return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs",
+            "CyberSnap",
+            "CyberSnap.exe");
+    }
+
+    private static string StartupShortcutPath() =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "CyberSnap.lnk");
+
+    private static string? TryReadStartupShortcutTarget()
+    {
+        try
+        {
+            var path = StartupShortcutPath();
+            if (!File.Exists(path))
+                return null;
+
+            var shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType is null)
+                return null;
+
+            dynamic shell = Activator.CreateInstance(shellType)!;
+            try
+            {
+                dynamic shortcut = shell.CreateShortcut(path);
+                string target = shortcut.TargetPath;
+                return string.IsNullOrWhiteSpace(target) ? null : target;
+            }
+            finally
+            {
+                try { System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("startup.read-shortcut", ex.Message, ex);
+            return null;
+        }
     }
 
     public static void RemoveAppData()

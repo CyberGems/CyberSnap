@@ -204,6 +204,7 @@ public static class InstallService
                 const string rk = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
                 using var key = Registry.CurrentUser.OpenSubKey(rk, true);
                 key?.SetValue("CyberSnap", $"\"{targetExe}\"");
+                UninstallService.RemoveStartupShortcut();
             }
             catch (Exception ex)
             {
