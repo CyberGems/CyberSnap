@@ -1626,7 +1626,24 @@ public sealed partial class EditorForm
             _scaleMenuLastClosed = DateTime.UtcNow;
             if (_scaleButton is { IsDisposed: false })
                 _scaleButton.MenuOpen = false;
-            menu.Dispose();
+
+            // The modal menu filter still calls SetVisibleCore after Closed.
+            // Disposing here makes that call touch a dead ContextMenuStrip and kills the process.
+            if (!IsHandleCreated || IsDisposed)
+                return;
+            try
+            {
+                BeginInvoke(() =>
+                {
+                    if (!menu.IsDisposed)
+                        menu.Dispose();
+                });
+            }
+            catch (InvalidOperationException)
+            {
+                if (!menu.IsDisposed)
+                    menu.Dispose();
+            }
         };
         menu.Show(_scaleButton.PointToScreen(Point.Empty), ToolStripDropDownDirection.AboveRight);
     }
