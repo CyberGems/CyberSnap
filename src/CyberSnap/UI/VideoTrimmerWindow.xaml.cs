@@ -1922,8 +1922,8 @@ namespace CyberSnap.UI
 
             string lang = _settingsService.Settings.InterfaceLanguage;
             string msg = _preciseCut
-                ? LocalizationService.Translate(lang, "Precise cut on")
-                : LocalizationService.Translate(lang, "Precise cut off");
+                ? LocalizationService.Translate(lang, "Exact trim on. Export takes longer.")
+                : LocalizationService.Translate(lang, "Fast trim on. The cut can be a little off.");
             ShowBanner(msg);
         }
 
@@ -1932,10 +1932,10 @@ namespace CyberSnap.UI
             string lang = _settingsService.Settings.InterfaceLanguage;
             PreciseCutLabel.Text = LocalizationService.Translate(lang, "Precise");
             PreciseCutToggleBtn.ToolTip = (_preciseCut
-                ? LocalizationService.Translate(lang, "Precise cut on: frame-exact boundaries (re-encode, slower)")
-                : LocalizationService.Translate(lang, "Precise cut off: fast keyframe cut (boundaries are approximate)")) + " (P)";
+                ? LocalizationService.Translate(lang, "Exact trim is on. The video starts and ends on your marks, and export takes longer.")
+                : LocalizationService.Translate(lang, "Fast trim is on. The video can start a little before or after your marks.")) + " (P)";
             System.Windows.Automation.AutomationProperties.SetName(PreciseCutToggleBtn,
-                LocalizationService.Translate(lang, "Enable precise cut"));
+                LocalizationService.Translate(lang, _preciseCut ? "Exact trim" : "Fast trim"));
         }
 
         private void UpdateAllTooltips()

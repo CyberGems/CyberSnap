@@ -1226,7 +1226,7 @@
                                   VerticalAlignment="Center"
                                   Padding="10,0"
                                   Click="PreciseCutToggleBtn_Click"
-                                  ToolTip="Enable precise cut (P)"
+                                  ToolTip="Fast trim is on. The video can start a little before or after your marks. (P)"
                                   Style="{StaticResource TrimmerLoopToggleStyle}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Path Data="M 12,3 L 12,9 M 12,15 L 12,21 M 3,12 L 9,12 M 15,12 L 21,12 M 10,10 L 14,10 L 14,14 L 10,14 Z"
