@@ -927,7 +927,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             if (label == _zoomLabel)
                 label.ForeColor = EditorColors.Accent;
-            else if (label == _coordsLabel || label == _fileNameLabel || label == _liveStatusLabel)
+            else if (label == _coordsLabel || label == _fileNameLabel || label == _liveStatusLabel || label == _scaleLabel)
                 label.ForeColor = EditorColors.TextSecondary;
             else
                 label.ForeColor = EditorColors.TextPrimary;
@@ -943,6 +943,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         _savedFilePath = savedFilePath;
         _canvas.ResetState(new Bitmap(captured));
+        _activeDocument.ResetScaleBaseline();
         _suppressCloseConfirm = false;
         // Auto-maximize is desirable for real captures/opened files (show the whole image),
         // but not for the blank "New" document — the user didn't ask to resize the window.
@@ -987,6 +988,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return;
 
         UpdateZoomStatus();
+        UpdateScaleControls();
         UpdateToolButtonState();
         UpdateCaptureCaption();
         UpdateLiveStatusText();

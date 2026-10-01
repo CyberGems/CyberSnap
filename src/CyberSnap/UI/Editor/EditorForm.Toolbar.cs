@@ -26,6 +26,11 @@ public sealed partial class EditorForm
     private DoubleBufferedPanel _titleFileNameLabel = null!;
     private string _titleFileNameText = "";
     private Label _zoomLabel = null!;
+    private DoubleBufferedLabel _scaleLabel = null!;
+    private EditorScaleFactorButton _scale1Button = null!;
+    private EditorScaleFactorButton _scale2Button = null!;
+    private EditorScaleFactorButton _scale4Button = null!;
+    private bool _applyingEditorScale;
     private EditorZoomSlider _zoomSlider = null!;
     private bool _suppressZoomSliderChange;
     private EditorCommandButton _undoButton = null!;
@@ -423,7 +428,9 @@ public sealed partial class EditorForm
             Margin = new Padding(0),
             Padding = new Padding(0),
         };
-        // Coords lead the right-side group, sitting just to the left of the zoom slider.
+        // Scale changes the document's pixels. Zoom, just to its right, only changes the view.
+        var scaleHost = BuildScaleHost();
+        rightControlsFlow.Controls.Add(scaleHost);
         rightControlsFlow.Controls.Add(coordsPanel);
         rightControlsFlow.Controls.Add(zoomHost);
         rightControlsFlow.Controls.Add(_zoomViewBtn);
@@ -504,6 +511,9 @@ public sealed partial class EditorForm
             return WithShortcut("Fit to window", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomFit") ?? "9");
         });
         RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", $"{EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomIn") ?? "8"} / {EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomOut") ?? "7"}"));
+        RegisterHoverTooltip(_scale1Button, () => ScaleFactorTooltip(1));
+        RegisterHoverTooltip(_scale2Button, () => ScaleFactorTooltip(2));
+        RegisterHoverTooltip(_scale4Button, () => ScaleFactorTooltip(4));
 
         RegisterHoverTooltip(_liveStatusLabel, () =>
         {
@@ -1562,6 +1572,159 @@ public sealed partial class EditorForm
         typeof(Control)
             .GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
             ?.SetValue(control, true);
+    }
+
+    private Control BuildScaleHost()
+    {
+        var host = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 16, 0),
+            Padding = new Padding(0),
+            Height = 42,
+        };
+
+        _scaleLabel = new DoubleBufferedLabel
+        {
+            AutoSize = true,
+            Text = LocalizationService.Translate("Scale"),
+            ForeColor = EditorColors.TextSecondary,
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(0, 12, 6, 0),
+            BackColor = Color.Transparent,
+        };
+
+        _scale1Button = CreateScaleButton(1);
+        _scale2Button = CreateScaleButton(2);
+        _scale4Button = CreateScaleButton(4);
+
+        host.Controls.Add(_scaleLabel);
+        host.Controls.Add(_scale1Button);
+        host.Controls.Add(_scale2Button);
+        host.Controls.Add(_scale4Button);
+        return host;
+    }
+
+    private EditorScaleFactorButton CreateScaleButton(int factor)
+    {
+        var button = new EditorScaleFactorButton
+        {
+            Factor = factor,
+            Text = $"{factor}×",
+            Width = 40,
+            Height = 42,
+            Margin = new Padding(0),
+            AccessibleName = $"{factor}x",
+        };
+        button.Click += (_, _) => ApplyEditorScale(factor);
+        return button;
+    }
+
+    private string? ScaleFactorTooltip(int factor)
+    {
+        if (factor == 1)
+            return LocalizationService.Translate("Original size");
+
+        var doc = _activeDocument;
+        if (doc is null || doc.Canvas.IsDisposed)
+            return LocalizationService.Translate(factor == 2 ? "Scale to 2x" : "Scale to 4x");
+
+        if (!ImageScaleService.IsFactorAvailable(doc.ScaleBaseWidth, doc.ScaleBaseHeight, factor))
+        {
+            string key = factor == 2
+                ? "Scaling to 2× would exceed limit ({0}px / {1} MP)"
+                : "Scaling to 4× would exceed limit ({0}px / {1} MP)";
+            return string.Format(
+                LocalizationService.Translate(key),
+                ImageScaleService.MaxDimension,
+                ImageScaleService.MaxPixels / 1_000_000);
+        }
+
+        return LocalizationService.Translate(factor == 2 ? "Scale to 2x" : "Scale to 4x");
+    }
+
+    private void ApplyEditorScale(int factor)
+    {
+        if (_applyingEditorScale || _activeDocument is null || _canvas.IsDisposed)
+            return;
+        if (factor is not (1 or 2 or 4))
+            return;
+
+        var doc = _activeDocument;
+        SyncScaleBaseline(doc);
+        if (doc.ScaleFactor == factor)
+            return;
+
+        if (factor != 1 && !ImageScaleService.TryGetScaledSize(doc.ScaleBaseWidth, doc.ScaleBaseHeight, factor, out _, out _, out string? err))
+        {
+            string detail = err == "Scale exceeds max dimension"
+                ? string.Format(LocalizationService.Translate("Scaling to {0}× would exceed {1}px limit"), factor, ImageScaleService.MaxDimension)
+                : string.Format(LocalizationService.Translate("Scaling to {0}× would exceed pixel limit"), factor);
+            ToastWindow.ShowError(LocalizationService.Translate("Scaling not available"), detail);
+            UpdateScaleControls();
+            return;
+        }
+
+        int targetW = doc.ScaleBaseWidth * factor;
+        int targetH = doc.ScaleBaseHeight * factor;
+        try
+        {
+            _applyingEditorScale = true;
+            doc.ScaleFactor = factor;
+            _canvas.ResizeCanvas(targetW, targetH, scaleContent: true, Models.Commands.AnchorPosition.Center);
+            if (factor == 1)
+                _canvas.ApplyInitialView();
+            else
+                _canvas.ZoomReset();
+        }
+        catch (OutOfMemoryException)
+        {
+            doc.SyncScaleFactorFromSize();
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Scaling failed"),
+                LocalizationService.Translate("Not enough memory to scale this image"));
+        }
+        catch (Exception ex)
+        {
+            doc.SyncScaleFactorFromSize();
+            ToastWindow.ShowError(LocalizationService.Translate("Scaling failed"), ex.Message);
+        }
+        finally
+        {
+            _applyingEditorScale = false;
+            UpdateScaleControls();
+        }
+    }
+
+    private void UpdateScaleControls()
+    {
+        if (_scale1Button is null || _activeDocument is null || _canvas.IsDisposed)
+            return;
+
+        if (!_applyingEditorScale)
+            SyncScaleBaseline(_activeDocument);
+
+        var doc = _activeDocument;
+        bool can2 = ImageScaleService.IsFactorAvailable(doc.ScaleBaseWidth, doc.ScaleBaseHeight, 2);
+        bool can4 = ImageScaleService.IsFactorAvailable(doc.ScaleBaseWidth, doc.ScaleBaseHeight, 4);
+        _scale1Button.Active = doc.ScaleFactor == 1;
+        _scale1Button.Available = true;
+        _scale2Button.Active = doc.ScaleFactor == 2;
+        _scale2Button.Available = can2;
+        _scale4Button.Active = doc.ScaleFactor == 4;
+        _scale4Button.Available = can4;
+    }
+
+    private static void SyncScaleBaseline(EditorDocument doc)
+    {
+        if (doc.Canvas.IsDisposed)
+            return;
+        doc.SyncScaleFactorFromSize();
     }
 
     private void UpdateZoomStatus()
@@ -4010,6 +4173,121 @@ internal static class EditorPaint
 
         path.CloseFigure();
         return path;
+    }
+}
+
+internal sealed class EditorScaleFactorButton : Button
+{
+    private bool _hover;
+    private bool _pressed;
+    private bool _active;
+    private bool _available = true;
+
+    public EditorScaleFactorButton()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw |
+                 ControlStyles.Selectable, true);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        BackColor = Color.Transparent;
+        Cursor = Cursors.Hand;
+        Font = UiChrome.ChromeFont(10f, FontStyle.Bold);
+        TabStop = true;
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int Factor { get; set; }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Active
+    {
+        get => _active;
+        set
+        {
+            if (_active == value) return;
+            _active = value;
+            Invalidate();
+        }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Available
+    {
+        get => _available;
+        set
+        {
+            if (_available == value) return;
+            _available = value;
+            Invalidate();
+        }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        var parentBack = Parent?.BackColor ?? EditorColors.TitleBar;
+        g.Clear(parentBack == Color.Transparent ? EditorColors.TitleBar : parentBack);
+
+        var rect = new Rectangle(1, 4, Width - 3, Height - 9);
+        if (rect.Width <= 0 || rect.Height <= 0) return;
+
+        bool lit = _available && (_active || _hover || _pressed);
+        Color content = !_available
+            ? Color.FromArgb(88, 105, 128)
+            : lit ? EditorColors.Accent : EditorColors.TextPrimary;
+
+        if (_available && (_active || _pressed || _hover))
+        {
+            int alpha = _active ? 36 : _pressed ? 28 : 16;
+            using var path = EditorPaint.RoundedRect(rect, 6);
+            using var brush = new SolidBrush(Color.FromArgb(alpha, EditorColors.Accent));
+            g.FillPath(brush, path);
+        }
+
+        TextRenderer.DrawText(
+            g,
+            Text,
+            Font,
+            rect,
+            content,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        _pressed = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+        {
+            _pressed = true;
+            Invalidate();
+        }
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        _pressed = false;
+        Invalidate();
+        base.OnMouseUp(e);
     }
 }
 

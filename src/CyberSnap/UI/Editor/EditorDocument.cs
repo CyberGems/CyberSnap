@@ -14,11 +14,52 @@ internal sealed class EditorDocument : IDisposable
     {
         Canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
         SavedFilePath = savedFilePath;
+        ResetScaleBaseline();
     }
 
     public AnnotationCanvas Canvas { get; }
 
     public string? SavedFilePath { get; set; }
+
+    /// <summary>Pixel size of the document at 1×. 2× and 4× are measured from this, not from the current bitmap.</summary>
+    public int ScaleBaseWidth { get; set; }
+
+    public int ScaleBaseHeight { get; set; }
+
+    public int ScaleFactor { get; set; } = 1;
+
+    public void ResetScaleBaseline()
+    {
+        if (Canvas.IsDisposed) return;
+        ScaleBaseWidth = Canvas.BaseBitmap.Width;
+        ScaleBaseHeight = Canvas.BaseBitmap.Height;
+        ScaleFactor = 1;
+    }
+
+    /// <summary>
+    /// Keeps 1×/2×/4× in step with the bitmap. Undo and a manual resize land back on 1×
+    /// when the size is no longer an exact multiple of the stored original.
+    /// </summary>
+    public void SyncScaleFactorFromSize()
+    {
+        if (Canvas.IsDisposed || ScaleBaseWidth <= 0 || ScaleBaseHeight <= 0)
+            return;
+
+        int width = Canvas.BaseBitmap.Width;
+        int height = Canvas.BaseBitmap.Height;
+        if (width == ScaleBaseWidth * 4 && height == ScaleBaseHeight * 4)
+            ScaleFactor = 4;
+        else if (width == ScaleBaseWidth * 2 && height == ScaleBaseHeight * 2)
+            ScaleFactor = 2;
+        else if (width == ScaleBaseWidth && height == ScaleBaseHeight)
+            ScaleFactor = 1;
+        else
+        {
+            ScaleBaseWidth = width;
+            ScaleBaseHeight = height;
+            ScaleFactor = 1;
+        }
+    }
 
     public bool IsDirty => Canvas is { IsDisposed: false, IsDirty: true, IsDefaultBlank: false };
 
