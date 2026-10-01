@@ -25,6 +25,7 @@ public partial class OcrResultWindow : Window
 
     private readonly SettingsService _settingsService;
     private readonly ImageSource? _previewSource;
+    private string? _copiedText;
     private readonly OcrResultWindowLifecycle _lifecycle = new();
     private CancellationTokenSource? _translateCts;
 
@@ -42,10 +43,12 @@ public partial class OcrResultWindow : Window
     public OcrResultWindow(
         string ocrText,
         SettingsService settingsService,
-        ImageSource? previewSource = null)
+        ImageSource? previewSource = null,
+        string? alreadyCopiedText = null)
     {
         _settingsService = settingsService;
         _previewSource = previewSource;
+        _copiedText = alreadyCopiedText;
         InitializeComponent();
         CyberSnapWindowChrome.Apply(this);
         UiScale.Set(settingsService.Settings.UiScale);
@@ -56,6 +59,7 @@ public partial class OcrResultWindow : Window
         LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
 
         OcrTextBox.Text = ocrText;
+        ApplyCopyActionState();
         OcrPreviewImage.Source = _previewSource;
         OcrPreviewImage.Visibility = _previewSource is null ? Visibility.Collapsed : Visibility.Visible;
         OcrPreviewEmptyText.Visibility = _previewSource is null ? Visibility.Visible : Visibility.Collapsed;
@@ -210,7 +214,11 @@ public partial class OcrResultWindow : Window
         SearchClearBtn.ToolTip = LocalizationService.Translate(lang, "Clear search");
         OcrTitleBar.CloseToolTip = LocalizationService.Translate(lang, "Close");
         OcrTitleBar.RefreshTooltips();
+        CopyOnlyBtn.ToolTip = LocalizationService.Translate(lang, "Copy the text and keep this window open.");
+        CopyOnlyBtnText.Text = LocalizationService.Translate(lang, "Copy");
+        CopiedBadgeText.Text = LocalizationService.Translate(lang, "Copied");
         UpdateCharCount();
+        ApplyCopyActionState();
         PopulateLanguageCombos();
     }
 
@@ -323,13 +331,29 @@ public partial class OcrResultWindow : Window
     {
         if (translationExpanded)
         {
-            CopyHeaderHost.Content = null;
+            Detach(CopyBtn);
             CopyTranslationHost.Content = CopyBtn;
+            return;
         }
-        else
+
+        CopyTranslationHost.Content = null;
+        if (CopyBtn.Parent != CopyHeaderHost)
         {
-            CopyTranslationHost.Content = null;
-            CopyHeaderHost.Content = CopyBtn;
+            Detach(CopyBtn);
+            CopyHeaderHost.Children.Add(CopyBtn);
+        }
+    }
+
+    private static void Detach(FrameworkElement element)
+    {
+        switch (element.Parent)
+        {
+            case System.Windows.Controls.Panel panel:
+                panel.Children.Remove(element);
+                break;
+            case ContentControl host:
+                host.Content = null;
+                break;
         }
     }
 
@@ -359,6 +383,7 @@ public partial class OcrResultWindow : Window
     {
         UpdateCharCount();
         RefreshSearchMatches(keepCurrentMatch: true);
+        ApplyCopyActionState();
 
         if (!IsLoaded)
             return;
@@ -386,7 +411,23 @@ public partial class OcrResultWindow : Window
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => CloseWindow();
 
-    private async void CopyBtn_Click(object sender, RoutedEventArgs e)
+    private void CopyOnlyBtn_Click(object sender, RoutedEventArgs e)
+    {
+        CopyOcrText(closeAfter: false);
+    }
+
+    private void CopyBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (IsOcrTextCopied())
+        {
+            CloseWindow();
+            return;
+        }
+
+        CopyOcrText(closeAfter: true);
+    }
+
+    private void CopyOcrText(bool closeAfter)
     {
         var text = OcrTextBox.Text;
         if (string.IsNullOrWhiteSpace(text))
@@ -395,21 +436,35 @@ public partial class OcrResultWindow : Window
             return;
         }
 
-        try
+        if (!ResultDelivery.TryCopyText(text))
         {
-            ClipboardService.CopyTextToClipboard(text);
-            SoundService.PlayTextSound();
-            ToastWindow.Show(ToastSpec.Standard(LocalizationService.Translate("Text copied"), FormatCopyToastPreview(text)) with { SuppressSound = true });
-            CopyBtn.IsHitTestVisible = false;
-            await Task.Delay(120);
-            CloseWindow();
-        }
-        catch (Exception ex)
-        {
+            _copiedText = null;
+            ApplyCopyActionState();
             ToastWindow.ShowError(
                 "Copy failed",
-                $"CyberSnap could not copy the OCR text. Keep the result window open and try again.\n{ex.Message}");
+                "CyberSnap could not copy the OCR text. Keep the result window open and try again.");
+            return;
         }
+
+        _copiedText = text;
+        SoundService.PlayTextSound();
+        ApplyCopyActionState();
+        if (closeAfter)
+            CloseWindow();
+    }
+
+    private bool IsOcrTextCopied() =>
+        ResultDelivery.MatchesCopied(OcrTextBox.Text, _copiedText);
+
+    private void ApplyCopyActionState()
+    {
+        if (CopyBtnText is null || CopiedBadge is null)
+            return;
+
+        bool copied = IsOcrTextCopied();
+        CopiedBadge.Visibility = copied ? Visibility.Visible : Visibility.Collapsed;
+        CopyBtnText.Text = LocalizationService.Translate(copied ? "Close" : "Copy and close");
+        CopyBtnIcon.Visibility = copied ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private async void CopyTranslationBtn_Click(object sender, RoutedEventArgs e)

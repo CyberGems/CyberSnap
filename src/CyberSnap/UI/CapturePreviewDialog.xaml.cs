@@ -2657,19 +2657,13 @@ namespace CyberSnap.UI
                 if (settings.SaveHistory)
                     HistoryService.PrimaryInstance?.SaveOcrEntry(text);
 
-                if (AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr))
-                {
-                    try
-                    {
-                        ClipboardService.CopyTextToClipboard(text);
-                    }
-                    catch (Exception copyEx)
-                    {
-                        AppDiagnostics.LogWarning("preview.ocr-copy", copyEx.Message, copyEx);
-                    }
-                }
-
-                var window = new OcrResultWindow(text, _settingsService, BitmapPerf.ToBitmapSource(EffectiveBitmap));
+                // This button asks for the window. Copy still follows the OCR copy setting.
+                bool copied = ResultDelivery.ForOcr(settings).Copy && ResultDelivery.TryCopyText(text);
+                var window = new OcrResultWindow(
+                    text,
+                    _settingsService,
+                    BitmapPerf.ToBitmapSource(EffectiveBitmap),
+                    alreadyCopiedText: copied ? text : null);
                 window.Show();
                 CyberSnapWindowChrome.EnsureForeground(window);
             }

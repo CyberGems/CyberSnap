@@ -45,9 +45,44 @@ public sealed class SettingsService : IDisposable
                 settings,
                 Helpers.AutoCopyKind.Ocr,
                 excluded: !value);
+            KeepOcrResultVisible(settings);
         }, "settings.ocr-auto-copy.static-save");
 
         RaiseAutoCopyEventsFromCache();
+    }
+
+    public static void SetOcrShowResultWindow(bool show)
+    {
+        MutateAutoCopy(settings =>
+        {
+            var plan = Helpers.ResultDelivery.Normalize(
+                Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Ocr),
+                show);
+            settings.OcrShowResultWindow = plan.ShowWindow;
+        }, "settings.ocr-show-window.static-save");
+
+        RaiseAutoCopyEventsFromCache();
+    }
+
+    public static void SetScanShowResultWindow(bool show)
+    {
+        MutateAutoCopy(settings =>
+        {
+            var plan = Helpers.ResultDelivery.Normalize(
+                Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Scan),
+                show);
+            settings.ScanShowResultWindow = plan.ShowWindow;
+        }, "settings.scan-show-window.static-save");
+
+        RaiseAutoCopyEventsFromCache();
+    }
+
+    private static void KeepOcrResultVisible(AppSettings settings)
+    {
+        var plan = Helpers.ResultDelivery.Normalize(
+            Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Ocr),
+            settings.OcrShowResultWindow);
+        settings.OcrShowResultWindow = plan.ShowWindow;
     }
 
     public static void SetAutoCopyToClipboard(bool value)
@@ -129,6 +164,9 @@ public sealed class SettingsService : IDisposable
                 s_cachedSettings.AutoCopyExcludeGif = settings.AutoCopyExcludeGif;
                 s_cachedSettings.AutoCopyExcludeScan = settings.AutoCopyExcludeScan;
                 s_cachedSettings.OcrAutoCopyToClipboard = settings.OcrAutoCopyToClipboard;
+                s_cachedSettings.OcrShowResultWindow = settings.OcrShowResultWindow;
+                s_cachedSettings.ScanShowResultWindow = settings.ScanShowResultWindow;
+                s_cachedSettings.ResultDeliverySchemaVersion = settings.ResultDeliverySchemaVersion;
                 s_cachedSettings.AfterCapture = settings.AfterCapture;
                 s_cachedSettings.OpenEditorAfterCapture = settings.OpenEditorAfterCapture;
                 s_cachedSettings.OpenInSystemViewerAfterCapture = settings.OpenInSystemViewerAfterCapture;
@@ -536,6 +574,7 @@ public sealed class SettingsService : IDisposable
         NormalizeUnsafeModifierlessHotkeys(settings);
         NormalizeToastButtonLayout(settings.ToastButtons);
         Helpers.AutoCopyPreferences.MigrateIfNeeded(settings);
+        Helpers.ResultDelivery.MigrateIfNeeded(settings);
         Helpers.AfterCapturePreferences.MigrateSystemViewerFlagIfNeeded(settings);
         Helpers.RecordingOutcomeModel.MigrateSaveMediaIfNeeded(settings);
 

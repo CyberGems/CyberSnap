@@ -1261,12 +1261,52 @@ public partial class SettingsWindow
             "Don't auto-copy QR/barcode results",
             previous,
             selected,
-            value => AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Scan, value),
+            value =>
+            {
+                AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Scan, value);
+                var plan = ResultDelivery.Normalize(
+                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Scan),
+                    _settingsService.Settings.ScanShowResultWindow);
+                _settingsService.Settings.ScanShowResultWindow = plan.ShowWindow;
+            },
             value => AutoCopyExcludeScanCheck.IsChecked = value,
             () =>
             {
+                if (ScanShowResultWindowCheck != null)
+                    ScanShowResultWindowCheck.IsChecked = _settingsService.Settings.ScanShowResultWindow;
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
+            });
+    }
+
+    private void ScanShowResultWindowCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange || _suppressAutoCopyPreferenceChange) return;
+
+        var previous = _settingsService.Settings.ScanShowResultWindow;
+        var selected = ScanShowResultWindowCheck.IsChecked == true;
+        UpdateCaptureSavePreference(
+            "settings.scan-show-window",
+            "Show the QR & Barcode result window",
+            previous,
+            selected,
+            value =>
+            {
+                var plan = ResultDelivery.Normalize(
+                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Scan),
+                    value);
+                _settingsService.Settings.ScanShowResultWindow = plan.ShowWindow;
+            },
+            value => ScanShowResultWindowCheck.IsChecked = value,
+            () =>
+            {
+                if (ScanShowResultWindowCheck.IsChecked != _settingsService.Settings.ScanShowResultWindow)
+                {
+                    _suppressCaptureSavePreferenceChange = true;
+                    ScanShowResultWindowCheck.IsChecked = _settingsService.Settings.ScanShowResultWindow;
+                    _suppressCaptureSavePreferenceChange = false;
+                }
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
             });
     }
 
@@ -1291,6 +1331,8 @@ public partial class SettingsWindow
                 _settingsService.Settings.AutoCopyExcludeGif = fresh.AutoCopyExcludeGif;
                 _settingsService.Settings.AutoCopyExcludeScan = fresh.AutoCopyExcludeScan;
                 _settingsService.Settings.OcrAutoCopyToClipboard = fresh.OcrAutoCopyToClipboard;
+                _settingsService.Settings.OcrShowResultWindow = fresh.OcrShowResultWindow;
+                _settingsService.Settings.ScanShowResultWindow = fresh.ScanShowResultWindow;
                 _settingsService.Settings.AfterCapture = fresh.AfterCapture;
             }
         }
@@ -1327,8 +1369,12 @@ public partial class SettingsWindow
                 AutoCopyExcludeImagesCheck.IsChecked = s.AutoCopyExcludeImages;
             if (AutoCopyOcrCheck != null)
                 AutoCopyOcrCheck.IsChecked = AutoCopyPreferences.ShouldCopy(s, AutoCopyKind.Ocr);
+            if (OcrShowResultWindowCheck != null)
+                OcrShowResultWindowCheck.IsChecked = ResultDelivery.ForOcr(s).ShowWindow;
             if (AutoCopyExcludeScanCheck != null)
                 AutoCopyExcludeScanCheck.IsChecked = s.AutoCopyExcludeScan;
+            if (ScanShowResultWindowCheck != null)
+                ScanShowResultWindowCheck.IsChecked = ResultDelivery.ForScan(s).ShowWindow;
             UpdateAutoCopyExcludeEnabledState();
             AfterCaptureOutcomeEditor?.LoadFromSettings(s);
             VideoOutcomeEditor?.LoadFromSettings(s);

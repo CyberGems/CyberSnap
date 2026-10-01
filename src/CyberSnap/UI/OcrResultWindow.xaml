@@ -579,24 +579,59 @@
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                             </StackPanel>
                         </Button>
-                        <ContentControl x:Name="CopyHeaderHost"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center">
-                            <Button x:Name="CopyBtn" Click="CopyBtn_Click"
-                                    IsDefault="True"
-                                    Style="{StaticResource CyberSnapAccentButton}">
+                        <StackPanel x:Name="CopyHeaderHost"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center">
+                            <Border x:Name="CopiedBadge"
+                                    Visibility="Collapsed"
+                                    CornerRadius="8"
+                                    Padding="7,2"
+                                    Margin="0,0,8,0"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource ThemeAccentSubtleBrush}"
+                                    BorderBrush="{DynamicResource ThemeAccentBrush}"
+                                    BorderThickness="1">
+                                <TextBlock x:Name="CopiedBadgeText"
+                                           Text="Copied"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Border>
+                            <Button x:Name="CopyOnlyBtn" Click="CopyOnlyBtn_Click"
+                                    Margin="0,0,6,0"
+                                    Style="{StaticResource ChromeButtonBase}"
+                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                    Background="#08FFFFFF"
+                                    BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                    BorderThickness="1"
+                                    MinHeight="24"
+                                    Padding="8,3"
+                                    ToolTip="Copy the text and keep this window open.">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Data="{StaticResource CopyIconGeometry}"
                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="2.2"
                                           StrokeLineJoin="Round" Fill="Transparent"
                                           Width="12" Height="12" Stretch="Uniform" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Copy and close" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="CopyOnlyBtnText" Text="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CopyBtn" Click="CopyBtn_Click"
+                                    IsDefault="True"
+                                    Style="{StaticResource CyberSnapAccentButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path x:Name="CopyBtnIcon"
+                                          Data="{StaticResource CopyIconGeometry}"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="2.2"
+                                          StrokeLineJoin="Round" Fill="Transparent"
+                                          Width="12" Height="12" Stretch="Uniform" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="CopyBtnText" Text="Copy and close" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                     <Path Data="{StaticResource EnterIconGeometry}"
                                           Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                           Width="13" Height="13" Stretch="Uniform" Margin="7,0,0,0" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                        </ContentControl>
+                        </StackPanel>
                     </Grid>
 
                     <!-- Translation controls (collapsed by default) -->

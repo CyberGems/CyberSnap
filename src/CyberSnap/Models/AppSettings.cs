@@ -283,6 +283,18 @@ public sealed class AppSettings
     /// </summary>
     public int AutoCopySettingsSchemaVersion { get; set; }
 
+    /// <summary>Open the OCR result window after recognition. Independent of auto-copy.</summary>
+    public bool OcrShowResultWindow { get; set; } = true;
+
+    /// <summary>Open the QR and barcode result window after a scan. Independent of auto-copy.</summary>
+    public bool ScanShowResultWindow { get; set; } = true;
+
+    /// <summary>
+    /// 0 = not yet migrated from the exclusive copy-or-window behavior.
+    /// 1 = copy and result window are independent.
+    /// </summary>
+    public int ResultDeliverySchemaVersion { get; set; }
+
     public bool OcrTranslationPanelExpanded { get; set; }
     public string? GoogleTranslateApiKey { get; set; }
     public bool TranslationRuntimeInstalled { get; set; }

@@ -319,7 +319,13 @@ public partial class HistoryWindow
                             AppDiagnostics.LogWarning("history.ocr-preview", previewEx.Message);
                         }
 
-                        var window = new OcrResultWindow(text, _settingsService, previewSource)
+                        bool copied = ResultDelivery.ForOcr(_settingsService.Settings).Copy
+                            && ResultDelivery.TryCopyText(text);
+                        var window = new OcrResultWindow(
+                            text,
+                            _settingsService,
+                            previewSource,
+                            alreadyCopiedText: copied ? text : null)
                         {
                             Owner = this
                         };

@@ -31,6 +31,9 @@ public partial class SettingsWindow
             if (AutoCopyOcrCheck != null)
                 AutoCopyOcrCheck.IsChecked =
                     AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Ocr);
+            if (OcrShowResultWindowCheck != null)
+                OcrShowResultWindowCheck.IsChecked =
+                    ResultDelivery.ForOcr(_settingsService.Settings).ShowWindow;
             UpdateAutoCopyExcludeEnabledState();
             GoogleApiKeyBox.Password = _settingsService.Settings.GoogleTranslateApiKey ?? "";
         }
@@ -134,16 +137,56 @@ public partial class SettingsWindow
             "Enable OCR auto-copy",
             previous,
             selected,
-            value => AutoCopyPreferences.SetExcluded(
-                _settingsService.Settings,
-                AutoCopyKind.Ocr,
-                excluded: !value),
+            value =>
+            {
+                AutoCopyPreferences.SetExcluded(
+                    _settingsService.Settings,
+                    AutoCopyKind.Ocr,
+                    excluded: !value);
+                var plan = ResultDelivery.Normalize(
+                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Ocr),
+                    _settingsService.Settings.OcrShowResultWindow);
+                _settingsService.Settings.OcrShowResultWindow = plan.ShowWindow;
+            },
             value => AutoCopyOcrCheck.IsChecked = value,
             SetOcrPreferenceStatus,
             _ =>
             {
+                if (OcrShowResultWindowCheck != null)
+                    OcrShowResultWindowCheck.IsChecked = _settingsService.Settings.OcrShowResultWindow;
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
+            });
+    }
+
+    private void OcrShowResultWindowCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressOcrPreferenceChange || _suppressAutoCopyPreferenceChange) return;
+
+        var previous = _settingsService.Settings.OcrShowResultWindow;
+        var selected = OcrShowResultWindowCheck.IsChecked == true;
+        UpdateOcrPreference(
+            "settings.ocr-show-window",
+            "Show the OCR result window",
+            previous,
+            selected,
+            value =>
+            {
+                var plan = ResultDelivery.Normalize(
+                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Ocr),
+                    value);
+                _settingsService.Settings.OcrShowResultWindow = plan.ShowWindow;
+            },
+            value => OcrShowResultWindowCheck.IsChecked = value,
+            SetOcrPreferenceStatus,
+            value =>
+            {
+                if (OcrShowResultWindowCheck.IsChecked != _settingsService.Settings.OcrShowResultWindow)
+                {
+                    _suppressOcrPreferenceChange = true;
+                    OcrShowResultWindowCheck.IsChecked = _settingsService.Settings.OcrShowResultWindow;
+                    _suppressOcrPreferenceChange = false;
+                }
             });
     }
 

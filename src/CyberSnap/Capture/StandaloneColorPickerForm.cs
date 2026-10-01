@@ -209,8 +209,9 @@ public sealed class StandaloneColorPickerForm : Form
         // itself is always created on the WPF UI thread via Dispatcher below,
         // so there is no cross-thread UI ownership issue.
         var prefs = SettingsService.LoadStatic();
-        bool showDetail = prefs?.ShowColorDetailWindow ?? true;
-        bool autoCopy = prefs?.ColorDetailAutoCopy ?? true;
+        var plan = prefs is null
+            ? new ResultDelivery.Plan(Copy: true, ShowWindow: true)
+            : ResultDelivery.ForColor(prefs);
         var format = prefs?.ColorDetailCopyFormat ?? Models.ColorDetailCopyFormat.Hex;
         bool includeHash = prefs?.ColorDetailIncludeHash ?? true;
 
@@ -222,11 +223,13 @@ public sealed class StandaloneColorPickerForm : Form
             _ => Helpers.ColorFormatHelper.ToHex(color.R, color.G, color.B, includeHash),
         };
 
-        if (autoCopy)
+        bool copied = false;
+        if (plan.Copy)
         {
             try
             {
                 ClipboardService.CopyTextToClipboard(copyText);
+                copied = true;
             }
             catch (Exception ex)
             {
@@ -249,9 +252,10 @@ public sealed class StandaloneColorPickerForm : Form
                     if (System.Windows.Application.Current is App app)
                         app.PersistRecentColor($"#{hexBare}");
 
-                    if (showDetail)
+                    if (plan.ShowWindow || (plan.Copy && !copied))
                     {
                         ColorDetailWindow.ShowForColor(color.R, color.G, color.B,
+                            alreadyCopiedText: copied ? copyText : null,
                             repick: () =>
                             {
                                 try

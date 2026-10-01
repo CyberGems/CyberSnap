@@ -189,8 +189,9 @@ public partial class App : Application
     {
         if (_settingsService is null) return;
         var s = _settingsService.Settings;
-        s.ShowColorDetailWindow = showWindow;
-        s.ColorDetailAutoCopy = autoCopy;
+        var plan = Helpers.ResultDelivery.Normalize(autoCopy, showWindow);
+        s.ShowColorDetailWindow = plan.ShowWindow;
+        s.ColorDetailAutoCopy = plan.Copy;
         s.ColorDetailCopyFormat = format;
         s.ColorDetailIncludeHash = includeHash;
         try { _settingsService.Save(); }

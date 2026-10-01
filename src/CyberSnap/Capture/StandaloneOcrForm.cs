@@ -37,6 +37,7 @@ public sealed class StandaloneOcrForm : Form
     // ── Context menu ──
     private readonly ContextMenuStrip _contextMenu;
     private readonly ToolStripMenuItem _autoCopyToggle;
+    private readonly ToolStripMenuItem _showWindowToggle;
 
     public StandaloneOcrForm()
     {
@@ -109,15 +110,30 @@ public sealed class StandaloneOcrForm : Form
         _autoCopyToggle = WindowsMenuRenderer.Item(
             LocalizationService.Translate("Enable OCR auto-copy"));
         _autoCopyToggle.ToolTipText = LocalizationService.Translate(
-            "When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy.");
+            "Copy recognized text to the clipboard. Showing the result window is a separate choice. Requires global Auto-copy.");
         _autoCopyToggle.Image = autoCopy ? FluentIcons.RenderBitmap("check",
             UiChrome.AccentColor, 20, true) : null;
         _autoCopyToggle.Click += (_, _) =>
         {
             bool current = GetOcrAutoCopySetting();
             SetOcrAutoCopySetting(!current);
+            RefreshShowWindowToggle();
         };
         _contextMenu.Items.Add(_autoCopyToggle);
+
+        _showWindowToggle = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Show the OCR result window"));
+        _showWindowToggle.ToolTipText = LocalizationService.Translate(
+            "Open the OCR window after recognition, whether or not the text was copied.");
+        RefreshShowWindowToggle();
+        _showWindowToggle.Click += (_, _) =>
+        {
+            var settings = SettingsService.LoadStatic();
+            bool current = settings is not null && ResultDelivery.ForOcr(settings).ShowWindow;
+            SettingsService.SetOcrShowResultWindow(!current);
+            RefreshShowWindowToggle();
+        };
+        _contextMenu.Items.Add(_showWindowToggle);
 
         _contextMenu.Items.Add(new ToolStripSeparator());
 
@@ -326,30 +342,25 @@ public sealed class StandaloneOcrForm : Form
                 {
                     try
                     {
-                        // Check auto-copy setting
-                        bool autoCopy = GetOcrAutoCopySetting();
-                        if (autoCopy)
+                        var settingsService = GetSettingsService();
+                        var plan = ResultDelivery.ForOcr(settingsService.Settings);
+                        bool copied = plan.Copy && ResultDelivery.TryCopyText(text);
+                        if (plan.ShowWindow || (plan.Copy && !copied))
                         {
-                            try
-                            {
-                                System.Windows.Clipboard.SetText(text);
-                                ToastWindow.Show(
-                                    ToastSpec.Standard(
-                                        LocalizationService.Translate("OCR copied"),
-                                        FormatOcrPreview(text))
-                                    with { SuppressSound = true });
-                            }
-                            catch (Exception clipEx)
-                            {
-                                AppDiagnostics.LogWarning("standalone-ocr.clipboard", clipEx.Message);
-                                var window = new OcrResultWindow(text, GetSettingsService(), previewSource);
-                                window.Show();
-                            }
+                            var window = new OcrResultWindow(
+                                text,
+                                settingsService,
+                                previewSource,
+                                alreadyCopiedText: copied ? text : null);
+                            window.Show();
                         }
                         else
                         {
-                            var window = new OcrResultWindow(text, GetSettingsService(), previewSource);
-                            window.Show();
+                            ToastWindow.Show(
+                                ToastSpec.Standard(
+                                    LocalizationService.Translate("OCR copied"),
+                                    FormatOcrPreview(text))
+                                with { SuppressSound = true });
                         }
                     }
                     catch (Exception ex)
@@ -476,6 +487,18 @@ public sealed class StandaloneOcrForm : Form
                 ? FluentIcons.RenderBitmap("check", UiChrome.AccentColor, 20, true)
                 : null;
         }
+        RefreshShowWindowToggle();
+    }
+
+    private void RefreshShowWindowToggle()
+    {
+        if (_showWindowToggle is null)
+            return;
+        var settings = SettingsService.LoadStatic();
+        bool show = settings is not null && ResultDelivery.ForOcr(settings).ShowWindow;
+        _showWindowToggle.Image = show
+            ? FluentIcons.RenderBitmap("check", UiChrome.AccentColor, 20, true)
+            : null;
     }
 
     private static SettingsService GetSettingsService()

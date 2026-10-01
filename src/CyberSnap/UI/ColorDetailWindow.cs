@@ -49,6 +49,11 @@ internal sealed class ColorDetailWindow : Window
     private System.Windows.Controls.Image _expanderIcon = null!;
     private WpfButton _expanderBtn = null!;
     private WpfButton _copyCloseBtn = null!;
+    private TextBlock? _primaryLabel;
+    private System.Windows.Shapes.Path? _primaryCopyGlyph;
+    private Border? _copiedBadge;
+    private string? _copiedText;
+    private Action<bool>? _setShowToggle;
     private Grid _headerBar = null!;
     private TextBlock _titleBlock = null!;
 
@@ -59,11 +64,12 @@ internal sealed class ColorDetailWindow : Window
 
     public event Action? RepickRequested;
 
-    public ColorDetailWindow(byte r, byte g, byte b)
+    public ColorDetailWindow(byte r, byte g, byte b, string? alreadyCopiedText = null)
     {
         _r = r;
         _g = g;
         _b = b;
+        _copiedText = alreadyCopiedText;
 
         Theme.Refresh();
         try { Theme.ApplyTo(Resources); } catch { }
@@ -138,8 +144,7 @@ internal sealed class ColorDetailWindow : Window
             if (Application.Current is App app)
             {
                 var s = app.SettingsService.Settings;
-                _showWindowPref = s.ShowColorDetailWindow;
-                _autoCopy = s.ColorDetailAutoCopy;
+                ApplyDeliveryPrefs(s.ColorDetailAutoCopy, s.ShowColorDetailWindow);
                 _format = s.ColorDetailCopyFormat;
                 _includeHash = s.ColorDetailIncludeHash;
                 return;
@@ -147,16 +152,24 @@ internal sealed class ColorDetailWindow : Window
         }
         catch { }
         var fallback = SettingsService.LoadStatic();
-        _showWindowPref = fallback?.ShowColorDetailWindow ?? true;
-        _autoCopy = fallback?.ColorDetailAutoCopy ?? true;
+        ApplyDeliveryPrefs(fallback?.ColorDetailAutoCopy ?? true, fallback?.ShowColorDetailWindow ?? true);
         _format = fallback?.ColorDetailCopyFormat ?? ColorDetailCopyFormat.Hex;
         _includeHash = fallback?.ColorDetailIncludeHash ?? true;
+    }
+
+    /// <summary>Keeps copy and the window from both being off, matching <see cref="ResultDelivery.ForColor"/>.</summary>
+    private void ApplyDeliveryPrefs(bool copy, bool showWindow)
+    {
+        var plan = ResultDelivery.Normalize(copy, showWindow);
+        _autoCopy = plan.Copy;
+        _showWindowPref = plan.ShowWindow;
     }
 
     private void SavePrefs()
     {
         try
         {
+            ApplyDeliveryPrefs(_autoCopy, _showWindowPref);
             if (Application.Current is App app)
                 app.PersistColorDetailPrefs(_showWindowPref, _autoCopy, _format, _includeHash);
         }
@@ -596,24 +609,69 @@ internal sealed class ColorDetailWindow : Window
         formatRow.Children.Add(_formatCombo);
         stack.Children.Add(formatRow);
 
-        stack.Children.Add(OptionToggleRow(T("Auto-copy on pick"), _autoCopy, v => { _autoCopy = v; SavePrefs(); }));
+        stack.Children.Add(OptionToggleRow(T("Auto-copy on pick"), _autoCopy, v =>
+        {
+            _autoCopy = v;
+            var plan = ResultDelivery.Normalize(_autoCopy, _showWindowPref);
+            if (plan.ShowWindow != _showWindowPref)
+            {
+                _showWindowPref = plan.ShowWindow;
+                _setShowToggle?.Invoke(plan.ShowWindow);
+            }
+            SavePrefs();
+        }));
         stack.Children.Add(OptionToggleRow(T("Include # in HEX"), _includeHash, v => { _includeHash = v; SavePrefs(); RefreshAll(); }));
-        stack.Children.Add(OptionToggleRow(T("Show this window after picking"), _showWindowPref, v => { _showWindowPref = v; SavePrefs(); }));
+        stack.Children.Add(OptionToggleRow(T("Show this window after picking"), _showWindowPref, v =>
+        {
+            var plan = ResultDelivery.Normalize(_autoCopy, v);
+            if (plan.ShowWindow != v)
+            {
+                _setShowToggle?.Invoke(plan.ShowWindow);
+                return;
+            }
 
-        var actions = new Grid { Margin = new Thickness(0, 10, 0, 0) };
+            _showWindowPref = plan.ShowWindow;
+            SavePrefs();
+        }, set => _setShowToggle = set));
+
+        _copiedBadge = new Border
+        {
+            HorizontalAlignment = WpfHAlign.Right,
+            Visibility = Visibility.Collapsed,
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(7, 2, 7, 2),
+            Margin = new Thickness(0, 8, 0, 0),
+            Background = Theme.Brush(WithAlpha(Theme.Accent, Theme.IsDark ? (byte)48 : (byte)36)),
+            BorderBrush = Theme.Brush(Theme.Accent),
+            BorderThickness = new Thickness(1),
+            Child = new TextBlock
+            {
+                Text = T("Copied"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Theme.Brush(Theme.TextPrimary),
+            },
+        };
+        stack.Children.Add(_copiedBadge);
+
+        var actions = new Grid { Margin = new Thickness(0, 8, 0, 0) };
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var closeBtn = StyledButton(T("Close"), isAccent: false);
-        closeBtn.IsCancel = true;
-        closeBtn.Click += (_, _) => Close();
-        Grid.SetColumn(closeBtn, 0);
-        actions.Children.Add(closeBtn);
+        var copyOnly = StyledButton(T("Copy"), isAccent: false, leadingCopy: true);
+        ToolTipService.SetToolTip(copyOnly, T("Copy the text and keep this window open."));
+        copyOnly.Click += (_, _) => CopyFavorite();
+        Grid.SetColumn(copyOnly, 0);
+        actions.Children.Add(copyOnly);
 
-        var copyClose = StyledButton(T("Copy & close"), isAccent: true);
+        var copyClose = StyledButton(T("Copy and close"), isAccent: true);
         copyClose.IsDefault = true;
-        copyClose.Click += (_, _) => { CopyFavorite(); Close(); };
+        copyClose.Click += (_, _) =>
+        {
+            if (IsFavoriteCopied() || CopyFavorite())
+                Close();
+        };
         Grid.SetColumn(copyClose, 2);
         actions.Children.Add(copyClose);
         _copyCloseBtn = copyClose;
@@ -623,7 +681,7 @@ internal sealed class ColorDetailWindow : Window
     }
 
     /// <summary>Settings-style option row: label on the left, widget-like toggle on the right.</summary>
-    private static FrameworkElement OptionToggleRow(string text, bool initial, Action<bool> onChange)
+    private static FrameworkElement OptionToggleRow(string text, bool initial, Action<bool> onChange, Action<Action<bool>>? registerSet = null)
     {
         var grid = new Grid { Margin = new Thickness(0, 4, 0, 4) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -639,7 +697,7 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(label, 0);
         grid.Children.Add(label);
 
-        var toggle = BuildToggle(initial, onChange);
+        var toggle = BuildToggle(initial, onChange, registerSet);
         Grid.SetColumn(toggle, 1);
         grid.Children.Add(toggle);
 
@@ -647,7 +705,7 @@ internal sealed class ColorDetailWindow : Window
     }
 
     /// <summary>Widget-style toggle switch (34x18 sliding thumb, accent track when on).</summary>
-    private static WpfButton BuildToggle(bool initial, Action<bool> onChange)
+    private static WpfButton BuildToggle(bool initial, Action<bool> onChange, Action<Action<bool>>? registerSet = null)
     {
         bool isOn = initial;
         var accent = Theme.Accent;
@@ -705,6 +763,11 @@ internal sealed class ColorDetailWindow : Window
             thumb.Margin = isOn ? new Thickness(0, 0, 3, 0) : new Thickness(3, 0, 0, 0);
         }
         Refresh();
+        registerSet?.Invoke(value =>
+        {
+            isOn = value;
+            Refresh();
+        });
 
         var toggle = new WpfButton
         {
@@ -899,7 +962,7 @@ internal sealed class ColorDetailWindow : Window
         return (Style)System.Windows.Markup.XamlReader.Parse(xaml);
     }
 
-    private WpfButton StyledButton(string text, bool isAccent)
+    private WpfButton StyledButton(string text, bool isAccent, bool leadingCopy = false)
     {
         var accent = Theme.Accent;
         var btn = new WpfButton
@@ -932,6 +995,7 @@ internal sealed class ColorDetailWindow : Window
             };
             // Detach first: as Button.Content the label is already a logical child.
             btn.Content = null;
+            _primaryLabel = label;
             // Leading copy glyph like the QR/OCR buttons (shared App.xaml geometry).
             if (TryFindResource("CopyIconGeometry") is System.Windows.Media.Geometry copyData)
             {
@@ -954,6 +1018,7 @@ internal sealed class ColorDetailWindow : Window
                             System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(WpfButton), 1),
                     });
                 row.Children.Add(copyGlyph);
+                _primaryCopyGlyph = copyGlyph;
                 label.Margin = new Thickness(6, 0, 0, 0);
             }
             row.Children.Add(label);
@@ -983,6 +1048,31 @@ internal sealed class ColorDetailWindow : Window
             btn.Background = Theme.Brush(bg);
             btn.BorderBrush = Theme.Brush(Theme.BorderSubtle);
             label.Foreground = Theme.Brush(Theme.TextPrimary);
+            if (leadingCopy && TryFindResource("CopyIconGeometry") is System.Windows.Media.Geometry copyData)
+            {
+                btn.Content = null;
+                var row = new StackPanel
+                {
+                    Orientation = System.Windows.Controls.Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = WpfHAlign.Center,
+                };
+                var copyGlyph = new System.Windows.Shapes.Path
+                {
+                    Data = copyData,
+                    StrokeThickness = 2.2,
+                    StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
+                    Width = 12,
+                    Height = 12,
+                    Stretch = System.Windows.Media.Stretch.Uniform,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Stroke = Theme.Brush(Theme.TextPrimary),
+                };
+                label.Margin = new Thickness(6, 0, 0, 0);
+                row.Children.Add(copyGlyph);
+                row.Children.Add(label);
+                btn.Content = row;
+            }
             btn.MouseEnter += (_, _) => btn.Background = Theme.Brush(Theme.TabHoverBg);
             btn.MouseLeave += (_, _) => btn.Background = Theme.Brush(bg);
         }
@@ -1007,6 +1097,7 @@ internal sealed class ColorDetailWindow : Window
         _previewContrast.Text = $"{T("Contrast")}: {onWhite:0.0}:1 {T("on white")} · {onBlack:0.0}:1 {T("on black")} ({ColorFormatHelper.ContrastGrade(Math.Max(onWhite, onBlack))})";
 
         PopulateRecents();
+        ApplyCopyActionState();
     }
 
     private void PopulateRecents()
@@ -1074,16 +1165,43 @@ internal sealed class ColorDetailWindow : Window
         CopyText(text);
     }
 
-    private void CopyFavorite() => CopyText(FavoriteText());
+    private bool CopyFavorite() => CopyText(FavoriteText());
 
-    private static void CopyText(string text)
+    private bool IsFavoriteCopied() =>
+        ResultDelivery.MatchesCopied(FavoriteText(), _copiedText);
+
+    private void ApplyCopyActionState()
     {
-        try
+        if (_primaryLabel is null)
+            return;
+
+        bool copied = IsFavoriteCopied();
+        if (_copiedBadge != null)
+            _copiedBadge.Visibility = copied ? Visibility.Visible : Visibility.Collapsed;
+        _primaryLabel.Text = T(copied ? "Close" : "Copy and close");
+        if (_primaryCopyGlyph != null)
         {
-            ClipboardService.CopyTextToClipboard(text);
-            try { SoundService.PlayColorSound(); } catch { }
+            _primaryCopyGlyph.Visibility = copied ? Visibility.Collapsed : Visibility.Visible;
+            _primaryLabel.Margin = copied ? new Thickness(0) : new Thickness(6, 0, 0, 0);
         }
-        catch (Exception ex) { AppDiagnostics.LogError("color-detail.copy", ex); }
+    }
+
+    private bool CopyText(string text)
+    {
+        if (!ResultDelivery.TryCopyText(text))
+        {
+            _copiedText = null;
+            ApplyCopyActionState();
+            ToastWindow.ShowError(
+                "Copy failed",
+                "CyberSnap could not copy the color. Keep this window open and try again.");
+            return false;
+        }
+
+        _copiedText = text;
+        try { SoundService.PlayColorSound(); } catch { }
+        ApplyCopyActionState();
+        return true;
     }
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -1096,8 +1214,8 @@ internal sealed class ColorDetailWindow : Window
         else if (e.Key is Key.Enter or Key.Return)
         {
             e.Handled = true;
-            CopyFavorite();
-            Close();
+            if (IsFavoriteCopied() || CopyFavorite())
+                Close();
         }
         else if (e.Key == Key.D1) CopyRow("HEX");
         else if (e.Key == Key.D2) CopyRow("RGB");
@@ -1177,7 +1295,7 @@ internal sealed class ColorDetailWindow : Window
     /// Shows the detail window for a picked color on the WPF UI thread.
     /// Safe to call from any thread; falls back to the classic toast.
     /// </summary>
-    public static void ShowForColor(byte r, byte g, byte b, Action? repick)
+    public static void ShowForColor(byte r, byte g, byte b, Action? repick = null, string? alreadyCopiedText = null)
     {
         try
         {
@@ -1187,7 +1305,7 @@ internal sealed class ColorDetailWindow : Window
             {
                 try
                 {
-                    var win = new ColorDetailWindow(r, g, b);
+                    var win = new ColorDetailWindow(r, g, b, alreadyCopiedText);
                     if (repick is not null)
                         win.RepickRequested += repick;
                     win.Show();

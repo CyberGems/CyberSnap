@@ -1129,22 +1129,22 @@ public partial class App
                     MarkFirstTime(_settingsService.Settings.HasFirstOcr,
                         () => _settingsService.Settings.HasFirstOcr = true, "First OCR", "ocr", d => _settingsService.Settings.FirstOcrAt = d);
 
-                    if (Helpers.AutoCopyPreferences.ShouldCopy(_settingsService.Settings, Helpers.AutoCopyKind.Ocr))
+                    var plan = Helpers.ResultDelivery.ForOcr(_settingsService.Settings);
+                    bool copied = plan.Copy && TryCopyCaptureTextToClipboard(text);
+                    if (plan.ShowWindow || (plan.Copy && !copied))
                     {
-                        var copied = TryCopyCaptureTextToClipboard(text);
-                        ToastWindow.Show(copied
-                            ? ToastSpec.Standard(LocalizationService.Translate("OCR copied"), FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true }
-                            : ToastSpec.Standard(LocalizationService.Translate("OCR ready"), LocalizationService.Translate("Clipboard copy failed.")));
-                        if (!copied)
-                        {
-                            var window = new OcrResultWindow(text, _settingsService, BitmapPerf.ToBitmapSource(result));
-                            window.Show();
-                        }
+                        var window = new OcrResultWindow(
+                            text,
+                            _settingsService,
+                            BitmapPerf.ToBitmapSource(result),
+                            alreadyCopiedText: copied ? text : null);
+                        window.Show();
                     }
                     else
                     {
-                        var window = new OcrResultWindow(text, _settingsService, BitmapPerf.ToBitmapSource(result));
-                        window.Show();
+                        ToastWindow.Show(ToastSpec.Standard(
+                            LocalizationService.Translate("OCR copied"),
+                            FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true });
                     }
                 }
                 else

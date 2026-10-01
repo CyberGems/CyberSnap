@@ -15,21 +15,26 @@ public partial class QrResultWindow : Window
 {
     private readonly SettingsService _settingsService;
     private readonly BarcodeFormat _format;
+    private string? _copiedText;
+    private bool _copyFailed;
 
     public QrResultWindow(
         string codeText,
         BarcodeFormat format,
         SettingsService settingsService,
-        ImageSource? previewSource = null)
+        ImageSource? previewSource = null,
+        string? alreadyCopiedText = null)
     {
         _settingsService = settingsService;
         _format = format;
+        _copiedText = alreadyCopiedText;
         InitializeComponent();
         CyberSnapWindowChrome.Apply(this);
         UiScale.Set(settingsService.Settings.UiScale);
         UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
 
         ContentTextBox.Text = codeText;
+        ApplyCopyActionState();
         PreviewImage.Source = previewSource;
         PreviewImage.Visibility = previewSource is null ? Visibility.Collapsed : Visibility.Visible;
         PreviewUnavailableText.Visibility = previewSource is null ? Visibility.Visible : Visibility.Collapsed;
@@ -122,8 +127,9 @@ public partial class QrResultWindow : Window
         DetectedTypeLabel.Text = LocalizationService.Translate(language, "Detected type");
         ContentLabel.Text = LocalizationService.Translate(language, "Code content");
         PreviewUnavailableText.Text = LocalizationService.Translate(language, "Source preview unavailable");
-        CopyButtonText.Text = LocalizationService.Translate(language, "Copy and close");
-        CopyButton.ToolTip = LocalizationService.Translate(language, "Copy this QR & Barcode text");
+        CopyOnlyButtonText.Text = LocalizationService.Translate(language, "Copy");
+        CopyOnlyButton.ToolTip = LocalizationService.Translate(language, "Copy the text and keep this window open.");
+        ApplyCopyActionState();
         QrTitleBar.CloseToolTip = LocalizationService.Translate(language, "Close");
         QrTitleBar.RefreshTooltips();
     }
@@ -151,21 +157,56 @@ public partial class QrResultWindow : Window
         return LocalizationService.Translate(language, key);
     }
 
-    private async void CopyButton_Click(object sender, RoutedEventArgs e)
+    private void CopyOnlyButton_Click(object sender, RoutedEventArgs e)
     {
-        try
+        CopyCode(closeAfter: false);
+    }
+
+    private void CopyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (IsCodeCopied())
         {
-            ClipboardService.CopyTextToClipboard(ContentTextBox.Text);
-            CopyButton.IsHitTestVisible = false;
-            await Task.Delay(120);
             Close();
+            return;
         }
-        catch (Exception ex)
+
+        CopyCode(closeAfter: true);
+    }
+
+    private void CopyCode(bool closeAfter)
+    {
+        var text = ContentTextBox.Text;
+        if (!ResultDelivery.TryCopyText(text))
         {
-            AppDiagnostics.LogWarning("qr-result.copy", ex.Message, ex);
-            CopyStatusText.Text = LocalizationService.Translate("Copy failed");
-            CopyButton.IsHitTestVisible = true;
+            _copiedText = null;
+            _copyFailed = true;
+            ApplyCopyActionState();
+            return;
         }
+
+        _copyFailed = false;
+
+        _copiedText = text;
+        ApplyCopyActionState();
+        if (closeAfter)
+            Close();
+    }
+
+    private bool IsCodeCopied() =>
+        ResultDelivery.MatchesCopied(ContentTextBox.Text, _copiedText);
+
+    private void ApplyCopyActionState()
+    {
+        if (CopyButtonText is null)
+            return;
+
+        bool copied = IsCodeCopied();
+        if (copied)
+            _copyFailed = false;
+        CopyStatusLabel.Text = LocalizationService.Translate(copied ? "Copied" : "Copy failed");
+        CopyStatusText.Visibility = copied || _copyFailed ? Visibility.Visible : Visibility.Collapsed;
+        CopyButtonText.Text = LocalizationService.Translate(copied ? "Close" : "Copy and close");
+        CopyButtonIcon.Visibility = copied ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();

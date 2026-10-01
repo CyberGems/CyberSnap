@@ -283,23 +283,26 @@ public sealed class StandaloneScanForm : Form
                     try
                     {
                         var settingsService = GetSettingsService();
-                        var autoCopy = AutoCopyPreferences.ShouldCopy(
-                            settingsService.Settings, AutoCopyKind.Scan);
-                        var copySucceeded = autoCopy && TryCopyToClipboard(decoded.Text);
+                        var plan = ResultDelivery.ForScan(settingsService.Settings);
+                        var copySucceeded = plan.Copy && TryCopyToClipboard(decoded.Text);
                         var preview = decoded.Text.Length > 100 ? decoded.Text[..100] + "..." : decoded.Text;
-                        if (autoCopy && copySucceeded)
+                        if (plan.ShowWindow || (plan.Copy && !copySucceeded))
+                        {
+                            var window = new QrResultWindow(
+                                decoded.Text,
+                                decoded.Format,
+                                settingsService,
+                                previewSource,
+                                alreadyCopiedText: copySucceeded ? decoded.Text : null);
+                            window.Show();
+                        }
+                        else
                         {
                             var bmp = BarcodeService.RenderPreview(decoded.Text, decoded.Format);
                             var title = decoded.Format == ZXing.BarcodeFormat.QR_CODE
                                 ? "QR Code copied"
                                 : "Barcode copied";
                             ToastWindow.ShowInlinePreview(bmp, title, preview, suppressSound: true);
-                        }
-                        else
-                        {
-                            var window = new QrResultWindow(
-                                decoded.Text, decoded.Format, settingsService, previewSource);
-                            window.Show();
                         }
                     }
                     catch (Exception ex)

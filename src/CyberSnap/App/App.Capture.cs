@@ -896,25 +896,28 @@ public partial class App
                             var decoded = BarcodeService.DecodeDetailed(scanned);
                             if (decoded is not null)
                             {
-                                var autoCopy = AutoCopyPreferences.ShouldCopy(
-                                    _settingsService!.Settings, AutoCopyKind.Scan);
-                                var copySucceeded = autoCopy && TryCopyCaptureTextToClipboard(decoded.Text);
+                                var plan = ResultDelivery.ForScan(_settingsService!.Settings);
+                                var copySucceeded = plan.Copy && TryCopyCaptureTextToClipboard(decoded.Text);
                                 _historyService?.SaveCodeEntry(decoded.Text, decoded.Format.ToString());
                                 var prev = decoded.Text.Length > 100 ? decoded.Text[..100] + "..." : decoded.Text;
-                                if (autoCopy && copySucceeded)
+                                if (plan.ShowWindow || (plan.Copy && !copySucceeded))
+                                {
+                                    var previewSource = BitmapPerf.ToBitmapSource(scanned);
+                                    var window = new QrResultWindow(
+                                        decoded.Text,
+                                        decoded.Format,
+                                        _settingsService,
+                                        previewSource,
+                                        alreadyCopiedText: copySucceeded ? decoded.Text : null);
+                                    window.Show();
+                                }
+                                else
                                 {
                                     var preview = BarcodeService.RenderPreview(decoded.Text, decoded.Format);
                                     var title = decoded.Format == ZXing.BarcodeFormat.QR_CODE
                                         ? "QR Code copied"
                                         : "Barcode copied";
                                     ToastWindow.ShowInlinePreview(preview, title, prev, suppressSound: true);
-                                }
-                                else
-                                {
-                                    var previewSource = BitmapPerf.ToBitmapSource(scanned);
-                                    var window = new QrResultWindow(
-                                        decoded.Text, decoded.Format, _settingsService, previewSource);
-                                    window.Show();
                                 }
                                 CelebrateCaptureIfEarned(_settingsService!.Settings, CaptureKind.Scan);
                                 MarkFirstTime(_settingsService.Settings.HasFirstScan,

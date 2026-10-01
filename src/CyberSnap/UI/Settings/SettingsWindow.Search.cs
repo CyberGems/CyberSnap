@@ -915,6 +915,8 @@ public partial class SettingsWindow
             "autocopy"                  => AfterCaptureOutcomeEditor,
             "autocopyexcludeimages"     => AutoCopyExcludeImagesCheck,
             "autocopyocr"               => AutoCopyOcrCheck,
+            "ocrshowresultwindow"       => OcrShowResultWindowCheck,
+            "scanshowresultwindow"      => ScanShowResultWindowCheck,
             "autocopyexcludeocr"        => AutoCopyOcrCheck, // legacy search term
             "autocopyexcludescan"       => AutoCopyExcludeScanCheck,
             "autocopyexcluderecording"  => VideoOutcomeEditor,

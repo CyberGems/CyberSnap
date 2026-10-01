@@ -1816,6 +1816,26 @@
                                           Services:LocalizationService.SourceToolTip="When global Auto-copy is on, still don't copy scanned codes."
                                           Checked="AutoCopyExcludeScanCheck_Changed" Unchecked="AutoCopyExcludeScanCheck_Changed"/>
                             </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="ScanShowResultWindowRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show the QR &amp; Barcode result window" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Show the QR &amp; Barcode result window"/>
+                                    <TextBlock Text="Open the result window after a scan, whether or not the code was copied." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Open the result window after a scan, whether or not the code was copied."/>
+                                </StackPanel>
+                                <CheckBox x:Name="ScanShowResultWindowCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show the QR &amp; Barcode result window"
+                                          Checked="ScanShowResultWindowCheck_Changed" Unchecked="ScanShowResultWindowCheck_Changed"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -2285,13 +2305,31 @@
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="Enable OCR auto-copy" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Enable OCR auto-copy"/>
-                                <TextBlock Text="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy."/>
+                                <TextBlock Text="Copy recognized text to the clipboard. Showing the result window is a separate choice. Requires global Auto-copy." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Copy recognized text to the clipboard. Showing the result window is a separate choice. Requires global Auto-copy."/>
                             </StackPanel>
                             <CheckBox x:Name="AutoCopyOcrCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                       AutomationProperties.Name="Enable OCR auto-copy"
-                                      ToolTip="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy."
-                                      Services:LocalizationService.SourceToolTip="When enabled, OCR text is copied automatically and the result window is skipped. When disabled, OCR opens the result window instead. Requires global Auto-copy."
+                                      ToolTip="Copy recognized text to the clipboard. Showing the result window is a separate choice. Requires global Auto-copy."
+                                      Services:LocalizationService.SourceToolTip="Copy recognized text to the clipboard. Showing the result window is a separate choice. Requires global Auto-copy."
                                       Checked="AutoCopyOcrCheck_Changed" Unchecked="AutoCopyOcrCheck_Changed"/>
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                        <Grid x:Name="OcrShowResultWindowRow" Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Show the OCR result window" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Show the OCR result window"/>
+                                <TextBlock Text="Open the OCR window after recognition, whether or not the text was copied." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Open the OCR window after recognition, whether or not the text was copied."/>
+                            </StackPanel>
+                            <CheckBox x:Name="OcrShowResultWindowCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Show the OCR result window"
+                                      Checked="OcrShowResultWindowCheck_Changed" Unchecked="OcrShowResultWindowCheck_Changed"/>
                         </Grid>
                         <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                         <Grid Style="{StaticResource SettingRow}">
