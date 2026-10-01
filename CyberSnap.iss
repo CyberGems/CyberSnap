@@ -41,6 +41,8 @@ Name: "editordesktopicon"; Description: "{cm:EditorShortcut}"; GroupDescription:
 Name: "startup"; Description: "{cm:RunAtStartup}"; GroupDescription: "{cm:OptionsGroup}"
 
 [Files]
+; publish-win64 comes from a self-contained publish plus scripts/Get-BundledFfmpeg.ps1.
+; That places ffmpeg.exe, its license, and the .NET runtime inside this folder.
 Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]

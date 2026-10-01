@@ -411,7 +411,9 @@ public static class InstallService
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "CyberSnap.exe",
-            "ffmpeg.exe"
+            "ffmpeg.exe",
+            "FFmpeg-LICENSE.txt",
+            "FFmpeg-NOTICE.txt"
         };
 
         return !entries.All(name => allowed.Contains(name!));
@@ -420,6 +422,8 @@ public static class InstallService
     private static IEnumerable<string> GetOptionalPayloadEntries()
     {
         yield return "ffmpeg.exe";
+        yield return "FFmpeg-LICENSE.txt";
+        yield return "FFmpeg-NOTICE.txt";
     }
 
     private static void CopyFileWithRetry(string source, string destination, CancellationToken cancellationToken = default)

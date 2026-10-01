@@ -97,7 +97,8 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 ## 🛠️ Tech Stack & Architecture
 
 - **Platform:** Windows 10 (build 19041) or later: x64, x86, ARM64
-- **Framework:** .NET 9 + WPF (PerMonitorV2 high DPI)
+- **Framework:** .NET 9 + WPF (PerMonitorV2 high DPI). The installer and the portable zip already include the .NET 9 Desktop Runtime.
+- **Recording:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, with libx264), shipped beside the app. See [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Database:** SQLite (local history and search index)
 - **Capture:** DirectX via Vortice.Direct2D1 / Vortice.Direct3D11
 - **OCR:** Tesseract
@@ -127,7 +128,8 @@ CyberSnap/
 │   │   ├── Helpers/            Utility helpers
 │   │   └── Native/             Native interop
 │   └── CyberSnap.AppModel/     Shared models and settings schemas
-├── scripts/                    Utilities (upload API-key encryption)
+├── scripts/                    Release checks, bundled FFmpeg download, upload key helper
+├── third-party/ffmpeg/         What FFmpeg build is shipped, and why
 ├── CyberSnap.iss               Inno Setup installer script
 └── CyberSnap.sln               Solution
 ```
@@ -139,6 +141,13 @@ CyberSnap/
 ### Install
 
 Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/releases/latest) and follow the wizard. The installer registers `.csnp` file associations, creates shortcuts, and offers to start with Windows.
+
+The installer and the portable zip are enough on their own:
+
+- **.NET 9 Desktop Runtime** is inside `CyberSnap.exe`. Installing .NET separately is only required when you build CyberSnap from source.
+- **FFmpeg** is the `ffmpeg.exe` placed next to `CyberSnap.exe`. MP4 recording, GIF encoding, the video trimmer, and audio waveforms use it. You do not install FFmpeg yourself, and you do not add it to `PATH`.
+
+If Windows shows **"You must install .NET Desktop Runtime to run this application"** for `CyberSnap.exe`, that copy was built without the runtime inside it. `dotnet build` produces that kind of exe, and so does a publish that omits `--self-contained true`. On a PC that already has the .NET 9 Desktop Runtime, both copies start, so the missing runtime only shows up on a clean machine. The release build is checked for an embedded runtime before it is packed. Details of the FFmpeg file, its license, and how to replace it are in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ### 🛡️ Windows SmartScreen
 
@@ -170,18 +179,21 @@ You can verify the file independently: compare the SHA with the GitHub release, 
 **Prerequisites:** .NET 9 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2022 or `dotnet` CLI
 
 ```powershell
-# Build (Debug)
+# Build (Debug). This exe needs the .NET 9 Desktop Runtime on the machine where it runs.
 dotnet build src/CyberSnap/CyberSnap.csproj
 
-# Publish self-contained for x64
+# Publish self-contained for x64. This is what a clean PC can run.
 dotnet publish src/CyberSnap/CyberSnap.csproj `
   -c Release -r win-x64 `
   --self-contained true `
   -p:PublishSingleFile=true `
   -o ./publish-win64
+
+# Place the pinned ffmpeg.exe, license, and notice next to that publish.
+./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
 ```
 
-Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) from `CyberSnap.iss`.
+Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) from `CyberSnap.iss`. The script packs whatever is in `publish-win64`, including `ffmpeg.exe`.
 
 ---
 
@@ -215,7 +227,7 @@ Contributions are welcome. Please open an issue describing the change before sta
 
 Originally forked from [OddSnap](https://github.com/jasperdevs/odd-snap) by [jasperdevs](https://github.com/jasperdevs). CyberSnap has since been extensively rewritten and expanded by [CyberGems](https://cybergems.org/).
 
-This project also builds on open-source components including Tesseract OCR, ZXing, SQLite, and Inno Setup, thanks to their authors and maintainers.
+This project also builds on open-source components including Tesseract OCR, ZXing, SQLite, FFmpeg, x264, and Inno Setup, thanks to their authors and maintainers. The FFmpeg binary shipped with CyberSnap is the GPLv3 essentials build documented in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ---
 

@@ -44,7 +44,15 @@ jobs:
 
       - name: Publish Win-x64 Self-Contained Exe
         run: |
-          dotnet publish src/CyberSnap/CyberSnap.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o ./publish-win64
+          dotnet publish src/CyberSnap/CyberSnap.csproj -c Release -r win-x64 --self-contained true -p:SelfContained=true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o ./publish-win64
+
+      - name: Verify the publish embeds the .NET runtime
+        shell: pwsh
+        run: ./scripts/Test-SelfContainedBundle.ps1 -Exe ./publish-win64/CyberSnap.exe
+
+      - name: Bundle FFmpeg
+        shell: pwsh
+        run: ./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
 
       - name: Zip Published Output
         shell: powershell
