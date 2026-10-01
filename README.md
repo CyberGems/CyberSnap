@@ -97,7 +97,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 ## 🛠️ Tech Stack & Architecture
 
 - **Platform:** Windows 10 (build 19041) or later: x64, x86, ARM64
-- **Framework:** .NET 9 + WPF (PerMonitorV2 high DPI). The installer and the portable zip already include the .NET 9 Desktop Runtime.
+- **Framework:** .NET 9 + WPF (PerMonitorV2 high DPI). The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) already include the .NET 9 Desktop Runtime.
 - **Recording:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, with libx264), shipped beside the app. See [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Database:** SQLite (local history and search index)
 - **Capture:** DirectX via Vortice.Direct2D1 / Vortice.Direct3D11
@@ -142,7 +142,7 @@ CyberSnap/
 
 Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/releases/latest) and follow the wizard. The installer registers `.csnp` file associations, creates shortcuts, and offers to start with Windows.
 
-The installer and the portable zip are enough on their own:
+The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) are enough on their own:
 
 - **.NET 9 Desktop Runtime** is inside `CyberSnap.exe`. Installing .NET separately is only required when you build CyberSnap from source.
 - **FFmpeg** is the `ffmpeg.exe` placed next to `CyberSnap.exe`. MP4 recording, GIF encoding, the video trimmer, and audio waveforms use it. You do not install FFmpeg yourself, and you do not add it to `PATH`.
