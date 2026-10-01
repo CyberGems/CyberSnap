@@ -47,10 +47,8 @@ public sealed partial class EditorForm
             _closeButton.AccessibleName = LocalizationService.Translate("Close");
         if (_minimizeButton is not null)
             _minimizeButton.AccessibleName = LocalizationService.Translate("Minimize");
-        if (_donateButton is not null)
-            _donateButton.AccessibleName = LocalizationService.Translate("Donate");
         if (_menuButton is not null)
-            _menuButton.AccessibleName = LocalizationService.Translate("Menu");
+            _menuButton.AccessibleName = LocalizationService.Translate("More");
         UpdateWindowStateButton();
 
         if (_brandPanel is not null)

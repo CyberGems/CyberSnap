@@ -486,7 +486,7 @@ public sealed class QuickStartGuide : Form
         [
             new TipDef("draw", T("F1-F12 keys quickly switch between annotation tools")),
             new TipDef("select", T("Right-click objects to duplicate, delete, or transform them")),
-            new TipDef("menu", T("Use the burger menu for save, export, view options, and more")),
+            new TipDef("more", T("Use the More menu for save, export, and view options")),
         ];
 
         _shortcuts =

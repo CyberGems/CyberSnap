@@ -145,8 +145,7 @@
                         MouseLeftButtonDown="DonateBtn_MouseLeftButtonDown"
                         MouseEnter="TitleBtn_MouseEnter"
                         MouseLeave="TitleBtn_MouseLeave"
-                        ToolTip="Donate"
-                        Services:LocalizationService.SourceToolTip="Donate">
+                        Visibility="Collapsed">
                     <Image x:Name="DonateIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
                 </Border>
                 <Border x:Name="DonateSeparator"
@@ -155,7 +154,8 @@
                         Margin="4,0,4,0"
                         Background="{DynamicResource ThemeInputBorderBrush}"
                         Opacity="0.7"
-                        VerticalAlignment="Center"/>
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed"/>
                 <Border x:Name="BurgerBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
                         ContextMenuService.IsEnabled="False"

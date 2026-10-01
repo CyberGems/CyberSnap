@@ -47,7 +47,6 @@ public sealed partial class EditorForm
     private readonly List<(EditorCommandButton Button, string LabelKey)> _localizedCommandButtons = new();
     private EditorChromeButton? _closeButton;
     private EditorChromeButton? _minimizeButton;
-    private EditorChromeButton? _donateButton;
     private EditorChromeButton? _menuButton;
     private Panel? _brandPanel;
     private EditorCommandButton _galleryButton = null!;
@@ -649,7 +648,7 @@ public sealed partial class EditorForm
         windowActions.Controls.Add(_minimizeButton);
 
         windowActions.Controls.Add(MakeSeparator());
-        _menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
+        _menuButton = MakeChromeButton("more", LocalizationService.Translate("More"));
         _menuButton.Click += (s, _) =>
         {
             if (DateTime.UtcNow - _burgerMenuLastClosed < TimeSpan.FromMilliseconds(200))
@@ -668,11 +667,6 @@ public sealed partial class EditorForm
                 : ToolStripDropDownDirection.BelowRight);
         };
         windowActions.Controls.Add(_menuButton);
-
-        windowActions.Controls.Add(MakeSeparator());
-        _donateButton = MakeChromeButton("heart", LocalizationService.Translate("Donate"));
-        _donateButton.Click += (_, _) => DonationLinks.Open();
-        windowActions.Controls.Add(_donateButton);
 
         // Filename Label in the middle
         _titleFileNameText = LocalizationService.Translate("Untitled");
@@ -2074,6 +2068,11 @@ public sealed partial class EditorForm
                 _menuButton.PressedOverride = false;
             }
         };
+
+        var donateItem = WindowsMenuRenderer.Item("Donate", iconId: "heart", customColor: Color.FromArgb(244, 63, 94));
+        donateItem.Click += (_, _) => DonationLinks.Open();
+        menu.Items.Add(donateItem);
+        menu.Items.Add(new ToolStripSeparator());
 
         // ── "New" submenu ──
         var newSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("New"), showImages: true);

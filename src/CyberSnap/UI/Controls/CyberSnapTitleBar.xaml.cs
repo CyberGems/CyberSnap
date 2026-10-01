@@ -149,11 +149,9 @@ public partial class CyberSnapTitleBar : UserControl
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         MinimizeBtn.ToolTip = Services.LocalizationService.Translate("Minimize");
         MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
-        DonateBtn.ToolTip = Services.LocalizationService.Translate("Donate");
         CloseBtn.ToolTip = ResolveCloseToolTip(this);
         ApplyTooltipPlacement(MinimizeBtn);
         ApplyTooltipPlacement(MaximizeBtn);
-        ApplyTooltipPlacement(DonateBtn);
         ApplyTooltipPlacement(CloseBtn);
     }
 
@@ -176,7 +174,8 @@ public partial class CyberSnapTitleBar : UserControl
     {
         TitleLogo.Source = OwnerWindow?.Icon ?? ThemedLogo.Square(18);
         var titleIcon = TitleBarIconColor;
-        DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", titleIcon, 18, active: DonateBtn.IsMouseOver);
+        DonateBtn.Visibility = Visibility.Collapsed;
+        DonateSeparator.Visibility = Visibility.Collapsed;
         MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18, active: MinimizeBtn.IsMouseOver);
 
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
@@ -189,8 +188,7 @@ public partial class CyberSnapTitleBar : UserControl
         // If the pointer is still over Close, keep the high-contrast hover glyph.
         var closeIconColor = CloseBtn.IsMouseOver ? TitleBarCloseHoverIconColor : titleIcon;
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", closeIconColor, 18, active: CloseBtn.IsMouseOver);
-        // Hamburger burger menu icon (crisp Fluent vector)
-        BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18, active: BurgerBtn.IsMouseOver);
+        BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("more", titleIcon, 18, active: BurgerBtn.IsMouseOver);
         // "Open editor" shortcut \u2014 the Fluent "Compose" icon (shared with the tray/widget menus)
         AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18, active: AnnotationBtn.IsMouseOver);
         AnnotationIcon.Opacity = 1.0;
@@ -206,12 +204,15 @@ public partial class CyberSnapTitleBar : UserControl
         BurgerSeparator.Visibility = BurgerBtn.Visibility == Visibility.Visible
             ? Visibility.Visible
             : Visibility.Collapsed;
+        bool hasChromeBeforeWindowButtons =
+            ActionBtn.Visibility == Visibility.Visible
+            || AnnotationBtn.Visibility == Visibility.Visible
+            || PinBtn.Visibility == Visibility.Visible;
         WindowControlsSeparator.Visibility =
-            BurgerBtn.Visibility == Visibility.Visible || DonateBtn.Visibility == Visibility.Visible
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+            BurgerBtn.Visibility != Visibility.Visible && hasChromeBeforeWindowButtons
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
-        if (DonateBtn.IsMouseOver) ApplyButtonHoverVisual(DonateBtn, true);
         if (BurgerBtn.IsMouseOver) ApplyButtonHoverVisual(BurgerBtn, true);
         if (AnnotationBtn.IsMouseOver) ApplyButtonHoverVisual(AnnotationBtn, true);
         if (ActionBtn.IsMouseOver) ApplyButtonHoverVisual(ActionBtn, true);
@@ -325,10 +326,11 @@ public partial class CyberSnapTitleBar : UserControl
 
             // Burger menu with toggles + shortcuts
             BurgerBtn.Visibility = Visibility.Visible;
-            BurgerBtn.ToolTip = LocalizationService.Translate("Menu");
+            BurgerBtn.ToolTip = LocalizationService.Translate("More");
 
             var menu = new ContextMenu();
             StyleBurgerMenu(menu);
+            InsertDonateFirst(menu);
 
             // Editor shortcut
             var editorItem = new MenuItem
@@ -423,12 +425,12 @@ public partial class CyberSnapTitleBar : UserControl
             AnnotationBtn.Visibility = Visibility.Collapsed;
 
             ActionBtn.Visibility = Visibility.Visible;
-            ActionBtn.ToolTip = LocalizationService.Translate("Menu");
-            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18);
+            ActionBtn.ToolTip = LocalizationService.Translate("More");
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("more", titleIcon, 18);
 
-            // Build burger menu with toggles + Configuration
             var menu = new ContextMenu();
             StyleBurgerMenu(menu);
+            InsertDonateFirst(menu);
 
             var searchToggle = new MenuItem
             {
@@ -507,10 +509,11 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.Visibility = Visibility.Collapsed;
 
             BurgerBtn.Visibility = Visibility.Visible;
-            BurgerBtn.ToolTip = LocalizationService.Translate("Menu");
+            BurgerBtn.ToolTip = LocalizationService.Translate("More");
 
             var menu = new ContextMenu();
             StyleBurgerMenu(menu);
+            InsertDonateFirst(menu);
 
             if (OwnerWindow is CapturePreviewDialog previewWindow)
             {
@@ -607,6 +610,22 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.Visibility = Visibility.Collapsed;
             BurgerBtn.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void InsertDonateFirst(ContextMenu menu)
+    {
+        var item = new MenuItem
+        {
+            Header = LocalizationService.Translate("Donate"),
+            Icon = CreateMenuIcon("heart", System.Drawing.Color.FromArgb(244, 63, 94), 16),
+        };
+        item.Click += (_, _) =>
+        {
+            menu.IsOpen = false;
+            DonationLinks.Open();
+        };
+        menu.Items.Insert(0, new Separator());
+        menu.Items.Insert(0, item);
     }
 
     private void StyleBurgerMenu(ContextMenu menu)
@@ -759,11 +778,11 @@ public partial class CyberSnapTitleBar : UserControl
         if (ReferenceEquals(border, DonateBtn))
             DonateIcon.Source = Helpers.FluentIcons.RenderWpf("heart", iconColor, 18, active);
         else if (ReferenceEquals(border, BurgerBtn))
-            BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("menu", iconColor, 18, active);
+            BurgerIcon.Source = Helpers.FluentIcons.RenderWpf("more", iconColor, 18, active);
         else if (ReferenceEquals(border, AnnotationBtn))
             AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", iconColor, 18, active);
         else if (ReferenceEquals(border, ActionBtn))
-            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("menu", iconColor, 18, active);
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("more", iconColor, 18, active);
         else if (ReferenceEquals(border, PinBtn))
         {
             if (hovered)
