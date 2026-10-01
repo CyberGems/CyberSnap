@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using CyberSnap.Helpers;
+using CyberSnap.UI.Controls;
 using Button = System.Windows.Controls.Button;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfColor = System.Windows.Media.Color;
@@ -755,11 +756,13 @@ internal sealed class ThemedPdfExportDialog : Window
         var accent = Theme.Accent;
         var button = new Button
         {
-            Content = Services.LocalizationService.Translate(text),
+            Content = HotkeyBadge.Labeled(
+                Services.LocalizationService.Translate(text),
+                isPrimary ? HotkeyBadgeKind.Enter : HotkeyBadgeKind.Escape),
             MinWidth = 94,
             Height = 34,
             Margin = new Thickness(6, 0, 6, 0),
-            Padding = new Thickness(22, 0, 22, 0),
+            Padding = new Thickness(16, 0, 16, 0),
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Cursor = WpfCursors.Hand,

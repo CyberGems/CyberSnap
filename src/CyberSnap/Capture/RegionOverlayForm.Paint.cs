@@ -547,6 +547,38 @@ public sealed partial class RegionOverlayForm
         }
     }
 
+    /// <summary>CyberClock keycap: rounded chip with the return arrow, used on the Done pill.</summary>
+    private static void DrawEnterKeyBadge(Graphics g, RectangleF box, Color color)
+    {
+        float radius = Math.Max(2f, box.Height * 0.28f);
+        var old = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using (var fill = new SolidBrush(Color.FromArgb(CyberSnap.UI.Theme.IsDark ? 36 : 22, color)))
+        using (var border = new Pen(Color.FromArgb(140, color), Math.Max(1f, box.Height * 0.08f)))
+        using (var chip = WindowsDockRenderer.RoundedRect(box, radius))
+        {
+            g.FillPath(fill, chip);
+            g.DrawPath(border, chip);
+        }
+
+        float padX = box.Width * 0.18f;
+        float padY = box.Height * 0.22f;
+        var icon = new RectangleF(box.X + padX, box.Y + padY, box.Width - padX * 2f, box.Height - padY * 2f);
+        using var arrow = new Pen(color, Math.Max(1.15f, icon.Height * 0.14f))
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round
+        };
+        PointF P(float x, float y) => new(icon.X + icon.Width * (x / 24f), icon.Y + icon.Height * (y / 24f));
+        g.DrawLine(arrow, P(20, 4), P(20, 11));
+        g.DrawBezier(arrow, P(20, 11), P(20, 14), P(18, 14), P(17, 14));
+        g.DrawLine(arrow, P(17, 14), P(5, 14));
+        g.DrawLine(arrow, P(5, 14), P(9, 9));
+        g.DrawLine(arrow, P(5, 14), P(9, 19));
+        g.SmoothingMode = old;
+    }
+
     /// <summary>
     /// Draws a 3D rounded-rectangle confirm/cancel action button: a solid colored face
     /// with a vertical gradient sitting on a darker extruded "side" block, a white circular
@@ -590,7 +622,8 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            iconSize = face.Height * (iconOnRight ? DoneLabelIconFrac : 0.58f);
+            DoneKeyBadgeSize(face.Height, out float doneBadgeW, out float doneBadgeH);
+            iconSize = iconOnRight ? doneBadgeH : face.Height * 0.58f;
             float gap = face.Height * (iconOnRight ? DoneLabelGapFrac : 0.22f);
 
             using var sf = new StringFormat(StringFormat.GenericTypographic)
@@ -606,12 +639,12 @@ public sealed partial class RegionOverlayForm
             float textX;
             if (iconOnRight)
             {
-                // Done: label + larger check as a single centered group, equal left/right padding.
+                // Done: label + Enter keycap as one centered group.
                 float padX = face.Height * DoneLabelPadXFrac;
-                float groupW = textSize.Width + gap + iconSize;
+                float groupW = textSize.Width + gap + doneBadgeW;
                 textX = face.X + (face.Width - groupW) / 2f;
                 bx = textX + textSize.Width + gap;
-                by = face.Y + (face.Height - iconSize) / 2f;
+                by = face.Y + (face.Height - doneBadgeH) / 2f;
 
                 var fam0 = font.FontFamily;
                 float em0 = fam0.GetEmHeight(font.Style);
@@ -662,6 +695,22 @@ public sealed partial class RegionOverlayForm
         Color iconColor = Color.FromArgb((int)(255 * baseAlphaFactor), baseIconColor);
         // Selected: full-opacity so the accent tint isn't washed out by the shared baseAlpha.
         Color pillIconColor = isSelectedMode ? accentColor : iconColor;
+
+        if (kind == ConfirmChromeKind.Done)
+        {
+            DoneKeyBadgeSize(face.Height, out float badgeW, out float badgeH);
+            if (badgeW > face.Width - 6f)
+            {
+                float scale = (face.Width - 6f) / badgeW;
+                badgeW *= scale;
+                badgeH *= scale;
+            }
+            var badge = string.IsNullOrEmpty(label)
+                ? new RectangleF(face.X + (face.Width - badgeW) / 2f, face.Y + (face.Height - badgeH) / 2f, badgeW, badgeH)
+                : new RectangleF(bx, face.Y + (face.Height - badgeH) / 2f, badgeW, badgeH);
+            DrawEnterKeyBadge(g, badge, pillIconColor);
+            return;
+        }
 
         if (useFluent)
         {

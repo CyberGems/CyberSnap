@@ -113,8 +113,13 @@ public sealed partial class RegionOverlayForm : Form
     // Done pill label+check layout — single source of truth shared by the width measurer
     // (State) and the layer (Paint), so the pair stays visually centered at any DPI.
     private const float DoneLabelPadXFrac = 0.34f; // left/right padding, × confirm pill height
-    private const float DoneLabelIconFrac = 0.82f; // check glyph box, × confirm pill height
-    private const float DoneLabelGapFrac = 0.22f;  // gap between label and check
+    private const float DoneLabelGapFrac = 0.22f;  // gap between label and the Enter keycap
+
+    private static void DoneKeyBadgeSize(float pillHeight, out float badgeW, out float badgeH)
+    {
+        badgeH = Math.Clamp(pillHeight * 0.56f, UiChrome.ScaleFloat(12f), UiChrome.ScaleFloat(16f));
+        badgeW = badgeH * 1.62f;
+    }
 
     private bool _confirmChromeLayoutDirty = true;
     private Rectangle _confirmChromeLaidOutForRect = Rectangle.Empty;

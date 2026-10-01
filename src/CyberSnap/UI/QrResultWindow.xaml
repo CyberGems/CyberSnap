@@ -240,12 +240,7 @@
                                            Text="Copy and close"
                                            Margin="6,0,0,0"
                                            VerticalAlignment="Center"/>
-                                <Path Data="{StaticResource EnterIconGeometry}"
-                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      Width="13" Height="13"
-                                      Stretch="Uniform"
-                                      Margin="7,0,0,0"
-                                      VerticalAlignment="Center"/>
+                                <controls:HotkeyBadge Kind="Enter" Margin="6,0,0,0"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

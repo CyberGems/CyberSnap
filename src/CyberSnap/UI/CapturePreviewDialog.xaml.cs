@@ -1612,6 +1612,7 @@ namespace CyberSnap.UI
             // Reuse the pills' spinner ring (blue, 0/162/255) and make it spin,
             // so the Processing state reads identically to a running pill.
             var accent = GetPrimaryButtonSpinnerColor();
+            CancelKeyBadge.Visibility = Visibility.Collapsed;
             CancelIcon.Source = RenderSpinnerRing(accent, 14);
             CancelIcon.Visibility = Visibility.Visible;
             StartPrimaryButtonSpin();
@@ -1639,9 +1640,8 @@ namespace CyberSnap.UI
             {
                 rotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
                 rotation.Angle = 0;
-                CancelIcon.RenderTransform = CancelIconScale;
-                CancelIcon.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
             }
+            CancelIcon.RenderTransform = Transform.Identity;
         }
 
         private AfterCapturePillChip CreateAfterCapturePillChip(
@@ -2417,10 +2417,8 @@ namespace CyberSnap.UI
             bool viewerOn = state.SystemViewer;
             bool editorOn = state.Destination == AfterCaptureDestination.Editor;
             bool continuesToSurface = viewerOn || editorOn;
-            var cSec = Theme.TextSecondary;
-            var enterColor = System.Drawing.Color.FromArgb(cSec.A, cSec.R, cSec.G, cSec.B);
-            CancelIcon.Source = FluentIcons.RenderWpf("enter", enterColor, 32, active: false);
-            CancelIcon.Visibility = Visibility.Visible;
+            CancelIcon.Visibility = Visibility.Collapsed;
+            CancelKeyBadge.Visibility = Visibility.Visible;
 
             CancelText.Text = LocalizationService.Translate("Close");
             if (continuesToSurface)

@@ -105,6 +105,8 @@ public static class Theme
         resources["ThemeAccentHoverBrush"] = Brush(AccentHover);
         resources["ThemeTooltipBackgroundBrush"] = Brush(IsDark ? C(20, 20, 20) : C(233, 236, 243));
         resources["ThemeTooltipBorderBrush"] = Brush(IsDark ? CA(255, 255, 255, 26) : CA(0, 0, 0, 16));
+        resources["HotkeyBadgeBackgroundBrush"] = Brush(IsDark ? CA(255, 255, 255, 20) : CA(0, 0, 0, 16));
+        resources["HotkeyBadgeBorderBrush"] = Brush(IsDark ? CA(255, 255, 255, 41) : CA(0, 0, 0, 32));
         resources["SoundItemCustomSourceBrush"] = Brush(AccentHover);
     }
 

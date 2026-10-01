@@ -406,7 +406,13 @@ public partial class OcrResultWindow : Window
         StopTranslationConfigurationCheck();
         StopTranslationLoading(keepStatusVisible: false);
         TranslatedTextBox.Text = string.Empty;
-        CopyTranslationBtn.Visibility = Visibility.Collapsed;
+        SetTranslationCopyVisible(false);
+    }
+
+    private void SetTranslationCopyVisible(bool visible)
+    {
+        CopyTranslationBtn.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        CopyBtnKeyBadge.Visibility = visible ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => CloseWindow();
@@ -516,7 +522,10 @@ public partial class OcrResultWindow : Window
             && FocusManager.GetFocusedElement(this) is not ComboBox)
         {
             e.Handled = true;
-            CopyBtn_Click(CopyBtn, new RoutedEventArgs());
+            if (CopyTranslationBtn.Visibility == Visibility.Visible)
+                CopyTranslationBtn_Click(CopyTranslationBtn, new RoutedEventArgs());
+            else
+                CopyBtn_Click(CopyBtn, new RoutedEventArgs());
         }
     }
 
@@ -813,7 +822,7 @@ public partial class OcrResultWindow : Window
         TranslatedTextBox.Text = string.Empty;
         TranslateStatus.Visibility = Visibility.Visible;
         TranslateStatus.Text = "Checking translation setup...";
-        CopyTranslationBtn.Visibility = Visibility.Collapsed;
+        SetTranslationCopyVisible(false);
         TranslateBtn.IsEnabled = false;
         TranslateBtn.Content = LocalizationService.Translate("Checking...");
     }
@@ -829,7 +838,7 @@ public partial class OcrResultWindow : Window
         TranslatedTextBox.Text = "";
         TranslateStatus.Visibility = Visibility.Visible;
         TranslationLoadingOverlay.Visibility = Visibility.Visible;
-        CopyTranslationBtn.Visibility = Visibility.Collapsed;
+        SetTranslationCopyVisible(false);
         TranslateBtn.IsEnabled = false;
         TranslateBtn.Content = LocalizationService.Translate("Translating...");
         FromLanguageCombo.IsEnabled = false;
@@ -972,7 +981,7 @@ public partial class OcrResultWindow : Window
 
             StopTranslationLoading(keepStatusVisible: false);
             TranslatedTextBox.Text = result;
-            CopyTranslationBtn.Visibility = Visibility.Visible;
+            SetTranslationCopyVisible(true);
         }
         catch (OperationCanceledException)
         {

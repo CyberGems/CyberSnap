@@ -70,7 +70,15 @@ internal sealed class ColorPickerFlyoutWindow : System.Windows.Window
         PreviewKeyDown += (s, e) =>
         {
             if (e.Key == Key.Escape)
+            {
+                e.Handled = true;
                 SafeClose();
+            }
+            else if (e.Key is Key.Enter or Key.Return)
+            {
+                e.Handled = true;
+                picker.AcceptFromKeyboard();
+            }
         };
     }
 }

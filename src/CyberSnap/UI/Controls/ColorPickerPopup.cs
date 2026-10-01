@@ -41,6 +41,8 @@ internal sealed class ColorPickerPopup : ContentControl
     private double _value = 1.0;
     private WpfColor _currentColor = WpfColor.FromRgb(128, 128, 128);
     private bool _hasColor;
+    private bool _accepting;
+    private bool _accepted;
     private WpfColor _referenceColor;
     private bool _hasReference;
 
@@ -83,6 +85,32 @@ internal sealed class ColorPickerPopup : ContentControl
         Theme.Refresh();
         BuildUI();
         Loaded += OnLoaded;
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key is not (Key.Enter or Key.Return))
+                return;
+            e.Handled = true;
+            AcceptFromKeyboard();
+        };
+    }
+
+    /// <summary>Enter accepts the current color. Safe to call more than once.</summary>
+    public void AcceptFromKeyboard()
+    {
+        if (_accepting || _accepted)
+            return;
+        _accepted = true;
+        _accepting = true;
+        try
+        {
+            if (_hasColor && Application.Current is CyberSnap.App app)
+                app.PersistRecentColor(ToHex(_currentColor));
+            CloseRequested?.Invoke();
+        }
+        finally
+        {
+            _accepting = false;
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -407,17 +435,7 @@ internal sealed class ColorPickerPopup : ContentControl
         Grid.SetColumn(clearButton, 0);
         actionRow.Children.Add(clearButton);
 
-        var acceptButton = BuildButton(LocalizationService.Translate("Accept"), isAccent: true, () =>
-        {
-            if (_hasColor)
-            {
-                if (Application.Current is CyberSnap.App app)
-                {
-                    app.PersistRecentColor(ToHex(_currentColor));
-                }
-            }
-            CloseRequested?.Invoke();
-        });
+        var acceptButton = BuildButton(LocalizationService.Translate("Accept"), isAccent: true, AcceptFromKeyboard);
         acceptButton.HorizontalAlignment = WpfHorizontalAlignment.Stretch;
         acceptButton.MinWidth = 0;
         acceptButton.Margin = new Thickness(0);
@@ -757,21 +775,17 @@ internal sealed class ColorPickerPopup : ContentControl
     {
         var accent = Theme.Accent;
 
-        var label = new TextBlock
-        {
-            Text = text.ToUpper(CultureInfo.CurrentCulture),
-            FontSize = 10.5,
-            FontWeight = FontWeights.SemiBold,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-
         var button = new Button
         {
-            Content = label,
+            Content = HotkeyBadge.Labeled(
+                text.ToUpper(CultureInfo.CurrentCulture),
+                isAccent ? HotkeyBadgeKind.Enter : null),
             Height = 28,
             MinWidth = isAccent ? 100 : 64,
             Margin = new Thickness(0, 0, isAccent ? 8 : 0, 0),
             Padding = new Thickness(10, 0, 10, 0),
+            FontSize = 10.5,
+            FontWeight = FontWeights.SemiBold,
             Cursor = WpfCursors.Hand,
             BorderThickness = new Thickness(1),
             Template = BuildButtonTemplate(),
@@ -784,15 +798,15 @@ internal sealed class ColorPickerPopup : ContentControl
             var hoverText = Theme.IsDark ? Colors.Black : Colors.White;
             button.Background = Theme.Brush(baseBg);
             button.BorderBrush = Theme.Brush(WithAlpha(accent, 170));
-            label.Foreground = Theme.Brush(restText);
-            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(accent); label.Foreground = Theme.Brush(hoverText); };
-            button.MouseLeave += (_, _) => { button.Background = Theme.Brush(baseBg); label.Foreground = Theme.Brush(restText); };
+            button.Foreground = Theme.Brush(restText);
+            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(accent); button.Foreground = Theme.Brush(hoverText); };
+            button.MouseLeave += (_, _) => { button.Background = Theme.Brush(baseBg); button.Foreground = Theme.Brush(restText); };
         }
         else
         {
             button.Background = Theme.Brush(SecondaryButtonBg);
             button.BorderBrush = Theme.Brush(SecondaryButtonBorder);
-            label.Foreground = Theme.Brush(Theme.TextPrimary);
+            button.Foreground = Theme.Brush(Theme.TextPrimary);
             button.MouseEnter += (_, _) => button.Background = Theme.Brush(Theme.TabHoverBg);
             button.MouseLeave += (_, _) => button.Background = Theme.Brush(SecondaryButtonBg);
         }

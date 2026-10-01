@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using CyberSnap.Helpers;
+using CyberSnap.UI.Controls;
 using CyberSnap.Models.Commands;
 using Button = System.Windows.Controls.Button;
 using ComboBox = System.Windows.Controls.ComboBox;
@@ -1463,7 +1464,9 @@ internal sealed class ThemedResizeDialog : Window
         var accent = Theme.Accent;
         var button = new Button
         {
-            Content = Services.LocalizationService.Translate(text).ToUpper(CultureInfo.CurrentCulture),
+            Content = HotkeyBadge.Labeled(
+                Services.LocalizationService.Translate(text).ToUpper(CultureInfo.CurrentCulture),
+                isPrimary ? HotkeyBadgeKind.Enter : HotkeyBadgeKind.Escape),
             MinWidth = 94,
             Height = 34,
             Margin = new Thickness(isPrimary ? 10 : 0, 0, 0, 0),

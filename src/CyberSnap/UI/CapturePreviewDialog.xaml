@@ -590,17 +590,19 @@
                                                     HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <TextBlock x:Name="CancelText" Text="Close" VerticalAlignment="Center"
                                                        FontSize="12.5" FontWeight="SemiBold"/>
-                                            <!-- Host owns the invite slide so spinner RotateTransform on CancelIcon stays independent. -->
-                                            <Grid x:Name="CancelIconHost" Margin="7,0,0,0" VerticalAlignment="Center">
+                                            <!-- Host owns the invite zoom. The keycap is the idle glyph; the image is the processing spinner. -->
+                                            <Grid x:Name="CancelIconHost" Margin="7,0,0,0" VerticalAlignment="Center"
+                                                  RenderTransformOrigin="0.5,0.5">
                                                 <Grid.RenderTransform>
-                                                    <TranslateTransform x:Name="CancelIconSlide"/>
-                                                </Grid.RenderTransform>
-                                                <Image x:Name="CancelIcon" Width="16" Height="16"
-                                                       RenderTransformOrigin="0.5,0.5">
-                                                    <Image.RenderTransform>
+                                                    <TransformGroup>
                                                         <ScaleTransform x:Name="CancelIconScale" ScaleX="1" ScaleY="1"/>
-                                                    </Image.RenderTransform>
-                                                </Image>
+                                                        <TranslateTransform x:Name="CancelIconSlide"/>
+                                                    </TransformGroup>
+                                                </Grid.RenderTransform>
+                                                <controls:HotkeyBadge x:Name="CancelKeyBadge" Kind="Enter"/>
+                                                <Image x:Name="CancelIcon" Width="16" Height="16"
+                                                       Visibility="Collapsed"
+                                                       RenderTransformOrigin="0.5,0.5"/>
                                             </Grid>
                                         </StackPanel>
                                         <!-- Countdown ring around the seconds numeral: the accent arc depletes

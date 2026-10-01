@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Navigation;
 using CyberSnap.Helpers;
+using CyberSnap.UI.Controls;
 using CyberSnap.Native;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
@@ -382,29 +383,29 @@ internal sealed class ThemedConfirmDialog : Window
             {
                 _saveResult = SavePromptResult.Cancel;
                 Close();
-            }));
+            }, HotkeyBadgeKind.Escape));
             buttons.Children.Add(BuildButton(Services.LocalizationService.Translate("No"), isPrimary: false, kind, () =>
             {
                 _saveResult = SavePromptResult.DontSave;
                 Close();
-            }));
+            }, hint: null));
             buttons.Children.Add(BuildButton(Services.LocalizationService.Translate("Yes"), isPrimary: true, kind, () =>
             {
                 _saveResult = SavePromptResult.Save;
                 DialogResult = true;
                 Close();
-            }));
+            }, HotkeyBadgeKind.Enter));
         }
         else
         {
             if (secondaryText is not null)
-                buttons.Children.Add(BuildButton(secondaryText, isPrimary: false, kind, () => Close()));
+                buttons.Children.Add(BuildButton(secondaryText, isPrimary: false, kind, () => Close(), HotkeyBadgeKind.Escape));
             buttons.Children.Add(BuildButton(primaryText, isPrimary: true, kind, () =>
             {
                 _confirmed = true;
                 DialogResult = true;
                 Close();
-            }));
+            }, HotkeyBadgeKind.Enter));
         }
         Grid.SetRow(buttons, 4);
         root.Children.Add(buttons);
@@ -548,21 +549,21 @@ internal sealed class ThemedConfirmDialog : Window
         };
     }
 
-    private Button BuildButton(string text, bool isPrimary, Kind kind, Action click)
+    private Button BuildButton(string text, bool isPrimary, Kind kind, Action click, HotkeyBadgeKind? hint)
     {
         var accent = AccentFor(kind);
         var button = new Button
         {
-            Content = text,
+            Content = HotkeyBadge.Labeled(text, hint),
             MinWidth = 94,
             Height = 34,
             Margin = new Thickness(6, 0, 6, 0),
-            Padding = new Thickness(22, 0, 22, 0),
+            Padding = new Thickness(16, 0, 16, 0),
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Cursor = WpfCursors.Hand,
-            IsDefault = isPrimary,
-            IsCancel = !isPrimary,
+            IsDefault = hint == HotkeyBadgeKind.Enter,
+            IsCancel = hint == HotkeyBadgeKind.Escape,
             BorderThickness = new Thickness(1),
             Template = BuildButtonTemplate()
         };

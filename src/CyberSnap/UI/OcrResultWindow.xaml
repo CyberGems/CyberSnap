@@ -626,9 +626,7 @@
                                           StrokeLineJoin="Round" Fill="Transparent"
                                           Width="12" Height="12" Stretch="Uniform" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="CopyBtnText" Text="Copy and close" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                    <Path Data="{StaticResource EnterIconGeometry}"
-                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                          Width="13" Height="13" Stretch="Uniform" Margin="7,0,0,0" VerticalAlignment="Center"/>
+                                    <controls:HotkeyBadge x:Name="CopyBtnKeyBadge" Kind="Enter" Margin="6,0,0,0"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -712,10 +710,7 @@
                                            Services:LocalizationService.SourceText="Copy translation and close"
                                            Margin="6,0,0,0"
                                            VerticalAlignment="Center"/>
-                                <Path Data="{StaticResource EnterIconGeometry}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="2.2"
-                                      StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
-                                      Width="12" Height="12" Stretch="Uniform" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                <controls:HotkeyBadge x:Name="CopyTranslationKeyBadge" Kind="Enter" Margin="6,0,0,0"/>
                             </StackPanel>
                         </Button>
                 </Grid>
