@@ -511,6 +511,16 @@
                                             <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Button>
+                                    <Button x:Name="ExtractTextBtn" Click="ExtractTextBtn_Click"
+                                            Style="{StaticResource PreviewActionButton}"
+                                            Margin="0,0,6,4">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="ExtractTextIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock x:Name="ExtractTextText" Text="Extract text" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button x:Name="OpenViewerBtn" Click="OpenViewerBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
                                             Margin="0,0,6,4">

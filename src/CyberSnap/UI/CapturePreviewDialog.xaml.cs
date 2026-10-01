@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
@@ -27,11 +29,11 @@ namespace CyberSnap.UI
         /// <summary>Resume auto-close after the pointer stops moving over the window.</summary>
         private const int CursorIdleResumeMs = 650;
         private const int CountdownFadeMs = 220;
-        /// <summary>Resting opacity for the Done CTA accent hairline (quiet, not shouty).</summary>
-        private const double CtaBorderOpacityRest = 0.35;
-        /// <summary>Peak opacity for the Done-border breathe — wide enough to read, still soft.</summary>
-        private const double CtaBorderOpacityPeak = 0.75;
-        private const double CtaBorderBreatheSeconds = 2.4;
+        /// <summary>Resting opacity for the Done CTA accent hairline. Kept low so the stroke reads as a quiet edge, not a glow.</summary>
+        private const double CtaBorderOpacityRest = 0.20;
+        /// <summary>Peak opacity for the Done-border breathe. A small lift, so the pulse stays discreet.</summary>
+        private const double CtaBorderOpacityPeak = 0.38;
+        private const double CtaBorderBreatheSeconds = 3.6;
         private const double EnterInviteZoomScale = 0.88;
         private const int EnterInviteMs = 180;
         private const int PillSimInitialDelayMs = 200;
@@ -47,6 +49,7 @@ namespace CyberSnap.UI
         private SolidColorBrush? _ctaBorderBrush;
         private bool _ctaBorderPulseActive;
         private bool _primaryButtonHovered;
+        private bool _extractTextRunning;
         private long _suppressWindowMotionUntilTicks;
         private bool _didCenterOnOpen;
         private bool _isSideBySide = true;
@@ -322,6 +325,10 @@ namespace CyberSnap.UI
             SaveAsText.Text = LocalizationService.Translate("Save as...");
             CopyText.Text = LocalizationService.Translate("Copy");
             EditText.Text = LocalizationService.Translate("Edit");
+            ExtractTextText.Text = LocalizationService.Translate("Extract text");
+            ExtractTextBtn.ToolTip = WithHotkeyHint(
+                LocalizationService.Translate("Extract text from this image using OCR."),
+                "Ctrl+T");
             OpenViewerText.Text = LocalizationService.Translate("Open in viewer");
             PrintText.Text = LocalizationService.Translate("Print");
             PrintBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Print this capture."), "Ctrl+P");
@@ -359,6 +366,7 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(SaveAsBtn);
             ApplyTooltipPlacement(CopyBtn);
             ApplyTooltipPlacement(EditBtn);
+            ApplyTooltipPlacement(ExtractTextBtn);
             ApplyTooltipPlacement(OpenViewerBtn);
             ApplyTooltipPlacement(PrintBtn);
             ApplyTooltipPlacement(MoreBtn);
@@ -419,6 +427,59 @@ namespace CyberSnap.UI
                 BeginDeferredPillCompletionSimulation();
                 InitAutoCloseCountdown();
             }), DispatcherPriority.ApplicationIdle);
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            // WindowChrome + WindowStyle=None bypasses WPF's normal non-client maximize
+            // calculation. Supply the monitor work area explicitly so the taskbar
+            // (including per-monitor taskbars) is never covered.
+            var source = PresentationSource.FromVisual(this) as HwndSource;
+            source?.AddHook(WndProc);
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == 0x0024) // WM_GETMINMAXINFO
+            {
+                WmGetMinMaxInfo(hwnd, lParam);
+                handled = true;
+            }
+
+            return IntPtr.Zero;
+        }
+
+        private void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+        {
+            var mmi = Marshal.PtrToStructure<Native.User32.MINMAXINFO>(lParam);
+            var monitor = Native.User32.MonitorFromWindow(hwnd, Native.User32.MONITOR_DEFAULTTONEAREST);
+            if (monitor != IntPtr.Zero)
+            {
+                var monitorInfo = new Native.User32.MONITORINFO
+                {
+                    cbSize = Marshal.SizeOf<Native.User32.MONITORINFO>()
+                };
+                if (Native.User32.GetMonitorInfo(monitor, ref monitorInfo))
+                {
+                    var work = monitorInfo.rcWork;
+                    var monitorBounds = monitorInfo.rcMonitor;
+                    // ptMaxPosition is relative to the monitor origin, so a taskbar on any
+                    // edge (and a monitor left or above the primary) stays in the work area.
+                    mmi.ptMaxPosition.X = work.Left - monitorBounds.Left;
+                    mmi.ptMaxPosition.Y = work.Top - monitorBounds.Top;
+                    mmi.ptMaxSize.X = work.Width;
+                    mmi.ptMaxSize.Y = work.Height;
+                }
+            }
+
+            // handled=true skips WPF's MinWidth/MinHeight enforcement. Keep the floor in
+            // physical pixels so the resize border still respects the XAML minimum.
+            var dpi = VisualTreeHelper.GetDpi(this);
+            mmi.ptMinTrackSize.X = (int)Math.Ceiling(MinWidth * dpi.DpiScaleX);
+            mmi.ptMinTrackSize.Y = (int)Math.Ceiling(MinHeight * dpi.DpiScaleY);
+            Marshal.StructureToPtr(mmi, lParam, true);
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -485,6 +546,7 @@ namespace CyberSnap.UI
             SetPreviewIcon(SaveAsIcon, "save", primaryIconColor, 13);
             SetPreviewIcon(CopyIcon, "copy", primaryIconColor, 13);
             SetPreviewIcon(EditIcon, "draw", primaryIconColor, 13);
+            SetPreviewIcon(ExtractTextIcon, "ocr", primaryIconColor, 13);
             SetPreviewIcon(OpenViewerIcon, "eye", primaryIconColor, 13);
             SetPreviewIcon(PrintIcon, "print", primaryIconColor, 13);
             SetPreviewIcon(DeleteIcon, "trash", GetDeleteAccent(), 13);
@@ -2405,6 +2467,7 @@ namespace CyberSnap.UI
             SaveAsBtn.Visibility = Visibility.Visible;
             CopyBtn.Visibility = Visibility.Visible;
             EditBtn.Visibility = editAuto ? Visibility.Collapsed : Visibility.Visible;
+            ExtractTextBtn.Visibility = Visibility.Visible;
             OpenViewerBtn.Visibility = viewerAuto ? Visibility.Collapsed : Visibility.Visible;
 
             SaveBtn.IsEnabled = !saveAuto;
@@ -2412,6 +2475,7 @@ namespace CyberSnap.UI
             // the capture currently on the clipboard, and the user may need to recopy.
             CopyBtn.IsEnabled = true;
             EditBtn.IsEnabled = !editAuto;
+            ExtractTextBtn.IsEnabled = !_extractTextRunning;
             OpenViewerBtn.IsEnabled = !viewerAuto;
 
             // Delete only makes sense once the capture actually exists on disk.
@@ -2422,6 +2486,7 @@ namespace CyberSnap.UI
                 || SaveAsBtn.Visibility == Visibility.Visible
                 || CopyBtn.Visibility == Visibility.Visible
                 || EditBtn.Visibility == Visibility.Visible
+                || ExtractTextBtn.Visibility == Visibility.Visible
                 || OpenViewerBtn.Visibility == Visibility.Visible
                 || PrintBtn.Visibility == Visibility.Visible
                 || DeleteBtn.Visibility == Visibility.Visible
@@ -2557,6 +2622,75 @@ namespace CyberSnap.UI
                 return;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Edit;
             CommitActiveSession();
+        }
+
+        private async void ExtractTextBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isClosing || _extractTextRunning)
+                return;
+
+            // Hold auto-close while recognition runs, same as the print dialog.
+            CancelAutoCloseOnInteraction();
+            StopAutoCloseCountdown(resetProgress: true);
+            SetCountdownRingShown(false, keepLayoutSlot: true);
+
+            _extractTextRunning = true;
+            ExtractTextBtn.IsEnabled = false;
+            try
+            {
+                using var clone = new Bitmap(EffectiveBitmap);
+                var settings = _settingsService.Settings;
+                string text = await OcrService.RecognizeAsync(clone, settings.OcrLanguageTag);
+                if (_isClosing)
+                    return;
+
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    ToastWindow.Show(
+                        LocalizationService.Translate("OCR"),
+                        LocalizationService.Translate("No text found"));
+                    return;
+                }
+
+                SoundService.PlayTextSound();
+
+                if (settings.SaveHistory)
+                    HistoryService.PrimaryInstance?.SaveOcrEntry(text);
+
+                if (AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr))
+                {
+                    try
+                    {
+                        ClipboardService.CopyTextToClipboard(text);
+                    }
+                    catch (Exception copyEx)
+                    {
+                        AppDiagnostics.LogWarning("preview.ocr-copy", copyEx.Message, copyEx);
+                    }
+                }
+
+                var window = new OcrResultWindow(text, _settingsService, BitmapPerf.ToBitmapSource(EffectiveBitmap));
+                window.Show();
+                CyberSnapWindowChrome.EnsureForeground(window);
+            }
+            catch (Exception ex)
+            {
+                if (!_isClosing)
+                {
+                    ToastWindow.ShowError(
+                        LocalizationService.Translate("OCR error"),
+                        ex.Message);
+                }
+            }
+            finally
+            {
+                _extractTextRunning = false;
+                if (!_isClosing)
+                {
+                    ExtractTextBtn.IsEnabled = true;
+                    InitAutoCloseCountdown();
+                }
+            }
         }
 
         private void OpenViewerBtn_Click(object sender, RoutedEventArgs e)
@@ -2802,6 +2936,12 @@ namespace CyberSnap.UI
                 if (e.Key == Key.E && EditBtn.IsEnabled && EditBtn.IsVisible)         // Ctrl+E — edit
                 {
                     EditBtn_Click(EditBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.T && ExtractTextBtn.IsEnabled && ExtractTextBtn.IsVisible) // Ctrl+T — extract text
+                {
+                    ExtractTextBtn_Click(ExtractTextBtn, new RoutedEventArgs());
                     e.Handled = true;
                     return;
                 }
