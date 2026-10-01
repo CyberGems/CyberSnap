@@ -562,6 +562,9 @@ public sealed class AppSettings
     public bool StartWithWindows { get; set; } = true;
 
     public bool AutoCheckForUpdates { get; set; } = true;
+
+    /// <summary>When true, the About window shows other CyberGems apps. Default on.</summary>
+    public bool ShowSuiteRecommendations { get; set; } = true;
     /// <summary>Release label (e.g. "v1.16.0") the user chose to skip. Skipped versions
     /// produce no toast or badge until a newer release appears or the user checks manually.</summary>
     public string SkippedUpdateVersion { get; set; } = "";

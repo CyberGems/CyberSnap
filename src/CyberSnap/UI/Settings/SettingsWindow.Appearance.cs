@@ -243,6 +243,9 @@ public partial class SettingsWindow
             SetSaveDirectoryPath(s.SaveDirectory);
             SyncSavingSettingsFromSaveToFile();
             StartWithWindowsCheck.IsChecked = s.StartWithWindows;
+            _suppressShowSuiteChange = true;
+            try { ShowSuiteRecommendationsCheck.IsChecked = s.ShowSuiteRecommendations; }
+            finally { _suppressShowSuiteChange = false; }
             RulerCaptureAllScreensCheck.IsChecked = s.RulerCaptureAllScreens;
             RulerContextMenuEnabledCheck.IsChecked = s.RulerContextMenuEnabled;
 

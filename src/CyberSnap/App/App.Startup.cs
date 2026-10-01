@@ -260,6 +260,7 @@ public partial class App
         });
     }
 
+    /// <summary>Queries GitHub when the startup check is on. It never downloads or installs.</summary>
     private void ScheduleAutoUpdateCheck()
     {
         _ = Task.Run(async () =>

@@ -907,6 +907,8 @@ public partial class SettingsWindow
         {
             // General / Startup
             "startwithwindows"          => StartWithWindowsCheck,
+            "showsuiterecommendations"  => ShowSuiteRecommendationsCheck,
+            "cybergemssuite"            => SuiteSuggestionsRow,
             "pintrayicon"               => TrayPinRow,
             "setupwizard"               => SetupWizardRow,
             "aftercapture"              => AfterCaptureOutcomeEditor,

@@ -47,6 +47,7 @@ public partial class SettingsWindow : Window
     private bool _suppressAutoCopyPreferenceChange;
     private bool ImageIndexResetInProgress { get; set; }
     private bool _suppressStartWithWindowsChange;
+    private bool _suppressShowSuiteChange;
     private WindowState _lastNonMinimizedState = WindowState.Normal;
     // Mixed-DPI open: capture the trigger monitor before Show(), then center with
     // SetWindowPos in physical pixels (same path as CapturePreviewDialog). DIP Left/Top
@@ -1001,6 +1002,32 @@ public partial class SettingsWindow : Window
             }
 
             ShowStartupPreferenceFailed(ex);
+        }
+    }
+
+    private void ShowSuiteRecommendationsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressShowSuiteChange) return;
+        var previous = _settingsService.Settings.ShowSuiteRecommendations;
+        var selected = ShowSuiteRecommendationsCheck.IsChecked == true;
+        try
+        {
+            _settingsService.Settings.ShowSuiteRecommendations = selected;
+            _settingsService.Save();
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is AboutWindow about)
+                    about.ApplySuiteVisibility();
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.suite-recommendations", ex);
+            _settingsService.Settings.ShowSuiteRecommendations = previous;
+            _suppressShowSuiteChange = true;
+            try { ShowSuiteRecommendationsCheck.IsChecked = previous; }
+            finally { _suppressShowSuiteChange = false; }
+            try { _settingsService.Save(); } catch { }
         }
     }
 

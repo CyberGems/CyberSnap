@@ -1,10 +1,14 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using MediaBrush = System.Windows.Media.Brush;
@@ -19,10 +23,14 @@ public partial class AboutWindow : Window
     private const string RepoUrl = "https://github.com/CyberGems/CyberSnap";
     private const string WebsiteUrl = "https://cybergems.org";
 
+    private const double SuiteIdleOpacity = 0.38;
+
     private readonly SettingsService _settingsService;
     private bool _suppressAutoCheckUpdateChange;
+    private bool _suiteBuilt;
     private DropShadowEffect? _aboutLogoGlow;
     private UpdateCheckResult? _availableUpdate;
+    private DispatcherTimer? _diagTipTimer;
 
     public AboutWindow(SettingsService settingsService)
     {
@@ -104,12 +112,22 @@ public partial class AboutWindow : Window
 
             await UpdateService.DownloadUpdateAsync(result.DownloadUrl, installerPath, progress);
 
-            UpdateProgressText.Text = LocalizationService.Translate("Download completed. Launching installer...");
+            UpdateProgressBar.Value = 100;
+            UpdateProgressText.Text = LocalizationService.Translate("Download Complete");
 
-            ThemedConfirmDialog.Alert(this,
-                LocalizationService.Translate("Download Complete"),
-                LocalizationService.Translate("The update has been successfully downloaded. CyberSnap will now close to continue the installation."),
-                error: false);
+            var install = ThemedConfirmDialog.Confirm(this,
+                LocalizationService.Translate("Install update"),
+                LocalizationService.Translate("The update is downloaded. Install it now? CyberSnap will close."),
+                LocalizationService.Translate("Install"),
+                LocalizationService.Translate("Not now"),
+                danger: false);
+            if (!install)
+            {
+                UpdateProgressPanel.Visibility = Visibility.Collapsed;
+                UpdateBtn.IsEnabled = true;
+                SetFooterIconsEnabled(true);
+                return;
+            }
 
             UpdateService.LaunchInstallerAndExit(installerPath);
         }
@@ -138,6 +156,8 @@ public partial class AboutWindow : Window
             AutoCheckUpdateCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates;
             LoadVersionLabels();
             RefreshLocalization();
+            EnsureSuiteApps();
+            ApplySuiteVisibility();
         }
         finally
         {
@@ -169,8 +189,15 @@ public partial class AboutWindow : Window
             AboutFooterDocsBtn.ToolTip = LocalizationService.Translate("Open the online documentation");
             AboutFooterGithubBtn.ToolTip = LocalizationService.Translate("View project on GitHub");
             AboutFooterIssuesBtn.ToolTip = LocalizationService.Translate("Report a bug or open an issue");
+            AboutFooterDiagBtn.ToolTip = LocalizationService.Translate("Copy diagnostic information");
             AboutFooterReleasesBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
             AboutFooterDonateBtn.ToolTip = LocalizationService.Translate("Donate to project");
+            SuiteSectionLabel.Text = LocalizationService.Translate("More apps from CyberGems");
+            SuiteMoreBtn.Content = LocalizationService.Translate("See more...");
+            SuiteMoreBtn.ToolTip = LocalizationService.Translate("Visit CyberGems website");
+            System.Windows.Automation.AutomationProperties.SetName(SuiteMoreBtn, LocalizationService.Translate("See more..."));
+            RefreshSuiteTooltips();
+            ApplySuiteVisibility();
         }
         catch (Exception ex)
         {
@@ -275,6 +302,17 @@ public partial class AboutWindow : Window
         var result = _availableUpdate ?? app?.LatestUpdateResult;
         if (result?.IsUpdateAvailable == true)
         {
+            var download = ThemedConfirmDialog.Confirm(this,
+                LocalizationService.Translate("Download"),
+                string.Format(
+                    LocalizationService.Translate("Download {0}? The installer does not run until you confirm."),
+                    result.LatestVersionLabel),
+                LocalizationService.Translate("Download"),
+                LocalizationService.Translate("Cancel"),
+                danger: false);
+            if (!download)
+                return;
+
             // Downloading re-arms notifications for this version (also on failure).
             app?.ClearSkippedUpdateVersion();
             await StartUpdateDownloadAsync(result);
@@ -285,13 +323,14 @@ public partial class AboutWindow : Window
     }
 
     /// <summary>Shows the inline available-update state: changelog peek plus
-    /// View Release / Skip actions. The main button downloads. Nothing downloads by itself.</summary>
+    /// View Release / Skip actions. Update Now asks before it downloads, and
+    /// installation asks again after the file is ready.</summary>
     private void ShowUpdateAvailable(UpdateCheckResult result)
     {
         _availableUpdate = result;
         AboutUpdateDesc.Text = result.StatusMessage;
         UpdateBtn.Content = LocalizationService.Translate("Update Now");
-        UpdateBtn.ToolTip = LocalizationService.Translate("View update details and changelog");
+        UpdateBtn.ToolTip = LocalizationService.Translate("Download this version after you confirm. Installation waits for a second confirmation.");
         UpdatePeekTitle.Text = string.Format(LocalizationService.Translate("What's New in {0}"), result.LatestVersionLabel);
         var peek = UpdateService.PeekReleaseNotes(result.ReleaseNotes, 280);
         UpdatePeekText.Text = string.IsNullOrWhiteSpace(peek) ? result.StatusMessage : peek;
@@ -392,6 +431,153 @@ public partial class AboutWindow : Window
         OpenUrl($"{RepoUrl}/issues");
     }
 
+    private void AboutFooterDiag_Click(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        try
+        {
+            ClipboardService.CopyTextToClipboard(BuildDiagnosticReport());
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("about.copy-diagnostics", ex);
+            return;
+        }
+
+        var copied = LocalizationService.Translate("Diagnostic info copied to clipboard!");
+        AboutFooterDiagBtn.ToolTip = copied;
+        _diagTipTimer?.Stop();
+        _diagTipTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.2) };
+        _diagTipTimer.Tick += (_, _) =>
+        {
+            _diagTipTimer?.Stop();
+            AboutFooterDiagBtn.ToolTip = LocalizationService.Translate("Copy diagnostic information");
+        };
+        _diagTipTimer.Start();
+    }
+
+    private void SuiteMoreBtn_Click(object sender, RoutedEventArgs e) => OpenUrl(WebsiteUrl);
+
+    /// <summary>Shows or hides the sister-app row from the current setting.</summary>
+    public void ApplySuiteVisibility()
+    {
+        SuiteSection.Visibility = _settingsService.Settings.ShowSuiteRecommendations
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void EnsureSuiteApps()
+    {
+        if (_suiteBuilt)
+        {
+            RefreshSuiteTooltips();
+            return;
+        }
+
+        _suiteBuilt = true;
+        SuiteAppsHost.Children.Clear();
+        if (FindResource("SuiteAppButton") is not Style style)
+            return;
+
+        foreach (var app in SuiteCatalog.Pick(5))
+        {
+            BitmapImage? bitmap;
+            try
+            {
+                bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri($"pack://application:,,,/Assets/Suite/{app.Slug}.png", UriKind.Absolute);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze();
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("about.suite-icon", app.Slug + ": " + ex.Message, ex);
+                continue;
+            }
+
+            var image = new System.Windows.Controls.Image
+            {
+                Width = 30,
+                Height = 30,
+                Stretch = Stretch.Uniform,
+                Opacity = SuiteIdleOpacity,
+                IsHitTestVisible = false,
+                Source = bitmap
+            };
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+
+            var button = new System.Windows.Controls.Button
+            {
+                Style = style,
+                Content = image,
+                Tag = app
+            };
+            System.Windows.Automation.AutomationProperties.SetName(button, app.Name);
+            button.ToolTip = SuiteTooltip(app);
+            button.MouseEnter += (_, _) => FadeSuiteIcon(image, 1);
+            button.MouseLeave += (_, _) => FadeSuiteIcon(image, SuiteIdleOpacity);
+            button.Click += (_, _) => OpenUrl(app.Site);
+            SuiteAppsHost.Children.Add(button);
+        }
+    }
+
+    private void RefreshSuiteTooltips()
+    {
+        foreach (var child in SuiteAppsHost.Children)
+        {
+            if (child is System.Windows.Controls.Button button && button.Tag is SuiteApp app)
+                button.ToolTip = SuiteTooltip(app);
+        }
+    }
+
+    private static string SuiteTooltip(SuiteApp app)
+    {
+        var pitch = LocalizationService.CurrentLanguageCode.StartsWith("es", StringComparison.OrdinalIgnoreCase)
+            ? app.PitchEs
+            : app.PitchEn;
+        return $"{app.Name}: {pitch}";
+    }
+
+    private static void FadeSuiteIcon(System.Windows.Controls.Image image, double to)
+    {
+        image.BeginAnimation(OpacityProperty, new DoubleAnimation
+        {
+            To = to,
+            Duration = TimeSpan.FromMilliseconds(140),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        });
+    }
+
+    private string BuildDiagnosticReport()
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var ffmpeg = VideoRecorder.FindFfmpeg();
+        var themeSetting = _settingsService.Settings.ThemeMode.ToString();
+        var themeEffective = Theme.IsGray ? "grayscale" : Theme.IsDark ? "dark" : "light";
+        var install = InstallService.IsInstalled() ? "installed" : "portable or development";
+
+        return string.Join(Environment.NewLine,
+            "CyberSnap diagnostic report",
+            "",
+            $"- Version: {UpdateService.GetCurrentVersionLabel()}",
+            $"- Install: {install}",
+            $"- OS: {RuntimeInformation.OSDescription}",
+            $"- Display: {screen.Bounds.Width}x{screen.Bounds.Height} at ({screen.Bounds.X}, {screen.Bounds.Y}), DPI {dpi.PixelsPerInchX:0} ({dpi.DpiScaleX * 100:0}%)",
+            $"- Language: {_settingsService.Settings.InterfaceLanguage} (resolved {LocalizationService.CurrentLanguageCode})",
+            $"- Theme: {themeSetting} (effective {themeEffective})",
+            $"- Check for updates on startup: {OnOff(_settingsService.Settings.AutoCheckForUpdates)}",
+            $"- Suite suggestions: {OnOff(_settingsService.Settings.ShowSuiteRecommendations)}",
+            $"- FFmpeg: {(string.IsNullOrWhiteSpace(ffmpeg) ? "not found" : ffmpeg)}",
+            $"- Runtime: {RuntimeInformation.FrameworkDescription}",
+            $"- Local time: {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz} ({TimeZoneInfo.Local.DisplayName})");
+    }
+
+    private static string OnOff(bool value) => value ? "on" : "off";
+
     private void AboutFooterReleases_Click(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
@@ -453,6 +639,12 @@ public partial class AboutWindow : Window
             AboutFooterIssuesIcon4.SetResourceReference(Shape.StrokeProperty, brushKey);
             AboutFooterIssuesIcon5.SetResourceReference(Shape.StrokeProperty, brushKey);
         }
+        else if (border == AboutFooterDiagBtn)
+        {
+            AboutFooterDiagBody.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterDiagClip.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterDiagLines.SetResourceReference(Shape.StrokeProperty, brushKey);
+        }
         else if (border == AboutFooterReleasesBtn)
         {
             AboutFooterTagBody.SetResourceReference(Shape.StrokeProperty, brushKey);
@@ -471,12 +663,14 @@ public partial class AboutWindow : Window
         AboutFooterWebsiteBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterGithubBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterIssuesBtn.Background = System.Windows.Media.Brushes.Transparent;
+        AboutFooterDiagBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterReleasesBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterDocsBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterDonateBtn.Background = System.Windows.Media.Brushes.Transparent;
         SetFooterIconAccent(AboutFooterWebsiteBtn, primary: false);
         SetFooterIconAccent(AboutFooterGithubBtn, primary: false);
         SetFooterIconAccent(AboutFooterIssuesBtn, primary: false);
+        SetFooterIconAccent(AboutFooterDiagBtn, primary: false);
         SetFooterIconAccent(AboutFooterReleasesBtn, primary: false);
         SetFooterIconAccent(AboutFooterDocsBtn, primary: false);
     }
@@ -486,6 +680,7 @@ public partial class AboutWindow : Window
         AboutFooterWebsiteBtn.IsEnabled = enabled;
         AboutFooterGithubBtn.IsEnabled = enabled;
         AboutFooterIssuesBtn.IsEnabled = enabled;
+        AboutFooterDiagBtn.IsEnabled = enabled;
         AboutFooterReleasesBtn.IsEnabled = enabled;
         AboutFooterDocsBtn.IsEnabled = enabled;
         AboutFooterDonateBtn.IsEnabled = enabled;
@@ -493,6 +688,7 @@ public partial class AboutWindow : Window
         AboutFooterWebsiteBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterGithubBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterIssuesBtn.Opacity = enabled ? 1 : 0.45;
+        AboutFooterDiagBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterReleasesBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterDocsBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterDonateBtn.Opacity = enabled ? 1 : 0.45;
