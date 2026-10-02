@@ -227,6 +227,8 @@ public partial class TrayContextMenuWindow : Window
 
         SetTooltip(SettingsBtn, T("Open CyberSnap settings"));
         SetTooltip(AchievementsBtn, T("Open Achievements"));
+        SetTooltip(DonateBtn, T("Donate to project"));
+        System.Windows.Automation.AutomationProperties.SetName(DonateBtn, T("Donate"));
         SetTooltip(AboutBtn, T("Open About CyberSnap"));
         SetTooltip(ExitBtn, T("Quit CyberSnap"));
         SetCompactTooltip();
@@ -275,6 +277,7 @@ public partial class TrayContextMenuWindow : Window
 
         SettingsIcon.Source = GetIcon("gear", fgColor, 20);
         AchievementsIcon.Source = GetIcon("trophy", fgColor, 20);
+        DonateIcon.Source = FluentIcons.RenderWpf("heart", System.Drawing.Color.FromArgb(244, 63, 94), 20);
         AboutIcon.Source = GetIcon("info", fgColor, 20);
         ExitIcon.Source = GetDangerIcon("signOut", 20);
 
@@ -552,6 +555,12 @@ public partial class TrayContextMenuWindow : Window
     {
         try { CloseMenu(); _trayIcon.TriggerAchievements(); }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.achievements", ex); }
+    }
+
+    private void Donate_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); DonationLinks.Open(); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.donate", ex); }
     }
 
     private void About_Click(object sender, RoutedEventArgs e)

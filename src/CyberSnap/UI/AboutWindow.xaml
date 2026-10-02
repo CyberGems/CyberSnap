@@ -441,7 +441,7 @@
                            MouseLeave="AboutFooterCopyright_MouseLeave"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Website (Globe) — same icon/order as CyberWall -->
+                    <!-- Website (diamond) — same icon as CyberClock -->
                     <Border x:Name="AboutFooterWebsiteBtn"
                             Style="{StaticResource AboutFooterIconButton}"
                             ToolTip="Visit CyberGems website"
@@ -454,7 +454,7 @@
                                   Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5"
                                   StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                   Fill="Transparent"
-                                  Data="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                  Data="M6 3h12l4 6-10 12L2 9z M2 9h20 M10 3l-2 6 4 12 4-12-2-6"/>
                         </Viewbox>
                     </Border>
                     <!-- Online documentation (Open book) — same icon/order as CyberWall -->

@@ -514,9 +514,9 @@
                     </Button>
                 </UniformGrid>
 
-                <!-- Footer actions: four evenly distributed icon-only buttons. -->
+                <!-- Footer actions: icon-only. Donate sits between Achievements and About. -->
                 <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
-                <UniformGrid Columns="4">
+                <UniformGrid Columns="5">
                     <Button x:Name="ExitBtn"
                             Style="{StaticResource BottomDangerButtonStyle}"
                             Click="Exit_Click"
@@ -533,6 +533,16 @@
                             Padding="6"
                             Margin="2">
                         <Image x:Name="AchievementsIcon" Width="20" Height="20"
+                               Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="DonateBtn"
+                            Style="{StaticResource BottomButtonStyle}"
+                            Click="Donate_Click"
+                            ToolTip="Donate to project"
+                            AutomationProperties.Name="Donate"
+                            Padding="6"
+                            Margin="2">
+                        <Image x:Name="DonateIcon" Width="20" Height="20"
                                Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <Button x:Name="AboutBtn"
