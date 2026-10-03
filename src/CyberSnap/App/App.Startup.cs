@@ -284,7 +284,10 @@ public partial class App
                 {
                     LatestUpdateResult = null;
                     if (Application.Current is not null)
+                    {
                         RefreshWidgetUpdateBadge();
+                        RefreshAboutUpdateSectionIfOpen();
+                    }
                     return;
                 }
                 ClearSkippedUpdateVersion();
@@ -295,6 +298,7 @@ public partial class App
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     RefreshWidgetUpdateBadge();
+                    RefreshAboutUpdateSectionIfOpen();
                     var peek = UpdateService.PeekReleaseNotes(result.ReleaseNotes, 160);
                     var header = string.Format(LocalizationService.Translate("CyberSnap {0} is out!\nYou're on {1}"), result.LatestVersionLabel, UpdateService.GetCurrentVersionLabel());
                     var body = string.IsNullOrWhiteSpace(peek) ? header : $"{header}\n\n{peek}";

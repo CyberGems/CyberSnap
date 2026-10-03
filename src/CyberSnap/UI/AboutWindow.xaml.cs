@@ -351,6 +351,23 @@ public partial class AboutWindow : Window
         UpdateAvailablePanel.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>Refreshes the About update section from the latest background
+    /// check result. Called live by App when a check finishes while About is open.</summary>
+    public void RefreshUpdateState()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(RefreshUpdateState);
+            return;
+        }
+
+        // Do not clobber an in-progress download (progress panel + disabled button).
+        if (UpdateProgressPanel.Visibility == Visibility.Visible || !UpdateBtn.IsEnabled)
+            return;
+
+        RefreshUpdateSection();
+    }
+
     /// <summary>Applies the current update state to the About section:
     /// available (peek + actions), skipped, or default check prompt.</summary>
     private void RefreshUpdateSection()

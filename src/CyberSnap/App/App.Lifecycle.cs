@@ -167,6 +167,7 @@ public partial class App
         if (string.Equals(LatestUpdateResult?.LatestVersionLabel, versionLabel, StringComparison.Ordinal))
             LatestUpdateResult = null;
         RefreshWidgetUpdateBadge();
+        RefreshAboutUpdateSectionIfOpen();
     }
 
     /// <summary>Clears the skipped version (e.g. when the user starts a download or a newer release appears).</summary>
@@ -277,6 +278,20 @@ public partial class App
 
         if (_achievementsWindow is { IsVisible: true })
             _achievementsWindow.RefreshFromSettings();
+    }
+
+    /// <summary>Pushes the latest background update result into an open About window,
+    /// so the changelog peek appears live without reopening or focusing it.</summary>
+    public void RefreshAboutUpdateSectionIfOpen()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshAboutUpdateSectionIfOpen);
+            return;
+        }
+
+        if (_aboutWindow is { IsVisible: true })
+            _aboutWindow.RefreshUpdateState();
     }
 
     private void ShowAchievementsWindow()
