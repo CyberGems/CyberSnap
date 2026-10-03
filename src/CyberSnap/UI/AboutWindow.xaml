@@ -12,7 +12,7 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
-        Icon="pack://application:,,,/Assets/Icons/About.ico">
+         Icon="pack://application:,,,/Assets/Icons/CyberSnap.ico">
 
     <Window.Resources>
         <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="#FFF0F0F0"/>
@@ -354,10 +354,18 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE896;" Style="{StaticResource SettingIconGlyph}"/>
+                                <TextBlock x:Name="AboutUpdateIcon" Text="&#xE896;" Style="{StaticResource SettingIconGlyph}"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <TextBlock x:Name="AboutUpdateTitle" Text="Check for updates" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Check for updates"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock x:Name="AboutUpdateTitle" Text="Check for updates" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Check for updates"/>
+                                    <Border x:Name="UpdateBadge" Visibility="Collapsed" CornerRadius="3" Padding="5,2" Margin="8,0,0,0"
+                                            Background="{DynamicResource ThemeTabActiveBrush}">
+                                        <TextBlock x:Name="UpdateBadgeText" Text="New version" FontSize="10.5" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ThemeAccentBrush}"
+                                                   Services:LocalizationService.SourceText="New version"/>
+                                    </Border>
+                                </StackPanel>
                                 <TextBlock x:Name="AboutUpdateDesc" Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Check for the latest version and download updates directly."/>
                             </StackPanel>
                             <Button x:Name="UpdateBtn" Content="Check Now" Grid.Column="2" MinWidth="108"

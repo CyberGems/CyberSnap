@@ -338,12 +338,16 @@ public partial class AboutWindow : Window
         ViewReleaseBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
         SkipVersionBtn.Content = LocalizationService.Translate("Skip this version");
         SkipVersionBtn.ToolTip = LocalizationService.Translate("Skip this version");
+        UpdateBadge.Visibility = Visibility.Visible;
+        AboutUpdateIcon.SetResourceReference(TextBlock.ForegroundProperty, "ThemeAccentBrush");
         UpdateAvailablePanel.Visibility = Visibility.Visible;
     }
 
     private void HideUpdateAvailable()
     {
         _availableUpdate = null;
+        UpdateBadge.Visibility = Visibility.Collapsed;
+        AboutUpdateIcon.ClearValue(TextBlock.ForegroundProperty);
         UpdateAvailablePanel.Visibility = Visibility.Collapsed;
     }
 
