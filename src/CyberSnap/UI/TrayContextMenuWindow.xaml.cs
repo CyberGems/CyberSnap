@@ -26,6 +26,8 @@ public partial class TrayContextMenuWindow : Window
     private bool _showGallery = true;
     private bool _panelMenuOpen;
     private MenuItem? _panelMenuResetItem;
+    private ContextMenu? _panelMenu;
+    private bool _suppressPanelMenuReopen;
     private DateTime _panelMenuClosedAt = DateTime.MinValue;
     private WpfToolTip? _activeTooltip;
     private FrameworkElement? _activeTooltipOwner;
@@ -399,6 +401,20 @@ public partial class TrayContextMenuWindow : Window
     {
         try
         {
+            // True toggle: a second click while open closes instead of rebuilding.
+            if (_panelMenu?.IsOpen == true)
+            {
+                _panelMenu.IsOpen = false;
+                return;
+            }
+            // The dismissing press on ⋯ itself closes the popup before Click fires;
+            // without this the menu would instantly rebuild ("refresh") on 2nd click.
+            if (_suppressPanelMenuReopen)
+            {
+                _suppressPanelMenuReopen = false;
+                return;
+            }
+
             var menu = new ContextMenu
             {
                 PlacementTarget = PanelMenuBtn,
@@ -470,6 +486,7 @@ public partial class TrayContextMenuWindow : Window
             var resetItem = new MenuItem
             {
                 Header = T("Reposition panel"),
+                ToolTip = T("Brings the panel back into view when it extends beyond the screen"),
                 // Unlike the toggles above, this one closes the menu: the window glides
                 // while no popup is anchored to ⋯, so nothing can detach.
                 StaysOpenOnClick = false,
@@ -481,6 +498,9 @@ public partial class TrayContextMenuWindow : Window
                     Stretch = Stretch.Uniform,
                 },
             };
+            // Disabled items hide their tooltip by default; this one explains exactly
+            // why it is off, so keep it readable in both states.
+            System.Windows.Controls.ToolTipService.SetShowOnDisabled(resetItem, true);
             resetItem.Click += (_, _) =>
             {
                 try { ClampToWorkArea(); }
@@ -508,8 +528,14 @@ public partial class TrayContextMenuWindow : Window
 
             menu.Closed += (_, _) =>
             {
+                // If the dismissing press landed on ⋯ itself (mouse still down over it),
+                // the upcoming Click is a toggle-off: stay closed instead of reopening.
+                // Keyboard dismissal (Esc) leaves the button unpressed, so it still reopens.
+                if (PanelMenuBtn.IsMouseOver && Mouse.LeftButton == MouseButtonState.Pressed)
+                    _suppressPanelMenuReopen = true;
                 _panelMenuClosedAt = DateTime.UtcNow;
                 _panelMenuOpen = false;
+                _panelMenu = null;
                 _panelMenuResetItem = null;
                 SyncPanelMenuHover();
                 // Sections may have grown the panel past the work area while choosing;
@@ -529,6 +555,7 @@ public partial class TrayContextMenuWindow : Window
             if ((DateTime.UtcNow - _panelMenuClosedAt).TotalMilliseconds < 250)
                 return;
 
+            _panelMenu = menu;
             menu.IsOpen = true;
         }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.panel-menu", ex); }

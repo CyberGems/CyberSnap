@@ -2540,5 +2540,6 @@
   "Panel options": "Opciones del panel",
   "Capture modes": "Modos de captura",
   "Gallery and editor": "Galería y editor",
-  "Reposition panel": "Recolocar panel"
+  "Reposition panel": "Recolocar panel",
+  "Brings the panel back into view when it extends beyond the screen": "Devuelve el panel a la vista cuando se extiende más allá de la pantalla"
 }
