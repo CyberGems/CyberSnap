@@ -302,7 +302,6 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header Section -->
@@ -478,11 +477,14 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- Each hideable block owns its top separator so the whole block slides
+                     as one container (same technique as the capture-modes collapse). -->
+                <StackPanel x:Name="RecordingBlock" ClipToBounds="True">
                 <!-- Separate image-capture shortcuts from video recording controls. -->
                 <Border x:Name="RecordingSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="8,4,8,4"/>
 
                 <!-- Secondary capture tools — compact tiles matching the bottom rows -->
-                <UniformGrid x:Name="RecordingSection" Columns="2" ClipToBounds="True">
+                <UniformGrid x:Name="RecordingSection" Columns="2">
                     <!-- Screen Recorder (MP4) -->
                     <Button x:Name="VideoRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="VideoRecord_Click" Padding="4,8" Margin="4,2,2,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -514,11 +516,13 @@
                         </StackPanel>
                     </Button>
                 </UniformGrid>
+                </StackPanel>
 
+                <StackPanel x:Name="ToolsBlock" ClipToBounds="True">
                 <!-- Separator between capture tools and standalone utility tools -->
                 <Border x:Name="ToolsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
 
-                <UniformGrid x:Name="ToolsSection" Columns="2" ClipToBounds="True">
+                <UniformGrid x:Name="ToolsSection" Columns="2">
                     <!-- OCR -->
                     <Button x:Name="OcrBtn" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="4,8" Margin="4,2,2,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -583,15 +587,17 @@
                         </StackPanel>
                     </Button>
                 </UniformGrid>
+                </StackPanel>
             </StackPanel>
 
-            <!-- Separator -->
-            <Border x:Name="GallerySeparator" Grid.Row="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
-
             <!-- Bottom Actions — compact tiles; larger icons/labels for accessibility. -->
-            <StackPanel Grid.Row="3">
+            <StackPanel Grid.Row="2">
+                <StackPanel x:Name="GalleryBlock" ClipToBounds="True">
+                <!-- Separator -->
+                <Border x:Name="GallerySeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
+
                 <!-- Gallery & Editor in the same row -->
-                <UniformGrid x:Name="GallerySection" Columns="2" ClipToBounds="True">
+                <UniformGrid x:Name="GallerySection" Columns="2">
                     <!-- Gallery (left) -->
                     <Button x:Name="GalleryBtn"
                             Style="{StaticResource BottomButtonStyle}"
@@ -632,6 +638,7 @@
                         </StackPanel>
                     </Button>
                 </UniformGrid>
+                </StackPanel>
 
                 <!-- Footer actions: icon-only. Donate sits between Achievements and About. -->
                 <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>

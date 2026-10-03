@@ -25,6 +25,7 @@ public partial class TrayContextMenuWindow : Window
     private bool _showTools = true;
     private bool _showGallery = true;
     private bool _panelMenuOpen;
+    private MenuItem? _panelMenuResetItem;
     private DateTime _panelMenuClosedAt = DateTime.MinValue;
     private WpfToolTip? _activeTooltip;
     private FrameworkElement? _activeTooltipOwner;
@@ -417,6 +418,7 @@ public partial class TrayContextMenuWindow : Window
                 _isCompact = !modesItem.IsChecked;
                 ApplyCompactMode(animate: true);
                 SettingsService.SaveQuickPanelCompact(_isCompact);
+                RefreshResetItem();
             };
 
             var recordingItem = new MenuItem
@@ -430,6 +432,7 @@ public partial class TrayContextMenuWindow : Window
                 _showRecording = recordingItem.IsChecked;
                 ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowRecording(_showRecording);
+                RefreshResetItem();
             };
 
             var toolsItem = new MenuItem
@@ -443,6 +446,7 @@ public partial class TrayContextMenuWindow : Window
                 _showTools = toolsItem.IsChecked;
                 ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowTools(_showTools);
+                RefreshResetItem();
             };
 
             var galleryItem = new MenuItem
@@ -456,7 +460,29 @@ public partial class TrayContextMenuWindow : Window
                 _showGallery = galleryItem.IsChecked;
                 ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowGallery(_showGallery);
+                RefreshResetItem();
             };
+
+            var resetItem = new MenuItem
+            {
+                Header = T("Reposition panel"),
+                // Unlike the toggles above, this one closes the menu: the window glides
+                // while no popup is anchored to ⋯, so nothing can detach.
+                StaysOpenOnClick = false,
+                Icon = new System.Windows.Controls.Image
+                {
+                    Source = GetIcon("restore", Theme.TextPrimary, 16),
+                    Width = 16,
+                    Height = 16,
+                    Stretch = Stretch.Uniform,
+                },
+            };
+            resetItem.Click += (_, _) =>
+            {
+                try { ClampToWorkArea(); }
+                catch (Exception ex) { AppDiagnostics.LogError("traymenu.reposition", ex); }
+            };
+            _panelMenuResetItem = resetItem;
 
             menu.Items.Add(modesItem);
             var menuSeparator = new Separator();
@@ -464,17 +490,23 @@ public partial class TrayContextMenuWindow : Window
             menu.Items.Add(recordingItem);
             menu.Items.Add(toolsItem);
             menu.Items.Add(galleryItem);
+            var resetSeparator = new Separator();
+            menu.Items.Add(resetSeparator);
+            menu.Items.Add(resetItem);
+            RefreshResetItem();
 
             // Suite look: card background, rounded corners, hover wash, checkmarks.
             menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
             foreach (var item in menu.Items.OfType<MenuItem>())
                 item.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
             menuSeparator.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuSeparator");
+            resetSeparator.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuSeparator");
 
             menu.Closed += (_, _) =>
             {
                 _panelMenuClosedAt = DateTime.UtcNow;
                 _panelMenuOpen = false;
+                _panelMenuResetItem = null;
                 SyncPanelMenuHover();
                 // Sections may have grown the panel past the work area while choosing;
                 // glide back now that the menu (anchored to ⋯) is gone, so it stays put.
@@ -529,6 +561,39 @@ public partial class TrayContextMenuWindow : Window
                 PanelMenuBtn.ClearValue(BackgroundProperty);
         }
         catch { }
+    }
+
+    /// <summary>
+    /// The reset entry is only meaningful when there is something to fix: the panel
+    /// currently overflows, or sections were hidden from the full default.
+    /// </summary>
+    private void RefreshResetItem()
+    {
+        try
+        {
+            if (_panelMenuResetItem is null)
+                return;
+            bool customized = !_showRecording || !_showTools || !_showGallery || _isCompact;
+            _panelMenuResetItem.IsEnabled = customized || NeedsRefit();
+        }
+        catch { }
+    }
+
+    /// <summary>Overflow check without moving anything (used to enable the reset entry).</summary>
+    private bool NeedsRefit()
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+                return false;
+            if (!Native.User32.GetWindowRect(hwnd, out var rect))
+                return false;
+            var work = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea; // physical px
+            return rect.Right > work.Right || rect.Left < work.Left
+                || rect.Bottom > work.Bottom || rect.Top < work.Top;
+        }
+        catch { return false; }
     }
 
     /// <summary>
@@ -637,134 +702,81 @@ public partial class TrayContextMenuWindow : Window
 
     private void ApplySectionVisibility(bool animate)
     {
-        AnimateVertical(RecordingSection, _showRecording, animate);
-        AnimateVertical(ToolsSection, _showTools, animate);
-        AnimateVertical(GallerySection, _showGallery, animate);
-
-        // Separators: keep a single divider above the next visible block, never orphaned.
-        // Fading avoids a hard cut while the neighboring block is still animating.
-        bool anyVisible = _showRecording || _showTools || _showGallery;
-        FadeSeparator(RecordingSeparator, anyVisible, animate);
-        FadeSeparator(ToolsSeparator, _showTools && _showRecording, animate);
-        FadeSeparator(GallerySeparator, _showGallery && (_showRecording || _showTools), animate);
+        // Each block owns its top separator, so a single divider always travels with
+        // its section and no orphaned lines are possible.
+        AnimateBlock(RecordingBlock, _showRecording, animate);
+        AnimateBlock(ToolsBlock, _showTools, animate);
+        AnimateBlock(GalleryBlock, _showGallery, animate);
     }
 
     /// <summary>
-    /// Same feel as the capture-modes collapse: height slides while content fades.
-    /// Separators have no height to slide (margins would leave a gap), so they only fade.
+    /// Same technique as the capture-modes collapse, rotated 90°: the container's
+    /// height slides with clipping while everything inside (including the separator
+    /// margins) rides along. Height-only on purpose — opacity fades on top of window
+    /// reflow are what made the previous version stutter.
     /// </summary>
-    private static void AnimateVertical(FrameworkElement element, bool show, bool animate)
+    private static void AnimateBlock(FrameworkElement block, bool show, bool animate)
     {
         const double animDuration = 0.15; // seconds — matches the capture-modes collapse
         var duration = new Duration(TimeSpan.FromSeconds(animDuration));
         var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
 
-        element.BeginAnimation(FrameworkElement.HeightProperty, null);
-        element.BeginAnimation(UIElement.OpacityProperty, null);
+        block.BeginAnimation(FrameworkElement.HeightProperty, null);
 
         if (!animate)
         {
-            element.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-            element.Height = double.NaN;
-            element.Opacity = 1;
-            return;
-        }
-
-        bool isVisible = element.Visibility == Visibility.Visible && element.Opacity > 0.5;
-        if (show == isVisible && element.Visibility == (show ? Visibility.Visible : Visibility.Collapsed))
-        {
-            // Already in the target state (e.g. rapid re-toggle); just clear any stray animation.
-            if (show)
-            {
-                element.Height = double.NaN;
-                element.Opacity = 1;
-            }
+            // Instant (first show)
+            block.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            block.Height = double.NaN;
             return;
         }
 
         if (show)
         {
-            // Measure the natural height, then grow from 0 while fading in.
-            element.Height = double.NaN;
-            element.Opacity = 0;
-            element.Visibility = Visibility.Visible;
-            element.UpdateLayout();
-            double target = element.ActualHeight > 0 ? element.ActualHeight : 0;
+            if (block.Visibility == Visibility.Visible)
+                return; // already there; ignore stray re-toggles
+            // Measure the natural height, then grow from 0.
+            block.Height = double.NaN;
+            block.Visibility = Visibility.Visible;
+            block.UpdateLayout();
+            double target = block.ActualHeight > 0 ? block.ActualHeight : 0;
             if (target <= 0)
             {
-                element.Height = double.NaN;
-                element.Opacity = 1;
+                block.Height = double.NaN;
                 return;
             }
 
-            element.Height = 0;
+            block.Height = 0;
             var heightAnim = new DoubleAnimation(0, target, duration) { EasingFunction = ease };
             heightAnim.Completed += (_, _) =>
             {
-                element.BeginAnimation(FrameworkElement.HeightProperty, null);
-                element.Height = double.NaN;
+                block.BeginAnimation(FrameworkElement.HeightProperty, null);
+                block.Height = double.NaN;
             };
-            var opacityAnim = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
-            element.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
-            element.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+            block.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
         }
         else
         {
-            double current = element.ActualHeight > 0 ? element.ActualHeight : 0;
+            if (block.Visibility != Visibility.Visible)
+                return;
+            // Collapse: animate Height from current to 0, then hide.
+            double current = block.ActualHeight > 0 ? block.ActualHeight : 0;
             if (current <= 0)
             {
-                element.Visibility = Visibility.Collapsed;
-                element.Height = double.NaN;
+                block.Visibility = Visibility.Collapsed;
+                block.Height = double.NaN;
                 return;
             }
 
-            element.Height = current;
+            block.Height = current;
             var heightAnim = new DoubleAnimation(current, 0, duration) { EasingFunction = ease };
             heightAnim.Completed += (_, _) =>
             {
-                element.Visibility = Visibility.Collapsed;
-                element.BeginAnimation(FrameworkElement.HeightProperty, null);
-                element.Height = double.NaN;
-                element.Opacity = 1; // reset so the next expand starts clean
+                block.Visibility = Visibility.Collapsed;
+                block.BeginAnimation(FrameworkElement.HeightProperty, null);
+                block.Height = double.NaN; // restore for next expand
             };
-            var opacityAnim = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
-            element.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
-            element.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-        }
-    }
-
-    private static void FadeSeparator(FrameworkElement separator, bool show, bool animate)
-    {
-        const double animDuration = 0.15;
-        var duration = new Duration(TimeSpan.FromSeconds(animDuration));
-        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
-
-        separator.BeginAnimation(UIElement.OpacityProperty, null);
-
-        if (!animate)
-        {
-            separator.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-            separator.Opacity = 1;
-            return;
-        }
-
-        if (show)
-        {
-            separator.Visibility = Visibility.Visible;
-            var fadeIn = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
-            separator.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-        }
-        else
-        {
-            if (separator.Visibility != Visibility.Visible)
-                return;
-            var fadeOut = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
-            fadeOut.Completed += (_, _) =>
-            {
-                separator.Visibility = Visibility.Collapsed;
-                separator.Opacity = 1;
-            };
-            separator.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+            block.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
         }
     }
 
