@@ -480,6 +480,12 @@ public partial class HistoryWindow
         var menu = ImageSearchFilterBtn.ContextMenu;
         if (menu == null)
             return;
+        // Deterministic toggle (StaysOpen takes no capture, so this always runs).
+        if (menu.IsOpen)
+        {
+            menu.IsOpen = false;
+            return;
+        }
         // Close the tooltip if it is showing so it doesn't linger over the menu.
         if (ImageSearchFilterBtn.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
             tt.IsOpen = false;

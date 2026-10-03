@@ -635,7 +635,43 @@ public partial class HistoryWindow
     {
         var menu = new ContextMenu();
         menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+        // No mouse capture: overflow ⋮ buttons keep receiving presses, so the second
+        // press deterministically toggles instead of racing auto-dismiss. Dismissal is
+        // explicit (HistoryWindow press outside, Esc, deactivation) — see TrackCardMenu.
+        menu.StaysOpen = true;
+        TrackCardMenu(menu);
         return menu;
+    }
+
+    private static readonly HashSet<ContextMenu> s_openCardMenus = new();
+
+    /// <summary>Registry of open card menus so window-level dismiss can close them.</summary>
+    private static void TrackCardMenu(ContextMenu menu)
+    {
+        menu.Opened += (_, _) => { lock (s_openCardMenus) s_openCardMenus.Add(menu); };
+        menu.Closed += (_, _) => { lock (s_openCardMenus) s_openCardMenus.Remove(menu); };
+    }
+
+    private static void CloseOpenCardMenus()
+    {
+        ContextMenu[] open;
+        lock (s_openCardMenus)
+        {
+            if (s_openCardMenus.Count == 0)
+                return;
+            open = new ContextMenu[s_openCardMenus.Count];
+            s_openCardMenus.CopyTo(open);
+        }
+
+        foreach (var menu in open)
+        {
+            try
+            {
+                if (menu.IsOpen)
+                    menu.IsOpen = false;
+            }
+            catch { }
+        }
     }
 
     private MenuItem CreateCardActionMenuItem(string label, Action action, string? helpText = null,
@@ -741,6 +777,9 @@ public partial class HistoryWindow
             Cursor = Cursors.Hand,
             Opacity = 0.7,
             Child = content,
+            // Marks overflow triggers for window-level dismiss: presses here toggle
+            // deterministically on mouse-up instead of dismissing.
+            Tag = "CardOverflowButton",
             ToolTip = new System.Windows.Controls.ToolTip { Content = LocalizationService.Translate("Actions") },
         };
         System.Windows.Controls.Panel.SetZIndex(button, 999);

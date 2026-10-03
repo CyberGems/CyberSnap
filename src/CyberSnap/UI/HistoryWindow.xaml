@@ -668,10 +668,11 @@
                                                    Cursor="Hand" ToolTip="Search filters"
                                                    AutomationProperties.Name="Search filters"
                                                    MouseLeftButtonDown="ImageSearchFilterBtn_Click">
-                                                <Image.ContextMenu>
-                                                    <ContextMenu Placement="Bottom"
-                                                                 Style="{StaticResource HistoryActionsMenuStyle}"
-                                                                 AutomationProperties.Name="Search filters">
+                                                 <Image.ContextMenu>
+                                                     <ContextMenu Placement="Bottom"
+                                                                  StaysOpen="True"
+                                                                  Style="{StaticResource HistoryActionsMenuStyle}"
+                                                                  AutomationProperties.Name="Search filters">
                                                         <MenuItem x:Name="ImageSearchFileNameCheck" Header="Search file names" IsCheckable="True"
                                                                   Style="{StaticResource HistoryActionsMenuItem}"
                                                                   ToolTip="Include screenshot file names in search"

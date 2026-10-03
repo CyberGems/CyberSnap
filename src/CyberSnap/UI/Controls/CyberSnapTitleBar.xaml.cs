@@ -47,10 +47,11 @@ public partial class CyberSnapTitleBar : UserControl
 
     private Window? _subscribedWindow;
     /// <summary>
-    /// When a ContextMenu closes from an outside click, WPF closes it before our
-    /// button handler runs. Without this cooldown the same click reopens the menu,
-    /// and PlacementMode.MousePoint (the default) can park it at screen (0,0) under
-    /// mixed/150% DPI + AllowsTransparency windows.
+    /// Burger menus are StaysOpen (no mouse capture): without capture every press
+    /// reaches its button truthfully, so ToggleContextMenu's IsOpen branch is a
+    /// deterministic toggle and hover never goes stale. Dismissal is explicit instead
+    /// (owner press outside the buttons, Esc, deactivation). The cooldown below only
+    /// guards an explicit close followed by an immediate re-press.
     /// </summary>
     private DateTime _contextMenuClosedAt = DateTime.MinValue;
     /// <summary>
@@ -75,9 +76,11 @@ public partial class CyberSnapTitleBar : UserControl
                     if (_subscribedWindow != null)
                     {
                         _subscribedWindow.StateChanged -= Window_StateChanged;
+                        DetachMenuDismiss(_subscribedWindow);
                     }
                     _subscribedWindow = window;
                     _subscribedWindow.StateChanged += Window_StateChanged;
+                    AttachMenuDismiss(window);
                 }
             }
             RefreshIcons();
@@ -87,6 +90,7 @@ public partial class CyberSnapTitleBar : UserControl
             if (_subscribedWindow != null)
             {
                 _subscribedWindow.StateChanged -= Window_StateChanged;
+                DetachMenuDismiss(_subscribedWindow);
                 _subscribedWindow = null;
             }
         };
@@ -631,6 +635,95 @@ public partial class CyberSnapTitleBar : UserControl
     private void StyleBurgerMenu(ContextMenu menu)
     {
         menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+        // No mouse capture: the trigger buttons keep receiving presses, so the second
+        // press deterministically toggles instead of racing auto-dismiss. Dismissal is
+        // explicit (owner press outside the buttons, Esc, deactivation) — see hooks.
+        menu.StaysOpen = true;
+    }
+
+    /// <summary>Explicit dismissal for the StaysOpen burger menus.</summary>
+    private void AttachMenuDismiss(Window window)
+    {
+        window.PreviewMouseDown += OwnerPreviewMouseDown;
+        window.PreviewKeyDown += OwnerPreviewKeyDown;
+        window.Deactivated += OwnerDeactivated;
+    }
+
+    private void DetachMenuDismiss(Window window)
+    {
+        window.PreviewMouseDown -= OwnerPreviewMouseDown;
+        window.PreviewKeyDown -= OwnerPreviewKeyDown;
+        window.Deactivated -= OwnerDeactivated;
+    }
+
+    private void CloseOwnedMenus()
+    {
+        try
+        {
+            if (BurgerBtn.ContextMenu?.IsOpen == true)
+                BurgerBtn.ContextMenu.IsOpen = false;
+            if (ActionBtn.ContextMenu?.IsOpen == true)
+                ActionBtn.ContextMenu.IsOpen = false;
+        }
+        catch { }
+    }
+
+    private bool AnyOwnedMenuOpen() =>
+        BurgerBtn.ContextMenu?.IsOpen == true || ActionBtn.ContextMenu?.IsOpen == true;
+
+    private void OwnerPreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        try
+        {
+            if (!AnyOwnedMenuOpen())
+                return;
+            // Presses inside a menu never reach the owner window (separate visual tree),
+            // so anything arriving here is outside the menus — except on the triggers,
+            // which toggle deterministically on mouse-up below.
+            if (e.OriginalSource is DependencyObject source &&
+                (IsWithinElement(source, BurgerBtn) || IsWithinElement(source, ActionBtn)))
+                return;
+            CloseOwnedMenus();
+        }
+        catch { }
+    }
+
+    private void OwnerPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        try
+        {
+            if (e.Key == System.Windows.Input.Key.Escape && AnyOwnedMenuOpen())
+            {
+                CloseOwnedMenus();
+                e.Handled = true;
+            }
+        }
+        catch { }
+    }
+
+    private void OwnerDeactivated(object? sender, EventArgs e)
+    {
+        // Replaces the implicit auto-dismiss: never leave an orphan menu floating.
+        CloseOwnedMenus();
+    }
+
+    private static bool IsWithinElement(DependencyObject? source, DependencyObject ancestor)
+    {
+        for (var current = source; current is not null; current = GetVisualOrLogicalParent(current))
+        {
+            if (ReferenceEquals(current, ancestor))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static DependencyObject? GetVisualOrLogicalParent(DependencyObject element)
+    {
+        if (element is System.Windows.Media.Visual || element is System.Windows.Media.Media3D.Visual3D)
+            return System.Windows.Media.VisualTreeHelper.GetParent(element);
+
+        return LogicalTreeHelper.GetParent(element);
     }
 
     private static void ApplyMenuItemStyles(ContextMenu menu)
