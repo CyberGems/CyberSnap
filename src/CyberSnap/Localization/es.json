@@ -2536,5 +2536,8 @@
   "What's New": "Novedades",
   "What's New in {0}": "Novedades de {0}",
   "Update {0} skipped": "Actualización {0} omitida",
-  "New version": "Nueva versión"
+  "New version": "Nueva versión",
+  "Panel options": "Opciones del panel",
+  "Capture modes": "Modos de captura",
+  "Gallery and editor": "Galería y editor"
 }

@@ -296,6 +296,72 @@ public sealed class SettingsService : IDisposable
         }
     }
 
+    public static void SaveQuickPanelShowRecording(bool value)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+                s_cachedSettings.QuickPanelShowRecording = value;
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.QuickPanelShowRecording = value;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.quick-panel-recording.static-save", ex);
+        }
+    }
+
+    public static void SaveQuickPanelShowTools(bool value)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+                s_cachedSettings.QuickPanelShowTools = value;
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.QuickPanelShowTools = value;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.quick-panel-tools.static-save", ex);
+        }
+    }
+
+    public static void SaveQuickPanelShowGallery(bool value)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+                s_cachedSettings.QuickPanelShowGallery = value;
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.QuickPanelShowGallery = value;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.quick-panel-gallery.static-save", ex);
+        }
+    }
+
     public SettingsService(string? settingsPath = null, TimeSpan? saveDelay = null)
     {
         _settingsPath = ResolveSettingsPath(settingsPath);

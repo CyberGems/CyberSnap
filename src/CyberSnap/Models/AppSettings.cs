@@ -716,6 +716,14 @@ public sealed class AppSettings
     /// </summary>
     public bool QuickPanelCompact { get; set; }
 
+    /// <summary>
+    /// Quick-panel section visibility (⋯ header menu). Area, header and footer are
+    /// the panel skeleton and are never hidden. Defaults to visible.
+    /// </summary>
+    public bool QuickPanelShowRecording { get; set; } = true;
+    public bool QuickPanelShowTools { get; set; } = true;
+    public bool QuickPanelShowGallery { get; set; } = true;
+
     // Window bounds
     public double SettingsWindowLeft { get; set; } = -1;
     public double SettingsWindowTop { get; set; } = -1;

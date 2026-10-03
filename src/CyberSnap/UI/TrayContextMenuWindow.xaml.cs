@@ -21,6 +21,10 @@ public partial class TrayContextMenuWindow : Window
     private readonly System.Drawing.Point _clickPoint;
     private bool _isClosing = false;
     private bool _isCompact;
+    private bool _showRecording = true;
+    private bool _showTools = true;
+    private bool _showGallery = true;
+    private DateTime _panelMenuClosedAt = DateTime.MinValue;
     private WpfToolTip? _activeTooltip;
     private FrameworkElement? _activeTooltipOwner;
 
@@ -39,9 +43,15 @@ public partial class TrayContextMenuWindow : Window
         LoadLocalizedLabels();
         LoadIcons();
 
-        // Restore persisted compact state (no animation on first show)
-        _isCompact = SettingsService.LoadStatic()?.QuickPanelCompact ?? false;
+        // Restore persisted panel state (no animation on first show).
+        // Area, header and footer are the panel skeleton and are never hidden.
+        var saved = SettingsService.LoadStatic();
+        _isCompact = saved?.QuickPanelCompact ?? false;
+        _showRecording = saved?.QuickPanelShowRecording ?? true;
+        _showTools = saved?.QuickPanelShowTools ?? true;
+        _showGallery = saved?.QuickPanelShowGallery ?? true;
         ApplyCompactMode(animate: false);
+        ApplySectionVisibility();
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -231,7 +241,7 @@ public partial class TrayContextMenuWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(DonateBtn, T("Donate"));
         SetTooltip(AboutBtn, T("Open About CyberSnap"));
         SetTooltip(ExitBtn, T("Quit CyberSnap"));
-        SetCompactTooltip();
+        SetTooltip(PanelMenuBtn, T("Panel options"));
 
         // Determine recording state and localize the compact record button.
         bool isRecording = Capture.RecordingForm.Current != null;
@@ -277,9 +287,12 @@ public partial class TrayContextMenuWindow : Window
 
         SettingsIcon.Source = GetIcon("gear", fgColor, 20);
         AchievementsIcon.Source = GetIcon("trophy", fgColor, 20);
-        DonateIcon.Source = FluentIcons.RenderWpf("heart", System.Drawing.Color.FromArgb(244, 63, 94), 20);
+        // Donate rests in the same gray-cyan as trophy/info/gear so only Exit reads
+        // as "danger" at rest; it reclaims rose #F43F5E on hover (see DonateBtn_MouseEnter).
+        DonateIcon.Source = GetIcon("heart", fgColor, 20);
         AboutIcon.Source = GetIcon("info", fgColor, 20);
         ExitIcon.Source = GetDangerIcon("signOut", 20);
+        PanelMenuIcon.Source = GetIcon("more", Theme.TextSecondary, 16);
 
         bool isRecording = Capture.RecordingForm.Current != null;
         if (isRecording)
@@ -380,15 +393,85 @@ public partial class TrayContextMenuWindow : Window
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.close-btn", ex); }
     }
 
-    private void CompactToggle_Click(object sender, RoutedEventArgs e)
+    private void PanelMenu_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            _isCompact = !_isCompact;
-            ApplyCompactMode(animate: true);
-            SettingsService.SaveQuickPanelCompact(_isCompact);
+            var menu = new ContextMenu
+            {
+                PlacementTarget = PanelMenuBtn,
+                Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+                HorizontalOffset = 0,
+                VerticalOffset = 2,
+            };
+
+            var modesItem = new MenuItem
+            {
+                Header = T("Capture modes"),
+                IsCheckable = true,
+                IsChecked = !_isCompact,
+            };
+            modesItem.Click += (_, _) =>
+            {
+                _isCompact = !modesItem.IsChecked;
+                ApplyCompactMode(animate: true);
+                SettingsService.SaveQuickPanelCompact(_isCompact);
+            };
+
+            var recordingItem = new MenuItem
+            {
+                Header = T("Recording"),
+                IsCheckable = true,
+                IsChecked = _showRecording,
+            };
+            recordingItem.Click += (_, _) =>
+            {
+                _showRecording = recordingItem.IsChecked;
+                ApplySectionVisibility();
+                SettingsService.SaveQuickPanelShowRecording(_showRecording);
+            };
+
+            var toolsItem = new MenuItem
+            {
+                Header = T("Tools"),
+                IsCheckable = true,
+                IsChecked = _showTools,
+            };
+            toolsItem.Click += (_, _) =>
+            {
+                _showTools = toolsItem.IsChecked;
+                ApplySectionVisibility();
+                SettingsService.SaveQuickPanelShowTools(_showTools);
+            };
+
+            var galleryItem = new MenuItem
+            {
+                Header = T("Gallery and editor"),
+                IsCheckable = true,
+                IsChecked = _showGallery,
+            };
+            galleryItem.Click += (_, _) =>
+            {
+                _showGallery = galleryItem.IsChecked;
+                ApplySectionVisibility();
+                SettingsService.SaveQuickPanelShowGallery(_showGallery);
+            };
+
+            menu.Items.Add(modesItem);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(recordingItem);
+            menu.Items.Add(toolsItem);
+            menu.Items.Add(galleryItem);
+
+            menu.Closed += (_, _) => _panelMenuClosedAt = DateTime.UtcNow;
+
+            // The outside-click that closed the menu reaches this handler next; treat it as toggle-off.
+            if ((DateTime.UtcNow - _panelMenuClosedAt).TotalMilliseconds < 250)
+                return;
+
+            menu.IsOpen = true;
         }
-        catch (Exception ex) { AppDiagnostics.LogError("traymenu.compact-toggle", ex); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.panel-menu", ex); }
     }
 
     private void ApplyCompactMode(bool animate)
@@ -397,15 +480,8 @@ public partial class TrayContextMenuWindow : Window
         var duration = new Duration(TimeSpan.FromSeconds(animDuration));
         var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
 
-        // Chevron: 90° = expanded (pointing down), 0° = collapsed (pointing right)
-        double targetAngle = _isCompact ? 0 : 90;
-
         if (animate)
         {
-            // Animate chevron rotation
-            var rotAnim = new DoubleAnimation(targetAngle, duration) { EasingFunction = ease };
-            ChevronRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, rotAnim);
-
             // Animate capture modes panel width to avoid size jump
             if (_isCompact)
             {
@@ -438,20 +514,44 @@ public partial class TrayContextMenuWindow : Window
         else
         {
             // Instant (first show)
-            ChevronRotation.Angle = targetAngle;
             CaptureModesPanel.Visibility = _isCompact ? Visibility.Collapsed : Visibility.Visible;
             CaptureModesPanel.Width = 132;
         }
-
-        SetCompactTooltip();
     }
 
-    private void SetCompactTooltip()
+    private void ApplySectionVisibility()
     {
-        string tip = _isCompact
-            ? T("Expand capture modes")
-            : T("Collapse capture modes");
-        SetTooltip(CompactToggleBtn, tip);
+        RecordingSection.Visibility = _showRecording ? Visibility.Visible : Visibility.Collapsed;
+        ToolsSection.Visibility = _showTools ? Visibility.Visible : Visibility.Collapsed;
+        GallerySection.Visibility = _showGallery ? Visibility.Visible : Visibility.Collapsed;
+
+        // Separators: keep a single divider above the next visible block, never orphaned.
+        bool anyVisible = _showRecording || _showTools || _showGallery;
+        RecordingSeparator.Visibility = anyVisible ? Visibility.Visible : Visibility.Collapsed;
+        ToolsSeparator.Visibility = (_showTools && _showRecording) ? Visibility.Visible : Visibility.Collapsed;
+        GallerySeparator.Visibility = _showGallery && (_showRecording || _showTools)
+            ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void DonateBtn_MouseEnter(object sender, WpfMouseEventArgs e)
+    {
+        try
+        {
+            DonateIcon.Source = FluentIcons.RenderWpf("heart", System.Drawing.Color.FromArgb(244, 63, 94), 20);
+            DismissAboutHeaderToolTip();
+        }
+        catch { }
+    }
+
+    private void DonateBtn_MouseLeave(object sender, WpfMouseEventArgs e)
+    {
+        try
+        {
+            var media = Theme.TextPrimary;
+            var drawing = System.Drawing.Color.FromArgb(media.A, media.R, media.G, media.B);
+            DonateIcon.Source = FluentIcons.RenderWpf("heart", drawing, 20);
+        }
+        catch { }
     }
 
     private void AreaCapture_Click(object sender, RoutedEventArgs e)

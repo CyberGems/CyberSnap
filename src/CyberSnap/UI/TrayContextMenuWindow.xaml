@@ -217,30 +217,17 @@
                         </Ellipse>
                     </StackPanel>
                 </Border>
-                <!-- Compact toggle chevron -->
-                <Button x:Name="CompactToggleBtn"
+                <!-- Panel options (⋯): replaces the old compact chevron so the header
+                     keeps only two controls (⋯, X). Capture-modes collapsing moves
+                     into this menu as its first checkable item. -->
+                <Button x:Name="PanelMenuBtn"
                         Grid.Column="1"
                         Style="{StaticResource HeaderActionButtonStyle}"
-                        Click="CompactToggle_Click"
-                        ToolTip="Collapse capture modes"
+                        Click="PanelMenu_Click"
+                        ToolTip="Panel options"
                         Margin="0,0,4,0">
-                    <Path x:Name="CompactToggleChevron"
-                          Data="M 4,2 L 10,8 L 4,14"
-                          Stroke="{DynamicResource ThemeTextSecondaryBrush}"
-                          StrokeThickness="1.5"
-                          StrokeLineJoin="Round"
-                          StrokeStartLineCap="Round"
-                          StrokeEndLineCap="Round"
-                          Width="10"
-                          Height="10"
-                          Stretch="Uniform"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                          RenderTransformOrigin="0.5,0.5">
-                        <Path.RenderTransform>
-                            <RotateTransform x:Name="ChevronRotation" Angle="90"/>
-                        </Path.RenderTransform>
-                    </Path>
+                    <Image x:Name="PanelMenuIcon" Width="16" Height="16" Stretch="Uniform"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
                 <Button x:Name="TrayCloseBtn"
                         Grid.Column="2"
@@ -360,10 +347,10 @@
                 </Grid>
 
                 <!-- Separate image-capture shortcuts from video recording controls. -->
-                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="8,4,8,4"/>
+                <Border x:Name="RecordingSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="8,4,8,4"/>
 
                 <!-- Secondary capture tools — compact tiles matching the bottom rows -->
-                <UniformGrid Columns="2">
+                <UniformGrid x:Name="RecordingSection" Columns="2">
                     <!-- Screen Recorder (MP4) -->
                     <Button x:Name="VideoRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="VideoRecord_Click" Padding="4,8" Margin="4,2,2,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -397,9 +384,9 @@
                 </UniformGrid>
 
                 <!-- Separator between capture tools and standalone utility tools -->
-                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
+                <Border x:Name="ToolsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
 
-                <UniformGrid Columns="2">
+                <UniformGrid x:Name="ToolsSection" Columns="2">
                     <!-- OCR -->
                     <Button x:Name="OcrBtn" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="4,8" Margin="4,2,2,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -467,12 +454,12 @@
             </StackPanel>
 
             <!-- Separator -->
-            <Border Grid.Row="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
+            <Border x:Name="GallerySeparator" Grid.Row="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
 
             <!-- Bottom Actions — compact tiles; larger icons/labels for accessibility. -->
             <StackPanel Grid.Row="3">
                 <!-- Gallery & Editor in the same row -->
-                <UniformGrid Columns="2">
+                <UniformGrid x:Name="GallerySection" Columns="2">
                     <!-- Gallery (left) -->
                     <Button x:Name="GalleryBtn"
                             Style="{StaticResource BottomButtonStyle}"
@@ -538,6 +525,8 @@
                     <Button x:Name="DonateBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Donate_Click"
+                            MouseEnter="DonateBtn_MouseEnter"
+                            MouseLeave="DonateBtn_MouseLeave"
                             ToolTip="Donate to project"
                             AutomationProperties.Name="Donate"
                             Padding="6"
