@@ -470,7 +470,15 @@ public partial class TrayContextMenuWindow : Window
                 item.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
             menuSeparator.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuSeparator");
 
-            menu.Closed += (_, _) => _panelMenuClosedAt = DateTime.UtcNow;
+            menu.Closed += (_, _) =>
+            {
+                _panelMenuClosedAt = DateTime.UtcNow;
+                SyncPanelMenuHover();
+                // Sections may have grown the panel past the work area while choosing;
+                // re-fit now that the menu (anchored to ⋯) is gone, so it stays put.
+                ClampToWorkArea();
+            };
+            menu.Opened += (_, _) => SyncPanelMenuHover();
 
             // The outside-click that closed the menu reaches this handler next; treat it as toggle-off.
             if ((DateTime.UtcNow - _panelMenuClosedAt).TotalMilliseconds < 250)
@@ -479,6 +487,67 @@ public partial class TrayContextMenuWindow : Window
             menu.IsOpen = true;
         }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.panel-menu", ex); }
+    }
+
+    private void PanelMenuBtn_MouseEnter(object sender, WpfMouseEventArgs e)
+    {
+        try { PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg); }
+        catch { }
+    }
+
+    private void PanelMenuBtn_MouseLeave(object sender, WpfMouseEventArgs e)
+    {
+        try { PanelMenuBtn.ClearValue(BackgroundProperty); }
+        catch { }
+    }
+
+    /// <summary>
+    /// While its popup is open the ⋯ button can miss MouseEnter (no re-enter fires
+    /// when the menu closes under a steady cursor), leaving the highlight out of sync.
+    /// Re-sync explicitly, mirroring the suite title-bar buttons.
+    /// </summary>
+    private void SyncPanelMenuHover()
+    {
+        try
+        {
+            if (PanelMenuBtn.IsMouseOver)
+                PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg);
+            else
+                PanelMenuBtn.ClearValue(BackgroundProperty);
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Shifts the panel back inside its monitor's work area after section toggles.
+    /// Runs on menu close (not per toggle) so the open menu never detaches from ⋯.
+    /// </summary>
+    private void ClampToWorkArea()
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+                return;
+            if (!Native.User32.GetWindowRect(hwnd, out var rect))
+                return;
+            var work = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea; // physical px
+
+            int dx = 0, dy = 0;
+            if (rect.Right > work.Right) dx = work.Right - rect.Right;
+            if (rect.Left + dx < work.Left) dx = work.Left - rect.Left;
+            if (rect.Bottom > work.Bottom) dy = work.Bottom - rect.Bottom;
+            if (rect.Top + dy < work.Top) dy = work.Top - rect.Top;
+            if (dx == 0 && dy == 0)
+                return;
+
+            var fromDevice = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice
+                ?? System.Windows.Media.Matrix.Identity;
+            var offset = fromDevice.Transform(new Vector(dx, dy));
+            if (!double.IsNaN(Left)) Left += offset.X;
+            if (!double.IsNaN(Top)) Top += offset.Y;
+        }
+        catch (Exception ex) { AppDiagnostics.LogWarning("traymenu.clamp", ex.Message, ex); }
     }
 
     private void ApplyCompactMode(bool animate)
