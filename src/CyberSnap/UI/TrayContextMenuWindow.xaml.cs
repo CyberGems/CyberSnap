@@ -51,7 +51,7 @@ public partial class TrayContextMenuWindow : Window
         _showTools = saved?.QuickPanelShowTools ?? true;
         _showGallery = saved?.QuickPanelShowGallery ?? true;
         ApplyCompactMode(animate: false);
-        ApplySectionVisibility();
+        ApplySectionVisibility(animate: false);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -427,7 +427,7 @@ public partial class TrayContextMenuWindow : Window
             recordingItem.Click += (_, _) =>
             {
                 _showRecording = recordingItem.IsChecked;
-                ApplySectionVisibility();
+                ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowRecording(_showRecording);
             };
 
@@ -440,7 +440,7 @@ public partial class TrayContextMenuWindow : Window
             toolsItem.Click += (_, _) =>
             {
                 _showTools = toolsItem.IsChecked;
-                ApplySectionVisibility();
+                ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowTools(_showTools);
             };
 
@@ -453,15 +453,22 @@ public partial class TrayContextMenuWindow : Window
             galleryItem.Click += (_, _) =>
             {
                 _showGallery = galleryItem.IsChecked;
-                ApplySectionVisibility();
+                ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowGallery(_showGallery);
             };
 
             menu.Items.Add(modesItem);
-            menu.Items.Add(new Separator());
+            var menuSeparator = new Separator();
+            menu.Items.Add(menuSeparator);
             menu.Items.Add(recordingItem);
             menu.Items.Add(toolsItem);
             menu.Items.Add(galleryItem);
+
+            // Suite look: card background, rounded corners, hover wash, checkmarks.
+            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+            foreach (var item in menu.Items.OfType<MenuItem>())
+                item.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
+            menuSeparator.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuSeparator");
 
             menu.Closed += (_, _) => _panelMenuClosedAt = DateTime.UtcNow;
 
@@ -519,18 +526,137 @@ public partial class TrayContextMenuWindow : Window
         }
     }
 
-    private void ApplySectionVisibility()
+    private void ApplySectionVisibility(bool animate)
     {
-        RecordingSection.Visibility = _showRecording ? Visibility.Visible : Visibility.Collapsed;
-        ToolsSection.Visibility = _showTools ? Visibility.Visible : Visibility.Collapsed;
-        GallerySection.Visibility = _showGallery ? Visibility.Visible : Visibility.Collapsed;
+        AnimateVertical(RecordingSection, _showRecording, animate);
+        AnimateVertical(ToolsSection, _showTools, animate);
+        AnimateVertical(GallerySection, _showGallery, animate);
 
         // Separators: keep a single divider above the next visible block, never orphaned.
+        // Fading avoids a hard cut while the neighboring block is still animating.
         bool anyVisible = _showRecording || _showTools || _showGallery;
-        RecordingSeparator.Visibility = anyVisible ? Visibility.Visible : Visibility.Collapsed;
-        ToolsSeparator.Visibility = (_showTools && _showRecording) ? Visibility.Visible : Visibility.Collapsed;
-        GallerySeparator.Visibility = _showGallery && (_showRecording || _showTools)
-            ? Visibility.Visible : Visibility.Collapsed;
+        FadeSeparator(RecordingSeparator, anyVisible, animate);
+        FadeSeparator(ToolsSeparator, _showTools && _showRecording, animate);
+        FadeSeparator(GallerySeparator, _showGallery && (_showRecording || _showTools), animate);
+    }
+
+    /// <summary>
+    /// Same feel as the capture-modes collapse: height slides while content fades.
+    /// Separators have no height to slide (margins would leave a gap), so they only fade.
+    /// </summary>
+    private static void AnimateVertical(FrameworkElement element, bool show, bool animate)
+    {
+        const double animDuration = 0.15; // seconds — matches the capture-modes collapse
+        var duration = new Duration(TimeSpan.FromSeconds(animDuration));
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+
+        element.BeginAnimation(FrameworkElement.HeightProperty, null);
+        element.BeginAnimation(UIElement.OpacityProperty, null);
+
+        if (!animate)
+        {
+            element.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            element.Height = double.NaN;
+            element.Opacity = 1;
+            return;
+        }
+
+        bool isVisible = element.Visibility == Visibility.Visible && element.Opacity > 0.5;
+        if (show == isVisible && element.Visibility == (show ? Visibility.Visible : Visibility.Collapsed))
+        {
+            // Already in the target state (e.g. rapid re-toggle); just clear any stray animation.
+            if (show)
+            {
+                element.Height = double.NaN;
+                element.Opacity = 1;
+            }
+            return;
+        }
+
+        if (show)
+        {
+            // Measure the natural height, then grow from 0 while fading in.
+            element.Height = double.NaN;
+            element.Opacity = 0;
+            element.Visibility = Visibility.Visible;
+            element.UpdateLayout();
+            double target = element.ActualHeight > 0 ? element.ActualHeight : 0;
+            if (target <= 0)
+            {
+                element.Height = double.NaN;
+                element.Opacity = 1;
+                return;
+            }
+
+            element.Height = 0;
+            var heightAnim = new DoubleAnimation(0, target, duration) { EasingFunction = ease };
+            heightAnim.Completed += (_, _) =>
+            {
+                element.BeginAnimation(FrameworkElement.HeightProperty, null);
+                element.Height = double.NaN;
+            };
+            var opacityAnim = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
+            element.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
+            element.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+        }
+        else
+        {
+            double current = element.ActualHeight > 0 ? element.ActualHeight : 0;
+            if (current <= 0)
+            {
+                element.Visibility = Visibility.Collapsed;
+                element.Height = double.NaN;
+                return;
+            }
+
+            element.Height = current;
+            var heightAnim = new DoubleAnimation(current, 0, duration) { EasingFunction = ease };
+            heightAnim.Completed += (_, _) =>
+            {
+                element.Visibility = Visibility.Collapsed;
+                element.BeginAnimation(FrameworkElement.HeightProperty, null);
+                element.Height = double.NaN;
+                element.Opacity = 1; // reset so the next expand starts clean
+            };
+            var opacityAnim = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
+            element.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
+            element.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+        }
+    }
+
+    private static void FadeSeparator(FrameworkElement separator, bool show, bool animate)
+    {
+        const double animDuration = 0.15;
+        var duration = new Duration(TimeSpan.FromSeconds(animDuration));
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+
+        separator.BeginAnimation(UIElement.OpacityProperty, null);
+
+        if (!animate)
+        {
+            separator.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            separator.Opacity = 1;
+            return;
+        }
+
+        if (show)
+        {
+            separator.Visibility = Visibility.Visible;
+            var fadeIn = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
+            separator.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+        }
+        else
+        {
+            if (separator.Visibility != Visibility.Visible)
+                return;
+            var fadeOut = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
+            fadeOut.Completed += (_, _) =>
+            {
+                separator.Visibility = Visibility.Collapsed;
+                separator.Opacity = 1;
+            };
+            separator.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+        }
     }
 
     private void DonateBtn_MouseEnter(object sender, WpfMouseEventArgs e)
