@@ -353,6 +353,7 @@
                         Grid.Column="1"
                         Style="{StaticResource HeaderActionButtonStyle}"
                         Click="PanelMenu_Click"
+                        PreviewMouseLeftButtonDown="PanelMenuBtn_PreviewMouseDown"
                         MouseEnter="PanelMenuBtn_MouseEnter"
                         MouseLeave="PanelMenuBtn_MouseLeave"
                         ToolTip="Panel options"

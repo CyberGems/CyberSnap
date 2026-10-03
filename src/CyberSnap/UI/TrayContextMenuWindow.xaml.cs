@@ -412,6 +412,10 @@ public partial class TrayContextMenuWindow : Window
             if (_suppressPanelMenuReopen)
             {
                 _suppressPanelMenuReopen = false;
+                // The press landed here, so the cursor is over the button even if
+                // capture hasn't reported a re-enter yet.
+                try { PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg); }
+                catch { }
                 return;
             }
 
@@ -559,6 +563,30 @@ public partial class TrayContextMenuWindow : Window
             menu.IsOpen = true;
         }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.panel-menu", ex); }
+    }
+
+    /// <summary>
+    /// Deterministic toggle-off: the open popup captures the mouse, so a second press
+    /// on ⋯ never reaches Click cleanly (auto-dismiss races it and IsMouseOver reads
+    /// stale). Close it here, synchronously, and swallow the press so no Click can
+    /// rebuild ("refresh") the menu right after.
+    /// </summary>
+    private void PanelMenuBtn_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            if (_panelMenu?.IsOpen == true)
+            {
+                _panelMenu.IsOpen = false;
+                // In case a Click still arrives for this press, consume it there too.
+                _suppressPanelMenuReopen = true;
+                e.Handled = true;
+                // The press landed here: keep the highlight even though capture
+                // hasn't reported a re-enter yet.
+                PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg);
+            }
+        }
+        catch { }
     }
 
     private void PanelMenuBtn_MouseEnter(object sender, WpfMouseEventArgs e)
