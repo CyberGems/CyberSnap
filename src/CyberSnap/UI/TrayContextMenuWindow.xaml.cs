@@ -25,10 +25,8 @@ public partial class TrayContextMenuWindow : Window
     private bool _showTools = true;
     private bool _showGallery = true;
     private bool _panelMenuOpen;
-    private MenuItem? _panelMenuResetItem;
-    private ContextMenu? _panelMenu;
-    private bool _suppressPanelMenuReopen;
-    private DateTime _panelMenuClosedAt = DateTime.MinValue;
+    private System.Windows.Controls.Button? _panelMenuResetRow;
+    private System.Windows.Controls.Primitives.Popup? _panelPopup;
     private WpfToolTip? _activeTooltip;
     private FrameworkElement? _activeTooltipOwner;
 
@@ -184,6 +182,8 @@ public partial class TrayContextMenuWindow : Window
         _isClosing = true;
         try
         {
+            // A StaysOpen popup would otherwise outlive its panel as an orphan.
+            ClosePanelMenu();
             Close();
         }
         catch (Exception ex)
@@ -401,189 +401,196 @@ public partial class TrayContextMenuWindow : Window
     {
         try
         {
-            // True toggle: a second click while open closes instead of rebuilding.
-            if (_panelMenu?.IsOpen == true)
+            // Deterministic toggle: the StaysOpen popup takes no mouse capture, so every
+            // press reaches Click truthfully — no timing guards needed.
+            if (_panelPopup?.IsOpen == true)
             {
-                _panelMenu.IsOpen = false;
-                return;
-            }
-            // The dismissing press on ⋯ itself closes the popup before Click fires;
-            // without this the menu would instantly rebuild ("refresh") on 2nd click.
-            if (_suppressPanelMenuReopen)
-            {
-                _suppressPanelMenuReopen = false;
-                // The press landed here, so the cursor is over the button even if
-                // capture hasn't reported a re-enter yet.
-                try { PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg); }
-                catch { }
+                ClosePanelMenu();
                 return;
             }
 
-            var menu = new ContextMenu
+            System.Windows.Controls.Primitives.ToggleButton MakeToggle(string text, bool isChecked, Action<bool> onToggle)
+            {
+                var row = new System.Windows.Controls.Primitives.ToggleButton
+                {
+                    Content = T(text),
+                    IsChecked = isChecked,
+                };
+                row.SetResourceReference(FrameworkElement.StyleProperty, "PanelMenuCheckRow");
+                row.Click += (_, _) =>
+                {
+                    try
+                    {
+                        onToggle(row.IsChecked == true);
+                        RefreshResetItem();
+                        RefreshResetItemDelayed();
+                    }
+                    catch (Exception ex) { AppDiagnostics.LogError("traymenu.panel-toggle", ex); }
+                };
+                return row;
+            }
+
+            var modesRow = MakeToggle("Capture modes", !_isCompact, checkedOn =>
+            {
+                _isCompact = !checkedOn;
+                ApplyCompactMode(animate: true);
+                SettingsService.SaveQuickPanelCompact(_isCompact);
+            });
+            var recordingRow = MakeToggle("Recording", _showRecording, checkedOn =>
+            {
+                _showRecording = checkedOn;
+                ApplySectionVisibility(animate: true);
+                SettingsService.SaveQuickPanelShowRecording(_showRecording);
+            });
+            var toolsRow = MakeToggle("Tools", _showTools, checkedOn =>
+            {
+                _showTools = checkedOn;
+                ApplySectionVisibility(animate: true);
+                SettingsService.SaveQuickPanelShowTools(_showTools);
+            });
+            var galleryRow = MakeToggle("Gallery and editor", _showGallery, checkedOn =>
+            {
+                _showGallery = checkedOn;
+                ApplySectionVisibility(animate: true);
+                SettingsService.SaveQuickPanelShowGallery(_showGallery);
+            });
+
+            var resetContent = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, VerticalAlignment = System.Windows.VerticalAlignment.Center };
+            var resetIconHost = new Grid { Width = 24, Margin = new Thickness(0, 0, 4, 0) };
+            resetIconHost.Children.Add(new System.Windows.Controls.Image
+            {
+                Source = GetIcon("restore", Theme.TextPrimary, 16),
+                Width = 16,
+                Height = 16,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            });
+            resetContent.Children.Add(resetIconHost);
+            resetContent.Children.Add(new TextBlock { Text = T("Reposition panel"), VerticalAlignment = System.Windows.VerticalAlignment.Center });
+
+            var resetRow = new System.Windows.Controls.Button { Content = resetContent };
+            resetRow.SetResourceReference(FrameworkElement.StyleProperty, "PanelMenuActionRow");
+            resetRow.ToolTip = T("Brings the panel back into view when it extends beyond the screen");
+            // Disabled rows hide their tooltip by default; this one explains exactly
+            // why it is off, so keep it readable in both states.
+            System.Windows.Controls.ToolTipService.SetShowOnDisabled(resetRow, true);
+            resetRow.Click += (_, _) =>
+            {
+                try
+                {
+                    ClosePanelMenu();
+                    ClampToWorkArea();
+                }
+                catch (Exception ex) { AppDiagnostics.LogError("traymenu.reposition", ex); }
+            };
+            _panelMenuResetRow = resetRow;
+
+            Border Divider()
+            {
+                var divider = new Border
+                {
+                    Height = 1,
+                    Margin = new Thickness(8, 4, 8, 4),
+                    SnapsToDevicePixels = true,
+                };
+                divider.SetResourceReference(Border.BackgroundProperty, "ThemeSeparatorBrush");
+                return divider;
+            }
+
+            var stack = new StackPanel();
+            stack.Children.Add(modesRow);
+            stack.Children.Add(Divider());
+            stack.Children.Add(recordingRow);
+            stack.Children.Add(toolsRow);
+            stack.Children.Add(galleryRow);
+            stack.Children.Add(Divider());
+            stack.Children.Add(resetRow);
+
+            var shell = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(4),
+                MinWidth = 180,
+                SnapsToDevicePixels = true,
+                BorderThickness = new Thickness(1),
+                Child = stack,
+            };
+            shell.SetResourceReference(Border.BackgroundProperty, "ThemeCardBrush");
+            shell.SetResourceReference(Border.BorderBrushProperty, "ThemeInputBorderBrush");
+
+            var popup = new System.Windows.Controls.Primitives.Popup
             {
                 PlacementTarget = PanelMenuBtn,
                 Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
                 HorizontalOffset = 0,
                 VerticalOffset = 2,
+                AllowsTransparency = true,
+                // Takes no mouse capture: ⋯ keeps receiving presses, so the toggle above
+                // (and hover) always sees the truth. Dismissal is fully explicit.
+                StaysOpen = true,
+                Child = shell,
             };
-
-            var modesItem = new MenuItem
+            popup.Closed += (_, _) =>
             {
-                Header = T("Capture modes"),
-                IsCheckable = true,
-                IsChecked = !_isCompact,
-            };
-            modesItem.Click += (_, _) =>
-            {
-                _isCompact = !modesItem.IsChecked;
-                ApplyCompactMode(animate: true);
-                SettingsService.SaveQuickPanelCompact(_isCompact);
-                RefreshResetItem();
-                RefreshResetItemDelayed();
-            };
-
-            var recordingItem = new MenuItem
-            {
-                Header = T("Recording"),
-                IsCheckable = true,
-                IsChecked = _showRecording,
-            };
-            recordingItem.Click += (_, _) =>
-            {
-                _showRecording = recordingItem.IsChecked;
-                ApplySectionVisibility(animate: true);
-                SettingsService.SaveQuickPanelShowRecording(_showRecording);
-                RefreshResetItem();
-                RefreshResetItemDelayed();
-            };
-
-            var toolsItem = new MenuItem
-            {
-                Header = T("Tools"),
-                IsCheckable = true,
-                IsChecked = _showTools,
-            };
-            toolsItem.Click += (_, _) =>
-            {
-                _showTools = toolsItem.IsChecked;
-                ApplySectionVisibility(animate: true);
-                SettingsService.SaveQuickPanelShowTools(_showTools);
-                RefreshResetItem();
-                RefreshResetItemDelayed();
-            };
-
-            var galleryItem = new MenuItem
-            {
-                Header = T("Gallery and editor"),
-                IsCheckable = true,
-                IsChecked = _showGallery,
-            };
-            galleryItem.Click += (_, _) =>
-            {
-                _showGallery = galleryItem.IsChecked;
-                ApplySectionVisibility(animate: true);
-                SettingsService.SaveQuickPanelShowGallery(_showGallery);
-                RefreshResetItem();
-                RefreshResetItemDelayed();
-            };
-
-            var resetItem = new MenuItem
-            {
-                Header = T("Reposition panel"),
-                ToolTip = T("Brings the panel back into view when it extends beyond the screen"),
-                // Unlike the toggles above, this one closes the menu: the window glides
-                // while no popup is anchored to ⋯, so nothing can detach.
-                StaysOpenOnClick = false,
-                Icon = new System.Windows.Controls.Image
-                {
-                    Source = GetIcon("restore", Theme.TextPrimary, 16),
-                    Width = 16,
-                    Height = 16,
-                    Stretch = Stretch.Uniform,
-                },
-            };
-            // Disabled items hide their tooltip by default; this one explains exactly
-            // why it is off, so keep it readable in both states.
-            System.Windows.Controls.ToolTipService.SetShowOnDisabled(resetItem, true);
-            resetItem.Click += (_, _) =>
-            {
-                try { ClampToWorkArea(); }
-                catch (Exception ex) { AppDiagnostics.LogError("traymenu.reposition", ex); }
-            };
-            _panelMenuResetItem = resetItem;
-
-            menu.Items.Add(modesItem);
-            var menuSeparator = new Separator();
-            menu.Items.Add(menuSeparator);
-            menu.Items.Add(recordingItem);
-            menu.Items.Add(toolsItem);
-            menu.Items.Add(galleryItem);
-            var resetSeparator = new Separator();
-            menu.Items.Add(resetSeparator);
-            menu.Items.Add(resetItem);
-            RefreshResetItem();
-
-            // Suite look: card background, rounded corners, hover wash, checkmarks.
-            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
-            foreach (var item in menu.Items.OfType<MenuItem>())
-                item.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
-            menuSeparator.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuSeparator");
-            resetSeparator.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuSeparator");
-
-            menu.Closed += (_, _) =>
-            {
-                // If the dismissing press landed on ⋯ itself (mouse still down over it),
-                // the upcoming Click is a toggle-off: stay closed instead of reopening.
-                // Keyboard dismissal (Esc) leaves the button unpressed, so it still reopens.
-                if (PanelMenuBtn.IsMouseOver && Mouse.LeftButton == MouseButtonState.Pressed)
-                    _suppressPanelMenuReopen = true;
-                _panelMenuClosedAt = DateTime.UtcNow;
                 _panelMenuOpen = false;
-                _panelMenu = null;
-                _panelMenuResetItem = null;
+                _panelPopup = null;
+                _panelMenuResetRow = null;
                 SyncPanelMenuHover();
                 // Sections may have grown the panel past the work area while choosing;
-                // glide back now that the menu (anchored to ⋯) is gone, so it stays put.
+                // glide back now that the popup is gone.
                 ClampToWorkArea();
             };
-            menu.Opened += (_, _) =>
+            popup.Opened += (_, _) =>
             {
                 _panelMenuOpen = true;
-                // Open-state indication: keep the highlight while choosing, even though
-                // the cursor has left the button for the menu.
+                // Open-state indication: keep the highlight while choosing.
                 try { PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg); }
                 catch { }
             };
 
-            // The outside-click that closed the menu reaches this handler next; treat it as toggle-off.
-            if ((DateTime.UtcNow - _panelMenuClosedAt).TotalMilliseconds < 250)
-                return;
-
-            _panelMenu = menu;
-            menu.IsOpen = true;
+            _panelPopup = popup;
+            RefreshResetItem();
+            RefreshResetItemDelayed();
+            popup.IsOpen = true;
         }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.panel-menu", ex); }
     }
 
-    /// <summary>
-    /// Deterministic toggle-off: the open popup captures the mouse, so a second press
-    /// on ⋯ never reaches Click cleanly (auto-dismiss races it and IsMouseOver reads
-    /// stale). Close it here, synchronously, and swallow the press so no Click can
-    /// rebuild ("refresh") the menu right after.
-    /// </summary>
-    private void PanelMenuBtn_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    private void ClosePanelMenu()
     {
         try
         {
-            if (_panelMenu?.IsOpen == true)
+            if (_panelPopup?.IsOpen == true)
+                _panelPopup.IsOpen = false;
+        }
+        catch (Exception ex) { AppDiagnostics.LogWarning("traymenu.panel-menu-close", ex.Message, ex); }
+    }
+
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            // Presses inside the popup never reach this window (separate visual tree),
+            // so anything arriving here with the popup open is a dismissal press —
+            // except on ⋯ itself, which Click toggles deterministically below.
+            if (_panelPopup?.IsOpen != true)
+                return;
+            if (e.OriginalSource is DependencyObject source && IsWithinElement(source, PanelMenuBtn))
+                return;
+            ClosePanelMenu();
+        }
+        catch { }
+    }
+
+    private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        try
+        {
+            if (e.Key == Key.Escape && _panelPopup?.IsOpen == true)
             {
-                _panelMenu.IsOpen = false;
-                // In case a Click still arrives for this press, consume it there too.
-                _suppressPanelMenuReopen = true;
+                ClosePanelMenu();
                 e.Handled = true;
-                // The press landed here: keep the highlight even though capture
-                // hasn't reported a re-enter yet.
-                PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg);
             }
         }
         catch { }
@@ -606,9 +613,8 @@ public partial class TrayContextMenuWindow : Window
     }
 
     /// <summary>
-    /// While its popup is open the ⋯ button can miss MouseEnter (no re-enter fires
-    /// when the menu closes under a steady cursor), leaving the highlight out of sync.
-    /// Re-sync explicitly, mirroring the suite title-bar buttons.
+    /// Explicit hover sync for the ⋯ open-state indication (mirrors the suite title-bar
+    /// buttons). With no capture in play IsMouseOver reads truthfully here.
     /// </summary>
     private void SyncPanelMenuHover()
     {
@@ -631,9 +637,9 @@ public partial class TrayContextMenuWindow : Window
     {
         try
         {
-            if (_panelMenuResetItem is null)
+            if (_panelMenuResetRow is null)
                 return;
-            _panelMenuResetItem.IsEnabled = NeedsRefit();
+            _panelMenuResetRow.IsEnabled = NeedsRefit();
         }
         catch { }
     }

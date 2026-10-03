@@ -15,6 +15,8 @@
         SnapsToDevicePixels="True"
         ShowActivated="True"
         Loaded="Window_Loaded"
+        PreviewMouseDown="Window_PreviewMouseDown"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Deactivated="Window_Deactivated">
 
     <Window.Resources>
@@ -158,33 +160,12 @@
             </Setter>
         </Style>
 
-        <!-- Panel ⋯ menu: same look as the suite's HistoryActions menus (card background,
-             rounded corners, hover wash, checkmark for checkable items). DynamicResources
-             keep it in sync with dark/light/gray themes. -->
-        <Style x:Key="HistoryActionsMenuStyle" TargetType="ContextMenu">
-            <Setter Property="OverridesDefaultStyle" Value="True"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="MinWidth" Value="156"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="4"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ContextMenu">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="HistoryActionsMenuItem" TargetType="MenuItem">
+        <!-- Panel ⋯ popup rows: same look as the suite menus (hover wash, checkmark),
+             but hosted in a StaysOpen Popup instead of a ContextMenu. A ContextMenu
+             captures the mouse while open, which blinds ⋯ to the second press and
+             freezes its highlight; the Popup takes no capture, so the toggle stays
+             deterministic. DynamicResources keep it in sync with the themes. -->
+        <Style x:Key="PanelMenuCheckRow" TargetType="ToggleButton">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
@@ -192,13 +173,13 @@
             <Setter Property="MinWidth" Value="148"/>
             <Setter Property="MinHeight" Value="36"/>
             <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="StaysOpenOnClick" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="MenuItem">
+                    <ControlTemplate TargetType="ToggleButton">
                         <Border x:Name="Bd"
                                 MinHeight="{TemplateBinding MinHeight}"
                                 CornerRadius="4"
@@ -208,57 +189,23 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="24"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Grid Grid.Column="0" Margin="0,0,4,0">
-                                    <ContentPresenter ContentSource="Icon"
-                                                      VerticalAlignment="Center"
-                                                      HorizontalAlignment="Center"/>
-                                    <Path x:Name="CheckMark"
-                                          Width="10" Height="10"
-                                          SnapsToDevicePixels="False"
-                                          Stroke="{TemplateBinding Foreground}"
-                                          StrokeThickness="1.5"
-                                          Data="M 1 5 L 4 8 L 9 2"
-                                          Visibility="Collapsed"/>
-                                </Grid>
+                                <Path x:Name="CheckMark" Grid.Column="0"
+                                      Width="10" Height="10"
+                                      Margin="0,0,4,0"
+                                      SnapsToDevicePixels="False"
+                                      Stroke="{TemplateBinding Foreground}"
+                                      StrokeThickness="1.5"
+                                      Data="M 1 5 L 4 8 L 9 2"
+                                      Visibility="Collapsed"/>
                                 <ContentPresenter Grid.Column="1"
-                                                   ContentSource="Header"
                                                    RecognizesAccessKey="True"
                                                    VerticalAlignment="Center"/>
-                                <Path x:Name="RightArrow" Grid.Column="2"
-                                      VerticalAlignment="Center"
-                                      Margin="4,0,0,0"
-                                      Fill="{TemplateBinding Foreground}"
-                                      Data="M 0 0 L 4 4 L 0 8 Z"
-                                      Visibility="Collapsed"/>
-                                <Popup x:Name="PART_Popup"
-                                       AllowsTransparency="True"
-                                       Focusable="False"
-                                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                                       Placement="Right"
-                                       HorizontalOffset="4"
-                                       PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}">
-                                    <Border Background="{DynamicResource ThemeCardBrush}"
-                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Padding="4">
-                                        <ScrollViewer CanContentScroll="True"
-                                                      HorizontalScrollBarVisibility="Disabled"
-                                                      VerticalScrollBarVisibility="Auto">
-                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
-                                        </ScrollViewer>
-                                    </Border>
-                                </Popup>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
+                            <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
-                            </Trigger>
-                            <Trigger Property="HasItems" Value="True">
-                                <Setter TargetName="RightArrow" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
@@ -271,18 +218,40 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="HistoryActionsMenuSeparator" TargetType="Separator">
+        <Style x:Key="PanelMenuActionRow" TargetType="Button">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeSeparatorBrush}"/>
-            <Setter Property="Margin" Value="8,4"/>
-            <Setter Property="Height" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinWidth" Value="148"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="Separator">
-                        <Border Height="{TemplateBinding Height}"
-                                Margin="{TemplateBinding Margin}"
-                                Background="{TemplateBinding Background}"
-                                SnapsToDevicePixels="True"/>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                MinHeight="{TemplateBinding MinHeight}"
+                                CornerRadius="4"
+                                Background="Transparent"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter RecognizesAccessKey="True"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -353,7 +322,6 @@
                         Grid.Column="1"
                         Style="{StaticResource HeaderActionButtonStyle}"
                         Click="PanelMenu_Click"
-                        PreviewMouseLeftButtonDown="PanelMenuBtn_PreviewMouseDown"
                         MouseEnter="PanelMenuBtn_MouseEnter"
                         MouseLeave="PanelMenuBtn_MouseLeave"
                         ToolTip="Panel options"
