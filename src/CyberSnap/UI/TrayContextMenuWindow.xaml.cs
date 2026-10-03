@@ -24,6 +24,7 @@ public partial class TrayContextMenuWindow : Window
     private bool _showRecording = true;
     private bool _showTools = true;
     private bool _showGallery = true;
+    private bool _panelMenuOpen;
     private DateTime _panelMenuClosedAt = DateTime.MinValue;
     private WpfToolTip? _activeTooltip;
     private FrameworkElement? _activeTooltipOwner;
@@ -473,12 +474,20 @@ public partial class TrayContextMenuWindow : Window
             menu.Closed += (_, _) =>
             {
                 _panelMenuClosedAt = DateTime.UtcNow;
+                _panelMenuOpen = false;
                 SyncPanelMenuHover();
                 // Sections may have grown the panel past the work area while choosing;
-                // re-fit now that the menu (anchored to ⋯) is gone, so it stays put.
+                // glide back now that the menu (anchored to ⋯) is gone, so it stays put.
                 ClampToWorkArea();
             };
-            menu.Opened += (_, _) => SyncPanelMenuHover();
+            menu.Opened += (_, _) =>
+            {
+                _panelMenuOpen = true;
+                // Open-state indication: keep the highlight while choosing, even though
+                // the cursor has left the button for the menu.
+                try { PanelMenuBtn.Background = Theme.Brush(Theme.TabHoverBg); }
+                catch { }
+            };
 
             // The outside-click that closed the menu reaches this handler next; treat it as toggle-off.
             if ((DateTime.UtcNow - _panelMenuClosedAt).TotalMilliseconds < 250)
@@ -497,6 +506,10 @@ public partial class TrayContextMenuWindow : Window
 
     private void PanelMenuBtn_MouseLeave(object sender, WpfMouseEventArgs e)
     {
+        // While the menu is open the cursor lives on the popup: keep the highlight
+        // as the open-state indication instead of clearing it mid-choice.
+        if (_panelMenuOpen)
+            return;
         try { PanelMenuBtn.ClearValue(BackgroundProperty); }
         catch { }
     }
@@ -519,8 +532,9 @@ public partial class TrayContextMenuWindow : Window
     }
 
     /// <summary>
-    /// Shifts the panel back inside its monitor's work area after section toggles.
-    /// Runs on menu close (not per toggle) so the open menu never detaches from ⋯.
+    /// Glides the panel back inside its monitor's work area after section toggles.
+    /// Runs on menu close (not per toggle) so the open menu never detaches from ⋯,
+    /// and animated with the same easing as the sections so there is no jump.
     /// </summary>
     private void ClampToWorkArea()
     {
@@ -544,8 +558,34 @@ public partial class TrayContextMenuWindow : Window
             var fromDevice = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice
                 ?? System.Windows.Media.Matrix.Identity;
             var offset = fromDevice.Transform(new Vector(dx, dy));
-            if (!double.IsNaN(Left)) Left += offset.X;
-            if (!double.IsNaN(Top)) Top += offset.Y;
+
+            const double animDuration = 0.15; // seconds — same feel as the section slides
+            var duration = new Duration(TimeSpan.FromSeconds(animDuration));
+            var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+
+            if (!double.IsNaN(Left) && offset.X != 0)
+            {
+                double targetLeft = Left + offset.X;
+                var leftAnim = new DoubleAnimation(Left, targetLeft, duration) { EasingFunction = ease };
+                leftAnim.Completed += (_, _) =>
+                {
+                    BeginAnimation(Window.LeftProperty, null);
+                    Left = targetLeft;
+                };
+                BeginAnimation(Window.LeftProperty, leftAnim);
+            }
+
+            if (!double.IsNaN(Top) && offset.Y != 0)
+            {
+                double targetTop = Top + offset.Y;
+                var topAnim = new DoubleAnimation(Top, targetTop, duration) { EasingFunction = ease };
+                topAnim.Completed += (_, _) =>
+                {
+                    BeginAnimation(Window.TopProperty, null);
+                    Top = targetTop;
+                };
+                BeginAnimation(Window.TopProperty, topAnim);
+            }
         }
         catch (Exception ex) { AppDiagnostics.LogWarning("traymenu.clamp", ex.Message, ex); }
     }
