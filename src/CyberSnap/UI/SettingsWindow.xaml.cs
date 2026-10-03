@@ -65,6 +65,18 @@ public partial class SettingsWindow : Window
         _historyService = historyService;
         _imageSearchIndexService = imageSearchIndexService;
         _openMonitorPoint = System.Windows.Forms.Cursor.Position;
+        // The tray quick-panel persists section visibility through static saves that
+        // bypass this instance; reload here so a later Save() cannot clobber those
+        // flags with stale values (same merge-with-latest pattern as App.Capture saves).
+        _settingsService.Load();
+        var latestPanelState = SettingsService.LoadStatic();
+        if (latestPanelState != null)
+        {
+            _settingsService.Settings.QuickPanelCompact = latestPanelState.QuickPanelCompact;
+            _settingsService.Settings.QuickPanelShowRecording = latestPanelState.QuickPanelShowRecording;
+            _settingsService.Settings.QuickPanelShowTools = latestPanelState.QuickPanelShowTools;
+            _settingsService.Settings.QuickPanelShowGallery = latestPanelState.QuickPanelShowGallery;
+        }
         InitializeComponent();
         // Hide until post-layout physical centering finishes — avoids the visible jump
         // when the HWND resizes after the first DPI-aware move to a 150% monitor.

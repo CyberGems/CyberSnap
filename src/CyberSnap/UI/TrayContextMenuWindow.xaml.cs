@@ -419,6 +419,7 @@ public partial class TrayContextMenuWindow : Window
                 ApplyCompactMode(animate: true);
                 SettingsService.SaveQuickPanelCompact(_isCompact);
                 RefreshResetItem();
+                RefreshResetItemDelayed();
             };
 
             var recordingItem = new MenuItem
@@ -433,6 +434,7 @@ public partial class TrayContextMenuWindow : Window
                 ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowRecording(_showRecording);
                 RefreshResetItem();
+                RefreshResetItemDelayed();
             };
 
             var toolsItem = new MenuItem
@@ -447,6 +449,7 @@ public partial class TrayContextMenuWindow : Window
                 ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowTools(_showTools);
                 RefreshResetItem();
+                RefreshResetItemDelayed();
             };
 
             var galleryItem = new MenuItem
@@ -461,6 +464,7 @@ public partial class TrayContextMenuWindow : Window
                 ApplySectionVisibility(animate: true);
                 SettingsService.SaveQuickPanelShowGallery(_showGallery);
                 RefreshResetItem();
+                RefreshResetItemDelayed();
             };
 
             var resetItem = new MenuItem
@@ -564,8 +568,9 @@ public partial class TrayContextMenuWindow : Window
     }
 
     /// <summary>
-    /// The reset entry is only meaningful when there is something to fix: the panel
-    /// currently overflows, or sections were hidden from the full default.
+    /// The reset entry is only meaningful when the panel actually overflows the work
+    /// area. Re-checked after each toggle (once animations settle) so it lights up
+    /// exactly when there is something to fix — never just because sections are hidden.
     /// </summary>
     private void RefreshResetItem()
     {
@@ -573,8 +578,31 @@ public partial class TrayContextMenuWindow : Window
         {
             if (_panelMenuResetItem is null)
                 return;
-            bool customized = !_showRecording || !_showTools || !_showGallery || _isCompact;
-            _panelMenuResetItem.IsEnabled = customized || NeedsRefit();
+            _panelMenuResetItem.IsEnabled = NeedsRefit();
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Deferred re-check: right after a toggle the window is still mid-animation, so
+    /// the overflow measurement would be stale. Fires once, harmless if the menu or
+    /// panel is already gone by then.
+    /// </summary>
+    private void RefreshResetItemDelayed()
+    {
+        try
+        {
+            var timer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(220),
+            };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                RefreshResetItem();
+                RefreshResetItemDelayed();
+            };
+            timer.Start();
         }
         catch { }
     }
