@@ -79,37 +79,6 @@ public static class ToolListBuilder
         catch { }
     }
 
-    private static void UpdateLabelTip(TextBlock labelBlock)
-    {
-        try
-        {
-            string text = labelBlock.Text ?? "";
-            if (string.IsNullOrEmpty(text) || labelBlock.ActualWidth <= 0)
-            {
-                labelBlock.ToolTip = null;
-                return;
-            }
-            var typeface = new System.Windows.Media.Typeface(
-                labelBlock.FontFamily, labelBlock.FontStyle, labelBlock.FontWeight, labelBlock.FontStretch);
-            double pixelsPerDip = 1.0;
-            try { pixelsPerDip = System.Windows.Media.VisualTreeHelper.GetDpi(labelBlock).PixelsPerDip; }
-            catch { }
-            var formatted = new System.Windows.Media.FormattedText(
-                text,
-                System.Globalization.CultureInfo.CurrentCulture,
-                System.Windows.FlowDirection.LeftToRight,
-                typeface,
-                labelBlock.FontSize,
-                System.Windows.Media.Brushes.Black,
-                pixelsPerDip);
-            labelBlock.ToolTip = formatted.Width > labelBlock.ActualWidth + 0.5 ? text : null;
-        }
-        catch
-        {
-            labelBlock.ToolTip = null;
-        }
-    }
-
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
 
@@ -205,12 +174,11 @@ public static class ToolListBuilder
                 Style = (Style)owner.FindResource("SettingTitle"),
                 TextTrimming = TextTrimming.CharacterEllipsis,
             };
-            // Full label on hover, but only when it is actually clipped (narrow windows).
-            // Measured with FormattedText (pure math, no layout pass) so the check itself
-            // can never disturb rendering, and using the live text so the tip matches
-            // the translated row instead of the English source label.
-            labelBlock.Loaded += (_, _) => UpdateLabelTip(labelBlock);
-            labelBlock.SizeChanged += (_, _) => UpdateLabelTip(labelBlock);
+            // Full label on hover. Bound to the live text (not a snapshot) so it always
+            // matches the translated row, including after language switches, and never
+            // goes stale when translation lands after layout.
+            var tipBinding = new System.Windows.Data.Binding("Text") { Source = labelBlock };
+            labelBlock.SetBinding(FrameworkElement.ToolTipProperty, tipBinding);
             Grid.SetColumn(labelBlock, 1);
             grid.Children.Add(labelBlock);
 
