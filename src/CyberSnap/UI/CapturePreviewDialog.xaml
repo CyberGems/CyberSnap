@@ -14,8 +14,6 @@
         Topmost="False"
         Icon="pack://application:,,,/Assets/Icons/Preview.ico"
         PreviewKeyDown="Window_PreviewKeyDown"
-        PreviewMouseDown="Window_PreviewMouseDown"
-        Deactivated="Window_Deactivated"
         SizeChanged="Window_SizeChanged">
 
     <Window.Resources>

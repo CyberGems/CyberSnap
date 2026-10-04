@@ -151,17 +151,8 @@ public partial class HistoryWindow : Window
                 $"move left={Left:F0} top={Top:F0} w={Width:F0} h={Height:F0} active={IsActive} state={WindowState}");
         };
 
-        // Explicit dismissal for the StaysOpen card/filter menus (no mouse capture, so no
-        // auto-dismiss): any press outside the menus and their overflow toggles closes them.
-        PreviewMouseDown += HistoryWindow_PreviewMouseDown;
-        PreviewKeyDown += HistoryWindow_PreviewKeyDown;
-        Deactivated += HistoryWindow_Deactivated;
-
         Closed += (_, _) =>
         {
-            PreviewMouseDown -= HistoryWindow_PreviewMouseDown;
-            PreviewKeyDown -= HistoryWindow_PreviewKeyDown;
-            Deactivated -= HistoryWindow_Deactivated;
             _historyService.Changed -= HistoryService_Changed;
             _imageSearchIndexService.Changed -= ImageSearchIndexService_Changed;
             _imageSearchIndexService.StatusChanged -= ImageSearchIndexService_StatusChanged;
@@ -179,69 +170,6 @@ public partial class HistoryWindow : Window
 
         // Immediately load history
         ScheduleHistoryTabLoad();
-    }
-
-    /// <summary>
-    /// Explicit dismissal for the StaysOpen card/filter menus. Presses inside an open
-    /// menu never reach this window (separate visual tree); presses on overflow ⋮
-    /// buttons toggle deterministically on mouse-up instead.
-    /// </summary>
-    private void HistoryWindow_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        try
-        {
-            if (e.OriginalSource is DependencyObject source && IsWithinOverflowButton(source))
-                return;
-            CloseOpenHistoryMenus();
-        }
-        catch { }
-    }
-
-    private void HistoryWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        try
-        {
-            if (e.Key == System.Windows.Input.Key.Escape)
-                CloseOpenHistoryMenus();
-        }
-        catch { }
-    }
-
-    private void HistoryWindow_Deactivated(object? sender, EventArgs e)
-    {
-        // Replaces the implicit auto-dismiss: never leave an orphan menu floating.
-        CloseOpenHistoryMenus();
-    }
-
-    private void CloseOpenHistoryMenus()
-    {
-        try
-        {
-            var filterMenu = ImageSearchFilterBtn.ContextMenu;
-            if (filterMenu?.IsOpen == true)
-                filterMenu.IsOpen = false;
-        }
-        catch { }
-        CloseOpenCardMenus();
-    }
-
-    private static bool IsWithinOverflowButton(DependencyObject? source)
-    {
-        for (var current = source; current is not null; current = GetHistoryParent(current))
-        {
-            if (current is FrameworkElement fe && Equals(fe.Tag, "CardOverflowButton"))
-                return true;
-        }
-
-        return false;
-    }
-
-    private static DependencyObject? GetHistoryParent(DependencyObject element)
-    {
-        if (element is System.Windows.Media.Visual || element is System.Windows.Media.Media3D.Visual3D)
-            return System.Windows.Media.VisualTreeHelper.GetParent(element);
-
-        return LogicalTreeHelper.GetParent(element);
     }
 
     public void RequestRefresh()

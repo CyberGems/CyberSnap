@@ -1022,73 +1022,25 @@ namespace CyberSnap.UI
             }
         }
 
-        private ContextMenu? _moreMenu;
+        private System.Windows.Controls.ContextMenu? _moreMenu;
 
         private void MoreBtn_Click(object sender, RoutedEventArgs e)
         {
             CancelAutoCloseOnInteraction();
-            // Deterministic toggle (StaysOpen takes no capture, so this always runs).
-            if (_moreMenu?.IsOpen == true)
-            {
-                _moreMenu.IsOpen = false;
+            // Deterministic toggle-off: if this press just dismissed the menu, stay closed.
+            if (CyberSnap.Helpers.MenuReopenSuppress.Consume(_moreMenu))
                 return;
-            }
             var menu = BuildMoreMenu();
             menu.PlacementTarget = MoreBtn;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
             menu.Closed += (_, _) =>
             {
-                if (ReferenceEquals(_moreMenu, menu))
-                    _moreMenu = null;
+                // Deterministic toggle-off: if the dismissing press is still down over
+                // More, the upcoming Click is a toggle-off (capture blinds IsMouseOver).
+                CyberSnap.Helpers.MenuReopenSuppress.ArmIfCursorOverTrigger(menu, MoreBtn);
             };
             _moreMenu = menu;
             menu.IsOpen = true;
-        }
-
-        private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            try
-            {
-                // Presses inside the open menu never reach this window (separate visual
-                // tree); anything else outside MoreBtn dismisses it (never handled, so
-                // annotation input is unaffected).
-                if (_moreMenu?.IsOpen != true)
-                    return;
-                if (e.OriginalSource is DependencyObject source && IsWithinElement(source, MoreBtn))
-                    return;
-                _moreMenu.IsOpen = false;
-            }
-            catch { }
-        }
-
-        private void Window_Deactivated(object? sender, EventArgs e)
-        {
-            // Replaces the implicit auto-dismiss: never leave an orphan menu floating.
-            try
-            {
-                if (_moreMenu?.IsOpen == true)
-                    _moreMenu.IsOpen = false;
-            }
-            catch { }
-        }
-
-        private static bool IsWithinElement(DependencyObject? source, DependencyObject ancestor)
-        {
-            for (var current = source; current is not null; current = GetElementParent(current))
-            {
-                if (ReferenceEquals(current, ancestor))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static DependencyObject? GetElementParent(DependencyObject element)
-        {
-            if (element is Visual || element is System.Windows.Media.Media3D.Visual3D)
-                return VisualTreeHelper.GetParent(element);
-
-            return LogicalTreeHelper.GetParent(element);
         }
 
         private ContextMenu BuildMoreMenu()
@@ -1098,11 +1050,7 @@ namespace CyberSnap.UI
                 Background = Theme.Brush(Theme.BgElevated),
                 BorderBrush = Theme.Brush(Theme.BorderSubtle),
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(4),
-                // No mouse capture: MoreBtn keeps receiving presses, so the second press
-                // deterministically toggles instead of racing auto-dismiss. Dismissal is
-                // explicit (window press outside MoreBtn, Esc via window close, deactivation).
-                StaysOpen = true,
+                Padding = new Thickness(4)
             };
 
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
