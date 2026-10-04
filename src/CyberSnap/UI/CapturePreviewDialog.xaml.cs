@@ -1022,27 +1022,30 @@ namespace CyberSnap.UI
             }
         }
 
+        private bool _moreMenuOpen;
         private System.Windows.Controls.ContextMenu? _moreMenu;
 
         private void MoreBtn_Click(object sender, RoutedEventArgs e)
         {
             CancelAutoCloseOnInteraction();
-            // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
-            Services.AppDiagnostics.LogInfo("menudiag-toggle", $"preview moreFieldNull={_moreMenu == null} moreIsOpen={_moreMenu?.IsOpen == true}");
-            // Deterministic toggle-off: if this press just dismissed the menu, stay closed.
-            if (CyberSnap.Helpers.MenuReopenSuppress.Consume(_moreMenu))
+            // Deterministic toggle driven by an explicit open flag (not the desync-prone
+            // IsOpen read): always closes first so ghosts can never stack, then opens only
+            // when it was not open. No timing involved.
+            bool wasOpen = _moreMenuOpen;
+            if (_moreMenu?.IsOpen == true)
+                _moreMenu.IsOpen = false;
+            _moreMenuOpen = false;
+            if (wasOpen)
                 return;
             var menu = BuildMoreMenu();
             menu.PlacementTarget = MoreBtn;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-            menu.Closed += (_, _) =>
-            {
-                // Deterministic toggle-off: if the dismissing press is still down over
-                // More, the upcoming Click is a toggle-off (capture blinds IsMouseOver).
-                CyberSnap.Helpers.MenuReopenSuppress.ArmIfCursorOverTrigger(menu, MoreBtn);
-            };
+            menu.Opened += (_, _) => _moreMenuOpen = true;
+            menu.Closed += (_, _) => _moreMenuOpen = false;
             _moreMenu = menu;
             menu.IsOpen = true;
+            // Opened confirms with _moreMenuOpen = true; if opening silently fails the
+            // flag stays false and the next press simply retries.
         }
 
         private ContextMenu BuildMoreMenu()

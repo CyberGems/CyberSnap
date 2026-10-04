@@ -47,12 +47,14 @@ public partial class CyberSnapTitleBar : UserControl
 
     private Window? _subscribedWindow;
     /// <summary>
-    /// When a ContextMenu closes from an outside click, WPF closes it before our
-    /// button handler runs. Without this cooldown the same click reopens the menu,
-    /// and PlacementMode.MousePoint (the default) can park it at screen (0,0) under
-    /// mixed/150% DPI + AllowsTransparency windows.
+    /// Explicit open tracking per burger menu. ContextMenu.IsOpen alone is not reliable:
+    /// the popup can die silently (activation shifts, topmost overlays) without Closed
+    /// firing, leaving IsOpen stale-false so the next press wrongly reopens ("refresh").
+    /// These flags are set only in Opened and cleared in Closed or on our own close path,
+    /// and every toggle defensively closes first so ghosts can never stack.
     /// </summary>
-    private DateTime _contextMenuClosedAt = DateTime.MinValue;
+    private bool _burgerMenuOpen;
+    private bool _actionMenuOpen;
     /// <summary>
     /// Which title button received the current press. Set on preview-down (which runs
     /// before bubble handlers act). Menu buttons only toggle on mouse-up when the press
@@ -406,16 +408,14 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
+                _burgerMenuOpen = true;
                 ApplyButtonHoverVisual(BurgerBtn, true);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
 
             menu.Closed += (_, _) =>
             {
-                RecordContextMenuClosed();
-                // Deterministic toggle-off: if the dismissing press is still down over ⋯,
-                // the upcoming Click is a toggle-off, not a reopen (capture blinds IsMouseOver).
-                MenuReopenSuppress.ArmIfCursorOverTrigger(menu, BurgerBtn);
+                _burgerMenuOpen = false;
                 if (!BurgerBtn.IsMouseOver)
                     ApplyButtonHoverVisual(BurgerBtn, false);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
@@ -447,6 +447,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
+                _actionMenuOpen = true;
                 ApplyButtonHoverVisual(ActionBtn, true);
                 var settings = ((App)Application.Current).GetSettings();
                 searchToggle.IsChecked = settings.ShowImageSearchBar;
@@ -492,10 +493,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Closed += (_, _) =>
             {
-                RecordContextMenuClosed();
-                // Deterministic toggle-off: if the dismissing press is still down over ⋯,
-                // the upcoming Click is a toggle-off, not a reopen (capture blinds IsMouseOver).
-                MenuReopenSuppress.ArmIfCursorOverTrigger(menu, ActionBtn);
+                _actionMenuOpen = false;
                 if (!ActionBtn.IsMouseOver)
                     ActionBtn.Background = System.Windows.Media.Brushes.Transparent;
             };
@@ -597,15 +595,13 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
+                _burgerMenuOpen = true;
                 ApplyButtonHoverVisual(BurgerBtn, true);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
             menu.Closed += (_, _) =>
             {
-                RecordContextMenuClosed();
-                // Deterministic toggle-off: if the dismissing press is still down over ⋯,
-                // the upcoming Click is a toggle-off, not a reopen (capture blinds IsMouseOver).
-                MenuReopenSuppress.ArmIfCursorOverTrigger(menu, BurgerBtn);
+                _burgerMenuOpen = false;
                 if (!BurgerBtn.IsMouseOver)
                     ApplyButtonHoverVisual(BurgerBtn, false);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
@@ -657,32 +653,20 @@ public partial class CyberSnapTitleBar : UserControl
         return text + "...";
     }
 
-    private void RecordContextMenuClosed()
-    {
-        _contextMenuClosedAt = DateTime.UtcNow;
-    }
-
     /// <summary>
-    /// Opens/closes a title-bar ContextMenu without the reopen-at-(0,0) glitch under DPI scaling.
+    /// Deterministic open/close for a title-bar menu driven by an explicit open flag
+    /// (not the desync-prone IsOpen read): always closes first so ghosts can never
+    /// stack, then opens only when it was not open. No timing involved.
     /// </summary>
-    private void ToggleContextMenu(ContextMenu? menu, FrameworkElement target)
+    private void ToggleTitleMenu(ContextMenu? menu, FrameworkElement target, ref bool openFlag)
     {
         if (menu is null)
             return;
 
-        // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
-        int id = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(menu);
-        double msSinceClose = (DateTime.UtcNow - _contextMenuClosedAt).TotalMilliseconds;
-        Services.AppDiagnostics.LogInfo("menudiag-toggle", $"menu={id:x} target={target.GetType().Name} isOpen={menu.IsOpen} msSinceClose={msSinceClose:F0}");
-
-        if (menu.IsOpen)
-        {
-            menu.IsOpen = false;
-            return;
-        }
-
-        // The outside-click that closed the menu reaches this handler next; treat it as a toggle-off.
-        if ((DateTime.UtcNow - _contextMenuClosedAt).TotalMilliseconds < 250)
+        bool wasOpen = openFlag;
+        menu.IsOpen = false;
+        openFlag = false;
+        if (wasOpen)
             return;
 
         menu.PlacementTarget = target;
@@ -690,6 +674,8 @@ public partial class CyberSnapTitleBar : UserControl
         menu.HorizontalOffset = 0;
         menu.VerticalOffset = 2;
         menu.IsOpen = true;
+        // Opened confirms with the open flag; if opening silently fails the flag stays
+        // false and the next press simply retries.
     }
 
     private Window? OwnerWindow => Window.GetWindow(this);
@@ -1017,14 +1003,11 @@ public partial class CyberSnapTitleBar : UserControl
         if (!ReferenceEquals(_pressOrigin, BurgerBtn))
             return;
         _pressOrigin = null;
-        if (MenuReopenSuppress.Consume(BurgerBtn.ContextMenu))
-        {
-            // The press landed here: keep the highlight even though capture
-            // hasn't reported a re-enter yet.
+        bool wasOpen = _burgerMenuOpen;
+        ToggleTitleMenu(BurgerBtn.ContextMenu, BurgerBtn, ref _burgerMenuOpen);
+        // The press landed here: keep the highlight when we just closed.
+        if (wasOpen)
             ApplyButtonHoverVisual(BurgerBtn, true);
-            return;
-        }
-        ToggleContextMenu(BurgerBtn.ContextMenu, BurgerBtn);
     }
 
     private void AnnotationBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1054,12 +1037,10 @@ public partial class CyberSnapTitleBar : UserControl
         _pressOrigin = null;
         if (OwnerWindow is HistoryWindow)
         {
-            if (MenuReopenSuppress.Consume(ActionBtn.ContextMenu))
-            {
+            bool wasOpen = _actionMenuOpen;
+            ToggleTitleMenu(ActionBtn.ContextMenu, ActionBtn, ref _actionMenuOpen);
+            if (wasOpen)
                 ApplyButtonHoverVisual(ActionBtn, true);
-                return;
-            }
-            ToggleContextMenu(ActionBtn.ContextMenu, ActionBtn);
         }
     }
 

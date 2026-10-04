@@ -474,18 +474,25 @@ public partial class HistoryWindow
         }
     }
 
+    private bool _filterMenuOpen;
+
     private void ImageSearchFilterBtn_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         e.Handled = true;
         var menu = ImageSearchFilterBtn.ContextMenu;
         if (menu == null)
             return;
-        // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
-        Services.AppDiagnostics.LogInfo("menudiag-toggle", $"filter menuIsOpen={menu.IsOpen}");
+        menu.Opened -= FilterMenu_Opened;
+        menu.Opened += FilterMenu_Opened;
         menu.Closed -= FilterMenu_Closed;
         menu.Closed += FilterMenu_Closed;
-        // Deterministic toggle-off: if this press just dismissed the menu, stay closed.
-        if (CyberSnap.Helpers.MenuReopenSuppress.Consume(menu))
+        // Deterministic toggle driven by an explicit open flag (not the desync-prone
+        // IsOpen read): always closes first so ghosts can never stack, then opens only
+        // when it was not open. No timing involved.
+        bool wasOpen = _filterMenuOpen;
+        menu.IsOpen = false;
+        _filterMenuOpen = false;
+        if (wasOpen)
             return;
         // Close the tooltip if it is showing so it doesn't linger over the menu.
         if (ImageSearchFilterBtn.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
@@ -493,18 +500,18 @@ public partial class HistoryWindow
         menu.PlacementTarget = ImageSearchFilterBtn;
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
         menu.IsOpen = true;
+        // Opened confirms with _filterMenuOpen = true; if opening silently fails the
+        // flag stays false and the next press simply retries.
+    }
+
+    private void FilterMenu_Opened(object? sender, System.Windows.RoutedEventArgs e)
+    {
+        _filterMenuOpen = true;
     }
 
     private void FilterMenu_Closed(object? sender, System.Windows.RoutedEventArgs e)
     {
-        try
-        {
-            // Deterministic toggle-off: if the dismissing press is still down over the
-            // filter button, the upcoming Click is a toggle-off (capture blinds IsMouseOver).
-            CyberSnap.Helpers.MenuReopenSuppress.ArmIfCursorOverTrigger(
-                ImageSearchFilterBtn.ContextMenu, ImageSearchFilterBtn);
-        }
-        catch { }
+        _filterMenuOpen = false;
     }
 
     private void ImageSearchIcon_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)

@@ -758,17 +758,28 @@ public partial class HistoryWindow
                 Motion.FromTo(button.Opacity, active ? 1d : 0.7d, 140, Motion.SmoothOut));
         }
 
+        bool menuOpen = false;
+
         button.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
         button.PreviewMouseLeftButtonUp += (_, e) =>
         {
             e.Handled = true;
-            // Deterministic toggle-off: if this press just dismissed the menu, stay closed.
-            if (MenuReopenSuppress.Consume(menu))
+            // Deterministic toggle driven by an explicit open flag (not the desync-prone
+            // IsOpen read): always closes first so ghosts can never stack, then opens
+            // only when it was not open. No timing involved.
+            bool wasOpen = menuOpen;
+            menu.IsOpen = false;
+            menuOpen = false;
+            if (!wasOpen)
             {
-                Refresh();
-                return;
+                menu.PlacementTarget = button;
+                menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                menu.HorizontalOffset = 0;
+                menu.VerticalOffset = 2;
+                menu.IsOpen = true;
+                // Opened confirms with menuOpen = true; if opening silently fails the
+                // flag stays false and the next press simply retries.
             }
-            ToggleCardMenu(menu, button);
             Refresh();
         };
         button.MouseEnter += (_, _) => { hovered = true; Refresh(); };
@@ -778,6 +789,7 @@ public partial class HistoryWindow
 
         menu.Opened += (_, _) =>
         {
+            menuOpen = true;
             if (button.ToolTip is System.Windows.Controls.ToolTip tt)
                 tt.IsOpen = false;
             ToolTipService.SetIsEnabled(button, false);
@@ -790,39 +802,12 @@ public partial class HistoryWindow
         };
         menu.Closed += (_, _) =>
         {
+            menuOpen = false;
             ToolTipService.SetIsEnabled(button, true);
-            menu.Tag = DateTime.UtcNow;
-            // Deterministic toggle-off: if the dismissing press is still down over ⋮,
-            // the upcoming Click is a toggle-off, not a reopen (capture blinds IsMouseOver).
-            MenuReopenSuppress.ArmIfCursorOverTrigger(menu, button);
             Refresh();
         };
 
         return button;
-    }
-
-    /// <summary>Same toggle contract as the title-bar burgers.</summary>
-    private static void ToggleCardMenu(ContextMenu menu, FrameworkElement target)
-    {
-        // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
-        int id = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(menu);
-        Services.AppDiagnostics.LogInfo("menudiag-toggle", $"menu={id:x} target=card-overflow isOpen={menu.IsOpen} tagIsDate={menu.Tag is DateTime}");
-        if (menu.IsOpen)
-        {
-            menu.IsOpen = false;
-            return;
-        }
-
-        // The outside-click that just closed the menu reaches this handler next;
-        // treat it as a toggle-off instead of reopening.
-        if (menu.Tag is DateTime closedAt && (DateTime.UtcNow - closedAt).TotalMilliseconds < 250)
-            return;
-
-        menu.PlacementTarget = target;
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-        menu.HorizontalOffset = 0;
-        menu.VerticalOffset = 2;
-        menu.IsOpen = true;
     }
 
     /// <summary>
