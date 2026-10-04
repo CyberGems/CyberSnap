@@ -383,6 +383,13 @@ public partial class SettingsWindow
     private void PopulateToolToggles() =>
         ToolListBuilder.Build(CaptureToolsPanel, AnnotationToolsPanel, _settingsService, this, () => HotkeyChanged?.Invoke(), EditorToolsPanel);
 
+    private void SyncPrtScBannerVisibility()
+    {
+        bool hidden = _settingsService.Settings.HidePrtScBanner;
+        PrtScWarnBanner.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+        PrtScInfoBtn.Visibility = hidden ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void PopulateInterfaceLanguageOptions()
     {
         _languageItemSources.Clear();
@@ -602,6 +609,7 @@ public partial class SettingsWindow
         ThemeDarkRadio?.ApplyDefaultTooltip();
         RefreshLanguageComboDisplay();
         PopulateToolToggles();
+        SyncPrtScBannerVisibility();
         PopulateSoundCustomizationPanel();
         LoadFileNameTokenButtons();
         LoadFileNameTemplate(_settingsService.Settings.FileNameTemplate);

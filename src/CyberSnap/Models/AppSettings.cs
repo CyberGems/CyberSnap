@@ -217,6 +217,12 @@ public sealed class AppSettings
     public bool ShowCapturePreview { get; set; } = true;
 
     /// <summary>
+    /// When true, the Print Screen advisory banner in Settings → Hotkeys stays hidden
+    /// (reopen it anytime with the ? button next to it).
+    /// </summary>
+    public bool HidePrtScBanner { get; set; }
+
+    /// <summary>
     /// When true, open the share flow after capture confirm (off by default).
     /// </summary>
     public bool AutoShareAfterCapture { get; set; }
@@ -898,6 +904,9 @@ public sealed class AppSettings
         // Check user-customized value first (including explicit clears stored as [0,0])
         if (ToolHotkeys != null && ToolHotkeys.TryGetValue(toolId, out var v) && v.Length >= 2)
             return (v[0], v[1]);
+        // Undo has no single-key default like its siblings: Ctrl+Z is the expected binding.
+        if (string.Equals(toolId, "undo", StringComparison.OrdinalIgnoreCase))
+            return (Native.User32.MOD_CONTROL, 0x5A);
         if (ToolDef.AllTools.Any(t => t.Id == toolId && t.Group == 1) &&
             EnabledTools is { Count: > 0 } &&
             !EnabledTools.Contains(toolId))
@@ -965,12 +974,14 @@ public sealed class AppSettings
     {
         HotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
         HotkeyKey = 0x41;
+        // Overlay utility hotkeys are retired (standalone flow owns OCR/color/QR/ruler now):
+        // reset leaves them unassigned instead of writing phantom O/C/Q/R bindings.
         OcrHotkeyModifiers = 0;
-        OcrHotkeyKey = 0x4F;        // O
+        OcrHotkeyKey = 0;
         PickerHotkeyModifiers = 0;
-        PickerHotkeyKey = 0x43;     // C
+        PickerHotkeyKey = 0;
         ScanHotkeyModifiers = 0;
-        ScanHotkeyKey = 0x51;       // Q
+        ScanHotkeyKey = 0;
         CenterHotkeyModifiers = 0;
         CenterHotkeyKey = 0;
         FullscreenHotkeyModifiers = 0;
@@ -980,7 +991,7 @@ public sealed class AppSettings
         RepeatLastAreaHotkeyModifiers = 0;
         RepeatLastAreaHotkeyKey = 0;
         RulerHotkeyModifiers = 0;
-        RulerHotkeyKey = 0x52;      // R
+        RulerHotkeyKey = 0;
         RecordHotkeyModifiers = 0;
         RecordHotkeyKey = 0;
         RecordGifHotkeyModifiers = 0;

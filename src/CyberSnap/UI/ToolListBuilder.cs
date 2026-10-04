@@ -32,6 +32,33 @@ public static class ToolListBuilder
     private static readonly Dictionary<TextBox, bool> RecordingFlags = new();
     private static readonly Dictionary<TextBox, System.Windows.Threading.DispatcherTimer> BlockedDetectTimers = new();
 
+    // At most one advisory tooltip may be open: boxes that never took focus (e.g. advisory
+    // opened from the PrtSc button) never get LostFocus, so a stuck tooltip would otherwise
+    // linger while the user moves on. Showing a new one always closes the previous.
+    private static System.Windows.Controls.ToolTip? s_openAdvisory;
+
+    private static void ShowAdvisory(System.Windows.Controls.ToolTip tip)
+    {
+        try
+        {
+            if (s_openAdvisory != null && !ReferenceEquals(s_openAdvisory, tip))
+                s_openAdvisory.IsOpen = false;
+        }
+        catch { }
+        s_openAdvisory = tip;
+        tip.IsOpen = true;
+    }
+
+    private static void CloseOtherAdvisories(System.Windows.Controls.ToolTip mine)
+    {
+        try
+        {
+            if (s_openAdvisory != null && !ReferenceEquals(s_openAdvisory, mine))
+                s_openAdvisory.IsOpen = false;
+        }
+        catch { }
+    }
+
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
 
@@ -173,6 +200,7 @@ public static class ToolListBuilder
                     hkBox.ClearValue(TextBox.FontWeightProperty);
                     tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
                     tooltip.IsOpen = false;
+                    CloseOtherAdvisories(tooltip);
                     if (resetWarningTimer != null)
                     {
                         resetWarningTimer.Stop();
@@ -236,7 +264,7 @@ public static class ToolListBuilder
                                     hkBox.Foreground = System.Windows.Media.Brushes.Red;
                                     hkBox.FontWeight = FontWeights.Bold;
                                     tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
-                                    tooltip.IsOpen = true;
+                                    ShowAdvisory(tooltip);
                                 }
                             };
                             BlockedDetectTimers[hkBox] = timer;
@@ -605,18 +633,18 @@ public static class ToolListBuilder
             LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
             HotkeyFormatter.Format(mod, vk),
             conflictLabel);
-        tooltip.IsOpen = true;
+        ShowAdvisory(tooltip);
     }
 
-    private static void ShowModifierRequiredWarning(TextBox hkBox, TextBox capturedBox, System.Windows.Controls.ToolTip tooltip)
+    private static void ShowModifierRequiredWarning(TextBox hkBox, TextBox capturedBox,
+        System.Windows.Controls.ToolTip tooltip)
     {
         capturedBox.Text = LocalizationService.Translate("Modifier required");
         hkBox.Foreground = HotkeyWarningBrush;
         hkBox.FontWeight = FontWeights.SemiBold;
         tooltip.Content = LocalizationService.Translate("Global hotkeys require a modifier (Ctrl, Alt, or Shift).");
-        tooltip.IsOpen = true;
+        ShowAdvisory(tooltip);
     }
-
     /// <summary>
     /// Feedback after assigning Print Screen: red "Taken" when another app owns it (Case A),
     /// amber advisory naming likely interceptors when a low-level hook may swallow it (Case B),
@@ -631,7 +659,7 @@ public static class ToolListBuilder
             hkBox.Foreground = System.Windows.Media.Brushes.Red;
             hkBox.FontWeight = FontWeights.Bold;
             tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
-            tooltip.IsOpen = true;
+            ShowAdvisory(tooltip);
             return;
         }
 
@@ -642,7 +670,7 @@ public static class ToolListBuilder
             tooltip.Content = string.Format(
                 LocalizationService.Translate("Print Screen assigned, but {0} may intercept it. Close it or change its shortcut."),
                 string.Join(", ", interceptors));
-            tooltip.IsOpen = true;
+            ShowAdvisory(tooltip);
             return;
         }
 

@@ -210,10 +210,10 @@ All capture actions are bound to **configurable hotkeys** in Settings:
 | Scroll capture | Not set |
 | Record MP4 | Not set |
 | Record GIF | Not set |
-| OCR | `O` |
-| Color picker | `C` |
-| QR & Barcode scan | `Q` |
-| Ruler | `R` |
+| OCR | Not set |
+| Color picker | Not set |
+| QR & Barcode scan | Not set |
+| Ruler | Not set |
 
 Open the annotation editor directly: `CyberSnap.exe --editor`
 

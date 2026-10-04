@@ -1229,7 +1229,18 @@ public partial class SettingsWindow : Window
 
     private void ClosePrtScWarnBanner_Click(object sender, RoutedEventArgs e)
     {
+        _settingsService.Settings.HidePrtScBanner = true;
+        try { _settingsService.Save(); } catch { }
         PrtScWarnBanner.Visibility = Visibility.Collapsed;
+        PrtScInfoBtn.Visibility = Visibility.Visible;
+    }
+
+    private void PrtScInfoBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.HidePrtScBanner = false;
+        try { _settingsService.Save(); } catch { }
+        PrtScWarnBanner.Visibility = Visibility.Visible;
+        PrtScInfoBtn.Visibility = Visibility.Collapsed;
     }
 
 }

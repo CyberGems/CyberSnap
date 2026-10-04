@@ -52,6 +52,11 @@ public partial class SetupWizard : Window
         RefreshLanguageComboDisplay();
         WizAfterCaptureOutcomeEditor?.RefreshLocalization();
 
+        // Respect a previous dismissal from Settings (the wizard has no reopen toggle).
+        WizPrtScWarnBanner.Visibility = _settingsService.Settings.HidePrtScBanner
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
         // Show the first page explicitly (Page0 starts collapsed in XAML)
         Page0.Visibility = Visibility.Visible;
     }
