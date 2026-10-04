@@ -804,6 +804,9 @@ public partial class HistoryWindow
     /// <summary>Same toggle contract as the title-bar burgers.</summary>
     private static void ToggleCardMenu(ContextMenu menu, FrameworkElement target)
     {
+        // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
+        int id = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(menu);
+        Services.AppDiagnostics.LogInfo("menudiag-toggle", $"menu={id:x} target=card-overflow isOpen={menu.IsOpen} tagIsDate={menu.Tag is DateTime}");
         if (menu.IsOpen)
         {
             menu.IsOpen = false;

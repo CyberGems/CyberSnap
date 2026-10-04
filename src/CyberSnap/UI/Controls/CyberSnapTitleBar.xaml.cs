@@ -670,6 +670,11 @@ public partial class CyberSnapTitleBar : UserControl
         if (menu is null)
             return;
 
+        // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
+        int id = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(menu);
+        double msSinceClose = (DateTime.UtcNow - _contextMenuClosedAt).TotalMilliseconds;
+        Services.AppDiagnostics.LogInfo("menudiag-toggle", $"menu={id:x} target={target.GetType().Name} isOpen={menu.IsOpen} msSinceClose={msSinceClose:F0}");
+
         if (menu.IsOpen)
         {
             menu.IsOpen = false;

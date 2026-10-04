@@ -33,7 +33,23 @@ public static class MenuReopenSuppress
             Prune();
             if (menu is null || trigger is null)
                 return;
-            if (IsCursorOver(trigger))
+            // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
+            int id = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(menu);
+            if (!trigger.IsVisible || trigger.ActualWidth <= 0 || trigger.ActualHeight <= 0)
+            {
+                Services.AppDiagnostics.LogInfo("menudiag-arm", $"menu={id:x} NOT-ARMED trigger not laid out");
+                return;
+            }
+            var cursor = System.Windows.Forms.Cursor.Position;
+            var topLeft = trigger.PointToScreen(new System.Windows.Point(0, 0));
+            var source = PresentationSource.FromVisual(trigger);
+            var toDevice = source?.CompositionTarget?.TransformToDevice ?? Matrix.Identity;
+            var size = toDevice.Transform(new Vector(trigger.ActualWidth, trigger.ActualHeight));
+            bool over = cursor.X >= topLeft.X && cursor.X <= topLeft.X + size.X
+                && cursor.Y >= topLeft.Y && cursor.Y <= topLeft.Y + size.Y;
+            Services.AppDiagnostics.LogInfo("menudiag-arm",
+                $"menu={id:x} cursor=({cursor.X},{cursor.Y}) rect=({topLeft.X:F0},{topLeft.Y:F0},{topLeft.X + size.X:F0},{topLeft.Y + size.Y:F0}) over={over} pressed={System.Windows.Input.Mouse.LeftButton}");
+            if (over)
                 s_armed[menu] = DateTime.UtcNow;
         }
         catch { }
@@ -49,11 +65,17 @@ public static class MenuReopenSuppress
         {
             if (menu is null)
                 return false;
+            // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
+            int id = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(menu);
             if (s_armed.TryGetValue(menu, out var armedAt))
             {
                 s_armed.Remove(menu);
-                return DateTime.UtcNow - armedAt < FreshWindow;
+                bool fresh = DateTime.UtcNow - armedAt < FreshWindow;
+                Services.AppDiagnostics.LogInfo("menudiag-consume", $"menu={id:x} ARMED age={(DateTime.UtcNow - armedAt).TotalMilliseconds:F0}ms -> suppress={fresh}");
+                return fresh;
             }
+            Services.AppDiagnostics.LogInfo("menudiag-consume", $"menu={id:x} NOT-armed -> proceed");
+            return false;
         }
         catch { }
 

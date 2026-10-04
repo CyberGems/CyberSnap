@@ -1027,6 +1027,8 @@ namespace CyberSnap.UI
         private void MoreBtn_Click(object sender, RoutedEventArgs e)
         {
             CancelAutoCloseOnInteraction();
+            // DIAG-TEMP: second-click toggle diagnosis (remove after root cause found).
+            Services.AppDiagnostics.LogInfo("menudiag-toggle", $"preview moreFieldNull={_moreMenu == null} moreIsOpen={_moreMenu?.IsOpen == true}");
             // Deterministic toggle-off: if this press just dismissed the menu, stay closed.
             if (CyberSnap.Helpers.MenuReopenSuppress.Consume(_moreMenu))
                 return;
