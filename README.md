@@ -203,17 +203,17 @@ All capture actions are bound to **configurable hotkeys** in Settings:
 
 | Action | Default Hotkey |
 |---|---|
-| Capture area | Configurable |
-| Repeat last area | Configurable |
-| Active window | Configurable |
-| Full screen | Configurable |
-| Scroll capture | Configurable |
-| Record MP4 | Configurable |
-| Record GIF | Configurable |
-| OCR | Configurable |
-| Color picker | Configurable |
-| QR & Barcode scan | Configurable |
-| Ruler | Configurable |
+| Capture area | `Alt+Shift+A` |
+| Repeat last area | Not set |
+| Active window | Not set |
+| Full screen | Not set |
+| Scroll capture | Not set |
+| Record MP4 | Not set |
+| Record GIF | Not set |
+| OCR | `O` |
+| Color picker | `C` |
+| QR & Barcode scan | `Q` |
+| Ruler | `R` |
 
 Open the annotation editor directly: `CyberSnap.exe --editor`
 
