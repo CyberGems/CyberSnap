@@ -47,14 +47,6 @@ public partial class CyberSnapTitleBar : UserControl
 
     private Window? _subscribedWindow;
     /// <summary>
-    /// Burger menus are StaysOpen (no mouse capture): without capture every press
-    /// reaches its button truthfully, so ToggleContextMenu's IsOpen branch is a
-    /// deterministic toggle and hover never goes stale. Dismissal is explicit instead
-    /// (owner press outside the buttons, Esc, deactivation). The cooldown below only
-    /// guards an explicit close followed by an immediate re-press.
-    /// </summary>
-    private DateTime _contextMenuClosedAt = DateTime.MinValue;
-    /// <summary>
     /// Which title button received the current press. Set on preview-down (which runs
     /// before bubble handlers act). Menu buttons only toggle on mouse-up when the press
     /// started on them: acting on mouse-down (e.g. maximize resizes the window
@@ -253,71 +245,32 @@ public partial class CyberSnapTitleBar : UserControl
     }
 
     /// <summary>Builds the "Help" submenu: contextual wiki page, homepage, update check and About.</summary>
-    private MenuItem CreateHelpSubmenu(ContextMenu rootMenu, string wikiPage, string wikiHeaderKey, string wikiTooltipKey, System.Drawing.Color titleIcon)
+    private SuitePopupMenu BuildHelpSubmenu(string wikiPage, string wikiHeaderKey, string wikiTooltipKey, System.Drawing.Color titleIcon)
     {
-        var helpItem = new MenuItem
-        {
-            Header = LocalizationService.Translate("Help"),
-            Icon = CreateMenuIcon("question", titleIcon, 16)
-        };
-        helpItem.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
-        helpItem.SetResourceReference(MenuItem.ItemContainerStyleProperty, "HistoryActionsMenuItem");
-
-        var wikiItem = new MenuItem
-        {
-            Header = LocalizationService.Translate(wikiHeaderKey),
-            Icon = CreateMenuIcon("question", titleIcon, 16),
-            ToolTip = LocalizationService.Translate(wikiTooltipKey)
-        };
-        wikiItem.Click += (_, _) =>
-        {
-            rootMenu.IsOpen = false;
-            WikiLinks.Open(wikiPage);
-        };
-
-        var homepageItem = new MenuItem
-        {
-            Header = LocalizationService.Translate("CyberGems Website..."),
-            Icon = CreateMenuIcon("home", titleIcon, 16),
-            ToolTip = LocalizationService.Translate("Visit CyberGems website")
-        };
-        homepageItem.Click += (_, _) =>
-        {
-            rootMenu.IsOpen = false;
-            WikiLinks.OpenUrl(WikiLinks.HomepageUrl);
-        };
-
-        var updatesItem = new MenuItem
-        {
-            Header = LocalizationService.Translate("Check for Updates..."),
-            Icon = CreateMenuIcon("redo", titleIcon, 16),
-            ToolTip = LocalizationService.Translate("Check for the latest version")
-        };
-        updatesItem.Click += (_, _) =>
-        {
-            rootMenu.IsOpen = false;
-            ((App)Application.Current).ShowAboutAndCheckForUpdates();
-        };
-
-        var aboutItem = new MenuItem
-        {
-            Header = LocalizationService.Translate("About CyberSnap..."),
-            Icon = CreateMenuIcon("info", titleIcon, 16),
-            ToolTip = LocalizationService.Translate("Open About CyberSnap")
-        };
-        aboutItem.Click += (_, _) =>
-        {
-            rootMenu.IsOpen = false;
-            _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+        var submenu = new SuitePopupMenu();
+        submenu.AddAction(
+            LocalizationService.Translate(wikiHeaderKey),
+            () => WikiLinks.Open(wikiPage),
+            CreateMenuIcon("question", titleIcon, 16),
+            LocalizationService.Translate(wikiTooltipKey));
+        submenu.AddAction(
+            LocalizationService.Translate("CyberGems Website..."),
+            () => WikiLinks.OpenUrl(WikiLinks.HomepageUrl),
+            CreateMenuIcon("home", titleIcon, 16),
+            LocalizationService.Translate("Visit CyberGems website"));
+        submenu.AddAction(
+            LocalizationService.Translate("Check for Updates..."),
+            () => ((App)Application.Current).ShowAboutAndCheckForUpdates(),
+            CreateMenuIcon("redo", titleIcon, 16),
+            LocalizationService.Translate("Check for the latest version"));
+        submenu.AddAction(
+            LocalizationService.Translate("About CyberSnap..."),
+            () => Dispatcher.BeginInvoke(
                 System.Windows.Threading.DispatcherPriority.Background,
-                () => ((App)Application.Current).ShowAbout());
-        };
-
-        helpItem.Items.Add(wikiItem);
-        helpItem.Items.Add(homepageItem);
-        helpItem.Items.Add(updatesItem);
-        helpItem.Items.Add(aboutItem);
-        return helpItem;
+                () => ((App)Application.Current).ShowAbout()),
+            CreateMenuIcon("info", titleIcon, 16),
+            LocalizationService.Translate("Open About CyberSnap"));
+        return submenu;
     }
 
     private void InitializeActionBtn(System.Drawing.Color titleIcon)
@@ -328,101 +281,76 @@ public partial class CyberSnapTitleBar : UserControl
             AnnotationBtn.Visibility = Visibility.Collapsed;
             ActionBtn.Visibility = Visibility.Collapsed;
 
-            // Burger menu with toggles + shortcuts
+            // Burger menu with toggles + shortcuts (StaysOpen popup: deterministic toggle)
             BurgerBtn.Visibility = Visibility.Visible;
             BurgerBtn.ToolTip = LocalizationService.Translate("More");
 
-            var menu = new ContextMenu();
-            StyleBurgerMenu(menu);
-            InsertDonateFirst(menu);
+            var menu = new SuitePopupMenu();
+            menu.AddAction(
+                LocalizationService.Translate("Donate"),
+                () => DonationLinks.Open(),
+                CreateMenuIcon("heart", System.Drawing.Color.FromArgb(244, 63, 94), 16));
+            menu.AddDivider();
 
             // Editor shortcut
-            var editorItem = new MenuItem
-            {
-                Header = WithEllipsis(LocalizationService.Translate("Annotations Editor")),
-                Icon = CreateMenuIcon("compose", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open the post-capture editor for annotations.")
-            };
-            editorItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+            menu.AddAction(
+                WithEllipsis(LocalizationService.Translate("Annotations Editor")),
+                () => Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => Editor.EditorForm.ShowEditorEmptyOrPrompt());
-            };
-            menu.Items.Add(editorItem);
+                    () => Editor.EditorForm.ShowEditorEmptyOrPrompt()),
+                CreateMenuIcon("compose", titleIcon, 16),
+                LocalizationService.Translate("Open the post-capture editor for annotations."));
 
             // Gallery shortcut
-            var galleryItem = new MenuItem
-            {
-                Header = WithEllipsis(LocalizationService.Translate("Capture Gallery")),
-                Icon = CreateMenuIcon("history", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open the Capture Gallery")
-            };
-            galleryItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+            menu.AddAction(
+                WithEllipsis(LocalizationService.Translate("Capture Gallery")),
+                () => Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowHistory());
-            };
-            menu.Items.Add(galleryItem);
+                    () => ((App)Application.Current).ShowHistory()),
+                CreateMenuIcon("history", titleIcon, 16),
+                LocalizationService.Translate("Open the Capture Gallery"));
 
             // Achievements / Logros
-            var achievementsItem = new MenuItem
-            {
-                Header = LocalizationService.Translate("Achievements..."),
-                Icon = CreateMenuIcon("trophy", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open Achievements")
-            };
-            achievementsItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+            menu.AddAction(
+                LocalizationService.Translate("Achievements..."),
+                () => Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowAchievements());
-            };
-            menu.Items.Add(achievementsItem);
+                    () => ((App)Application.Current).ShowAchievements()),
+                CreateMenuIcon("trophy", titleIcon, 16),
+                LocalizationService.Translate("Open Achievements"));
 
-            menu.Items.Add(new Separator());
+            menu.AddDivider();
 
             // Setup wizard
-            var wizardItem = new MenuItem
-            {
-                Header = WithEllipsis(LocalizationService.Translate("Setup wizard")),
-                Icon = CreateMenuIcon("gear", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Re-run the setup wizard")
-            };
-            wizardItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+            menu.AddAction(
+                WithEllipsis(LocalizationService.Translate("Setup wizard")),
+                () => Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => settingsWin.RunSetupWizard());
-            };
-            menu.Items.Add(wizardItem);
+                    () => settingsWin.RunSetupWizard()),
+                CreateMenuIcon("gear", titleIcon, 16),
+                LocalizationService.Translate("Re-run the setup wizard"));
 
             // Help (wiki / homepage / updates / about)
-            menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.SettingsPage,
-                "Wiki: Settings...", "Open the Settings page in the CyberSnap wiki.", titleIcon));
+            menu.AddSubmenu(
+                LocalizationService.Translate("Help"),
+                BuildHelpSubmenu(WikiLinks.SettingsPage,
+                    "Wiki: Settings...", "Open the Settings page in the CyberSnap wiki.", titleIcon),
+                CreateMenuIcon("question", titleIcon, 16));
 
-            ApplyMenuItemStyles(menu);
-
-            menu.Opened += (_, _) =>
+            menu.Opened += () =>
             {
                 ApplyButtonHoverVisual(BurgerBtn, true);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
 
-            menu.Closed += (_, _) =>
+            menu.Closed += () =>
             {
-                RecordContextMenuClosed();
                 if (!BurgerBtn.IsMouseOver)
                     ApplyButtonHoverVisual(BurgerBtn, false);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
-            BurgerBtn.ContextMenu = menu;
+            _burgerMenu = menu;
         }
         else if (OwnerWindow is HistoryWindow)
         {
@@ -432,73 +360,59 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.ToolTip = LocalizationService.Translate("More");
             ActionIcon.Source = Helpers.FluentIcons.RenderWpf("more", titleIcon, 18);
 
-            var menu = new ContextMenu();
-            StyleBurgerMenu(menu);
-            InsertDonateFirst(menu);
+            var menu = new SuitePopupMenu();
+            menu.AddAction(
+                LocalizationService.Translate("Donate"),
+                () => DonationLinks.Open(),
+                CreateMenuIcon("heart", System.Drawing.Color.FromArgb(244, 63, 94), 16));
+            menu.AddDivider();
 
-            var searchToggle = new MenuItem
+            var searchEntry = menu.AddCheck(
+                LocalizationService.Translate("Search bar"),
+                ((App)Application.Current).GetSettings().ShowImageSearchBar,
+                value => ToggleSetting("ShowImageSearchBar", value),
+                toolTip: LocalizationService.Translate("Show or hide the search bar"));
+            menu.Opening += () =>
             {
-                Header = LocalizationService.Translate("Search bar"),
-                IsCheckable = true,
-                ToolTip = LocalizationService.Translate("Show or hide the search bar")
+                searchEntry.IsChecked = ((App)Application.Current).GetSettings().ShowImageSearchBar;
             };
-            searchToggle.Checked += (_, _) => ToggleSetting("ShowImageSearchBar", true);
-            searchToggle.Unchecked += (_, _) => ToggleSetting("ShowImageSearchBar", false);
-            menu.Items.Add(searchToggle);
-
-            menu.Opened += (_, _) =>
+            menu.Opened += () =>
             {
                 ApplyButtonHoverVisual(ActionBtn, true);
-                var settings = ((App)Application.Current).GetSettings();
-                searchToggle.IsChecked = settings.ShowImageSearchBar;
             };
 
-            menu.Items.Add(new Separator());
+            menu.AddDivider();
 
-            var configItem = new MenuItem
-            {
-                Header = WithEllipsis(LocalizationService.Translate("Gallery settings")),
-                Icon = CreateMenuIcon("gear", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open Gallery settings")
-            };
-            configItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                // Defer to avoid layout jump when context menu closes
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+            menu.AddAction(
+                WithEllipsis(LocalizationService.Translate("Gallery settings")),
+                () => Dispatcher.BeginInvoke(
+                    // Defer to avoid layout jump when the popup closes
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowSettings("gallery"));
-            };
-            menu.Items.Add(configItem);
+                    () => ((App)Application.Current).ShowSettings("gallery")),
+                CreateMenuIcon("gear", titleIcon, 16),
+                LocalizationService.Translate("Open Gallery settings"));
 
-            var achievementsItem = new MenuItem
-            {
-                Header = LocalizationService.Translate("Achievements..."),
-                Icon = CreateMenuIcon("trophy", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open Achievements")
-            };
-            achievementsItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+            menu.AddAction(
+                LocalizationService.Translate("Achievements..."),
+                () => Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowAchievements());
-            };
-            menu.Items.Add(achievementsItem);
+                    () => ((App)Application.Current).ShowAchievements()),
+                CreateMenuIcon("trophy", titleIcon, 16),
+                LocalizationService.Translate("Open Achievements"));
 
-            menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.GalleryPage,
-                "Wiki: Gallery...", "Open the Gallery page in the CyberSnap wiki.", titleIcon));
+            menu.AddSubmenu(
+                LocalizationService.Translate("Help"),
+                BuildHelpSubmenu(WikiLinks.GalleryPage,
+                    "Wiki: Gallery...", "Open the Gallery page in the CyberSnap wiki.", titleIcon),
+                CreateMenuIcon("question", titleIcon, 16));
 
-            ApplyMenuItemStyles(menu);
-
-            menu.Closed += (_, _) =>
+            menu.Closed += () =>
             {
-                RecordContextMenuClosed();
                 if (!ActionBtn.IsMouseOver)
                     ActionBtn.Background = System.Windows.Media.Brushes.Transparent;
             };
 
-            ActionBtn.ContextMenu = menu;
+            _actionMenu = menu;
         }
         else if (OwnerWindow is AboutWindow)
         {
@@ -515,56 +429,44 @@ public partial class CyberSnapTitleBar : UserControl
             BurgerBtn.Visibility = Visibility.Visible;
             BurgerBtn.ToolTip = LocalizationService.Translate("More");
 
-            var menu = new ContextMenu();
-            StyleBurgerMenu(menu);
-            InsertDonateFirst(menu);
+            var menu = new SuitePopupMenu();
+            menu.AddAction(
+                LocalizationService.Translate("Donate"),
+                () => DonationLinks.Open(),
+                CreateMenuIcon("heart", System.Drawing.Color.FromArgb(244, 63, 94), 16));
+            menu.AddDivider();
 
             if (OwnerWindow is CapturePreviewDialog previewWindow)
             {
-                var autoCloseToggle = new MenuItem
+                var autoCloseEntry = menu.AddCheck(
+                    LocalizationService.Translate("Autoclose this window"),
+                    previewWindow.IsAutoCloseEnabled,
+                    value => previewWindow.SetAutoCloseEnabled(value),
+                    toolTip: LocalizationService.Translate("The preview window auto-closes when the timer expires."));
+                menu.Opening += () =>
                 {
-                    Header = LocalizationService.Translate("Autoclose this window"),
-                    IsCheckable = true,
-                    ToolTip = LocalizationService.Translate("The preview window auto-closes when the timer expires.")
+                    autoCloseEntry.IsChecked = previewWindow.IsAutoCloseEnabled;
                 };
-                autoCloseToggle.Checked += (_, _) => previewWindow.SetAutoCloseEnabled(true);
-                autoCloseToggle.Unchecked += (_, _) => previewWindow.SetAutoCloseEnabled(false);
-                menu.Opened += (_, _) => autoCloseToggle.IsChecked = previewWindow.IsAutoCloseEnabled;
-                menu.Items.Add(autoCloseToggle);
-                menu.Items.Add(new Separator());
+                menu.AddDivider();
             }
 
-            var configItem = new MenuItem
-            {
-                Header = LocalizationService.Translate("Configuration..."),
-                Icon = CreateMenuIcon("gear", titleIcon, 16),
-                ToolTip = LocalizationService.Translate("Open the full Configuration window")
-            };
-            configItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+            menu.AddAction(
+                LocalizationService.Translate("Configuration..."),
+                () => Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowSettings());
-            };
-            menu.Items.Add(configItem);
+                    () => ((App)Application.Current).ShowSettings()),
+                CreateMenuIcon("gear", titleIcon, 16),
+                LocalizationService.Translate("Open the full Configuration window"));
 
             if (OwnerWindow is not AchievementsWindow)
             {
-                var achievementsItem = new MenuItem
-                {
-                    Header = LocalizationService.Translate("Achievements..."),
-                    Icon = CreateMenuIcon("trophy", titleIcon, 16),
-                    ToolTip = LocalizationService.Translate("Open Achievements")
-                };
-                achievementsItem.Click += (_, _) =>
-                {
-                    menu.IsOpen = false;
-                    _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                menu.AddAction(
+                    LocalizationService.Translate("Achievements..."),
+                    () => Dispatcher.BeginInvoke(
                         System.Windows.Threading.DispatcherPriority.Background,
-                        () => ((App)Application.Current).ShowAchievements());
-                };
-                menu.Items.Add(achievementsItem);
+                        () => ((App)Application.Current).ShowAchievements()),
+                    CreateMenuIcon("trophy", titleIcon, 16),
+                    LocalizationService.Translate("Open Achievements"));
             }
 
             // Contextual wiki page per chrome window (defaults to the wiki home).
@@ -589,24 +491,24 @@ public partial class CyberSnapTitleBar : UserControl
                 CapturePreviewDialog => "Open the Capture Preview page in the CyberSnap wiki.",
                 _ => "Open the CyberSnap wiki home page."
             };
-            menu.Items.Add(CreateHelpSubmenu(menu, wikiPage, wikiHeaderKey, wikiTooltipKey, titleIcon));
+            menu.AddSubmenu(
+                LocalizationService.Translate("Help"),
+                BuildHelpSubmenu(wikiPage, wikiHeaderKey, wikiTooltipKey, titleIcon),
+                CreateMenuIcon("question", titleIcon, 16));
 
-            ApplyMenuItemStyles(menu);
-
-            menu.Opened += (_, _) =>
+            menu.Opened += () =>
             {
                 ApplyButtonHoverVisual(BurgerBtn, true);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
-            menu.Closed += (_, _) =>
+            menu.Closed += () =>
             {
-                RecordContextMenuClosed();
                 if (!BurgerBtn.IsMouseOver)
                     ApplyButtonHoverVisual(BurgerBtn, false);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
-            BurgerBtn.ContextMenu = menu;
+            _burgerMenu = menu;
         }
         else
         {
@@ -616,30 +518,8 @@ public partial class CyberSnapTitleBar : UserControl
         }
     }
 
-    private void InsertDonateFirst(ContextMenu menu)
-    {
-        var item = new MenuItem
-        {
-            Header = LocalizationService.Translate("Donate"),
-            Icon = CreateMenuIcon("heart", System.Drawing.Color.FromArgb(244, 63, 94), 16),
-        };
-        item.Click += (_, _) =>
-        {
-            menu.IsOpen = false;
-            DonationLinks.Open();
-        };
-        menu.Items.Insert(0, new Separator());
-        menu.Items.Insert(0, item);
-    }
-
-    private void StyleBurgerMenu(ContextMenu menu)
-    {
-        menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
-        // No mouse capture: the trigger buttons keep receiving presses, so the second
-        // press deterministically toggles instead of racing auto-dismiss. Dismissal is
-        // explicit (owner press outside the buttons, Esc, deactivation) — see hooks.
-        menu.StaysOpen = true;
-    }
+    private SuitePopupMenu? _burgerMenu;
+    private SuitePopupMenu? _actionMenu;
 
     /// <summary>Explicit dismissal for the StaysOpen burger menus.</summary>
     private void AttachMenuDismiss(Window window)
@@ -660,16 +540,14 @@ public partial class CyberSnapTitleBar : UserControl
     {
         try
         {
-            if (BurgerBtn.ContextMenu?.IsOpen == true)
-                BurgerBtn.ContextMenu.IsOpen = false;
-            if (ActionBtn.ContextMenu?.IsOpen == true)
-                ActionBtn.ContextMenu.IsOpen = false;
+            _burgerMenu?.Close();
+            _actionMenu?.Close();
         }
         catch { }
     }
 
     private bool AnyOwnedMenuOpen() =>
-        BurgerBtn.ContextMenu?.IsOpen == true || ActionBtn.ContextMenu?.IsOpen == true;
+        _burgerMenu?.IsOpen == true || _actionMenu?.IsOpen == true;
 
     private void OwnerPreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -726,12 +604,6 @@ public partial class CyberSnapTitleBar : UserControl
         return LogicalTreeHelper.GetParent(element);
     }
 
-    private static void ApplyMenuItemStyles(ContextMenu menu)
-    {
-        foreach (var item in menu.Items.OfType<MenuItem>())
-            item.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
-    }
-
     private static string WithEllipsis(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -739,36 +611,6 @@ public partial class CyberSnapTitleBar : UserControl
         if (text.EndsWith("...", StringComparison.Ordinal) || text.EndsWith("…", StringComparison.Ordinal))
             return text;
         return text + "...";
-    }
-
-    private void RecordContextMenuClosed()
-    {
-        _contextMenuClosedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Opens/closes a title-bar ContextMenu without the reopen-at-(0,0) glitch under DPI scaling.
-    /// </summary>
-    private void ToggleContextMenu(ContextMenu? menu, FrameworkElement target)
-    {
-        if (menu is null)
-            return;
-
-        if (menu.IsOpen)
-        {
-            menu.IsOpen = false;
-            return;
-        }
-
-        // The outside-click that closed the menu reaches this handler next; treat it as a toggle-off.
-        if ((DateTime.UtcNow - _contextMenuClosedAt).TotalMilliseconds < 250)
-            return;
-
-        menu.PlacementTarget = target;
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-        menu.HorizontalOffset = 0;
-        menu.VerticalOffset = 2;
-        menu.IsOpen = true;
     }
 
     private Window? OwnerWindow => Window.GetWindow(this);
@@ -845,9 +687,9 @@ public partial class CyberSnapTitleBar : UserControl
         if (sender is not Border border)
             return;
 
-        if (ReferenceEquals(border, BurgerBtn) && BurgerBtn.ContextMenu?.IsOpen == true)
+        if (ReferenceEquals(border, BurgerBtn) && _burgerMenu?.IsOpen == true)
             return;
-        if (ReferenceEquals(border, ActionBtn) && ActionBtn.ContextMenu?.IsOpen == true)
+        if (ReferenceEquals(border, ActionBtn) && _actionMenu?.IsOpen == true)
             return;
 
         ApplyButtonHoverVisual(border, false);
@@ -1096,7 +938,8 @@ public partial class CyberSnapTitleBar : UserControl
         if (!ReferenceEquals(_pressOrigin, BurgerBtn))
             return;
         _pressOrigin = null;
-        ToggleContextMenu(BurgerBtn.ContextMenu, BurgerBtn);
+        // Deterministic toggle: SuitePopupMenu takes no mouse capture, so this always runs.
+        _burgerMenu?.Toggle(BurgerBtn);
     }
 
     private void AnnotationBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1125,7 +968,8 @@ public partial class CyberSnapTitleBar : UserControl
             return;
         _pressOrigin = null;
         if (OwnerWindow is HistoryWindow)
-            ToggleContextMenu(ActionBtn.ContextMenu, ActionBtn);
+            // Deterministic toggle: SuitePopupMenu takes no mouse capture, so this always runs.
+            _actionMenu?.Toggle(ActionBtn);
     }
 
     private static void ToggleSetting(string propertyName, bool value)
