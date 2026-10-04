@@ -1315,38 +1315,55 @@
                     </Button>
 
                     <Border x:Name="PrtScWarnBanner" CornerRadius="6" Padding="14,12" Margin="0,12,0,16"
-                            Background="#2E2207" BorderBrush="#4D3A12" BorderThickness="1" Visibility="Visible">
+                            Background="#24200E" BorderBrush="#453B18" BorderThickness="1" Visibility="Visible">
+                        <StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            
+
                             <!-- Warning Icon -->
-                            <Path Grid.Column="0" VerticalAlignment="Top" Margin="0,2,12,0" Width="18" Height="18" Stretch="Uniform"
+                            <Path Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0" Width="18" Height="18" Stretch="Uniform"
                                   Data="M10 2c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm1 12H9v-2h2v2zm0-4H9V6h2v4z"
                                   Fill="#F59E0B"/>
-                                  
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="How to unbind Snipping Tool from the PrtSc key?"
-                                           Services:LocalizationService.SourceText="How to unbind Snipping Tool from the PrtSc key?"
-                                           FontWeight="SemiBold" FontSize="13" Foreground="#FFFFFFFF" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"/>
-                                <TextBlock Text="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
-                                           Services:LocalizationService.SourceText="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
-                                           FontSize="11.5" Foreground="#FFDFB9" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap" Margin="0,4,0,10" Opacity="0.9"/>
-                                <Button x:Name="OpenWinSettingsBtn" Content="Open Windows Settings"
-                                        Services:LocalizationService.SourceText="Open Windows Settings"
-                                        HorizontalAlignment="Left" Padding="12,5" Height="28" MinHeight="28" FontSize="11"
-                                        Background="#1EFFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" Foreground="#FFFFFFFF"
-                                        Cursor="Hand" Click="OpenWinSettingsBtn_Click"/>
-                            </StackPanel>
-                            
+
+                            <TextBlock x:Name="PrtScBannerTitle" Grid.Column="1" VerticalAlignment="Center"
+                                       Text="How to unbind Snipping Tool from the PrtSc key?"
+                                       Services:LocalizationService.SourceText="How to unbind Snipping Tool from the PrtSc key?"
+                                       FontWeight="SemiBold" FontSize="13" Foreground="#FFFFFFFF" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"/>
+
+                            <!-- Collapse Button -->
+                            <Button x:Name="PrtScCollapseBtn" Grid.Column="2" VerticalAlignment="Center"
+                                    Width="24" Height="24" Content="⌃" FontSize="14" Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
+                                    Click="PrtScCollapseBtn_Click" Margin="8,0,0,0">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="Transparent">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Opacity" Value="1"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+
                             <!-- Close Button -->
-                            <Button Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right"
+                            <Button Grid.Column="3" VerticalAlignment="Center"
                                     Width="24" Height="24" Content="×" FontSize="20" Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
                                     Click="ClosePrtScWarnBanner_Click" ToolTip="Hide"
-                                    Services:LocalizationService.SourceToolTip="Hide" Margin="8,0,0,0">
+                                    Services:LocalizationService.SourceToolTip="Hide" Margin="4,0,0,0">
                                 <Button.Style>
                                     <Style TargetType="Button">
                                         <Setter Property="Template">
@@ -1367,6 +1384,25 @@
                                 </Button.Style>
                             </Button>
                         </Grid>
+
+                        <StackPanel x:Name="PrtScBannerBody" Margin="30,8,0,0">
+                            <TextBlock x:Name="PrtScBannerDesc" Text="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
+                                       Services:LocalizationService.SourceText="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
+                                       FontSize="11.5" Foreground="#FFDFB9" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap" Margin="0,0,0,10" Opacity="0.9"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="OpenWinSettingsBtn" Content="Open Windows Settings"
+                                        Services:LocalizationService.SourceText="Open Windows Settings"
+                                        HorizontalAlignment="Left" Padding="12,5" Height="28" MinHeight="28" FontSize="11"
+                                        Background="#1EFFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" Foreground="#FFFFFFFF"
+                                        Cursor="Hand" Click="OpenWinSettingsBtn_Click"/>
+                                <Button x:Name="AssignPrtScBtn" Content="Assign PrtSc"
+                                        Services:LocalizationService.SourceText="Assign PrtSc"
+                                        HorizontalAlignment="Left" Padding="12,5" Height="28" MinHeight="28" FontSize="11"
+                                        Background="#1EFFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" Foreground="#FFFFFFFF"
+                                        Cursor="Hand" Margin="8,0,0,0" Click="AssignPrtScBtn_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                        </StackPanel>
                     </Border>
 
                     <Grid Margin="0,6,0,0">

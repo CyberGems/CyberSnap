@@ -138,8 +138,7 @@ public static class ToolListBuilder
         void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey,
             Func<string, (uint mod, uint key)> getHotkey,
             Action<string, uint, uint> setHotkey,
-            bool allowSingleKeyHotkeys = false,
-            bool showPrintScreenQuickAssign = false)
+            bool allowSingleKeyHotkeys = false)
         {
             var card = new Border { Style = (Style)owner.FindResource("CompactItemCard") };
 
@@ -440,71 +439,6 @@ public static class ToolListBuilder
 
                 right.Children.Add(hkBox);
 
-                if (showPrintScreenQuickAssign)
-                {
-                    var prtScBtn = new Button { Content = "PrtSc" };
-                    prtScBtn.SetResourceReference(Button.StyleProperty, "ClearBtn");
-                    prtScBtn.Height = 28;
-                    prtScBtn.MinHeight = 28;
-                    prtScBtn.Width = 52;
-                    prtScBtn.MinWidth = 52;
-                    prtScBtn.FontSize = 11;
-                    prtScBtn.Margin = new Thickness(6, 0, 0, 0);
-                    prtScBtn.ToolTip = new System.Windows.Controls.ToolTip
-                    {
-                        Content = new TextBlock
-                        {
-                            Text = LocalizationService.Translate("Assign Print Screen (PrtSc) as the capture shortcut, replacing the default — works only if no other app is already using that key."),
-                            TextWrapping = TextWrapping.Wrap,
-                            MaxWidth = 260,
-                        }
-                    };
-
-                    prtScBtn.Click += (_, _) =>
-                    {
-                        var (prevMod, prevKey) = getHotkey(capturedId);
-                        var app = Application.Current as App;
-
-                        // Release our own claim so CanRegister does not report a self-conflict,
-                        // then probe both failure modes before committing.
-                        bool canReg = true;
-                        if (app is not null)
-                        {
-                            app.UnregisterAllHotkeys();
-                            canReg = HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT);
-                        }
-                        var interceptors = HotkeyConflictProbe.DetectPrintScreenInterceptors();
-
-                        // Re-register our hotkeys after committing. In SettingsWindow this happens via
-                        // hotkeyChanged; the SetupWizard passes none, so re-register directly.
-                        void ReRegister()
-                        {
-                            if (hotkeyChanged is not null) hotkeyChanged.Invoke();
-                            else app?.RegisterHotkeys(showReadyNotification: false);
-                        }
-
-                        try
-                        {
-                            setHotkey(capturedId, 0, Native.User32.VK_SNAPSHOT);
-                            settingsService.Save();
-                            capturedBox.Text = HotkeyFormatter.Format(0, Native.User32.VK_SNAPSHOT);
-                            ReRegister();
-                            ApplyPrintScreenFeedback(hkBox, capturedBox, tooltip, tipText, canReg, interceptors);
-                        }
-                        catch (Exception ex)
-                        {
-                            AppDiagnostics.LogError("settings.tool-hotkey-prtsc", ex);
-                            setHotkey(capturedId, prevMod, prevKey);
-                            try { settingsService.Save(); } catch { }
-                            capturedBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
-                            ReRegister();
-                            ShowToolHotkeySaveFailed("save", restoredConflict: false, ex);
-                        }
-                    };
-
-                    right.Children.Add(prtScBtn);
-                }
-
                 right.Children.Add(clearBtn);
 
                 Grid.SetColumn(right, 2);
@@ -547,8 +481,7 @@ public static class ToolListBuilder
 
         AddSubHeader(capturePanel, "Core Captures");
         foreach (var item in System.Linq.Enumerable.Take(captureItems, 6))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey,
-                showPrintScreenQuickAssign: item.id == "rect");
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         AddSubHeader(capturePanel, "Video & Recording");
         foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 6), 2))

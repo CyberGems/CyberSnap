@@ -2278,5 +2278,9 @@
   "Gallery and editor": "Gallery and editor",
   "Reposition panel": "Reposition panel",
   "Brings the panel back into view when it extends beyond the screen": "Brings the panel back into view when it extends beyond the screen",
-  "Hide": "Hide"
+  "Hide": "Hide",
+  "Assign PrtSc": "Assign PrtSc",
+  "How to free the Print Screen key?": "How to free the Print Screen key?",
+  "These apps may be holding the Print Screen key: {0}. Close them or change their shortcuts.": "These apps may be holding the Print Screen key: {0}. Close them or change their shortcuts.",
+  "Another application is holding the Print Screen key. Close it or change its shortcut to free the key.": "Another application is holding the Print Screen key. Close it or change its shortcut to free the key."
 }

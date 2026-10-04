@@ -407,6 +407,60 @@ public partial class SettingsWindow
 
         PrtScWarnBanner.Visibility = occupied ? Visibility.Visible : Visibility.Collapsed;
         PrtScInfoBtn.Visibility = occupied ? Visibility.Collapsed : Visibility.Visible;
+        if (occupied)
+            SyncPrtScBannerCause(rectMod, rectKey);
+        SyncPrtScBannerCollapse();
+    }
+
+    /// <summary>
+    /// Points the finger at the right occupant: Snipping Tool keeps its specific
+    /// guidance, other apps get a generic text naming them when known.
+    /// </summary>
+    private void SyncPrtScBannerCause(uint rectMod, uint rectKey)
+    {
+        bool snipping;
+        System.Collections.Generic.IReadOnlyList<string> interceptors =
+            System.Array.Empty<string>();
+        try
+        {
+            snipping = Services.HotkeyConflictProbe.IsSnippingToolBound();
+            if (!snipping)
+                interceptors = Services.HotkeyConflictProbe.DetectPrintScreenInterceptors();
+        }
+        catch
+        {
+            snipping = false;
+        }
+
+        if (snipping)
+        {
+            LocalizationService.SetSourceText(PrtScBannerTitle, "How to unbind Snipping Tool from the PrtSc key?");
+            LocalizationService.SetSourceText(PrtScBannerDesc, "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.");
+            LocalizationService.ApplyTo(PrtScWarnBanner, _settingsService.Settings.InterfaceLanguage);
+            OpenWinSettingsBtn.Visibility = Visibility.Visible;
+            return;
+        }
+
+        LocalizationService.SetSourceText(PrtScBannerTitle, "How to free the Print Screen key?");
+        PrtScBannerTitle.Text = LocalizationService.Translate("How to free the Print Screen key?");
+        if (interceptors.Count > 0)
+        {
+            PrtScBannerDesc.Text = string.Format(
+                LocalizationService.Translate("These apps may be holding the Print Screen key: {0}. Close them or change their shortcuts."),
+                string.Join(", ", interceptors));
+        }
+        else
+        {
+            PrtScBannerDesc.Text = LocalizationService.Translate("Another application is holding the Print Screen key. Close it or change its shortcut to free the key.");
+        }
+        OpenWinSettingsBtn.Visibility = Visibility.Collapsed;
+    }
+
+    private void SyncPrtScBannerCollapse()
+    {
+        bool collapsed = _settingsService.Settings.PrtScBannerCollapsed;
+        PrtScBannerBody.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+        PrtScCollapseBtn.Content = collapsed ? "⌄" : "⌃";
     }
 
     private void PopulateInterfaceLanguageOptions()
@@ -628,6 +682,7 @@ public partial class SettingsWindow
         ThemeDarkRadio?.ApplyDefaultTooltip();
         RefreshLanguageComboDisplay();
         PopulateToolToggles();
+        SyncPrtScBannerVisibility();
         SyncPrtScBannerVisibility();
         PopulateSoundCustomizationPanel();
         LoadFileNameTokenButtons();

@@ -1238,9 +1238,65 @@ public partial class SettingsWindow : Window
     private void PrtScInfoBtn_Click(object sender, RoutedEventArgs e)
     {
         _settingsService.Settings.HidePrtScBanner = false;
+        _settingsService.Settings.PrtScBannerCollapsed = false;
         try { _settingsService.Save(); } catch { }
         PrtScWarnBanner.Visibility = Visibility.Visible;
         PrtScInfoBtn.Visibility = Visibility.Collapsed;
+        SyncPrtScBannerCollapse();
+    }
+
+    private void PrtScCollapseBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.PrtScBannerCollapsed = !_settingsService.Settings.PrtScBannerCollapsed;
+        try { _settingsService.Save(); } catch { }
+        SyncPrtScBannerCollapse();
+    }
+
+    private void AssignPrtScBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var app = Application.Current as App;
+            bool canReg = true;
+            if (app is not null)
+            {
+                app.UnregisterAllHotkeys();
+                canReg = Services.HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT);
+            }
+            var interceptors = Services.HotkeyConflictProbe.DetectPrintScreenInterceptors();
+
+            _settingsService.Settings.SetToolHotkey("rect", 0, Native.User32.VK_SNAPSHOT);
+            _settingsService.Save();
+            if (app is not null)
+                HotkeyChanged?.Invoke();
+            else
+                app?.RegisterHotkeys(showReadyNotification: false);
+
+            if (!canReg)
+            {
+                ToastWindow.ShowError(
+                    LocalizationService.Translate("Assign PrtSc"),
+                    LocalizationService.Translate("This hotkey is registered by another application."));
+            }
+            else if (interceptors.Count > 0)
+            {
+                ToastWindow.Show(
+                    LocalizationService.Translate("Assign PrtSc"),
+                    string.Format(
+                        LocalizationService.Translate("Print Screen assigned, but {0} may intercept it. Close it or change its shortcut."),
+                        string.Join(", ", interceptors)));
+            }
+            else
+            {
+                ToastWindow.Show(
+                    LocalizationService.Translate("Assign PrtSc"),
+                    HotkeyFormatter.Format(0, Native.User32.VK_SNAPSHOT));
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.assign-prtsc", ex);
+        }
     }
 
 }

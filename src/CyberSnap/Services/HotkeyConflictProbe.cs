@@ -97,7 +97,7 @@ public static class HotkeyConflictProbe
     /// <summary>
     /// Whether the Print Screen banner is worth showing: false when CyberSnap itself
     /// already owns PrtSc, true when something else likely holds it (registry-bound
-    /// Snipping Tool, known interceptors, or a failed probe registration).
+    /// Snipping Tool, interceptors, another owner).
     /// Best-effort and heuristic — never throws.
     /// </summary>
     public static bool IsPrtScOccupiedElsewhere(uint currentMod, uint currentKey)
@@ -109,6 +109,19 @@ public static class HotkeyConflictProbe
             if (DetectPrintScreenInterceptors().Count > 0)
                 return true;
             return !CanRegister(0, User32.VK_SNAPSHOT);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>True when the Win11 Snipping Tool binding owns Print Screen.</summary>
+    public static bool IsSnippingToolBound()
+    {
+        try
+        {
+            return IsWindowsSnippingToolBound();
         }
         catch
         {
