@@ -6,14 +6,11 @@ namespace CyberSnap.Services;
 public sealed class HotkeyService : IDisposable
 {
     // Hotkey ID allocation:
-    //   9001–9011  — core capture / tool hotkeys
+    //   9001, 9006-9011  — core capture / tool hotkeys
+    //   (9002-9005 retired with the overlay utility hotkeys)
     //   9012       — standalone ruler
     //   9013+      — standalone tools; 9016 — repeat last capture area
     private const int HOTKEY_CAPTURE = 9001;
-    private const int HOTKEY_OCR = 9002;
-    private const int HOTKEY_PICKER = 9003;
-    private const int HOTKEY_SCAN = 9004;
-    private const int HOTKEY_RULER = 9005;
     private const int HOTKEY_GIF = 9006;
     private const int HOTKEY_FULLSCREEN = 9007;
     private const int HOTKEY_ACTIVE_WINDOW = 9008;
@@ -26,10 +23,6 @@ public sealed class HotkeyService : IDisposable
     private const int HOTKEY_REPEAT_LAST_AREA = 9016;
 
     private bool _captureRegistered;
-    private bool _ocrRegistered;
-    private bool _pickerRegistered;
-    private bool _scanRegistered;
-    private bool _rulerRegistered;
     private bool _gifRegistered;
     private bool _fullscreenRegistered;
     private bool _activeWindowRegistered;
@@ -43,10 +36,6 @@ public sealed class HotkeyService : IDisposable
     private bool _registered;
 
     public event Action? HotkeyPressed;
-    public event Action? OcrHotkeyPressed;
-    public event Action? PickerHotkeyPressed;
-    public event Action? ScanHotkeyPressed;
-    public event Action? RulerHotkeyPressed;
     public event Action? GifHotkeyPressed;
     public event Action? FullscreenHotkeyPressed;
     public event Action? ActiveWindowHotkeyPressed;
@@ -91,10 +80,6 @@ public sealed class HotkeyService : IDisposable
     public void UnregisterAll()
     {
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_CAPTURE);
-        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_OCR);
-        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_PICKER);
-        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_SCAN);
-        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_RULER);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_GIF);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_FULLSCREEN);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_ACTIVE_WINDOW);
@@ -106,10 +91,6 @@ public sealed class HotkeyService : IDisposable
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_AREA);
         _captureRegistered = false;
-        _ocrRegistered = false;
-        _pickerRegistered = false;
-        _scanRegistered = false;
-        _rulerRegistered = false;
         _gifRegistered = false;
         _fullscreenRegistered = false;
         _activeWindowRegistered = false;
@@ -123,10 +104,6 @@ public sealed class HotkeyService : IDisposable
     }
 
     public bool Register(uint modifiers, uint key) => RegisterHotkey(ref _captureRegistered, HOTKEY_CAPTURE, modifiers, key);
-    public bool RegisterOcr(uint modifiers, uint key) => RegisterHotkey(ref _ocrRegistered, HOTKEY_OCR, modifiers, key);
-    public bool RegisterPicker(uint modifiers, uint key) => RegisterHotkey(ref _pickerRegistered, HOTKEY_PICKER, modifiers, key);
-    public bool RegisterScan(uint modifiers, uint key) => RegisterHotkey(ref _scanRegistered, HOTKEY_SCAN, modifiers, key);
-    public bool RegisterRuler(uint modifiers, uint key) => RegisterHotkey(ref _rulerRegistered, HOTKEY_RULER, modifiers, key);
     public bool RegisterGif(uint modifiers, uint key) => RegisterHotkey(ref _gifRegistered, HOTKEY_GIF, modifiers, key);
     public bool RegisterFullscreen(uint modifiers, uint key) => RegisterHotkey(ref _fullscreenRegistered, HOTKEY_FULLSCREEN, modifiers, key);
     public bool RegisterActiveWindow(uint modifiers, uint key) => RegisterHotkey(ref _activeWindowRegistered, HOTKEY_ACTIVE_WINDOW, modifiers, key);
@@ -141,10 +118,6 @@ public sealed class HotkeyService : IDisposable
     public void Unregister()
     {
         if (_captureRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_CAPTURE); _captureRegistered = false; }
-        if (_ocrRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_OCR); _ocrRegistered = false; }
-        if (_pickerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_PICKER); _pickerRegistered = false; }
-        if (_scanRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_SCAN); _scanRegistered = false; }
-        if (_rulerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_RULER); _rulerRegistered = false; }
         if (_gifRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_GIF); _gifRegistered = false; }
         if (_fullscreenRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_FULLSCREEN); _fullscreenRegistered = false; }
         if (_activeWindowRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_ACTIVE_WINDOW); _activeWindowRegistered = false; }
@@ -167,10 +140,6 @@ public sealed class HotkeyService : IDisposable
         if (msg.message != User32.WM_HOTKEY) return;
         int id = (int)msg.wParam;
         if (id == HOTKEY_CAPTURE) { InvokeHandlersSafely(HotkeyPressed, "hotkey.capture"); handled = true; }
-        else if (id == HOTKEY_OCR) { InvokeHandlersSafely(OcrHotkeyPressed, "hotkey.ocr"); handled = true; }
-        else if (id == HOTKEY_PICKER) { InvokeHandlersSafely(PickerHotkeyPressed, "hotkey.picker"); handled = true; }
-        else if (id == HOTKEY_SCAN) { InvokeHandlersSafely(ScanHotkeyPressed, "hotkey.scan"); handled = true; }
-        else if (id == HOTKEY_RULER) { InvokeHandlersSafely(RulerHotkeyPressed, "hotkey.ruler"); handled = true; }
         else if (id == HOTKEY_GIF) { InvokeHandlersSafely(GifHotkeyPressed, "hotkey.gif"); handled = true; }
         else if (id == HOTKEY_FULLSCREEN) { InvokeHandlersSafely(FullscreenHotkeyPressed, "hotkey.fullscreen"); handled = true; }
         else if (id == HOTKEY_ACTIVE_WINDOW) { InvokeHandlersSafely(ActiveWindowHotkeyPressed, "hotkey.active-window"); handled = true; }

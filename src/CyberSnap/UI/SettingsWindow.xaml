@@ -1360,13 +1360,10 @@
                                        Services:LocalizationService.SourceText="Capture Toolbar"/>
                             <StackPanel x:Name="AnnotationToolsPanel"/>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,16,0,0">
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,16,0,0">
                             <TextBlock Text="Annotations Editor" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
-                                       Services:LocalizationService.SourceText="Annotations Editor"/>
+                                        Services:LocalizationService.SourceText="Annotations Editor"/>
                             <StackPanel x:Name="EditorToolsPanel"/>
-                        </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,16,0,0">
-                            <StackPanel x:Name="ToolbarUtilitiesPanel"/>
                         </StackPanel>
                     </Grid>
                 </StackPanel>

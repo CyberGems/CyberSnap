@@ -52,12 +52,11 @@ public static class ToolListBuilder
         return false;
     }
 
-    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null, StackPanel? editorToolsPanel = null, StackPanel? toolbarUtilitiesPanel = null, bool includeAnnotationTools = true)
+    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null, StackPanel? editorToolsPanel = null, bool includeAnnotationTools = true)
     {
         capturePanel.Children.Clear();
         annotationPanel.Children.Clear();
         editorToolsPanel?.Children.Clear();
-        toolbarUtilitiesPanel?.Children.Clear();
         var s = settingsService.Settings;
         // Icon color for rendering Fluent glyphs to bitmaps
         var iconColor = Theme.IsDark ? System.Drawing.Color.FromArgb(225, 255, 255, 255) : System.Drawing.Color.FromArgb(210, 0, 0, 0);
@@ -465,13 +464,8 @@ public static class ToolListBuilder
             ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
             ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
 
-            // Toolbar utilities (capture overlay toolbar)
-            ("ocr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
-            ("picker", "Color Picker", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
-            ("scan", "QR & Barcodes", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
-            ("ruler", "Ruler", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
-
-            // Standalone Utilities
+            // Standalone Utilities (global standalone launchers; overlay toolbar modes
+            // are reachable from capture itself, so they get no global hotkeys)
             ("_standaloneOcr", "OCR (Standalone)", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
             ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
             ("_standaloneScan", "QR & Barcodes (Standalone)", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
@@ -496,16 +490,8 @@ public static class ToolListBuilder
             AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         AddSectionHeader(capturePanel, "Standalone Utilities");
-        foreach (var item in System.Linq.Enumerable.Skip(captureItems, 12))
+        foreach (var item in System.Linq.Enumerable.Skip(captureItems, 8))
             AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey, allowSingleKeyHotkeys: true);
-
-        if (toolbarUtilitiesPanel is not null)
-        {
-            AddSubHeader(toolbarUtilitiesPanel, "Toolbar utilities");
-            foreach (var item in System.Linq.Enumerable.Skip(captureItems, 8).Take(4))
-                AddToolRow(toolbarUtilitiesPanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey, allowSingleKeyHotkeys: true);
-            LocalizationService.ApplyTo(toolbarUtilitiesPanel, settingsService.Settings.InterfaceLanguage);
-        }
 
         if (includeAnnotationTools)
         {
