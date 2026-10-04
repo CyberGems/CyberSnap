@@ -773,52 +773,55 @@ public sealed class AppSettings
         0x31, 0x32, 0x33 // 1, 2, 3
     };
 
-    private Dictionary<string, uint> GetAnnotationDefaults()
+    private Dictionary<string, (uint Mod, uint Key)> GetAnnotationDefaults()
     {
-        var result = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+        uint none = 0;
+        uint ctrl = Native.User32.MOD_CONTROL;
+        var result = new Dictionary<string, (uint Mod, uint Key)>(StringComparer.OrdinalIgnoreCase)
         {
-            ["select"] = 0x70,      // F1 (Move & Resize)
-            ["eraser"] = 0x71,      // F2 (Eraser)
-            ["text"] = 0x72,        // F3 (Text)
-            ["arrow"] = 0x73,       // F4 (Arrow)
-            ["line"] = 0x74,        // F5 (Line)
-            ["draw"] = 0x75,        // F6 (FreeHand)
-            ["curvedArrow"] = 0x76, // F7 (Curved Arrow)
-            ["circleShape"] = 0x77, // F8 (Circle)
-            ["rectShape"] = 0x78,   // F9 (Rectangle)
-            ["highlight"] = 0x79,   // F10 (Highlight)
-            ["step"] = 0x7A,        // F11 (Step Number)
-            ["magnifier"] = 0x7B,   // F12 (Magnifier)
-            ["blur"] = 0x31,        // 1 (Blur)
-            ["emoji"] = 0x32,       // 2 (Emoji)
-            ["ocr"] = 0x4F,         // O (OCR)
-            ["picker"] = 0x43,      // C (Color Picker)
-            ["scan"] = 0x51,        // Q (QR & Barcodes)
-            ["ruler"] = 0x52,       // R (Ruler)
+            ["select"] = (none, 0x70),      // F1 (Move & Resize)
+            ["eraser"] = (none, 0x71),      // F2 (Eraser)
+            ["text"] = (none, 0x72),        // F3 (Text)
+            ["arrow"] = (none, 0x73),       // F4 (Arrow)
+            ["line"] = (none, 0x74),        // F5 (Line)
+            ["draw"] = (none, 0x75),        // F6 (FreeHand)
+            ["curvedArrow"] = (none, 0x76), // F7 (Curved Arrow)
+            ["circleShape"] = (none, 0x77), // F8 (Circle)
+            ["rectShape"] = (none, 0x78),   // F9 (Rectangle)
+            ["highlight"] = (none, 0x79),   // F10 (Highlight)
+            ["step"] = (none, 0x7A),        // F11 (Step Number)
+            ["magnifier"] = (none, 0x7B),   // F12 (Magnifier)
+            ["blur"] = (none, 0x31),        // 1 (Blur)
+            ["emoji"] = (none, 0x32),       // 2 (Emoji)
+            ["undo"] = (ctrl, 0x5A),        // Ctrl+Z (Undo)
+            ["ocr"] = (none, 0x4F),         // O (OCR)
+            ["picker"] = (none, 0x43),      // C (Color Picker)
+            ["scan"] = (none, 0x51),        // Q (QR & Barcodes)
+            ["ruler"] = (none, 0x52),       // R (Ruler)
         };
         return result;
     }
 
-    private Dictionary<string, uint> GetEditorToolDefaults() =>
+    private Dictionary<string, (uint Mod, uint Key)> GetEditorToolDefaults() =>
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["editorPan"] = 0x20,         // Space
-            ["editorMove"] = 0x70,        // F1
-            ["editorEraser"] = 0x71,      // F2
-            ["editorText"] = 0x72,        // F3
-            ["editorArrow"] = 0x73,       // F4
-            ["editorLine"] = 0x74,        // F5
-            ["editorDraw"] = 0x75,        // F6
-            ["editorCurvedArrow"] = 0x76, // F7
-            ["editorCircle"] = 0x77,      // F8
-            ["editorRect"] = 0x78,        // F9
-            ["editorCrop"] = 0x33,        // 3
-            ["editorCutOut"] = 0x34,      // 4
-            ["editorHighlight"] = 0x79,   // F10
-            ["editorStep"] = 0x7A,        // F11
-            ["editorMagnifier"] = 0x7B,   // F12
-            ["editorBlur"] = 0x31,        // 1
-            ["editorEmoji"] = 0x32,       // 2
+            ["editorPan"] = (0, 0x20),         // Space
+            ["editorMove"] = (0, 0x70),        // F1
+            ["editorEraser"] = (0, 0x71),      // F2
+            ["editorText"] = (0, 0x72),        // F3
+            ["editorArrow"] = (0, 0x73),       // F4
+            ["editorLine"] = (0, 0x74),        // F5
+            ["editorDraw"] = (0, 0x75),        // F6
+            ["editorCurvedArrow"] = (0, 0x76), // F7
+            ["editorCircle"] = (0, 0x77),      // F8
+            ["editorRect"] = (0, 0x78),        // F9
+            ["editorCrop"] = (0, 0x33),        // 3
+            ["editorCutOut"] = (0, 0x34),      // 4
+            ["editorHighlight"] = (0, 0x79),   // F10
+            ["editorStep"] = (0, 0x7A),        // F11
+            ["editorMagnifier"] = (0, 0x7B),   // F12
+            ["editorBlur"] = (0, 0x31),        // 1
+            ["editorEmoji"] = (0, 0x32),       // 2
         };
 
     /// <summary>Get hotkey (mod, key) for an editor toolbar tool.</summary>
@@ -826,8 +829,8 @@ public sealed class AppSettings
     {
         if (EditorToolHotkeys != null && EditorToolHotkeys.TryGetValue(toolId, out var v) && v.Length >= 2)
             return (v[0], v[1]);
-        if (GetEditorToolDefaults().TryGetValue(toolId, out var defKey))
-            return (0u, defKey);
+        if (GetEditorToolDefaults().TryGetValue(toolId, out var defHotkey))
+            return defHotkey;
         return (0u, 0u);
     }
 
@@ -837,21 +840,21 @@ public sealed class AppSettings
         EditorToolHotkeys[toolId] = new[] { mod, key };
     }
 
-    private Dictionary<string, uint> GetEditorViewDefaults() =>
+    private Dictionary<string, (uint Mod, uint Key)> GetEditorViewDefaults() =>
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["editorZoomIn"] = 0x38,    // 8
-            ["editorZoomOut"] = 0x37,   // 7
-            ["editorZoomReset"] = 0x30, // 0
-            ["editorZoomFit"] = 0x39,   // 9
+            ["editorZoomIn"] = (0, 0x38),    // 8
+            ["editorZoomOut"] = (0, 0x37),   // 7
+            ["editorZoomReset"] = (0, 0x30), // 0
+            ["editorZoomFit"] = (0, 0x39),   // 9
         };
 
     public (uint mod, uint key) GetEditorViewHotkey(string viewId)
     {
         if (EditorViewHotkeys != null && EditorViewHotkeys.TryGetValue(viewId, out var v) && v.Length >= 2)
             return (v[0], v[1]);
-        if (GetEditorViewDefaults().TryGetValue(viewId, out var defKey))
-            return (0u, defKey);
+        if (GetEditorViewDefaults().TryGetValue(viewId, out var defHotkey))
+            return defHotkey;
         return (0u, 0u);
     }
 
@@ -904,17 +907,14 @@ public sealed class AppSettings
         // Check user-customized value first (including explicit clears stored as [0,0])
         if (ToolHotkeys != null && ToolHotkeys.TryGetValue(toolId, out var v) && v.Length >= 2)
             return (v[0], v[1]);
-        // Undo has no single-key default like its siblings: Ctrl+Z is the expected binding.
-        if (string.Equals(toolId, "undo", StringComparison.OrdinalIgnoreCase))
-            return (Native.User32.MOD_CONTROL, 0x5A);
         if (ToolDef.AllTools.Any(t => t.Id == toolId && t.Group == 1) &&
             EnabledTools is { Count: > 0 } &&
             !EnabledTools.Contains(toolId))
             return (0u, 0u);
         // Fall back to stable annotation tool defaults (always full stable order, not filtered by enabled tools).
         var defaults = GetAnnotationDefaults();
-        if (defaults.TryGetValue(toolId, out var defKey))
-            return (0u, defKey);
+        if (defaults.TryGetValue(toolId, out var defHotkey))
+            return defHotkey;
         return (0u, 0u);
     }
 
