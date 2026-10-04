@@ -95,6 +95,28 @@ public static class HotkeyConflictProbe
     }
 
     /// <summary>
+    /// Whether the Print Screen banner is worth showing: false when CyberSnap itself
+    /// already owns PrtSc, true when something else likely holds it (registry-bound
+    /// Snipping Tool, known interceptors, or a failed probe registration).
+    /// Best-effort and heuristic — never throws.
+    /// </summary>
+    public static bool IsPrtScOccupiedElsewhere(uint currentMod, uint currentKey)
+    {
+        try
+        {
+            if (currentMod == 0 && currentKey == User32.VK_SNAPSHOT)
+                return false;
+            if (DetectPrintScreenInterceptors().Count > 0)
+                return true;
+            return !CanRegister(0, User32.VK_SNAPSHOT);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Windows 11: "Use the Print screen key to open Snipping Tool" writes
     /// PrintScreenKeyForSnippingEnabled=1 under HKCU\Control Panel\Keyboard.
     /// When on, the OS consumes Print Screen before our hotkey ever fires.

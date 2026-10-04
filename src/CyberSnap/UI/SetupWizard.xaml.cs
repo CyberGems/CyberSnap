@@ -52,8 +52,22 @@ public partial class SetupWizard : Window
         RefreshLanguageComboDisplay();
         WizAfterCaptureOutcomeEditor?.RefreshLocalization();
 
-        // Respect a previous dismissal from Settings (the wizard has no reopen toggle).
-        WizPrtScWarnBanner.Visibility = _settingsService.Settings.HidePrtScBanner
+        // Respect a previous dismissal from Settings (the wizard has no reopen toggle),
+        // and otherwise only take the space while PrtSc is actually held by something else.
+        bool wizHideBanner = _settingsService.Settings.HidePrtScBanner;
+        if (!wizHideBanner)
+        {
+            try
+            {
+                var (wizMod, wizKey) = _settingsService.Settings.GetToolHotkey("rect");
+                wizHideBanner = !Services.HotkeyConflictProbe.IsPrtScOccupiedElsewhere(wizMod, wizKey);
+            }
+            catch
+            {
+                wizHideBanner = false;
+            }
+        }
+        WizPrtScWarnBanner.Visibility = wizHideBanner
             ? Visibility.Collapsed
             : Visibility.Visible;
 

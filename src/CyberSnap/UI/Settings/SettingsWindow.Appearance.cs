@@ -381,13 +381,32 @@ public partial class SettingsWindow
         ToolListBuilder.ExtraTools;
 
     private void PopulateToolToggles() =>
-        ToolListBuilder.Build(CaptureToolsPanel, AnnotationToolsPanel, _settingsService, this, () => HotkeyChanged?.Invoke(), EditorToolsPanel);
+        ToolListBuilder.Build(CaptureToolsPanel, AnnotationToolsPanel, _settingsService, this, () => { HotkeyChanged?.Invoke(); SyncPrtScBannerVisibility(); }, EditorToolsPanel);
 
     private void SyncPrtScBannerVisibility()
     {
-        bool hidden = _settingsService.Settings.HidePrtScBanner;
-        PrtScWarnBanner.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
-        PrtScInfoBtn.Visibility = hidden ? Visibility.Visible : Visibility.Collapsed;
+        // Dismissal wins; otherwise the banner only earns its space while PrtSc is
+        // actually held by something else (Snipping Tool, interceptors, another owner).
+        if (_settingsService.Settings.HidePrtScBanner)
+        {
+            PrtScWarnBanner.Visibility = Visibility.Collapsed;
+            PrtScInfoBtn.Visibility = Visibility.Visible;
+            return;
+        }
+
+        var (rectMod, rectKey) = _settingsService.Settings.GetToolHotkey("rect");
+        bool occupied;
+        try
+        {
+            occupied = Services.HotkeyConflictProbe.IsPrtScOccupiedElsewhere(rectMod, rectKey);
+        }
+        catch
+        {
+            occupied = true;
+        }
+
+        PrtScWarnBanner.Visibility = occupied ? Visibility.Visible : Visibility.Collapsed;
+        PrtScInfoBtn.Visibility = occupied ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void PopulateInterfaceLanguageOptions()
@@ -857,6 +876,7 @@ public partial class SettingsWindow
             _settingsService.Settings.ResetToDefaultHotkeys();
             _settingsService.Save();
             PopulateToolToggles();
+            SyncPrtScBannerVisibility();
             HotkeyChanged?.Invoke();
             ToastWindow.Show("Hotkeys reset", "All hotkeys have been reset to defaults.");
         }

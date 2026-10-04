@@ -34,8 +34,10 @@ public static class ToolListBuilder
 
     // At most one advisory tooltip may be open: boxes that never took focus (e.g. advisory
     // opened from the PrtSc button) never get LostFocus, so a stuck tooltip would otherwise
-    // linger while the user moves on. Showing a new one always closes the previous.
+    // linger while the user moves on. Showing a new one always closes the previous, and every
+    // advisory auto-closes after a few seconds no matter which focus path was taken.
     private static System.Windows.Controls.ToolTip? s_openAdvisory;
+    private static System.Windows.Threading.DispatcherTimer? s_advisoryTimer;
 
     private static void ShowAdvisory(System.Windows.Controls.ToolTip tip)
     {
@@ -47,6 +49,24 @@ public static class ToolListBuilder
         catch { }
         s_openAdvisory = tip;
         tip.IsOpen = true;
+        try
+        {
+            s_advisoryTimer?.Stop();
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (ReferenceEquals(s_openAdvisory, tip))
+                {
+                    try { tip.IsOpen = false; }
+                    catch { }
+                    s_openAdvisory = null;
+                }
+            };
+            s_advisoryTimer = timer;
+            timer.Start();
+        }
+        catch { }
     }
 
     private static void CloseOtherAdvisories(System.Windows.Controls.ToolTip mine)
@@ -57,6 +77,21 @@ public static class ToolListBuilder
                 s_openAdvisory.IsOpen = false;
         }
         catch { }
+    }
+
+    private static void UpdateLabelTip(TextBlock labelBlock, string fullLabel)
+    {
+        try
+        {
+            labelBlock.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            labelBlock.ToolTip = labelBlock.DesiredSize.Width > labelBlock.ActualWidth + 0.5
+                ? fullLabel
+                : null;
+        }
+        catch
+        {
+            labelBlock.ToolTip = null;
+        }
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -152,7 +187,11 @@ public static class ToolListBuilder
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(8, 0, 12, 0),
                 Style = (Style)owner.FindResource("SettingTitle"),
+                TextTrimming = TextTrimming.CharacterEllipsis,
             };
+            // Full label on hover, but only when it is actually clipped (narrow windows).
+            labelBlock.Loaded += (_, _) => UpdateLabelTip(labelBlock, label);
+            labelBlock.SizeChanged += (_, _) => UpdateLabelTip(labelBlock, label);
             Grid.SetColumn(labelBlock, 1);
             grid.Children.Add(labelBlock);
 
@@ -172,10 +211,13 @@ public static class ToolListBuilder
                 hkBox.Width = 135;
                 hkBox.MinWidth = 135;
                 hkBox.FontSize = 11;
-                var tooltip = new System.Windows.Controls.ToolTip
+                var tipText = new TextBlock
                 {
-                    Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.")
+                    Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application."),
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 260,
                 };
+                var tooltip = new System.Windows.Controls.ToolTip { Content = tipText };
                 hkBox.ToolTip = tooltip;
 
                 var (initMod, initKey) = getHotkey(toolId);
@@ -198,7 +240,7 @@ public static class ToolListBuilder
                     capturedBox.Text = LocalizationService.Translate("Press keys...");
                     hkBox.ClearValue(TextBox.ForegroundProperty);
                     hkBox.ClearValue(TextBox.FontWeightProperty);
-                    tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                    tipText.Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
                     tooltip.IsOpen = false;
                     CloseOtherAdvisories(tooltip);
                     if (resetWarningTimer != null)
@@ -217,7 +259,7 @@ public static class ToolListBuilder
                     capturedBox.Text = HotkeyFormatter.Format(m, k);
                     hkBox.ClearValue(TextBox.ForegroundProperty);
                     hkBox.ClearValue(TextBox.FontWeightProperty);
-                    tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                    tipText.Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
                     tooltip.IsOpen = false;
                     if (resetWarningTimer != null)
                     {
@@ -263,7 +305,7 @@ public static class ToolListBuilder
                                     capturedBox.Text = LocalizationService.Translate("Taken");
                                     hkBox.Foreground = System.Windows.Media.Brushes.Red;
                                     hkBox.FontWeight = FontWeights.Bold;
-                                    tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
+                                    tipText.Text = LocalizationService.Translate("This hotkey is registered by another application.");
                                     ShowAdvisory(tooltip);
                                 }
                             };
@@ -294,14 +336,14 @@ public static class ToolListBuilder
                     if (mod == 0 && vk == 0) return;
                     if (!allowSingleKeyHotkeys && IsUnsafeModifierlessHotkey(mod, vk))
                     {
-                        ShowModifierRequiredWarning(hkBox, capturedBox, tooltip);
+                        ShowModifierRequiredWarning(hkBox, capturedBox, tooltip, tipText);
                         return;
                     }
 
                     var conflict = FindHotkeyConflict(settingsService.Settings, capturedId, mod, vk);
                     if (conflict is not null)
                     {
-                        ShowInternalHotkeyConflictWarning(hkBox, capturedBox, tooltip, mod, vk, conflict.Label);
+                        ShowInternalHotkeyConflictWarning(hkBox, capturedBox, tooltip, tipText, mod, vk, conflict.Label);
                         return;
                     }
 
@@ -321,7 +363,7 @@ public static class ToolListBuilder
                             ? HotkeyConflictProbe.DetectPrintScreenInterceptors()
                             : System.Array.Empty<string>();
                         if (interceptors.Count > 0)
-                            ApplyPrintScreenFeedback(hkBox, capturedBox, tooltip, canRegister: true, interceptors);
+                            ApplyPrintScreenFeedback(hkBox, capturedBox, tooltip, tipText, canRegister: true, interceptors);
                         else
                             Keyboard.ClearFocus();
                     }
@@ -362,7 +404,7 @@ public static class ToolListBuilder
                                         capturedBox.Text = LocalizationService.Translate("Press keys...");
                                         hkBox.ClearValue(TextBox.ForegroundProperty);
                                         hkBox.ClearValue(TextBox.FontWeightProperty);
-                                        tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                                        tipText.Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
                                         tooltip.IsOpen = false;
                                     }
                                 };
@@ -421,7 +463,15 @@ public static class ToolListBuilder
                     prtScBtn.MinWidth = 52;
                     prtScBtn.FontSize = 11;
                     prtScBtn.Margin = new Thickness(6, 0, 0, 0);
-                    prtScBtn.ToolTip = LocalizationService.Translate("Assign Print Screen (PrtSc) as the capture shortcut, replacing the default — works only if no other app is already using that key.");
+                    prtScBtn.ToolTip = new System.Windows.Controls.ToolTip
+                    {
+                        Content = new TextBlock
+                        {
+                            Text = LocalizationService.Translate("Assign Print Screen (PrtSc) as the capture shortcut, replacing the default — works only if no other app is already using that key."),
+                            TextWrapping = TextWrapping.Wrap,
+                            MaxWidth = 260,
+                        }
+                    };
 
                     prtScBtn.Click += (_, _) =>
                     {
@@ -452,7 +502,7 @@ public static class ToolListBuilder
                             settingsService.Save();
                             capturedBox.Text = HotkeyFormatter.Format(0, Native.User32.VK_SNAPSHOT);
                             ReRegister();
-                            ApplyPrintScreenFeedback(hkBox, capturedBox, tooltip, canReg, interceptors);
+                            ApplyPrintScreenFeedback(hkBox, capturedBox, tooltip, tipText, canReg, interceptors);
                         }
                         catch (Exception ex)
                         {
@@ -623,13 +673,13 @@ public static class ToolListBuilder
         new(System.Windows.Media.Color.FromRgb(245, 158, 11));
 
     private static void ShowInternalHotkeyConflictWarning(TextBox hkBox, TextBox capturedBox,
-        System.Windows.Controls.ToolTip tooltip, uint mod, uint vk, string conflictLabelKey)
+        System.Windows.Controls.ToolTip tooltip, TextBlock tipText, uint mod, uint vk, string conflictLabelKey)
     {
         capturedBox.Text = LocalizationService.Translate("Taken");
         hkBox.Foreground = HotkeyWarningBrush;
         hkBox.FontWeight = FontWeights.SemiBold;
         var conflictLabel = LocalizationService.Translate(conflictLabelKey);
-        tooltip.Content = string.Format(
+        tipText.Text = string.Format(
             LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
             HotkeyFormatter.Format(mod, vk),
             conflictLabel);
@@ -637,12 +687,12 @@ public static class ToolListBuilder
     }
 
     private static void ShowModifierRequiredWarning(TextBox hkBox, TextBox capturedBox,
-        System.Windows.Controls.ToolTip tooltip)
+        System.Windows.Controls.ToolTip tooltip, TextBlock tipText)
     {
         capturedBox.Text = LocalizationService.Translate("Modifier required");
         hkBox.Foreground = HotkeyWarningBrush;
         hkBox.FontWeight = FontWeights.SemiBold;
-        tooltip.Content = LocalizationService.Translate("Global hotkeys require a modifier (Ctrl, Alt, or Shift).");
+        tipText.Text = LocalizationService.Translate("Global hotkeys require a modifier (Ctrl, Alt, or Shift).");
         ShowAdvisory(tooltip);
     }
     /// <summary>
@@ -651,14 +701,14 @@ public static class ToolListBuilder
     /// or cleared styling on success.
     /// </summary>
     private static void ApplyPrintScreenFeedback(TextBox hkBox, TextBox capturedBox,
-        System.Windows.Controls.ToolTip tooltip, bool canRegister, IReadOnlyList<string> interceptors)
+        System.Windows.Controls.ToolTip tooltip, TextBlock tipText, bool canRegister, IReadOnlyList<string> interceptors)
     {
         if (!canRegister)
         {
             capturedBox.Text = LocalizationService.Translate("Taken");
             hkBox.Foreground = System.Windows.Media.Brushes.Red;
             hkBox.FontWeight = FontWeights.Bold;
-            tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
+            tipText.Text = LocalizationService.Translate("This hotkey is registered by another application.");
             ShowAdvisory(tooltip);
             return;
         }
@@ -667,7 +717,7 @@ public static class ToolListBuilder
         {
             hkBox.Foreground = HotkeyWarningBrush;
             hkBox.FontWeight = FontWeights.SemiBold;
-            tooltip.Content = string.Format(
+            tipText.Text = string.Format(
                 LocalizationService.Translate("Print Screen assigned, but {0} may intercept it. Close it or change its shortcut."),
                 string.Join(", ", interceptors));
             ShowAdvisory(tooltip);
