@@ -79,14 +79,30 @@ public static class ToolListBuilder
         catch { }
     }
 
-    private static void UpdateLabelTip(TextBlock labelBlock, string fullLabel)
+    private static void UpdateLabelTip(TextBlock labelBlock)
     {
         try
         {
-            labelBlock.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-            labelBlock.ToolTip = labelBlock.DesiredSize.Width > labelBlock.ActualWidth + 0.5
-                ? fullLabel
-                : null;
+            string text = labelBlock.Text ?? "";
+            if (string.IsNullOrEmpty(text) || labelBlock.ActualWidth <= 0)
+            {
+                labelBlock.ToolTip = null;
+                return;
+            }
+            var typeface = new System.Windows.Media.Typeface(
+                labelBlock.FontFamily, labelBlock.FontStyle, labelBlock.FontWeight, labelBlock.FontStretch);
+            double pixelsPerDip = 1.0;
+            try { pixelsPerDip = System.Windows.Media.VisualTreeHelper.GetDpi(labelBlock).PixelsPerDip; }
+            catch { }
+            var formatted = new System.Windows.Media.FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentCulture,
+                System.Windows.FlowDirection.LeftToRight,
+                typeface,
+                labelBlock.FontSize,
+                System.Windows.Media.Brushes.Black,
+                pixelsPerDip);
+            labelBlock.ToolTip = formatted.Width > labelBlock.ActualWidth + 0.5 ? text : null;
         }
         catch
         {
@@ -190,8 +206,11 @@ public static class ToolListBuilder
                 TextTrimming = TextTrimming.CharacterEllipsis,
             };
             // Full label on hover, but only when it is actually clipped (narrow windows).
-            labelBlock.Loaded += (_, _) => UpdateLabelTip(labelBlock, label);
-            labelBlock.SizeChanged += (_, _) => UpdateLabelTip(labelBlock, label);
+            // Measured with FormattedText (pure math, no layout pass) so the check itself
+            // can never disturb rendering, and using the live text so the tip matches
+            // the translated row instead of the English source label.
+            labelBlock.Loaded += (_, _) => UpdateLabelTip(labelBlock);
+            labelBlock.SizeChanged += (_, _) => UpdateLabelTip(labelBlock);
             Grid.SetColumn(labelBlock, 1);
             grid.Children.Add(labelBlock);
 
@@ -208,8 +227,8 @@ public static class ToolListBuilder
                 hkBox.SetResourceReference(TextBox.StyleProperty, "HotkeyBox");
                 hkBox.Height = 28;
                 hkBox.MinHeight = 28;
-                hkBox.Width = 135;
-                hkBox.MinWidth = 135;
+                hkBox.Width = 120;
+                hkBox.MinWidth = 120;
                 hkBox.FontSize = 11;
                 var tipText = new TextBlock
                 {
