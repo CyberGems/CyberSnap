@@ -2566,7 +2566,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// </summary>
     private void MaybeAutoMaximizeForCapture()
     {
-        if (_isManualMaximized || _userRestoredWindow || _canvas is null)
+        if (_isManualMaximized || _canvas is null)
             return;
 
         var bmp = _canvas.BaseBitmap;
@@ -2574,8 +2574,16 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (bmp is null || viewport.Width <= 0 || viewport.Height <= 0)
             return;
 
-        if (bmp.Width <= viewport.Width && bmp.Height <= viewport.Height)
-            return; // the capture already fits at 100% — nothing to gain
+        // A capture that does not even fit the default window size always earns room,
+        // even when the user previously sized the window (restored placement).
+        bool exceedsDefault = bmp.Width > DefaultEditorWidth || bmp.Height > DefaultEditorHeight;
+        if (!exceedsDefault)
+        {
+            if (_userRestoredWindow)
+                return;
+            if (bmp.Width <= viewport.Width && bmp.Height <= viewport.Height)
+                return; // the capture already fits at 100% — nothing to gain
+        }
 
         var area = Screen.FromControl(this).WorkingArea;
         if (area.Width <= Width && area.Height <= Height)

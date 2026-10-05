@@ -62,35 +62,47 @@ public static class UiScale
 
     private static void ClampToCurrentMonitor(Window window)
     {
-        var area = GetWindowWorkArea(window);
-        var maxWidth = Math.Max(window.MinWidth, area.Width - 24);
-        var maxHeight = Math.Max(window.MinHeight, area.Height - 24);
-
-        if (window.Width > maxWidth)
-            window.Width = maxWidth;
-        if (window.Height > maxHeight)
-            window.Height = maxHeight;
-
-        if (window.Left + window.Width > area.Right)
-            window.Left = Math.Max(area.Left + 12, area.Right - window.Width - 12);
-        if (window.Top + window.Height > area.Bottom)
-            window.Top = Math.Max(area.Top + 12, area.Bottom - window.Height - 12);
-    }
-
-    private static Rect GetWindowWorkArea(Window window)
-    {
+        // Physical pixels throughout: DIP work-area conversions can misfire on mixed-DPI
+        // setups (wrong monitor scale), shoving correctly placed windows off-center.
         try
         {
             var hwnd = new WindowInteropHelper(window).Handle;
-            var screen = hwnd != IntPtr.Zero
-                ? System.Windows.Forms.Screen.FromHandle(hwnd)
-                : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position);
-            return PopupWindowHelper.ScreenWorkingAreaToDips(screen);
+            if (hwnd == IntPtr.Zero)
+                return;
+            if (!Native.User32.GetWindowRect(hwnd, out var wr))
+                return;
+            var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
+            var work = screen.WorkingArea;
+            int w = wr.Right - wr.Left;
+            int h = wr.Bottom - wr.Top;
+            if (w <= 0 || h <= 0)
+                return;
+
+            var (scaleX, scaleY) = PopupWindowHelper.GetScaleForPoint(
+                new System.Drawing.Point(wr.Left + w / 2, wr.Top + h / 2));
+            int margin = scaleX > 0 && scaleY > 0
+                ? Math.Max(8, (int)Math.Round(12 * (scaleX + scaleY) / 2.0))
+                : 12;
+
+            int minLeft = work.Left + margin;
+            int minTop = work.Top + margin;
+            int maxLeft = work.Right - w - margin;
+            int maxTop = work.Bottom - h - margin;
+            int newLeft = Math.Min(Math.Max(wr.Left, minLeft), Math.Max(minLeft, maxLeft));
+            int newTop = Math.Min(Math.Max(wr.Top, minTop), Math.Max(minTop, maxTop));
+            if (newLeft == wr.Left && newTop == wr.Top)
+                return;
+
+            Native.User32.SetWindowPos(
+                hwnd,
+                IntPtr.Zero,
+                newLeft,
+                newTop,
+                0,
+                0,
+                Native.User32.SWP_NOSIZE | Native.User32.SWP_NOZORDER | Native.User32.SWP_NOACTIVATE);
         }
-        catch
-        {
-            return PopupWindowHelper.GetCurrentWorkArea();
-        }
+        catch { }
     }
 
     private sealed record WindowScaleState(double Width, double Height, double MinWidth, double MinHeight);

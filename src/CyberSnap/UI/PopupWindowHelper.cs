@@ -80,7 +80,9 @@ internal static class PopupWindowHelper
     /// <summary>
     /// Centers a shown window on the monitor under <paramref name="monitorPoint"/> (or the
     /// static hint / cursor) using physical pixels via SetWindowPos. Avoids WPF DIP rounding
-    /// drift on mixed-DPI multi-monitor setups.
+    /// drift on mixed-DPI multi-monitor setups. The target size is computed from the window's
+    /// DIP size scaled by the TARGET monitor's DPI (not the monitor it happens to be on),
+    /// so centering is exact even across different scales.
     /// </summary>
     public static void CenterWindowOnPhysicalMonitor(Window window, System.Drawing.Point? monitorPoint = null)
     {
@@ -90,8 +92,6 @@ internal static class PopupWindowHelper
             return;
 
         window.UpdateLayout();
-        if (!User32.GetWindowRect(hwnd, out var wr))
-            return;
 
         var anchor = monitorPoint ?? _monitorHintPoint ?? System.Windows.Forms.Cursor.Position;
         _monitorHintPoint = null;
@@ -103,10 +103,32 @@ internal static class PopupWindowHelper
         else
             work = screen.WorkingArea;
 
-        int dlgW = wr.Right - wr.Left;
-        int dlgH = wr.Bottom - wr.Top;
-        if (dlgW <= 0 || dlgH <= 0)
-            return;
+        // Target-monitor scale: the window's physical size changes when it lands on a
+        // monitor with a different DPI, so measuring where it currently is mis-centers.
+        var (targetScaleX, targetScaleY) = GetScaleForPoint(
+            new System.Drawing.Point(work.Left + work.Width / 2, work.Top + work.Height / 2));
+
+        double dipW = window.ActualWidth > 0 ? window.ActualWidth
+            : (!double.IsNaN(window.Width) && window.Width > 0 ? window.Width : 0);
+        double dipH = window.ActualHeight > 0 ? window.ActualHeight
+            : (!double.IsNaN(window.Height) && window.Height > 0 ? window.Height : 0);
+
+        int dlgW;
+        int dlgH;
+        if (dipW > 0 && dipH > 0 && targetScaleX > 0 && targetScaleY > 0)
+        {
+            dlgW = Math.Max(1, (int)Math.Round(dipW * targetScaleX));
+            dlgH = Math.Max(1, (int)Math.Round(dipH * targetScaleY));
+        }
+        else
+        {
+            if (!User32.GetWindowRect(hwnd, out var wr))
+                return;
+            dlgW = wr.Right - wr.Left;
+            dlgH = wr.Bottom - wr.Top;
+            if (dlgW <= 0 || dlgH <= 0)
+                return;
+        }
 
         int x = work.Left + Math.Max(0, (work.Width - dlgW) / 2);
         int y = work.Top + Math.Max(0, (work.Height - dlgH) / 2);
