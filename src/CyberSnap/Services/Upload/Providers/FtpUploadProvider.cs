@@ -32,7 +32,8 @@ internal sealed class FtpUploadProvider : IImageUploadProvider
 
         progress?.Report(new UploadProgress(0.05, LocalizationService.Translate("Uploading…")));
 
-        var port = config.CustomPort > 0 ? config.CustomPort : (config.FtpUseTls ? 21 : 21);
+        // FTP and explicit FTPS share the default port 21.
+        var port = config.CustomPort > 0 ? config.CustomPort : 21;
         try
         {
             using var client = new AsyncFtpClient(

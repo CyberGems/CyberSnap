@@ -66,7 +66,7 @@ public partial class SettingsWindow
         UploadSubTabCyberGems.IsChecked = tag is "cybergems" or "cybersnap";
         UploadSubTabImgBB.IsChecked = tag == "imgbb";
         UploadSubTabImgur.IsChecked = tag == "imgur";
-        UploadSubTabCustom.IsChecked = tag is "custom" or "ftp" or "sftp" or "s3";
+        UploadSubTabCustom.IsChecked = tag is "custom" or "ftp" or "sftp" or "s3" or "webhook";
         if (UploadSubTabGeneral.IsChecked != true
             && UploadSubTabCyberGems.IsChecked != true
             && UploadSubTabImgBB.IsChecked != true
@@ -136,7 +136,8 @@ public partial class SettingsWindow
 
             UpdateCustomProtocolFieldsVisibility(s.UploadCustomProtocol);
             UploadTestCustomBtn.IsEnabled = true;
-            UploadTestCustomBtn.ToolTip = LocalizationService.Translate("Test custom destination");
+            UploadTestCustomBtn.ToolTip = LocalizationService.Translate(
+                "Uploads a tiny test image using the current custom settings.");
             SetUploadPreferenceStatus(string.Empty);
         }
         finally
@@ -181,17 +182,27 @@ public partial class SettingsWindow
         {
             display = UploadProviderKind.CyberGems;
             if (previous != display)
+            {
                 s.UploadDefaultProvider = display;
+                // Persist the fallback when changed at runtime (not during initial load).
+                if (!_suppressUploadPreferenceChange)
+                {
+                    try { _settingsService.Save(); }
+                    catch (Exception ex) { AppDiagnostics.LogWarning("settings.upload-default-provider", ex.Message, ex); }
+                }
+            }
         }
         SelectComboByTag(UploadDefaultProviderCombo, display.ToString());
     }
 
     private void UpdateCustomProtocolFieldsVisibility(UploadCustomProtocol protocol)
     {
+        bool isFtp = protocol == UploadCustomProtocol.Ftp;
+        bool isSftp = protocol == UploadCustomProtocol.Sftp;
         bool isS3 = protocol == UploadCustomProtocol.S3;
         bool isWebhook = protocol == UploadCustomProtocol.Webhook;
-        UploadFtpFields.Visibility = protocol == UploadCustomProtocol.Ftp ? Visibility.Visible : Visibility.Collapsed;
-        UploadSftpFields.Visibility = protocol == UploadCustomProtocol.Sftp ? Visibility.Visible : Visibility.Collapsed;
+        UploadFtpFields.Visibility = isFtp ? Visibility.Visible : Visibility.Collapsed;
+        UploadSftpFields.Visibility = isSftp ? Visibility.Visible : Visibility.Collapsed;
         UploadS3Fields.Visibility = isS3 ? Visibility.Visible : Visibility.Collapsed;
         if (UploadWebhookFields is not null)
             UploadWebhookFields.Visibility = isWebhook ? Visibility.Visible : Visibility.Collapsed;
@@ -208,19 +219,64 @@ public partial class SettingsWindow
             if (uniqueRow is not null)
                 uniqueRow.Visibility = isWebhook ? Visibility.Collapsed : Visibility.Visible;
         }
+
+        // Differentiate the shared FTP/SFTP server block so both protocols don't look identical.
+        if (UploadCustomServerTitle is not null)
+        {
+            var source = isSftp ? "SFTP server" : "FTP server";
+            LocalizationService.SetSourceText(UploadCustomServerTitle, source);
+            UploadCustomServerTitle.Text = LocalizationService.Translate(source);
+        }
+        if (UploadCustomPortHint is not null)
+        {
+            const string source = "0 = protocol default (FTP: 21, SFTP: 22)";
+            LocalizationService.SetSourceText(UploadCustomPortHint, source);
+            UploadCustomPortHint.Text = LocalizationService.Translate(source);
+        }
+
+        UpdateFtpTlsDependentVisibility(_settingsService.Settings.UploadFtpUseTls);
+        UpdateSftpPassphraseVisibility(_settingsService.Settings.UploadSftpPrivateKeyPath);
+    }
+
+    private void UpdateFtpTlsDependentVisibility(bool useTls)
+    {
+        // Regular FTP needs no certificate option; only show it for FTPS.
+        var visibility = useTls ? Visibility.Visible : Visibility.Collapsed;
+        if (UploadFtpAllowInsecureRow is not null)
+            UploadFtpAllowInsecureRow.Visibility = visibility;
+        if (UploadFtpAllowInsecureSeparator is not null)
+            UploadFtpAllowInsecureSeparator.Visibility = visibility;
+    }
+
+    private void UpdateSftpPassphraseVisibility(string? keyPath)
+    {
+        // Password-auth SFTP needs no passphrase row; only show it when a key is configured.
+        var hasKey = !string.IsNullOrWhiteSpace(keyPath);
+        var visibility = hasKey ? Visibility.Visible : Visibility.Collapsed;
+        if (UploadSftpPassphraseRow is not null)
+            UploadSftpPassphraseRow.Visibility = visibility;
+        if (UploadSftpPassphraseSeparator is not null)
+            UploadSftpPassphraseSeparator.Visibility = visibility;
     }
 
     private void UpdateSftpTrustedHostKeyLabel(string? fingerprint)
     {
         if (string.IsNullOrWhiteSpace(fingerprint))
         {
-            UploadSftpTrustedHostKeyText.Text = LocalizationService.Translate(
-                "Not stored yet — set on first successful connect.");
+            const string source = "Not stored yet — set on first successful connect.";
+            LocalizationService.SetSourceText(UploadSftpTrustedHostKeyText, source);
+            UploadSftpTrustedHostKeyText.Text = LocalizationService.Translate(source);
+            UploadSftpTrustedHostKeyText.ToolTip = null;
         }
         else
         {
-            var shortFp = fingerprint.Length > 24 ? fingerprint[..24] + "…" : fingerprint;
+            var trimmed = fingerprint.Trim();
+            var shortFp = trimmed.Length > 24 ? trimmed[..24] + "…" : trimmed;
+            // Pin the source text so a later language pass doesn't overwrite the fingerprint.
+            LocalizationService.SetSourceText(UploadSftpTrustedHostKeyText, shortFp);
             UploadSftpTrustedHostKeyText.Text = shortFp;
+            // Full fingerprint on hover for verification.
+            UploadSftpTrustedHostKeyText.ToolTip = trimmed;
         }
     }
 
@@ -535,8 +591,11 @@ public partial class SettingsWindow
     private void UploadCustomPortBox_Changed(object sender, TextChangedEventArgs e)
     {
         if (!IsLoaded || _suppressUploadPreferenceChange) return;
-        if (!int.TryParse(UploadCustomPortBox.Text, out var selected) || selected < 0 || selected > 65535)
+        if (!int.TryParse(UploadCustomPortBox.Text?.Trim(), out var selected) || selected < 0 || selected > 65535)
+        {
+            SetUploadPreferenceStatus(LocalizationService.Translate("Port must be a number from 0 to 65535 (0 = default)."));
             return;
+        }
         var previous = _settingsService.Settings.UploadCustomPort;
         if (previous == selected) return;
         UpdateUploadPreference(
@@ -699,14 +758,19 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressUploadPreferenceChange) return;
         var previous = _settingsService.Settings.UploadFtpUseTls;
         var selected = UploadFtpUseTlsCheck.IsChecked == true;
-        if (previous == selected) return;
+        if (previous == selected)
+        {
+            UpdateFtpTlsDependentVisibility(selected);
+            return;
+        }
         UpdateUploadPreference(
             "settings.upload-ftp-tls",
             "Use FTPS (TLS)",
             previous,
             selected,
             value => _settingsService.Settings.UploadFtpUseTls = value,
-            value => UploadFtpUseTlsCheck.IsChecked = value);
+            value => UploadFtpUseTlsCheck.IsChecked = value,
+            applyRuntime: UpdateFtpTlsDependentVisibility);
     }
 
     private void UploadFtpAllowInsecureCertificateCheck_Changed(object sender, RoutedEventArgs e)
@@ -745,14 +809,44 @@ public partial class SettingsWindow
         var previous = _settingsService.Settings.UploadSftpPrivateKeyPath;
         var text = UploadSftpPrivateKeyPathBox.Text?.Trim();
         var selected = string.IsNullOrWhiteSpace(text) ? null : text;
-        if (previous == selected) return;
+        if (previous == selected)
+        {
+            UpdateSftpPassphraseVisibility(selected);
+            return;
+        }
         UpdateUploadPreference(
             "settings.upload-sftp-key-path",
             "Private key path",
             previous,
             selected,
             value => _settingsService.Settings.UploadSftpPrivateKeyPath = value,
-            value => UploadSftpPrivateKeyPathBox.Text = value ?? "");
+            value => UploadSftpPrivateKeyPathBox.Text = value ?? "",
+            applyRuntime: UpdateSftpPassphraseVisibility);
+        if (!string.IsNullOrWhiteSpace(selected) && !System.IO.File.Exists(selected))
+        {
+            SetUploadPreferenceStatus(LocalizationService.Translate(
+                "Private key file not found. Password authentication will be used."));
+        }
+    }
+
+    private void UploadSftpBrowseKeyBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = LocalizationService.Translate("Select SFTP private key"),
+                CheckFileExists = true,
+                Filter = LocalizationService.Translate("Key files") + " (*.pem;*.ppk;*.key;id_rsa;id_ed25519)|*.pem;*.ppk;*.key;id_rsa;id_ed25519|"
+                    + LocalizationService.Translate("All files") + " (*.*)|*.*",
+            };
+            if (dialog.ShowDialog(this) == true)
+                UploadSftpPrivateKeyPathBox.Text = dialog.FileName;
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.upload-sftp-browse", ex.Message, ex);
+        }
     }
 
     private void UploadSftpPrivateKeyPassphraseBox_Changed(object sender, RoutedEventArgs e)
@@ -850,8 +944,8 @@ public partial class SettingsWindow
     {
         if (!IsLoaded || _suppressUploadPreferenceChange) return;
         var previous = _settingsService.Settings.UploadS3SecretKey;
-        var key = UploadS3SecretKeyBox.Password;
-        var selected = string.IsNullOrEmpty(key) ? null : key;
+        var key = UploadS3SecretKeyBox.Password?.Trim();
+        var selected = string.IsNullOrWhiteSpace(key) ? null : key;
         if (previous == selected) return;
         UpdateUploadPreference(
             "settings.upload-s3-secret-key",
@@ -923,11 +1017,28 @@ public partial class SettingsWindow
 
     private async Task RunProviderTestAsync(UploadProviderKind provider)
     {
-        if (_uploadTestInProgress) return;
+        if (_uploadTestInProgress)
+        {
+            ToastWindow.Show(
+                LocalizationService.Translate("Please wait"),
+                LocalizationService.Translate("Share upload is already running."));
+            return;
+        }
+        var precheck = GetCustomTestPrecheckError(provider);
+        if (precheck is not null)
+        {
+            SetUploadPreferenceStatus(precheck);
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Upload not configured"),
+                precheck);
+            return;
+        }
         _uploadTestInProgress = true;
         UploadTestCyberGemsBtn.IsEnabled = false;
         UploadTestImgBBBtn.IsEnabled = false;
         UploadTestImgurBtn.IsEnabled = false;
+        UploadTestCustomBtn.IsEnabled = false;
+        SetUploadPreferenceStatus(LocalizationService.Translate("Testing upload…"));
         try
         {
             using var bmp = CreateTestBitmap();
@@ -937,12 +1048,14 @@ public partial class SettingsWindow
 
             if (result.Success)
             {
+                SetUploadPreferenceStatus(string.Empty);
                 ToastWindow.Show(
                     LocalizationService.Translate("Upload works"),
                     result.PublicUrl ?? result.ClipboardText ?? LocalizationService.Translate("Uploaded"));
             }
             else
             {
+                SetUploadPreferenceStatus(result.ErrorMessage ?? LocalizationService.Translate("Upload failed"));
                 ToastWindow.ShowError(
                     LocalizationService.Translate("Upload failed"),
                     result.ErrorMessage ?? LocalizationService.Translate("Upload failed"));
@@ -951,6 +1064,7 @@ public partial class SettingsWindow
         catch (Exception ex)
         {
             AppDiagnostics.LogError("settings.upload-test", ex);
+            SetUploadPreferenceStatus(ex.Message);
             ToastWindow.ShowError(
                 LocalizationService.Translate("Upload failed"),
                 ex.Message);
@@ -961,7 +1075,37 @@ public partial class SettingsWindow
             UploadTestCyberGemsBtn.IsEnabled = true;
             UploadTestImgBBBtn.IsEnabled = true;
             UploadTestImgurBtn.IsEnabled = UploadCredentialResolver.HasUserImgurClientId(_settingsService.Settings);
+            UploadTestCustomBtn.IsEnabled = true;
         }
+    }
+
+    private string? GetCustomTestPrecheckError(UploadProviderKind provider)
+    {
+        if (provider != UploadProviderKind.Custom)
+            return null;
+        var s = _settingsService.Settings;
+        switch (s.UploadCustomProtocol)
+        {
+            case UploadCustomProtocol.Ftp:
+            case UploadCustomProtocol.Sftp:
+                if (string.IsNullOrWhiteSpace(s.UploadCustomHost))
+                    return LocalizationService.Translate("Enter a server host before testing.");
+                break;
+            case UploadCustomProtocol.S3:
+                if (string.IsNullOrWhiteSpace(s.UploadS3Bucket)
+                    || string.IsNullOrWhiteSpace(s.UploadS3AccessKey)
+                    || string.IsNullOrWhiteSpace(s.UploadS3SecretKey))
+                    return LocalizationService.Translate("Enter the S3 bucket, access key, and secret key before testing.");
+                break;
+            case UploadCustomProtocol.Webhook:
+                var url = s.UploadWebhookUrl?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(url)
+                    || !Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                    || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+                    return LocalizationService.Translate("Enter a valid webhook URL before testing.");
+                break;
+        }
+        return null;
     }
 
     private static Bitmap CreateTestBitmap()
