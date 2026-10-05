@@ -206,16 +206,45 @@ public static class UpdateService
         });
     }
 
+    /// <summary>Inner markdown of the first details block (localized release notes), if any.</summary>
+    private static string? ExtractDetailsBlock(string body)
+    {
+        int start = body.IndexOf("<details", StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+            return null;
+        int contentStart = body.IndexOf('>', start);
+        if (contentStart < 0)
+            return null;
+        int end = body.IndexOf("</details>", contentStart, StringComparison.OrdinalIgnoreCase);
+        if (end <= contentStart)
+            return null;
+        return body.Substring(contentStart + 1, end - contentStart - 1);
+    }
+
     /// <summary>
     /// Generates a clean 3-4 bullet plain-text teaser of the release notes for toasts and compact previews.
     /// Filters out markdown headings, badges, hashes, and download tables (CyberLauncher model).
+    /// When the UI runs in Spanish and the notes carry a localized details block, the teaser
+    /// is extracted from there so it matches the interface language.
     /// </summary>
     public static string PeekReleaseNotes(string? body, int maxChars = 220)
     {
         if (string.IsNullOrWhiteSpace(body))
             return string.Empty;
 
-        var lines = body
+        string source = body;
+        try
+        {
+            if (LocalizationService.CurrentLanguageCode.StartsWith("es", StringComparison.OrdinalIgnoreCase))
+            {
+                string? localized = ExtractDetailsBlock(body);
+                if (!string.IsNullOrWhiteSpace(localized))
+                    source = localized;
+            }
+        }
+        catch { }
+
+        var lines = source
             .TrimStart('\uFEFF')
             .Replace("\r\n", "\n")
             .Split('\n');
