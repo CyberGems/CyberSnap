@@ -396,7 +396,6 @@
                                     AutomationProperties.Name="Skip this version"
                                     Visibility="Collapsed"/>
                         </StackPanel>
-                        </StackPanel>
 
                         <StackPanel x:Name="UpdateProgressPanel" Visibility="Collapsed" Margin="38,8,0,8">
                             <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingsProgressText}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Downloading update..."/>
