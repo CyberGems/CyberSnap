@@ -99,6 +99,13 @@
                                 <Border.Effect>
                                     <DropShadowEffect Color="#000000" BlurRadius="3" ShadowDepth="1" Direction="270" Opacity="0.35"/>
                                 </Border.Effect>
+                                <Path x:Name="Check"
+                                      Data="M2.8,6.2 L5,8.4 L9.2,3.8"
+                                      Stroke="#0F141C"
+                                      StrokeThickness="1.6"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Visibility="Collapsed"/>
                             </Border>
                         </Grid>
 
@@ -111,6 +118,7 @@
                                 <Setter TargetName="Track" Property="Background" Value="{DynamicResource WidgetAccent}"/>
                                 <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WidgetAccent}"/>
                                 <Setter TargetName="Thumb" Property="Background" Value="#FFFFFF"/>
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="Track" Property="Effect" Value="{StaticResource CyanGlow}"/>
                             </Trigger>
 
