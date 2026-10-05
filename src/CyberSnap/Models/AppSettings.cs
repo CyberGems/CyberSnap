@@ -360,9 +360,6 @@ public sealed class AppSettings
     public uint ScrollCaptureHotkeyModifiers { get; set; }
     public uint ScrollCaptureHotkeyKey { get; set; }
 
-    // GIF recording global hotkey: unbound by default
-    public uint GifHotkeyModifiers { get; set; }
-    public uint GifHotkeyKey { get; set; }
     public int GifFps { get; set; } = 15;
 
     // Standalone ruler hotkey: unbound by default
@@ -893,7 +890,6 @@ public sealed class AppSettings
         "_activeWindow" => (ActiveWindowHotkeyModifiers, ActiveWindowHotkeyKey),
         "_repeatLastArea" => (RepeatLastAreaHotkeyModifiers, RepeatLastAreaHotkeyKey),
         "_scrollCapture" => (ScrollCaptureHotkeyModifiers, ScrollCaptureHotkeyKey),
-        "_record" => (GifHotkeyModifiers, GifHotkeyKey),
         // Standalone tools use the convention: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
         "_standaloneRuler" => (StandaloneRulerHotkeyModifiers, StandaloneRulerHotkeyKey),
         "_standaloneColorPicker" => (StandaloneColorPickerHotkeyModifiers, StandaloneColorPickerHotkeyKey),
@@ -935,7 +931,6 @@ public sealed class AppSettings
             case "_activeWindow": ActiveWindowHotkeyModifiers = mod; ActiveWindowHotkeyKey = key; break;
             case "_repeatLastArea": RepeatLastAreaHotkeyModifiers = mod; RepeatLastAreaHotkeyKey = key; break;
             case "_scrollCapture": ScrollCaptureHotkeyModifiers = mod; ScrollCaptureHotkeyKey = key; break;
-            case "_record": GifHotkeyModifiers = mod; GifHotkeyKey = key; break;
             // Standalone tools: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
             case "_standaloneRuler": StandaloneRulerHotkeyModifiers = mod; StandaloneRulerHotkeyKey = key; break;
             case "_standaloneColorPicker": StandaloneColorPickerHotkeyModifiers = mod; StandaloneColorPickerHotkeyKey = key; break;
@@ -998,8 +993,6 @@ public sealed class AppSettings
         RecordGifHotkeyKey = 0;
         ScrollCaptureHotkeyModifiers = 0;
         ScrollCaptureHotkeyKey = 0;
-        GifHotkeyModifiers = 0;
-        GifHotkeyKey = 0;
         StandaloneRulerHotkeyModifiers = 0;
         StandaloneRulerHotkeyKey = 0;
         StandaloneColorPickerHotkeyModifiers = 0;

@@ -1287,7 +1287,8 @@
                         </Grid>
                     </Border>
 
-                    <!-- Reopens the Print Screen advisory banner after it was hidden -->
+                    <!-- Reopens the Print Screen advisory banner after it was hidden.
+                         Same info glyph as the help card above, no extra chrome. -->
                     <Button x:Name="PrtScInfoBtn" Width="28" Height="28"
                             HorizontalAlignment="Right" Margin="0,10,4,0"
                             Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
@@ -1295,15 +1296,14 @@
                             ToolTip="How to unbind Snipping Tool from the PrtSc key?"
                             Services:LocalizationService.SourceToolTip="How to unbind Snipping Tool from the PrtSc key?">
                         <Button.Content>
-                            <TextBlock Text="&#xE946;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
                         </Button.Content>
                         <Button.Style>
                             <Style TargetType="Button">
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="Button">
-                                            <Border Background="Transparent" CornerRadius="14" BorderBrush="#FFFFFFFF" BorderThickness="1" Opacity="0.7">
+                                            <Border Background="Transparent">
                                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                         </ControlTemplate>

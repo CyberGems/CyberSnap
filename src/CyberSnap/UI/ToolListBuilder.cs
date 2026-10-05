@@ -24,9 +24,8 @@ public static class ToolListBuilder
     {
         ("_fullscreen",    "Fullscreen capture",  ToolGlyphs.FullscreenGlyph),
         ("_activeWindow",  "Active window",       ToolGlyphs.ActiveWindowGlyph),
-        ("_repeatLastArea", "Repeat last area",   ToolGlyphs.RepeatLastAreaGlyph),
+        ("_repeatLastArea", "Repeat last area",  ToolGlyphs.RepeatLastAreaGlyph),
         ("_scrollCapture", "Scroll capture",      ToolGlyphs.ScrollCaptureGlyph),
-        ("_record",        "Record",              ToolGlyphs.RecordGlyph),
     };
 
     private static readonly Dictionary<TextBox, bool> RecordingFlags = new();

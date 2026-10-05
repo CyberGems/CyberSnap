@@ -742,8 +742,6 @@ public sealed class SettingsService : IDisposable
             settings.RulerHotkeyKey = 0;
         if (IsUnsafeModifierlessHotkey(settings.ScrollCaptureHotkeyModifiers, settings.ScrollCaptureHotkeyKey))
             settings.ScrollCaptureHotkeyKey = 0;
-        if (IsUnsafeModifierlessHotkey(settings.GifHotkeyModifiers, settings.GifHotkeyKey))
-            settings.GifHotkeyKey = 0;
         if (IsUnsafeModifierlessHotkey(settings.StandaloneRulerHotkeyModifiers, settings.StandaloneRulerHotkeyKey))
             settings.StandaloneRulerHotkeyKey = 0;
     }
