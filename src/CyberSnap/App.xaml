@@ -225,8 +225,8 @@
                                 <Ellipse x:Name="Dot" Fill="#FFFFFF"/>
                                 <Path x:Name="Check"
                                       Data="M5,9.5 L8,12.5 L13,6"
-                                      Stroke="{DynamicResource ThemeAccentBrush}"
-                                      StrokeThickness="2"
+                                      Stroke="#0F141C"
+                                      StrokeThickness="2.2"
                                       StrokeStartLineCap="Round"
                                       StrokeEndLineCap="Round"
                                       Visibility="Collapsed"/>
