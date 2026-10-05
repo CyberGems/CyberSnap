@@ -2543,7 +2543,7 @@
   "Reposition panel": "Recolocar panel",
   "Brings the panel back into view when it extends beyond the screen": "Devuelve el panel a la vista cuando se extiende más allá de la pantalla",
   "Hide": "Esconder",
-  "Assign PrtSc": "Asignar PrtSc",
+  "Assign PrtSc to {0}": "Asignar PrtSc a {0}",
   "How to free the Print Screen key?": "¿Cómo liberar la tecla PrtSc?",
   "These apps may be holding the Print Screen key: {0}. Close them or change their shortcuts.": "Estas aplicaciones podrían estar reteniendo la tecla PrtSc: {0}. Ciérralas o cambia sus atajos.",
   "Another application is holding the Print Screen key. Close it or change its shortcut to free the key.": "Otra aplicación está reteniendo la tecla PrtSc. Ciérrala o cambia su atajo para liberarla."

@@ -223,12 +223,6 @@ public sealed class AppSettings
     public bool HidePrtScBanner { get; set; }
 
     /// <summary>
-    /// When true, the advisory banner shows only its title row (collapsed by default
-    /// to keep the noise down; expand with the chevron).
-    /// </summary>
-    public bool PrtScBannerCollapsed { get; set; } = true;
-
-    /// <summary>
     /// When true, open the share flow after capture confirm (off by default).
     /// </summary>
     public bool AutoShareAfterCapture { get; set; }

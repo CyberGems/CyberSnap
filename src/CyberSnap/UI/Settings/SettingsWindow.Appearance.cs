@@ -409,7 +409,10 @@ public partial class SettingsWindow
         PrtScInfoBtn.Visibility = occupied ? Visibility.Collapsed : Visibility.Visible;
         if (occupied)
             SyncPrtScBannerCause(rectMod, rectKey);
-        SyncPrtScBannerCollapse();
+        // Name the assignment target explicitly: the row label may be truncated.
+        AssignPrtScBtn.Content = string.Format(
+            LocalizationService.Translate("Assign PrtSc to {0}"),
+            LocalizationService.Translate("Area Capture"));
     }
 
     /// <summary>
@@ -454,13 +457,6 @@ public partial class SettingsWindow
             PrtScBannerDesc.Text = LocalizationService.Translate("Another application is holding the Print Screen key. Close it or change its shortcut to free the key.");
         }
         OpenWinSettingsBtn.Visibility = Visibility.Collapsed;
-    }
-
-    private void SyncPrtScBannerCollapse()
-    {
-        bool collapsed = _settingsService.Settings.PrtScBannerCollapsed;
-        PrtScBannerBody.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
-        PrtScCollapseBtn.Content = collapsed ? "⌄" : "⌃";
     }
 
     private void PopulateInterfaceLanguageOptions()

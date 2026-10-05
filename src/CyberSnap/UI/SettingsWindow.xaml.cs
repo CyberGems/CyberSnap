@@ -1238,18 +1238,9 @@ public partial class SettingsWindow : Window
     private void PrtScInfoBtn_Click(object sender, RoutedEventArgs e)
     {
         _settingsService.Settings.HidePrtScBanner = false;
-        _settingsService.Settings.PrtScBannerCollapsed = false;
         try { _settingsService.Save(); } catch { }
         PrtScWarnBanner.Visibility = Visibility.Visible;
         PrtScInfoBtn.Visibility = Visibility.Collapsed;
-        SyncPrtScBannerCollapse();
-    }
-
-    private void PrtScCollapseBtn_Click(object sender, RoutedEventArgs e)
-    {
-        _settingsService.Settings.PrtScBannerCollapsed = !_settingsService.Settings.PrtScBannerCollapsed;
-        try { _settingsService.Save(); } catch { }
-        SyncPrtScBannerCollapse();
     }
 
     private void AssignPrtScBtn_Click(object sender, RoutedEventArgs e)
@@ -1272,16 +1263,19 @@ public partial class SettingsWindow : Window
             else
                 app?.RegisterHotkeys(showReadyNotification: false);
 
+            string assignTitle = string.Format(
+                LocalizationService.Translate("Assign PrtSc to {0}"),
+                LocalizationService.Translate("Area Capture"));
             if (!canReg)
             {
                 ToastWindow.ShowError(
-                    LocalizationService.Translate("Assign PrtSc"),
+                    assignTitle,
                     LocalizationService.Translate("This hotkey is registered by another application."));
             }
             else if (interceptors.Count > 0)
             {
                 ToastWindow.Show(
-                    LocalizationService.Translate("Assign PrtSc"),
+                    assignTitle,
                     string.Format(
                         LocalizationService.Translate("Print Screen assigned, but {0} may intercept it. Close it or change its shortcut."),
                         string.Join(", ", interceptors)));
@@ -1289,7 +1283,7 @@ public partial class SettingsWindow : Window
             else
             {
                 ToastWindow.Show(
-                    LocalizationService.Translate("Assign PrtSc"),
+                    assignTitle,
                     HotkeyFormatter.Format(0, Native.User32.VK_SNAPSHOT));
             }
         }
