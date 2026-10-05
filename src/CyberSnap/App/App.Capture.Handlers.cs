@@ -845,6 +845,8 @@ public partial class App
                 SuppressSound = true,
                 IsSystemMessage = false,
                 CelebrationRank = ToastSpec.RankFirstTime,
+                ClickActionUrl = "cybersnap://achievements",
+                ClickActionLabel = "Open Achievements",
                 // A trophy after the name reads as an unlock; the default capture icon would be
                 // out of place here since the tool's own icon already sits on the left badge.
                 CelebrationBodyIconId = "trophy"
@@ -967,7 +969,9 @@ public partial class App
                 Celebrate = true,
                 SuppressSound = true,
                 IsSystemMessage = false,
-                CelebrationRank = celebrationRank
+                CelebrationRank = celebrationRank,
+                ClickActionUrl = celebrationRank == ToastSpec.RankDaily ? null : "cybersnap://achievements",
+                ClickActionLabel = celebrationRank == ToastSpec.RankDaily ? null : "Open Achievements",
             });
     }
 

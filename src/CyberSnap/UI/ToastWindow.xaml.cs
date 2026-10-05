@@ -1797,6 +1797,17 @@ public partial class ToastWindow : Window
                 return;
             }
 
+            if (_spec.ClickActionUrl == "cybersnap://achievements")
+            {
+                DismissAnimated();
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var app = (App)Application.Current;
+                    app.ShowAchievements();
+                });
+                return;
+            }
+
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo

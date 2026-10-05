@@ -45,7 +45,9 @@ public partial class AboutWindow : Window
         Loaded += (_, _) =>
         {
             ApplyMicaBackdrop();
-            PopupWindowHelper.CenterOnCurrentScreen(this);
+            // Physical-pixel centering (not DIP math): DIP placement drifts on mixed-DPI
+            // setups when the window starts on another monitor (e.g. 150% left + 125% right).
+            PopupWindowHelper.CenterWindowOnPhysicalMonitor(this);
             StartAboutLogoGlow();
         };
     }
