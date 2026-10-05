@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -409,10 +410,38 @@ public partial class SettingsWindow
         PrtScInfoBtn.Visibility = occupied ? Visibility.Collapsed : Visibility.Visible;
         if (occupied)
             SyncPrtScBannerCause(rectMod, rectKey);
-        // Name the assignment target explicitly: the row label may be truncated.
-        AssignPrtScBtn.Content = string.Format(
-            LocalizationService.Translate("Assign PrtSc to {0}"),
-            LocalizationService.Translate("Area Capture"));
+        // Name the assignment target explicitly (with brackets and its row icon so the
+        // row label reads at a glance even when truncated): the row label may be clipped.
+        var areaIconColor = Theme.IsDark
+            ? System.Drawing.Color.FromArgb(225, 255, 255, 255)
+            : System.Drawing.Color.FromArgb(210, 0, 0, 0);
+        var assignContent = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var assignIcon = new System.Windows.Controls.Image
+        {
+            Source = ToolIcons.RenderToolIconWpf(
+                "rect",
+                ToolDef.AllTools.First(t => t.Id == "rect").Icon,
+                areaIconColor,
+                16),
+            Width = 16,
+            Height = 16,
+            Margin = new Thickness(0, 0, 8, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        System.Windows.Media.RenderOptions.SetBitmapScalingMode(assignIcon, System.Windows.Media.BitmapScalingMode.HighQuality);
+        assignContent.Children.Add(assignIcon);
+        assignContent.Children.Add(new TextBlock
+        {
+            Text = string.Format(
+                LocalizationService.Translate("Assign PrtSc to {0}"),
+                "[" + LocalizationService.Translate("Area Capture") + "]"),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        AssignPrtScBtn.Content = assignContent;
     }
 
     /// <summary>

@@ -1288,12 +1288,16 @@
                     </Border>
 
                     <!-- Reopens the Print Screen advisory banner after it was hidden -->
-                    <Button x:Name="PrtScInfoBtn" Content="?" Width="28" Height="28"
+                    <Button x:Name="PrtScInfoBtn" Width="28" Height="28"
                             HorizontalAlignment="Right" Margin="0,10,4,0"
-                            FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
+                            Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
                             Visibility="Collapsed" Click="PrtScInfoBtn_Click"
                             ToolTip="How to unbind Snipping Tool from the PrtSc key?"
                             Services:LocalizationService.SourceToolTip="How to unbind Snipping Tool from the PrtSc key?">
+                        <Button.Content>
+                            <TextBlock Text="&#xE946;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button.Content>
                         <Button.Style>
                             <Style TargetType="Button">
                                 <Setter Property="Template">

@@ -15,8 +15,9 @@ public partial class App
         _hotkeyService = new HotkeyService();
         _hotkeyService.UnregisterAll();
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
+        _hotkeyService.RecordHotkeyPressed += OnRecordHotkeyPressed;
+        _hotkeyService.RecordGifHotkeyPressed += OnGifHotkeyPressed;
         _hotkeyService.CenterHotkeyPressed += () => OnToolHotkeyPressed(CaptureMode.Center);
-        _hotkeyService.GifHotkeyPressed += OnGifHotkeyPressed;
         _hotkeyService.FullscreenHotkeyPressed += OnFullscreenHotkeyPressed;
         _hotkeyService.ActiveWindowHotkeyPressed += OnActiveWindowHotkeyPressed;
         _hotkeyService.ScrollCaptureHotkeyPressed += OnScrollCaptureHotkeyPressed;
@@ -35,8 +36,9 @@ public partial class App
         }
 
         TryRegister(_hotkeyService.Register(s.HotkeyModifiers, s.HotkeyKey), "Capture", s.HotkeyModifiers, s.HotkeyKey);
+        TryRegister(_hotkeyService.RegisterRecord(s.RecordHotkeyModifiers, s.RecordHotkeyKey), "Record", s.RecordHotkeyModifiers, s.RecordHotkeyKey);
+        TryRegister(_hotkeyService.RegisterRecordGif(s.RecordGifHotkeyModifiers, s.RecordGifHotkeyKey), "Record GIF", s.RecordGifHotkeyModifiers, s.RecordGifHotkeyKey);
         TryRegister(_hotkeyService.RegisterCenter(s.CenterHotkeyModifiers, s.CenterHotkeyKey), "From Center", s.CenterHotkeyModifiers, s.CenterHotkeyKey);
-        TryRegister(_hotkeyService.RegisterGif(s.GifHotkeyModifiers, s.GifHotkeyKey), "GIF", s.GifHotkeyModifiers, s.GifHotkeyKey);
         TryRegister(_hotkeyService.RegisterFullscreen(s.FullscreenHotkeyModifiers, s.FullscreenHotkeyKey), "Fullscreen", s.FullscreenHotkeyModifiers, s.FullscreenHotkeyKey);
         TryRegister(_hotkeyService.RegisterActiveWindow(s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey), "Active Window", s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey);
         TryRegister(_hotkeyService.RegisterRepeatLastArea(s.RepeatLastAreaHotkeyModifiers, s.RepeatLastAreaHotkeyKey), "Repeat last area", s.RepeatLastAreaHotkeyModifiers, s.RepeatLastAreaHotkeyKey);
@@ -111,6 +113,8 @@ public partial class App
 
         OnStandaloneColorPickerHotkeyPressed();
     }
+
+    private void OnRecordHotkeyPressed() => LaunchRecordingWithFormat(RecordingFormat.MP4);
 
     private void OnGifHotkeyPressed()
     {

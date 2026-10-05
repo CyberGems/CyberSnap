@@ -489,7 +489,7 @@ public static class ToolListBuilder
 
         AddSectionHeader(capturePanel, "Standalone Utilities");
         foreach (var item in System.Linq.Enumerable.Skip(captureItems, 8))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey, allowSingleKeyHotkeys: true);
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         if (includeAnnotationTools)
         {
