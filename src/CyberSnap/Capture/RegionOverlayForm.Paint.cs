@@ -1424,18 +1424,33 @@ public sealed partial class RegionOverlayForm
         }
 
         int thumbSz = UiChrome.ScaleInt(12);
-        float thumbX = showPreview 
-            ? (trackRect.Right - thumbSz - UiChrome.ScaleInt(3)) 
+        float thumbX = showPreview
+            ? (trackRect.Right - thumbSz - UiChrome.ScaleInt(3))
             : (trackRect.Left + UiChrome.ScaleInt(3));
         float thumbY = trackRect.Y + (trackRect.Height - thumbSz) / 2f;
         var thumbRect = new RectangleF(thumbX, thumbY, thumbSz, thumbSz);
 
-        Color thumbColor = showPreview 
-            ? Color.White 
-            : (UiChrome.IsDark ? Color.FromArgb(136, 136, 136) : Color.FromArgb(100, 100, 100));
-
-        using (var brush = new SolidBrush(Color.FromArgb((int)(255 * opacity), thumbColor)))
+        using (var brush = new SolidBrush(Color.FromArgb((int)(255 * opacity), Color.White)))
             g.FillEllipse(brush, thumbRect);
+
+        // Dark check glyph on the thumb when preview-on, same language as the global pill toggle.
+        if (showPreview)
+        {
+            float penW = Math.Max(1.4f, thumbSz * 0.14f);
+            using var checkPen = new Pen(Color.FromArgb((int)(255 * opacity), Color.FromArgb(15, 20, 28)), penW)
+            {
+                StartCap = System.Drawing.Drawing2D.LineCap.Round,
+                EndCap = System.Drawing.Drawing2D.LineCap.Round,
+                LineJoin = System.Drawing.Drawing2D.LineJoin.Round,
+            };
+            float cx = thumbRect.X, cy = thumbRect.Y, s = thumbRect.Width;
+            g.DrawLines(checkPen, new[]
+            {
+                new PointF(cx + s * 0.28f, cy + s * 0.54f),
+                new PointF(cx + s * 0.45f, cy + s * 0.70f),
+                new PointF(cx + s * 0.74f, cy + s * 0.32f),
+            });
+        }
     }
 
     private void DrawCenterMoveGrip(Graphics g)
