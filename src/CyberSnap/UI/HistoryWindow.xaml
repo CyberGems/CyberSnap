@@ -15,53 +15,7 @@
         Icon="pack://application:,,,/Assets/Icons/Gallery.ico">
 
     <Window.Resources>
-        <Style TargetType="CheckBox">
-            <Setter Property="Width" Value="42"/>
-            <Setter Property="Height" Value="20"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="CheckBox">
-                        <Border x:Name="Track"
-                                Width="40"
-                                Height="20"
-                                CornerRadius="10"
-                                Background="#00000000"
-                                BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"
-                                BorderThickness="1"
-                                SnapsToDevicePixels="True">
-                            <Rectangle x:Name="Thumb"
-                                     Width="12"
-                                     Height="12"
-                                     Margin="4,0"
-                                     HorizontalAlignment="Left"
-                                     VerticalAlignment="Center"
-                                     Fill="{DynamicResource ThemeTextSecondaryBrush}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
-                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Track" Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- CheckBoxes here use the global pill toggle from App.xaml. -->
 
         <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="#FFF0F0F0"/>
         <SolidColorBrush x:Key="ThemeTextSecondaryBrush" Color="#FF9A9A9A"/>

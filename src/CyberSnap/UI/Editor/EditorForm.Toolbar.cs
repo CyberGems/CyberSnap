@@ -4525,23 +4525,18 @@ internal sealed class EditorToggleSwitch : Control
         int swX = labelWidth + LabelPillGap;
         int swY = (Height - swHeight) / 2;
         var swRect = new Rectangle(swX, swY, swWidth, swHeight);
-        // Pill track: transparent (off) -> accent (on), with a muted -> accent outline.
-        // Mirrors the rounded toggle switches used in the Settings window.
+        // Pill track: solid grey (off) -> accent (on), no outline.
+        // Mirrors the global pill toggle used in the Settings window.
         using var path = EditorPaint.RoundedRect(swRect, swHeight / 2);
 
         var accent = EditorColors.Accent;
-        using (var bgBrush = new SolidBrush(Color.FromArgb((int)(_animPercent * 255), accent)))
+        var offTrack = Color.FromArgb(255, 94, 102, 114);
+        using (var bgBrush = new SolidBrush(Lerp(offTrack, accent, _animPercent)))
         {
             e.Graphics.FillPath(bgBrush, path);
         }
 
-        Color borderColor = Lerp(Color.FromArgb(150, 132, 150, 178), accent, _animPercent);
-        using (var borderPen = new Pen(borderColor, 1.4f))
-        {
-            e.Graphics.DrawPath(borderPen, path);
-        }
-
-        // Thumb: muted grey (off) -> dark (on), sliding with margins like the config toggle.
+        // Thumb: always white, sliding with margins like the config toggle.
         const int knobSize = swHeight - 8; // 14px leaves breathing room around the thumb
         const float knobMargin = 4f;
         float knobMinX = swX + knobMargin;
@@ -4550,9 +4545,29 @@ internal sealed class EditorToggleSwitch : Control
         float knobY = swY + (swHeight - knobSize) / 2f;
 
         var knobRect = new RectangleF(knobX, knobY, knobSize, knobSize);
-        using (var knobBrush = new SolidBrush(Lerp(EditorColors.TextSecondary, EditorColors.BgPrimary, _animPercent)))
+        using (var knobBrush = new SolidBrush(Color.White))
         {
             e.Graphics.FillEllipse(knobBrush, knobRect);
+        }
+
+        // Dark check glyph on the thumb, fading in with the animation.
+        if (_animPercent > 0.02f)
+        {
+            using var checkPen = new Pen(
+                Color.FromArgb((int)(_animPercent * 255), 15, 20, 28),
+                Math.Max(1.6f, knobSize * 0.15f))
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round,
+            };
+            float cx = knobRect.X, cy = knobRect.Y, s = knobRect.Width;
+            e.Graphics.DrawLines(checkPen, new[]
+            {
+                new PointF(cx + s * 0.28f, cy + s * 0.54f),
+                new PointF(cx + s * 0.45f, cy + s * 0.70f),
+                new PointF(cx + s * 0.74f, cy + s * 0.32f),
+            });
         }
     }
 
