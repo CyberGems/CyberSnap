@@ -407,9 +407,10 @@ public partial class HistoryWindow : Window
     {
         base.OnSourceInitialized(e);
         // Always open centered on the screen where the user triggered it (the monitor under
-        // the cursor), regardless of where it was when last closed. EnsureWindowFitsWorkArea
-        // then clamps it inside the work area as a safety net.
-        PopupWindowHelper.CenterOnCurrentScreen(this);
+        // the cursor), regardless of where it was when last closed. Physical-pixel centering:
+        // DIP placement drifts on mixed-DPI setups when the window starts on another monitor.
+        // EnsureWindowFitsWorkArea then clamps it inside the work area as a safety net.
+        PopupWindowHelper.CenterWindowOnPhysicalMonitor(this);
         EnsureWindowFitsWorkArea();
         var source = PresentationSource.FromVisual(this) as HwndSource;
         source?.AddHook(WndProc);

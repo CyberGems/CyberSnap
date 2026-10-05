@@ -732,6 +732,16 @@ public sealed class AppSettings
     public double SettingsWindowTop { get; set; } = -1;
     public double SettingsWindowWidth { get; set; } = 960;
     public double SettingsWindowHeight { get; set; } = 840;
+
+    /// <summary>
+    /// Annotation editor placement in physical pixels (-1 = never saved, use defaults).
+    /// EditorWindowMaximized mirrors the editor's manual-maximize state.
+    /// </summary>
+    public double EditorWindowLeft { get; set; } = -1;
+    public double EditorWindowTop { get; set; } = -1;
+    public double EditorWindowWidth { get; set; } = -1;
+    public double EditorWindowHeight { get; set; } = -1;
+    public bool EditorWindowMaximized { get; set; }
     public int SettingsWindowState { get; set; } = 0; // 0 = Normal, 2 = Maximized (WPF WindowState)
 
     // Video recording (MP4)

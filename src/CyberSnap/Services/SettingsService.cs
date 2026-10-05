@@ -362,6 +362,38 @@ public sealed class SettingsService : IDisposable
         }
     }
 
+    public static void SaveEditorWindowPlacement(double left, double top, double width, double height, bool maximized)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+            {
+                s_cachedSettings.EditorWindowLeft = left;
+                s_cachedSettings.EditorWindowTop = top;
+                s_cachedSettings.EditorWindowWidth = width;
+                s_cachedSettings.EditorWindowHeight = height;
+                s_cachedSettings.EditorWindowMaximized = maximized;
+            }
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.EditorWindowLeft = left;
+            svc.Settings.EditorWindowTop = top;
+            svc.Settings.EditorWindowWidth = width;
+            svc.Settings.EditorWindowHeight = height;
+            svc.Settings.EditorWindowMaximized = maximized;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.editor-placement.static-save", ex);
+        }
+    }
+
     public SettingsService(string? settingsPath = null, TimeSpan? saveDelay = null)
     {
         _settingsPath = ResolveSettingsPath(settingsPath);

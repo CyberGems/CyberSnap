@@ -640,6 +640,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         try
         {
+            RestoreSavedWindowPlacement();
             MaybeAutoMaximizeForCapture();
             UpdateWindowChromeRegion();
             RefreshUi();
@@ -999,9 +1000,80 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         if (_emojiPicker is { IsDisposed: false })
             _emojiPicker.Close();
-        if (_suppressCloseConfirm) return;
+        if (_suppressCloseConfirm)
+        {
+            SaveWindowPlacement();
+            return;
+        }
         if (!PromptSaveAllDirtyDocuments())
+        {
             e.Cancel = true;
+            return;
+        }
+        SaveWindowPlacement();
+    }
+
+    /// <summary>
+    /// Persists the window placement so reopening restores the user's size and
+    /// manual-maximize state instead of defaults + auto-maximize. The editor uses a
+    /// manual maximize (bounds set to the work area, FormWindowState stays Normal),
+    /// so the flag and the pre-maximize bounds are what get stored.
+    /// </summary>
+    private void SaveWindowPlacement()
+    {
+        try
+        {
+            bool minimized = WindowState == FormWindowState.Minimized;
+            bool maximized = _isManualMaximized;
+            var bounds = minimized ? RestoreBounds : Bounds;
+            if (maximized && _restoreBounds.Width > 0 && _restoreBounds.Height > 0)
+                bounds = _restoreBounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+                return;
+            SettingsService.SaveEditorWindowPlacement(
+                bounds.X, bounds.Y, bounds.Width, bounds.Height, maximized && !minimized);
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Restores the persisted placement before first reveal (window still at Opacity 0).
+    /// A restored size counts as user-sized, so the capture auto-maximize leaves it alone.
+    /// </summary>
+    private void RestoreSavedWindowPlacement()
+    {
+        try
+        {
+            var saved = SettingsService.LoadStatic();
+            if (saved is null || saved.EditorWindowWidth <= 0 || saved.EditorWindowHeight <= 0)
+                return;
+            var rect = new Rectangle(
+                (int)saved.EditorWindowLeft,
+                (int)saved.EditorWindowTop,
+                (int)saved.EditorWindowWidth,
+                (int)saved.EditorWindowHeight);
+
+            Screen? target = null;
+            foreach (var screen in Screen.AllScreens)
+            {
+                if (screen.WorkingArea.IntersectsWith(rect))
+                {
+                    target = screen;
+                    break;
+                }
+            }
+            if (target is null)
+                return;
+
+            var bounds = NormalizeRestoredBounds(rect, target.WorkingArea, MinimumSize);
+            StartPosition = FormStartPosition.Manual;
+            Bounds = bounds;
+            _restoreBounds = bounds;
+            _userRestoredWindow = true;
+            if (saved.EditorWindowMaximized)
+                ApplyManualMaximize(userInitiated: false);
+        }
+        catch { }
     }
 
     /// <summary>
