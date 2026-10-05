@@ -446,21 +446,21 @@ public partial class SettingsWindow
                     ToolDef.AllTools.First(t => t.Id == "rect").Icon,
                     areaIconColor,
                     16),
-                Width = 14,
-                Height = 14,
-                Margin = new Thickness(0, 0, 2, 0),
+                Width = 13,
+                Height = 13,
+                Margin = new Thickness(0, 0, 3, 1),
                 VerticalAlignment = VerticalAlignment.Center,
             };
             System.Windows.Media.RenderOptions.SetBitmapScalingMode(assignIcon, System.Windows.Media.BitmapScalingMode.HighQuality);
-            // Icon lives inside the brackets, right next to the tool name.
+            // Icon lives inside the brackets, right next to the tool name: [ icon name ].
             string prefix = string.Format(
                 LocalizationService.Translate("Assign PrtSc to {0}"),
                 "").TrimEnd();
             string areaName = LocalizationService.Translate("Area Capture");
             var assignLabel = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
-            assignLabel.Inlines.Add(new System.Windows.Documents.Run(prefix + " ["));
+            assignLabel.Inlines.Add(new System.Windows.Documents.Run(prefix + " [ "));
             assignLabel.Inlines.Add(new System.Windows.Documents.InlineUIContainer(assignIcon));
-            assignLabel.Inlines.Add(new System.Windows.Documents.Run(areaName + "]"));
+            assignLabel.Inlines.Add(new System.Windows.Documents.Run(" " + areaName + " ]"));
             assignContent.Children.Add(assignLabel);
             AssignPrtScBtn.Content = assignContent;
         }

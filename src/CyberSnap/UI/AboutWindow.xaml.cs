@@ -331,6 +331,7 @@ public partial class AboutWindow : Window
         AboutUpdateDesc.Text = result.StatusMessage;
         UpdateBtn.Content = LocalizationService.Translate("Update Now");
         UpdateBtn.ToolTip = LocalizationService.Translate("Download this version after you confirm. Installation waits for a second confirmation.");
+        UpdateBtn.SetResourceReference(StyleProperty, "CyberSnapAccentButton");
         UpdatePeekTitle.Text = string.Format(LocalizationService.Translate("What's New in {0}"), result.LatestVersionLabel);
         var peek = UpdateService.PeekReleaseNotes(result.ReleaseNotes, 280);
         UpdatePeekText.Text = string.IsNullOrWhiteSpace(peek) ? result.StatusMessage : peek;
@@ -340,7 +341,9 @@ public partial class AboutWindow : Window
         SkipVersionBtn.ToolTip = LocalizationService.Translate("Skip this version");
         UpdateBadge.Visibility = Visibility.Visible;
         AboutUpdateIcon.SetResourceReference(TextBlock.ForegroundProperty, "ThemeAccentBrush");
-        UpdateAvailablePanel.Visibility = Visibility.Visible;
+        UpdatePeekPanel.Visibility = Visibility.Visible;
+        ViewReleaseBtn.Visibility = Visibility.Visible;
+        SkipVersionBtn.Visibility = Visibility.Visible;
     }
 
     private void HideUpdateAvailable()
@@ -348,7 +351,9 @@ public partial class AboutWindow : Window
         _availableUpdate = null;
         UpdateBadge.Visibility = Visibility.Collapsed;
         AboutUpdateIcon.ClearValue(TextBlock.ForegroundProperty);
-        UpdateAvailablePanel.Visibility = Visibility.Collapsed;
+        UpdatePeekPanel.Visibility = Visibility.Collapsed;
+        ViewReleaseBtn.Visibility = Visibility.Collapsed;
+        SkipVersionBtn.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>Refreshes the About update section from the latest background
@@ -388,6 +393,7 @@ public partial class AboutWindow : Window
             AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
         UpdateBtn.Content = LocalizationService.Translate("Check Now");
         UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
+        UpdateBtn.ClearValue(StyleProperty);
     }
 
     private void ViewReleaseBtn_Click(object sender, RoutedEventArgs e)

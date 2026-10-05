@@ -368,31 +368,34 @@
                                 </StackPanel>
                                 <TextBlock x:Name="AboutUpdateDesc" Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Check for the latest version and download updates directly."/>
                             </StackPanel>
-                            <Button x:Name="UpdateBtn" Content="Check Now" Grid.Column="2" MinWidth="108"
+                        </Grid>
+
+                        <StackPanel x:Name="UpdatePeekPanel" Visibility="Collapsed" Margin="38,2,0,4">
+                            <TextBlock x:Name="UpdatePeekTitle" Text="What's New" Style="{StaticResource SettingTitle}" FontSize="12" Margin="0,0,0,2" Services:LocalizationService.SourceText="What's New"/>
+                            <TextBlock x:Name="UpdatePeekText" Text="" Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="38,2,0,4">
+                            <Button x:Name="UpdateBtn" Content="Check Now" MinWidth="108" MinHeight="32"
                                     Services:LocalizationService.SourceContent="Check Now"
-                                    VerticalAlignment="Center" Click="UpdateCheckButton_Click" Cursor="Hand"
+                                    VerticalAlignment="Center" Margin="0,0,8,0" Click="UpdateCheckButton_Click" Cursor="Hand"
                                     ToolTip="Check for the latest version"
                                     Services:LocalizationService.SourceToolTip="Check for the latest version"
                                     AutomationProperties.Name="Check for Updates"/>
-                        </Grid>
-
-                        <StackPanel x:Name="UpdateAvailablePanel" Visibility="Collapsed" Margin="38,2,0,4">
-                            <TextBlock x:Name="UpdatePeekTitle" Text="What's New" Style="{StaticResource SettingTitle}" FontSize="12" Margin="0,0,0,2" Services:LocalizationService.SourceText="What's New"/>
-                            <TextBlock x:Name="UpdatePeekText" Text="" Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button x:Name="ViewReleaseBtn" Content="View Release" MinWidth="96"
-                                        Services:LocalizationService.SourceContent="View Release"
-                                        VerticalAlignment="Center" Margin="0,0,8,0" Click="ViewReleaseBtn_Click" Cursor="Hand"
-                                        ToolTip="View releases and changelogs"
-                                        Services:LocalizationService.SourceToolTip="View releases and changelogs"
-                                        AutomationProperties.Name="View Release"/>
-                                <Button x:Name="SkipVersionBtn" Content="Skip this version" MinWidth="108"
-                                        Services:LocalizationService.SourceContent="Skip this version"
-                                        VerticalAlignment="Center" Click="SkipVersionBtn_Click" Cursor="Hand"
-                                        ToolTip="Skip this version"
-                                        Services:LocalizationService.SourceToolTip="Skip this version"
-                                        AutomationProperties.Name="Skip this version"/>
-                            </StackPanel>
+                            <Button x:Name="ViewReleaseBtn" Content="View Release" MinWidth="96"
+                                    Services:LocalizationService.SourceContent="View Release"
+                                    VerticalAlignment="Center" Margin="0,0,8,0" Click="ViewReleaseBtn_Click" Cursor="Hand"
+                                    ToolTip="View releases and changelogs"
+                                    Services:LocalizationService.SourceToolTip="View releases and changelogs"
+                                    AutomationProperties.Name="View Release"
+                                    Visibility="Collapsed"/>
+                            <Button x:Name="SkipVersionBtn" Content="Skip this version" MinWidth="108"
+                                    Services:LocalizationService.SourceContent="Skip this version"
+                                    VerticalAlignment="Center" Click="SkipVersionBtn_Click" Cursor="Hand"
+                                    ToolTip="Skip this version"
+                                    Services:LocalizationService.SourceToolTip="Skip this version"
+                                    AutomationProperties.Name="Skip this version"
+                                    Visibility="Collapsed"/>
+                        </StackPanel>
                         </StackPanel>
 
                         <StackPanel x:Name="UpdateProgressPanel" Visibility="Collapsed" Margin="38,8,0,8">
