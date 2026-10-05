@@ -409,39 +409,63 @@ public partial class SettingsWindow
         PrtScWarnBanner.Visibility = occupied ? Visibility.Visible : Visibility.Collapsed;
         PrtScInfoBtn.Visibility = occupied ? Visibility.Collapsed : Visibility.Visible;
         if (occupied)
-            SyncPrtScBannerCause(rectMod, rectKey);
-        // Name the assignment target explicitly (with brackets and its row icon so the
-        // row label reads at a glance even when truncated): the row label may be clipped.
-        var areaIconColor = Theme.IsDark
-            ? System.Drawing.Color.FromArgb(225, 255, 255, 255)
-            : System.Drawing.Color.FromArgb(210, 0, 0, 0);
-        var assignContent = new StackPanel
         {
-            Orientation = System.Windows.Controls.Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        var assignIcon = new System.Windows.Controls.Image
+            try
+            {
+                SyncPrtScBannerCause(rectMod, rectKey);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("settings.prtsc-cause", ex);
+            }
+        }
+        RefreshAssignPrtScContent();
+    }
+
+    /// <summary>
+    /// Names the assignment target explicitly (with brackets and its row icon so the row
+    /// label reads at a glance even when truncated). Kept in its own method so it can run
+    /// both at construction and on every sync: the button must never keep its XAML default.
+    /// </summary>
+    private void RefreshAssignPrtScContent()
+    {
+        try
         {
-            Source = ToolIcons.RenderToolIconWpf(
-                "rect",
-                ToolDef.AllTools.First(t => t.Id == "rect").Icon,
-                areaIconColor,
-                16),
-            Width = 16,
-            Height = 16,
-            Margin = new Thickness(0, 0, 8, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        System.Windows.Media.RenderOptions.SetBitmapScalingMode(assignIcon, System.Windows.Media.BitmapScalingMode.HighQuality);
-        assignContent.Children.Add(assignIcon);
-        assignContent.Children.Add(new TextBlock
+            var areaIconColor = Theme.IsDark
+                ? System.Drawing.Color.FromArgb(225, 255, 255, 255)
+                : System.Drawing.Color.FromArgb(210, 0, 0, 0);
+            var assignContent = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            var assignIcon = new System.Windows.Controls.Image
+            {
+                Source = ToolIcons.RenderToolIconWpf(
+                    "rect",
+                    ToolDef.AllTools.First(t => t.Id == "rect").Icon,
+                    areaIconColor,
+                    16),
+                Width = 16,
+                Height = 16,
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            System.Windows.Media.RenderOptions.SetBitmapScalingMode(assignIcon, System.Windows.Media.BitmapScalingMode.HighQuality);
+            assignContent.Children.Add(assignIcon);
+            assignContent.Children.Add(new TextBlock
+            {
+                Text = string.Format(
+                    LocalizationService.Translate("Assign PrtSc to {0}"),
+                    "[" + LocalizationService.Translate("Area Capture") + "]"),
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+            AssignPrtScBtn.Content = assignContent;
+        }
+        catch (Exception ex)
         {
-            Text = string.Format(
-                LocalizationService.Translate("Assign PrtSc to {0}"),
-                "[" + LocalizationService.Translate("Area Capture") + "]"),
-            VerticalAlignment = VerticalAlignment.Center,
-        });
-        AssignPrtScBtn.Content = assignContent;
+            AppDiagnostics.LogError("settings.assign-prtsc-content", ex);
+        }
     }
 
     /// <summary>
@@ -707,7 +731,6 @@ public partial class SettingsWindow
         ThemeDarkRadio?.ApplyDefaultTooltip();
         RefreshLanguageComboDisplay();
         PopulateToolToggles();
-        SyncPrtScBannerVisibility();
         SyncPrtScBannerVisibility();
         PopulateSoundCustomizationPanel();
         LoadFileNameTokenButtons();

@@ -78,6 +78,9 @@ public partial class SettingsWindow : Window
             _settingsService.Settings.QuickPanelShowGallery = latestPanelState.QuickPanelShowGallery;
         }
         InitializeComponent();
+        // The assign button owns its content in code (icon + explicit target): set it here
+        // so it never keeps the English XAML default, even if a later sync path is skipped.
+        RefreshAssignPrtScContent();
         // Hide until post-layout physical centering finishes — avoids the visible jump
         // when the HWND resizes after the first DPI-aware move to a 150% monitor.
         Opacity = 0;
