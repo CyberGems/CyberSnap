@@ -82,7 +82,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ### 🖥️ Desktop Integration
 - **System Tray**: Runs in background with custom context menu
-- **Configurable Hotkeys**: Capture, OCR, recording, ruler, color picker, repeat-last-area
+- **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus standalone launchers for OCR, color picker, QR and ruler
 - **Auto-Start**: Launch at Windows sign-in
 - **Auto-Update**: Built-in updater with toast notifications, changelog preview, and per-version skip
 - **Setup Wizard**: First-run configuration assistant
@@ -199,21 +199,22 @@ Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) from `C
 
 ## ⌨️ Keyboard Shortcuts
 
-All capture actions are bound to **configurable hotkeys** in Settings:
+Capture, recording, and standalone tools expose configurable hotkeys in **Settings → Hotkeys**. Only Area Capture ships with a default:
 
 | Action | Default Hotkey |
 |---|---|
-| Capture area | `Alt+Shift+A` |
-| Repeat last area | Not set |
+| Area Capture | `Alt+Shift+A` |
+| From Center | Not set |
+| Fullscreen capture | Not set |
 | Active window | Not set |
-| Full screen | Not set |
-| Scroll capture | Not set |
-| Record MP4 | Not set |
-| Record GIF | Not set |
-| OCR | Not set |
-| Color picker | Not set |
-| QR & Barcode scan | Not set |
-| Ruler | Not set |
+| Scrolling Capture | Not set |
+| Repeat last area | Not set |
+| Screen Recorder (MP4) | Not set |
+| Screen Recorder (GIF) | Not set |
+| OCR (Standalone) | Not set |
+| Color Picker (Standalone) | Not set |
+| QR & Barcodes (Standalone) | Not set |
+| Ruler (Standalone) | Not set |
 
 Open the annotation editor directly: `CyberSnap.exe --editor`
 
