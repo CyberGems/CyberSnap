@@ -104,7 +104,9 @@ public partial class SetupWizard : Window
         }
         finally
         {
-            try { app?.RegisterHotkeys(showReadyNotification: false); }
+            // Quiet re-register: a legacy taken-PrtSc must not toast on top of the
+            // startup conflict toast; the banner carries the message instead.
+            try { app?.RegisterHotkeys(showReadyNotification: false, notifyConflicts: false); }
             catch { }
         }
 
@@ -531,6 +533,21 @@ public partial class SetupWizard : Window
 
         var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
 
+        if (mod == 0 && vk == Native.User32.VK_SNAPSHOT)
+        {
+            // GotFocus already released our hotkeys, so this probe is accurate
+            // with no extra churn. A taken PrtSc is refused, never persisted.
+            if (!HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT))
+            {
+                WizHotkeyTextBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
+                if (Application.Current is App refusedApp)
+                    refusedApp.RegisterHotkeys(showReadyNotification: false);
+                ApplyPrintScreenFeedback(canRegister: false, System.Array.Empty<string>());
+                SyncWizPrtScBanner();
+                return;
+            }
+        }
+
         try
         {
             _settingsService.Settings.SetToolHotkey("rect", mod, vk);
@@ -697,6 +714,17 @@ public partial class SetupWizard : Window
             canReg = HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT);
         }
         var interceptors = HotkeyConflictProbe.DetectPrintScreenInterceptors();
+
+        if (!canReg)
+        {
+            // Case A: another app owns PrtSc via RegisterHotKey. Refuse outright:
+            // persisting it would leave a dead hotkey (plus a conflict toast on
+            // every start), and the previous shortcut stays live.
+            app?.RegisterHotkeys(showReadyNotification: false);
+            ApplyPrintScreenFeedback(canRegister: false, interceptors);
+            SyncWizPrtScBanner();
+            return;
+        }
 
         try
         {

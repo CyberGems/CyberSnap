@@ -1279,6 +1279,21 @@ public partial class SettingsWindow : Window
             }
             var interceptors = Services.HotkeyConflictProbe.DetectPrintScreenInterceptors();
 
+            string assignTitle = string.Format(
+                LocalizationService.Translate("Assign PrtSc to {0}"),
+                LocalizationService.Translate("Area Capture"));
+            if (!canReg)
+            {
+                // Another app owns PrtSc: refuse so no dead hotkey is persisted
+                // (and no failing registration is attempted). Previous setup stays live.
+                if (app is not null)
+                    HotkeyChanged?.Invoke();
+                ToastWindow.ShowError(
+                    assignTitle,
+                    LocalizationService.Translate("This hotkey is registered by another application."));
+                return;
+            }
+
             _settingsService.Settings.SetToolHotkey("rect", 0, Native.User32.VK_SNAPSHOT);
             _settingsService.Save();
             if (app is not null)
@@ -1286,16 +1301,7 @@ public partial class SettingsWindow : Window
             else
                 app?.RegisterHotkeys(showReadyNotification: false);
 
-            string assignTitle = string.Format(
-                LocalizationService.Translate("Assign PrtSc to {0}"),
-                LocalizationService.Translate("Area Capture"));
-            if (!canReg)
-            {
-                ToastWindow.ShowError(
-                    assignTitle,
-                    LocalizationService.Translate("This hotkey is registered by another application."));
-            }
-            else if (interceptors.Count > 0)
+            if (interceptors.Count > 0)
             {
                 ToastWindow.Show(
                     assignTitle,

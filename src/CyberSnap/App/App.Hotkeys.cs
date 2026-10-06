@@ -9,7 +9,7 @@ namespace CyberSnap;
 
 public partial class App
 {
-    public void RegisterHotkeys(bool showReadyNotification = false)
+    public void RegisterHotkeys(bool showReadyNotification = false, bool notifyConflicts = true)
     {
         _hotkeyService?.Dispose();
         _hotkeyService = new HotkeyService();
@@ -47,7 +47,7 @@ public partial class App
         TryRegister(_hotkeyService.RegisterStandaloneColorPicker(s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey), "Standalone Color Picker", s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneOcr(s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey), "Standalone OCR", s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneScan(s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey), "Standalone Scanner", s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey);
-        if (failed.Count > 0)
+        if (failed.Count > 0 && notifyConflicts)
             ToastWindow.ShowError("Hotkey conflict", string.Format(LocalizationService.Translate("{0} — already in use by another app"), string.Join(", ", failed)));
         else if (showReadyNotification)
         {

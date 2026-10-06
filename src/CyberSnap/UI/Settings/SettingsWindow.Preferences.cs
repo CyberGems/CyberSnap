@@ -990,7 +990,8 @@ public partial class SettingsWindow
             value => ShowImageSearchBarCheck.IsChecked = value,
             value =>
             {
-                ((App)Application.Current).RefreshHistoryWindowIfOpen();
+                if (Application.Current is App app)
+                    app.RefreshWidgetWindowLayout();
             });
     }
 
@@ -1596,7 +1597,8 @@ public partial class SettingsWindow
     {
         _settingsService.Settings.WidgetDockPositionOffset = 0.5;
         _settingsService.Save();
-        ((App)Application.Current).RefreshWidgetWindowLayout();
+        if (Application.Current is App app)
+            app.RefreshWidgetWindowLayout();
     }
 
     private void UpdateWidgetOptionsVisibility(bool visible)
