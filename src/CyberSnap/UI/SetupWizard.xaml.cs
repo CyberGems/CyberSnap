@@ -625,7 +625,7 @@ public partial class SetupWizard : Window
         WizHotkeyTextBox.FontWeight = FontWeights.SemiBold;
         var conflictLabel = LocalizationService.Translate(conflictLabelKey);
         _tooltip.Content = string.Format(
-            LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
+            LocalizationService.Translate("\"{0}\" is already assigned to {1}."),
             HotkeyFormatter.Format(mod, vk),
             conflictLabel);
         ShowWizAdvisory();

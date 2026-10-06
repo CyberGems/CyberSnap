@@ -599,7 +599,7 @@ public static class ToolListBuilder
         hkBox.FontWeight = FontWeights.SemiBold;
         var conflictLabel = LocalizationService.Translate(conflictLabelKey);
         tipText.Text = string.Format(
-            LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
+            LocalizationService.Translate("\"{0}\" is already assigned to {1}."),
             HotkeyFormatter.Format(mod, vk),
             conflictLabel);
         ShowAdvisory(tooltip);

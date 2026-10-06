@@ -244,8 +244,6 @@ public sealed class AppSettings
     /// </summary>
     public bool RecordingSuppressSettingsExitConfirm { get; set; }
 
-    public bool AllowHotkeyOverride { get; set; }
-
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
     public uint HotkeyKey { get; set; } = 0x41; // Alt+Shift+A
 
