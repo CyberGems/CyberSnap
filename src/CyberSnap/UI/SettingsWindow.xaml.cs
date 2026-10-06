@@ -106,6 +106,8 @@ public partial class SettingsWindow : Window
         {
             AfterCaptureOutcomeEditor?.RefreshLocalization();
             AfterCaptureOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
+            if (AfterCaptureOutcomeEditor != null)
+                AfterCapturePresetSelector?.Refresh(AfterCaptureOutcomeEditor.State);
             VideoOutcomeEditor?.RefreshLocalization();
             VideoOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
             GifOutcomeEditor?.RefreshLocalization();
@@ -113,6 +115,12 @@ public partial class SettingsWindow : Window
         };
         if (AfterCaptureOutcomeEditor != null)
             AfterCaptureOutcomeEditor.OutcomeChanged += AfterCaptureOutcomeEditor_OutcomeChanged;
+        if (AfterCapturePresetSelector != null)
+        {
+            AfterCapturePresetSelector.PresetSelected += OnAfterCapturePresetSelected;
+            AfterCapturePresetSelector.Refresh(AfterCaptureOutcomeEditor?.State
+                ?? Helpers.AfterCaptureOutcomePresets.GetState(Helpers.AfterCapturePreset.Intermediate));
+        }
         if (VideoOutcomeEditor != null)
             VideoOutcomeEditor.OutcomeChanged += VideoOutcomeEditor_OutcomeChanged;
         if (GifOutcomeEditor != null)
@@ -402,6 +410,7 @@ public partial class SettingsWindow : Window
 
         var previous = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
         var selected = AfterCaptureOutcomeEditor.State;
+        AfterCapturePresetSelector?.Refresh(selected);
 
         UpdateGeneralPreference(
             "settings.after-capture-outcome",
@@ -431,6 +440,16 @@ public partial class SettingsWindow : Window
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
                 RefreshEditorPreviewState();
             });
+    }
+
+    /// <summary>Preset card picked: push its canonical state through the editor so the
+    /// normal chip persistence path (OutcomeChanged) applies it.</summary>
+    private void OnAfterCapturePresetSelected(Helpers.AfterCapturePreset preset)
+    {
+        if (!IsLoaded || AfterCaptureOutcomeEditor is null) return;
+        AfterCaptureOutcomeEditor.SetState(
+            Helpers.AfterCaptureOutcomePresets.GetState(preset),
+            raiseChanged: true);
     }
 
     private void VideoOutcomeEditor_OutcomeChanged() =>
@@ -501,6 +520,7 @@ public partial class SettingsWindow : Window
     {
         if (AfterCaptureOutcomeEditor is null) return;
         AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
+        AfterCapturePresetSelector?.Refresh(AfterCaptureOutcomeEditor.State);
         SyncSavingSettingsAvailability();
     }
 

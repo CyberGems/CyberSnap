@@ -318,3 +318,87 @@ public static class AfterCaptureOutcomeModel
     };
 
 }
+
+/// <summary>
+/// Friendly capture presets over <see cref="AfterCaptureOutcomeState"/>.
+/// Basic = save silently, Intermediate = preview then save, Advanced = edit.
+/// Custom is not selectable: it reports a state that matches no preset
+/// (manual chip setup, or a preset with Save toggled off).
+/// </summary>
+public enum AfterCapturePreset
+{
+    Basic,
+    Intermediate,
+    Advanced,
+    Custom
+}
+
+public static class AfterCaptureOutcomePresets
+{
+    public static AfterCapturePreset[] Selectable { get; } =
+    [
+        AfterCapturePreset.Basic,
+        AfterCapturePreset.Intermediate,
+        AfterCapturePreset.Advanced
+    ];
+
+    /// <summary>Canonical (normalized) state for a selectable preset.</summary>
+    public static AfterCaptureOutcomeState GetState(AfterCapturePreset preset) =>
+        AfterCaptureOutcomeModel.Normalize(preset switch
+        {
+            AfterCapturePreset.Basic => new AfterCaptureOutcomeState(
+                Save: true,
+                Destination: AfterCaptureDestination.None,
+                SystemViewer: false,
+                Clipboard: false,
+                Preview: false),
+            AfterCapturePreset.Advanced => new AfterCaptureOutcomeState(
+                Save: true,
+                Destination: AfterCaptureDestination.Editor,
+                SystemViewer: false,
+                Clipboard: true,
+                Preview: false),
+            _ => new AfterCaptureOutcomeState(
+                Save: true,
+                Destination: AfterCaptureDestination.Notification,
+                SystemViewer: false,
+                Clipboard: true,
+                Preview: true),
+        });
+
+    /// <summary>Which preset a state matches, or Custom when it matches none.</summary>
+    public static AfterCapturePreset Match(AfterCaptureOutcomeState state)
+    {
+        state = AfterCaptureOutcomeModel.Normalize(state);
+        foreach (var preset in Selectable)
+        {
+            if (GetState(preset).Equals(state))
+                return preset;
+        }
+        return AfterCapturePreset.Custom;
+    }
+
+    public static string TitleKey(AfterCapturePreset preset) => preset switch
+    {
+        AfterCapturePreset.Basic => "Basic",
+        AfterCapturePreset.Intermediate => "Intermediate",
+        AfterCapturePreset.Advanced => "Advanced",
+        _ => "Custom"
+    };
+
+    public static string SubtitleKey(AfterCapturePreset preset) => preset switch
+    {
+        AfterCapturePreset.Basic => "Save only",
+        AfterCapturePreset.Intermediate => "Save and preview",
+        AfterCapturePreset.Advanced => "Save and edit",
+        _ => "Custom"
+    };
+
+    public static string DescriptionKey(AfterCapturePreset preset) => preset switch
+    {
+        AfterCapturePreset.Basic => "Captures are saved silently to your folder.",
+        AfterCapturePreset.Intermediate => "Preview each capture, then save it with a notification.",
+        AfterCapturePreset.Advanced => "Open every capture in the annotation editor.",
+        _ => ""
+    };
+}

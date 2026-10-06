@@ -780,11 +780,28 @@
                                            Foreground="{DynamicResource WizFg}"
                                            Margin="0,0,0,4"
                                            Services:LocalizationService.SourceText="After capture"/>
-                                <TextBlock Text="Choose what happens when you confirm an image capture. Add steps with + and remove them with ×."
+                                <TextBlock Text="Pick a preset. Fine tuning stays available later in Configuration."
                                            FontSize="11" Foreground="{DynamicResource WizFgMuted}"
                                            Margin="0,0,0,12" TextWrapping="Wrap" Opacity="0.9"
-                                           Services:LocalizationService.SourceText="Choose what happens when you confirm an image capture. Add steps with + and remove them with ×."/>
-                                <controls:AfterCaptureOutcomeEditor x:Name="WizAfterCaptureOutcomeEditor"/>
+                                           Services:LocalizationService.SourceText="Pick a preset. Fine tuning stays available later in Configuration."/>
+                                <controls:AfterCapturePresetSelector x:Name="WizAfterCapturePresetSelector"
+                                                                     CardsOrientation="Vertical"/>
+                                <Border CornerRadius="6" Padding="12,9" Margin="0,0,0,0"
+                                        Background="{DynamicResource WizInputBg}"
+                                        BorderBrush="{DynamicResource WizBorder}"
+                                        BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Resulting actions" FontSize="11" FontWeight="SemiBold"
+                                                   FontFamily="Segoe UI Variable Text"
+                                                   Foreground="{DynamicResource WizFgMuted}" Opacity="0.85"
+                                                   Margin="0,0,0,4"
+                                                   Services:LocalizationService.SourceText="Resulting actions"/>
+                                        <TextBlock x:Name="WizOutcomeSummaryText" FontSize="12.5"
+                                                   FontFamily="Segoe UI Variable Text"
+                                                   Foreground="{DynamicResource WizFg}"
+                                                   TextWrapping="Wrap" LineHeight="19"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
 

@@ -1377,6 +1377,8 @@ public partial class SettingsWindow
                 ScanShowResultWindowCheck.IsChecked = ResultDelivery.ForScan(s).ShowWindow;
             UpdateAutoCopyExcludeEnabledState();
             AfterCaptureOutcomeEditor?.LoadFromSettings(s);
+            if (AfterCaptureOutcomeEditor != null)
+                AfterCapturePresetSelector?.Refresh(AfterCaptureOutcomeEditor.State);
             VideoOutcomeEditor?.LoadFromSettings(s);
             GifOutcomeEditor?.LoadFromSettings(s);
         }

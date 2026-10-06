@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -20,8 +21,8 @@ public partial class SetupWizard : Window
     private readonly TextBlock[] _stepLabels;
     private readonly TextBlock[] _stepSubs;
     private bool _suppressLanguageChange;
-    private bool _suppressAfterCaptureChange;
     private bool _suppressThemeChange;
+    private AfterCaptureOutcomeState _wizOutcome;
     private readonly Dictionary<string, string> _languageItemSources = new(StringComparer.OrdinalIgnoreCase);
     private System.Windows.Threading.DispatcherTimer? _blockedDetectTimer;
     private System.Windows.Threading.DispatcherTimer? _resetWarningTimer;
@@ -44,14 +45,14 @@ public partial class SetupWizard : Window
         _stepSubs = new[] { StepSub1, StepSub2, StepSub3, StepSub4, StepSub5 };
 
         InitializeMainHotkey();
-        if (WizAfterCaptureOutcomeEditor != null)
-            WizAfterCaptureOutcomeEditor.OutcomeChanged += WizAfterCaptureOutcomeEditor_OutcomeChanged;
+        WizAfterCapturePresetSelector.PresetSelected += WizPreset_Selected;
         LoadDefaults();
         UpdateSteps(_page);
         PopulateLanguages();
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         RefreshLanguageComboDisplay();
-        WizAfterCaptureOutcomeEditor?.RefreshLocalization();
+        WizAfterCapturePresetSelector.RefreshLocalization();
+        RefreshWizOutcomeSummary();
 
         // The banner only earns its space while PrtSc is actually held by something
         // else; SyncWizPrtScBanner also names the real occupant (Snipping Tool vs
@@ -266,8 +267,8 @@ public partial class SetupWizard : Window
 
         LocalizationService.ApplyCurrentCulture(normalized);
         LocalizationService.ApplyTo(this, normalized);
-        WizAfterCaptureOutcomeEditor?.RefreshLocalization();
-        SyncWizPrtScBanner();
+        WizAfterCapturePresetSelector.RefreshLocalization();
+        RefreshWizOutcomeSummary();
         UpdateSaveDirectoryState();
         UpdateNavButtons();
         RefreshLanguageComboDisplay();
@@ -821,20 +822,11 @@ public partial class SetupWizard : Window
         WizCaptureMagnifierCheck.IsChecked = s.ShowCaptureMagnifier;
         WizEnableSoundsCheck.IsChecked = !s.MuteSounds;
         WizCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
-        WizAfterCaptureOutcomeEditor?.LoadFromSettings(s);
-        // Prefer EffectiveSave so locked Editor/System-viewer and never-empty
-        // Normalize stay in lockstep with the checkbox.
-        _suppressAfterCaptureChange = true;
-        try
-        {
-            WizSaveToFileCheck.IsChecked = WizAfterCaptureOutcomeEditor?.State.EffectiveSave
-                ?? s.SaveToFile;
-        }
-        finally
-        {
-            _suppressAfterCaptureChange = false;
-        }
+        _wizOutcome = AfterCaptureOutcomeModel.FromSettings(s);
+        WizAfterCapturePresetSelector.Refresh(_wizOutcome);
+        WizSaveToFileCheck.IsChecked = _wizOutcome.EffectiveSave;
         WizSaveDirText.Text = s.SaveDirectory;
+        RefreshWizOutcomeSummary();
         UpdateSaveDirectoryState();
         LoadAppearanceDefaults();
     }
@@ -871,32 +863,22 @@ public partial class SetupWizard : Window
         UpdateSteps(_page);
     }
 
+    private void WizPreset_Selected(AfterCapturePreset preset)
+    {
+        bool save = WizSaveToFileCheck.IsChecked == true;
+        _wizOutcome = AfterCaptureOutcomeModel.Normalize(
+            AfterCaptureOutcomePresets.GetState(preset) with { Save = save });
+        WizAfterCapturePresetSelector.Refresh(_wizOutcome);
+        RefreshWizOutcomeSummary();
+        UpdateSaveDirectoryState();
+    }
+
     private void WizSaveToFile_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressAfterCaptureChange)
-        {
-            UpdateSaveDirectoryState();
-            return;
-        }
-
-        if (WizAfterCaptureOutcomeEditor != null)
-        {
-            var state = WizAfterCaptureOutcomeEditor.State;
-            bool save = WizSaveToFileCheck.IsChecked == true;
-
-            if (state.EffectiveSave != save)
-            {
-                WizAfterCaptureOutcomeEditor.SetState(state with { Save = save });
-                var effective = WizAfterCaptureOutcomeEditor.State.EffectiveSave;
-                if (WizSaveToFileCheck.IsChecked != effective)
-                {
-                    _suppressAfterCaptureChange = true;
-                    try { WizSaveToFileCheck.IsChecked = effective; }
-                    finally { _suppressAfterCaptureChange = false; }
-                }
-            }
-        }
-
+        bool save = WizSaveToFileCheck.IsChecked == true;
+        _wizOutcome = AfterCaptureOutcomeModel.Normalize(_wizOutcome with { Save = save });
+        WizAfterCapturePresetSelector.Refresh(_wizOutcome);
+        RefreshWizOutcomeSummary();
         UpdateSaveDirectoryState();
     }
 
@@ -909,23 +891,17 @@ public partial class SetupWizard : Window
         WizSaveDirDisabledHint.Visibility = saveEnabled ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void WizAfterCaptureOutcomeEditor_OutcomeChanged()
+    /// <summary>Read-only flow preview of the preset outcome (Capture → steps).</summary>
+    private void RefreshWizOutcomeSummary()
     {
-        if (_suppressAfterCaptureChange)
+        if (WizOutcomeSummaryText is null)
             return;
 
-        var state = WizAfterCaptureOutcomeEditor.State;
-        _suppressAfterCaptureChange = true;
-        try
-        {
-            WizSaveToFileCheck.IsChecked = state.EffectiveSave;
-        }
-        finally
-        {
-            _suppressAfterCaptureChange = false;
-        }
-
-        UpdateSaveDirectoryState();
+        var pills = AfterCaptureOutcomeModel.AllPills
+            .OrderBy(AfterCaptureOutcomeModel.FlowDisplayOrder)
+            .Where(pill => AfterCaptureOutcomeModel.IsActive(_wizOutcome, pill))
+            .Select(pill => LocalizationService.Translate(AfterCaptureOutcomeModel.LabelKey(pill)));
+        WizOutcomeSummaryText.Text = string.Join(" → ", pills);
     }
 
     private void BrowseSaveDir_Click(object sender, RoutedEventArgs e)
@@ -1066,11 +1042,7 @@ public partial class SetupWizard : Window
                         s.OcrAutoCopyToClipboard);
                     try
                     {
-                        var state = WizAfterCaptureOutcomeEditor.State with
-                        {
-                            Save = WizSaveToFileCheck.IsChecked == true
-                        };
-                        AfterCaptureOutcomeModel.ApplyToSettings(state, s);
+                        AfterCaptureOutcomeModel.ApplyToSettings(_wizOutcome, s);
                         s.AutoCopySettingsSchemaVersion = AutoCopyPreferences.SchemaVersion;
                         _settingsService.Save();
                     }

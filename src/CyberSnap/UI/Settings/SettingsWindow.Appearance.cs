@@ -219,6 +219,8 @@ public partial class SettingsWindow
                 : 0;
 
             AfterCaptureOutcomeEditor?.LoadFromSettings(s);
+            if (AfterCaptureOutcomeEditor != null)
+                AfterCapturePresetSelector?.Refresh(AfterCaptureOutcomeEditor.State);
             RefreshCapturePreviewTimeoutVisibility();
             ApplyAutoCopyControlsFromSettings(s);
 
@@ -753,6 +755,9 @@ public partial class SettingsWindow
         UpdateFileNameTemplatePreview(_settingsService.Settings.FileNameTemplate);
         SyncSavingSettingsFromSaveToFile();
         AfterCaptureOutcomeEditor?.RefreshLocalization();
+        AfterCapturePresetSelector?.RefreshLocalization();
+        if (AfterCaptureOutcomeEditor != null)
+            AfterCapturePresetSelector?.Refresh(AfterCaptureOutcomeEditor.State);
         VideoOutcomeEditor?.RefreshLocalization();
         GifOutcomeEditor?.RefreshLocalization();
         UpdateWindowTitle();
