@@ -25,6 +25,7 @@ public partial class SetupWizard : Window
     private readonly Dictionary<string, string> _languageItemSources = new(StringComparer.OrdinalIgnoreCase);
     private System.Windows.Threading.DispatcherTimer? _blockedDetectTimer;
     private System.Windows.Threading.DispatcherTimer? _resetWarningTimer;
+    private System.Windows.Threading.DispatcherTimer? _advisoryTimer;
     private System.Windows.Controls.ToolTip _tooltip = null!;
 
     public SetupWizard(SettingsService settingsService)
@@ -52,27 +53,94 @@ public partial class SetupWizard : Window
         RefreshLanguageComboDisplay();
         WizAfterCaptureOutcomeEditor?.RefreshLocalization();
 
-        // Respect a previous dismissal from Settings (the wizard has no reopen toggle),
-        // and otherwise only take the space while PrtSc is actually held by something else.
-        bool wizHideBanner = _settingsService.Settings.HidePrtScBanner;
-        if (!wizHideBanner)
-        {
-            try
-            {
-                var (wizMod, wizKey) = _settingsService.Settings.GetToolHotkey("rect");
-                wizHideBanner = !Services.HotkeyConflictProbe.IsPrtScOccupiedElsewhere(wizMod, wizKey);
-            }
-            catch
-            {
-                wizHideBanner = false;
-            }
-        }
-        WizPrtScWarnBanner.Visibility = wizHideBanner
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        // The banner only earns its space while PrtSc is actually held by something
+        // else; SyncWizPrtScBanner also names the real occupant (Snipping Tool vs
+        // known interceptors vs unknown owner), same as Configuration -> Hotkeys.
+        SyncWizPrtScBanner();
 
         // Show the first page explicitly (Page0 starts collapsed in XAML)
         Page0.Visibility = Visibility.Visible;
+    }
+
+    private void SyncWizPrtScBanner()
+    {
+        // A previous dismissal (from here or Settings) wins; otherwise the banner
+        // only earns its space while PrtSc is actually held by something else.
+        if (_settingsService.Settings.HidePrtScBanner)
+        {
+            WizPrtScWarnBanner.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var (rectMod, rectKey) = _settingsService.Settings.GetToolHotkey("rect");
+        bool occupied;
+        try
+        {
+            occupied = Services.HotkeyConflictProbe.IsPrtScOccupiedElsewhere(rectMod, rectKey);
+        }
+        catch
+        {
+            occupied = true;
+        }
+
+        WizPrtScWarnBanner.Visibility = occupied ? Visibility.Visible : Visibility.Collapsed;
+        if (occupied)
+        {
+            try
+            {
+                SyncWizPrtScBannerCause();
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("setup.prtsc-cause", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Points the finger at the right occupant, mirroring Settings: Snipping Tool keeps
+    /// its specific guidance (with the Windows Settings shortcut), other apps get a
+    /// generic text naming them when known (and the Windows button hides, it would not help).
+    /// </summary>
+    private void SyncWizPrtScBannerCause()
+    {
+        bool snipping;
+        IReadOnlyList<string> interceptors = Array.Empty<string>();
+        try
+        {
+            snipping = Services.HotkeyConflictProbe.IsSnippingToolBound();
+            if (!snipping)
+                interceptors = Services.HotkeyConflictProbe.DetectPrintScreenInterceptors();
+        }
+        catch
+        {
+            snipping = false;
+        }
+
+        if (snipping)
+        {
+            LocalizationService.SetSourceText(WizPrtScBannerTitle, "How to unbind Snipping Tool from the PrtSc key?");
+            LocalizationService.SetSourceText(WizPrtScBannerDesc, "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.");
+            LocalizationService.ApplyTo(WizPrtScWarnBanner, _settingsService.Settings.InterfaceLanguage);
+            WizOpenWinSettingsBtn.Visibility = Visibility.Visible;
+            return;
+        }
+
+        LocalizationService.SetSourceText(WizPrtScBannerTitle, "How to free the Print Screen key?");
+        WizPrtScBannerTitle.Text = LocalizationService.Translate("How to free the Print Screen key?");
+        // Note: the desc keeps its XAML Snipping Tool source; this runtime text wins
+        // because every ApplyTo(this) on language change is followed by SyncWizPrtScBanner.
+        if (interceptors.Count > 0)
+        {
+            WizPrtScBannerDesc.Text = string.Format(
+                LocalizationService.Translate("These apps may be holding the Print Screen key: {0}. Close them or change their shortcuts."),
+                string.Join(", ", interceptors));
+        }
+        else
+        {
+            WizPrtScBannerDesc.Text = LocalizationService.Translate("Another application is holding the Print Screen key. Close it or change its shortcut to free the key.");
+        }
+        WizOpenWinSettingsBtn.Visibility = Visibility.Collapsed;
     }
 
     private static string GetLanguageLabel(LocalizationLanguage language) =>
@@ -199,6 +267,7 @@ public partial class SetupWizard : Window
         LocalizationService.ApplyCurrentCulture(normalized);
         LocalizationService.ApplyTo(this, normalized);
         WizAfterCaptureOutcomeEditor?.RefreshLocalization();
+        SyncWizPrtScBanner();
         UpdateSaveDirectoryState();
         UpdateNavButtons();
         RefreshLanguageComboDisplay();
@@ -309,10 +378,49 @@ public partial class SetupWizard : Window
             _blockedDetectTimer.Stop();
             _blockedDetectTimer = null;
         }
+        HideWizAdvisory();
         WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
         WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
         _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
-        _tooltip.IsOpen = false;
+    }
+
+    /// <summary>
+    /// Advisory tooltips auto-close after a few seconds (parity with ToolListBuilder):
+    /// advisories born from the PrtSc button never take focus, so without a timer they
+    /// would linger while the user moves on.
+    /// </summary>
+    private void ShowWizAdvisory()
+    {
+        try
+        {
+            ShowWizAdvisory();
+            _advisoryTimer?.Stop();
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (ReferenceEquals(_advisoryTimer, timer))
+                {
+                    _advisoryTimer = null;
+                    try { _tooltip.IsOpen = false; }
+                    catch { }
+                }
+            };
+            _advisoryTimer = timer;
+            timer.Start();
+        }
+        catch { }
+    }
+
+    private void HideWizAdvisory()
+    {
+        try
+        {
+            _advisoryTimer?.Stop();
+            _advisoryTimer = null;
+            _tooltip.IsOpen = false;
+        }
+        catch { }
     }
 
     private void WizHotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
@@ -364,7 +472,7 @@ public partial class SetupWizard : Window
                         WizHotkeyTextBox.Foreground = System.Windows.Media.Brushes.Red;
                         WizHotkeyTextBox.FontWeight = FontWeights.Bold;
                         _tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
-                        _tooltip.IsOpen = true;
+                        ShowWizAdvisory();
                     }
                 };
             }
@@ -411,6 +519,7 @@ public partial class SetupWizard : Window
                 ApplyPrintScreenFeedback(canRegister: true, interceptors);
             else
                 Keyboard.ClearFocus();
+            SyncWizPrtScBanner();
         }
         catch (Exception ex)
         {
@@ -449,7 +558,7 @@ public partial class SetupWizard : Window
                         WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
                         WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
                         _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
-                        _tooltip.IsOpen = false;
+                        HideWizAdvisory();
                     }
                 };
                 _resetWarningTimer.Start();
@@ -458,7 +567,7 @@ public partial class SetupWizard : Window
             {
                 WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
                 WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-                _tooltip.IsOpen = false;
+                HideWizAdvisory();
             }
         }
     }
@@ -506,7 +615,7 @@ public partial class SetupWizard : Window
         WizHotkeyTextBox.Foreground = HotkeyWarningBrush;
         WizHotkeyTextBox.FontWeight = FontWeights.SemiBold;
         _tooltip.Content = LocalizationService.Translate("Global hotkeys require a modifier (Ctrl, Alt, or Shift).");
-        _tooltip.IsOpen = true;
+        ShowWizAdvisory();
     }
 
     private void ShowInternalHotkeyConflictWarning(uint mod, uint vk, string conflictLabelKey)
@@ -519,7 +628,7 @@ public partial class SetupWizard : Window
             LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
             HotkeyFormatter.Format(mod, vk),
             conflictLabel);
-        _tooltip.IsOpen = true;
+        ShowWizAdvisory();
     }
 
     private void ApplyPrintScreenFeedback(bool canRegister, IReadOnlyList<string> interceptors)
@@ -530,7 +639,7 @@ public partial class SetupWizard : Window
             WizHotkeyTextBox.Foreground = System.Windows.Media.Brushes.Red;
             WizHotkeyTextBox.FontWeight = FontWeights.Bold;
             _tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
-            _tooltip.IsOpen = true;
+            ShowWizAdvisory();
             return;
         }
 
@@ -541,13 +650,13 @@ public partial class SetupWizard : Window
             _tooltip.Content = string.Format(
                 LocalizationService.Translate("Print Screen assigned, but {0} may intercept it. Close it or change its shortcut."),
                 string.Join(", ", interceptors));
-            _tooltip.IsOpen = true;
+            ShowWizAdvisory();
             return;
         }
 
         WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
         WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-        _tooltip.IsOpen = false;
+        HideWizAdvisory();
     }
 
     private void WizPrtScBtn_Click(object sender, RoutedEventArgs e)
@@ -571,6 +680,7 @@ public partial class SetupWizard : Window
             WizHotkeyTextBox.Text = HotkeyFormatter.Format(0, Native.User32.VK_SNAPSHOT);
             app?.RegisterHotkeys(showReadyNotification: false);
             ApplyPrintScreenFeedback(canReg, interceptors);
+            SyncWizPrtScBanner();
         }
         catch (Exception ex)
         {
@@ -599,6 +709,7 @@ public partial class SetupWizard : Window
                 app.RegisterHotkeys(showReadyNotification: false);
             }
             Keyboard.ClearFocus();
+            SyncWizPrtScBanner();
         }
         catch (Exception ex)
         {
@@ -629,6 +740,7 @@ public partial class SetupWizard : Window
                 app.RegisterHotkeys(showReadyNotification: false);
             }
             Keyboard.ClearFocus();
+            SyncWizPrtScBanner();
         }
         catch (Exception ex)
         {
@@ -790,9 +902,6 @@ public partial class SetupWizard : Window
 
     private void UpdateSaveDirectoryState()
     {
-        WizSaveToFileCheck.IsEnabled = true;
-        WizSaveToFileCheck.Opacity = 1.0;
-
         var saveEnabled = WizSaveToFileCheck.IsChecked == true;
         WizSaveDirRow.Opacity = saveEnabled ? 1 : 0.48;
         WizBrowseSaveDirBtn.IsEnabled = saveEnabled;
@@ -1063,19 +1172,18 @@ public partial class SetupWizard : Window
             ? System.Windows.Media.Color.FromArgb(64, 0, 0, 0)
             : System.Windows.Media.Color.FromArgb(36, 0, 0, 0));
         Resources["WizAccentGlowColor"] = accent;
-        Resources["WizGlowColor"] = Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(58, accent.R, accent.G, accent.B)
-            : System.Windows.Media.Color.FromArgb(30, accent.R, accent.G, accent.B);
+        // Sober flat sidebar, neutral per theme (no cyan/blue tint, no glow layer:
+        // the active step dot carries the accent). Gray keeps its graphite pair.
         Resources["WizSidebarTopColor"] = Theme.IsGray
             ? System.Windows.Media.Color.FromRgb(34, 37, 41)
             : Theme.IsDark
-            ? System.Windows.Media.Color.FromRgb(15, 30, 44)
-            : System.Windows.Media.Color.FromRgb(226, 236, 245);
+            ? System.Windows.Media.Color.FromRgb(22, 25, 30)
+            : System.Windows.Media.Color.FromRgb(233, 235, 238);
         Resources["WizSidebarBottomColor"] = Theme.IsGray
             ? System.Windows.Media.Color.FromRgb(22, 24, 27)
             : Theme.IsDark
-            ? System.Windows.Media.Color.FromRgb(11, 14, 22)
-            : System.Windows.Media.Color.FromRgb(213, 219, 230);
+            ? System.Windows.Media.Color.FromRgb(18, 20, 23)
+            : System.Windows.Media.Color.FromRgb(221, 224, 229);
         Foreground = Theme.Brush(Theme.TextPrimary);
         Icon = ThemedLogo.Square(32);
     }
@@ -1182,6 +1290,10 @@ public partial class SetupWizard : Window
 
     private void CloseWizPrtScWarnBanner_Click(object sender, RoutedEventArgs e)
     {
+        // Dismissal is shared with Settings: it stays hidden there too until re-shown
+        // from the Hotkeys tab info button.
+        _settingsService.Settings.HidePrtScBanner = true;
+        try { _settingsService.Save(); } catch { }
         WizPrtScWarnBanner.Visibility = Visibility.Collapsed;
     }
 

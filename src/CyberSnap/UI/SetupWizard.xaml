@@ -25,9 +25,8 @@
         <Color x:Key="WizShadowColor">#80000000</Color>
         <SolidColorBrush x:Key="WizPanelShadow" Color="#40000000"/>
         <Color x:Key="WizAccentGlowColor">#00FFFF</Color>
-        <Color x:Key="WizSidebarTopColor">#0F1E2C</Color>
-        <Color x:Key="WizSidebarBottomColor">#0B0E16</Color>
-        <Color x:Key="WizGlowColor">#3A00FFFF</Color>
+        <Color x:Key="WizSidebarTopColor">#16191E</Color>
+        <Color x:Key="WizSidebarBottomColor">#121417</Color>
 
         <Style x:Key="WizBtn" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="FontSize" Value="13"/>
@@ -447,15 +446,7 @@
                 </LinearGradientBrush>
             </Grid.Background>
 
-            <!-- accent glow -->
-            <Border IsHitTestVisible="False">
-                <Border.Background>
-                    <RadialGradientBrush Center="0.22,0.14" GradientOrigin="0.22,0.14" RadiusX="1.15" RadiusY="0.72">
-                        <GradientStop Color="{DynamicResource WizGlowColor}" Offset="0"/>
-                        <GradientStop Color="#00FFFFFF" Offset="1"/>
-                    </RadialGradientBrush>
-                </Border.Background>
-            </Border>
+            <!-- Flat, sober sidebar: no accent glow, the active step dot carries the accent. -->
 
             <Grid Margin="28,36,26,26">
                 <Grid.RowDefinitions>
@@ -473,7 +464,8 @@
                                Foreground="{DynamicResource WizFg}" Margin="0,14,0,0"/>
                     <TextBlock Text="Let's get you set up" FontSize="12.5"
                                FontFamily="Segoe UI Variable Text"
-                               Foreground="{DynamicResource WizFgMuted}" Margin="0,3,0,0"/>
+                               Foreground="{DynamicResource WizFgMuted}" Margin="0,3,0,0"
+                               Services:LocalizationService.SourceText="Let's get you set up"/>
                 </StackPanel>
 
                 <!-- Numbered stepper -->
@@ -493,9 +485,11 @@
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="StepLabel1" Text="Appearance" FontSize="14"
-                                       FontFamily="Segoe UI Variable Text"/>
+                                       FontFamily="Segoe UI Variable Text"
+                                       Services:LocalizationService.SourceText="Appearance"/>
                             <TextBlock x:Name="StepSub1" Text="Language and visual theme" FontSize="11"
-                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"
+                                       Services:LocalizationService.SourceText="Language and visual theme"/>
                         </StackPanel>
                     </Grid>
 
@@ -514,9 +508,11 @@
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="StepLabel2" Text="Capture" FontSize="14"
-                                       FontFamily="Segoe UI Variable Text"/>
+                                       FontFamily="Segoe UI Variable Text"
+                                       Services:LocalizationService.SourceText="Capture"/>
                             <TextBlock x:Name="StepSub2" Text="Behavior and overlays" FontSize="11"
-                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"
+                                       Services:LocalizationService.SourceText="Behavior and overlays"/>
                         </StackPanel>
                     </Grid>
 
@@ -535,9 +531,11 @@
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="StepLabel3" Text="Saving" FontSize="14"
-                                       FontFamily="Segoe UI Variable Text"/>
+                                       FontFamily="Segoe UI Variable Text"
+                                       Services:LocalizationService.SourceText="Saving"/>
                             <TextBlock x:Name="StepSub3" Text="After capture and files" FontSize="11"
-                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"
+                                       Services:LocalizationService.SourceText="After capture and files"/>
                         </StackPanel>
                     </Grid>
 
@@ -556,9 +554,11 @@
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="StepLabel4" Text="Hotkeys" FontSize="14"
-                                       FontFamily="Segoe UI Variable Text"/>
+                                       FontFamily="Segoe UI Variable Text"
+                                       Services:LocalizationService.SourceText="Hotkeys"/>
                             <TextBlock x:Name="StepSub4" Text="Your shortcuts" FontSize="11"
-                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"
+                                       Services:LocalizationService.SourceText="Your shortcuts"/>
                         </StackPanel>
                     </Grid>
 
@@ -577,16 +577,19 @@
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="StepLabel5" Text="Ready" FontSize="14"
-                                       FontFamily="Segoe UI Variable Text"/>
+                                       FontFamily="Segoe UI Variable Text"
+                                       Services:LocalizationService.SourceText="Ready"/>
                             <TextBlock x:Name="StepSub5" Text="Finish up" FontSize="11"
-                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"
+                                       Services:LocalizationService.SourceText="Finish up"/>
                         </StackPanel>
                     </Grid>
                 </StackPanel>
 
                 <TextBlock Grid.Row="2" Text="You can change everything later in Settings."
                            FontSize="11" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"
-                           Foreground="{DynamicResource WizFgMuted}" Opacity="0.7"/>
+                           Foreground="{DynamicResource WizFgMuted}" Opacity="0.7"
+                           Services:LocalizationService.SourceText="You can change everything later in Settings."/>
             </Grid>
         </Grid>
 
@@ -609,6 +612,7 @@
                         FontSize="15"
                         Style="{StaticResource WizBtnClose}"
                         ToolTip="Accept defaults and close the Setup Wizard"
+                        Services:LocalizationService.SourceToolTip="Accept defaults and close the Setup Wizard"
                         Click="Skip_Click"/>
             </StackPanel>
 
@@ -617,14 +621,17 @@
                     <StackPanel>
                         <TextBlock Text="Appearance" FontSize="24" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Display"
-                                   Foreground="{DynamicResource WizFg}"/>
+                                   Foreground="{DynamicResource WizFg}"
+                                   Services:LocalizationService.SourceText="Appearance"/>
                         <TextBlock Text="Customize the language and visual appearance of the application"
                                    FontSize="13" FontFamily="Segoe UI Variable Text"
-                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,20"/>
+                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,20"
+                                   Services:LocalizationService.SourceText="Customize the language and visual appearance of the application"/>
 
                         <TextBlock Text="Interface language" FontSize="13" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Text"
-                                   Foreground="{DynamicResource WizFg}" Margin="0,0,0,8"/>
+                                   Foreground="{DynamicResource WizFg}" Margin="0,0,0,8"
+                                   Services:LocalizationService.SourceText="Interface language"/>
 
                         <Border Style="{StaticResource WizRow}">
                             <Grid>
@@ -633,20 +640,23 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Language" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"
+                                           Services:LocalizationService.SourceText="Language"/>
                                 <ComboBox x:Name="WizLanguageCombo" Grid.Column="1"
                                           MinWidth="200" Height="32"
                                           Style="{StaticResource WizComboBox}"
                                           ItemContainerStyle="{StaticResource WizComboBoxItem}"
-                                          VerticalContentAlignment="Center" FontSize="12"
-                                          ToolTip="Language"
-                                          SelectionChanged="Language_SelectionChanged"/>
+                                           VerticalContentAlignment="Center" FontSize="12"
+                                           ToolTip="Language"
+                                           Services:LocalizationService.SourceToolTip="Language"
+                                           SelectionChanged="Language_SelectionChanged"/>
                             </Grid>
                         </Border>
 
                         <TextBlock Text="Theme" FontSize="13" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Text"
-                                   Foreground="{DynamicResource WizFg}" Margin="0,14,0,8"/>
+                                   Foreground="{DynamicResource WizFg}" Margin="0,14,0,8"
+                                   Services:LocalizationService.SourceText="Theme"/>
 
                         <Border Style="{StaticResource WizRow}" Padding="14,14">
                             <StackPanel Orientation="Horizontal">
@@ -655,24 +665,28 @@
                                              GroupName="WizTheme" Margin="0,0,10,0"
                                              AutomationProperties.Name="CyberSnap theme"
                                              ToolTip="Always use the signature CyberSnap theme."
+                                             Services:LocalizationService.SourceToolTip="Always use the signature CyberSnap theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <controls:ThemeCard x:Name="WizThemeGrayscaleRadio"
                                              Caption="Dark" ThemeMode="Grayscale" CardWidth="90"
                                              GroupName="WizTheme" Margin="0,0,10,0"
                                              AutomationProperties.Name="Dark theme"
                                              ToolTip="Sober, monochrome dark theme."
+                                             Services:LocalizationService.SourceToolTip="Sober, monochrome dark theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <controls:ThemeCard x:Name="WizThemeLightRadio"
                                              Caption="Light" ThemeMode="Light" CardWidth="90"
                                              GroupName="WizTheme" Margin="0,0,10,0"
                                              AutomationProperties.Name="Light theme"
                                              ToolTip="Always use the light theme."
+                                             Services:LocalizationService.SourceToolTip="Always use the light theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <controls:ThemeCard x:Name="WizThemeAutoRadio"
                                              Caption="System" ThemeMode="System" CardWidth="90"
                                              GroupName="WizTheme"
                                              AutomationProperties.Name="System theme"
                                              ToolTip="Follows Windows: CyberSnap when dark, Light when light."
+                                             Services:LocalizationService.SourceToolTip="Follows Windows: CyberSnap when dark, Light when light."
                                              Checked="ThemeRadio_Changed"/>
                             </StackPanel>
                         </Border>
@@ -685,10 +699,12 @@
                     <StackPanel>
                         <TextBlock Text="Capture" FontSize="24" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Display"
-                                   Foreground="{DynamicResource WizFg}"/>
+                                   Foreground="{DynamicResource WizFg}"
+                                   Services:LocalizationService.SourceText="Capture"/>
                         <TextBlock Text="Behavior and overlays during capture" FontSize="13"
                                    FontFamily="Segoe UI Variable Text"
-                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,18"/>
+                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,18"
+                                   Services:LocalizationService.SourceText="Behavior and overlays during capture"/>
 
                         <Border Style="{StaticResource WizRow}">
                             <Grid>
@@ -697,7 +713,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Show pixel magnifier near cursor" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"
+                                           Services:LocalizationService.SourceText="Show pixel magnifier near cursor"/>
                                 <CheckBox x:Name="WizCaptureMagnifierCheck" Grid.Column="1" Content=""
                                           Style="{StaticResource WizCheckBox}"/>
                             </Grid>
@@ -709,7 +726,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Enable sounds" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"
+                                           Services:LocalizationService.SourceText="Enable sounds"/>
                                 <CheckBox x:Name="WizEnableSoundsCheck" Grid.Column="1" Content=""
                                           Style="{StaticResource WizCheckBox}"/>
                             </Grid>
@@ -721,7 +739,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Show capture widget" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"
+                                           Services:LocalizationService.SourceText="Show capture widget"/>
                                 <CheckBox x:Name="WizCaptureWidgetCheck" Grid.Column="1" Content=""
                                           Style="{StaticResource WizCheckBox}"/>
                             </Grid>
@@ -733,7 +752,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Show crosshair guides" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"
+                                           Services:LocalizationService.SourceText="Show crosshair guides"/>
                                 <CheckBox x:Name="WizCrosshairCheck" Grid.Column="1" Content=""
                                           Style="{StaticResource WizCheckBox}"/>
                             </Grid>
@@ -747,10 +767,12 @@
                     <StackPanel>
                         <TextBlock Text="Saving" FontSize="24" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Display"
-                                   Foreground="{DynamicResource WizFg}"/>
+                                   Foreground="{DynamicResource WizFg}"
+                                   Services:LocalizationService.SourceText="Saving"/>
                         <TextBlock Text="Choose what happens when a capture finishes" FontSize="13"
                                    FontFamily="Segoe UI Variable Text"
-                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,18"/>
+                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,18"
+                                   Services:LocalizationService.SourceText="Choose what happens when a capture finishes"/>
 
                         <Border Style="{StaticResource WizRow}" Padding="14,16" Margin="0,0,0,12">
                             <StackPanel>
@@ -773,7 +795,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Save screenshots to file" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"
+                                           Services:LocalizationService.SourceText="Save screenshots to file"/>
                                 <CheckBox x:Name="WizSaveToFileCheck" Grid.Column="1" Content=""
                                           Style="{StaticResource WizCheckBox}"
                                           Checked="WizSaveToFile_Changed" Unchecked="WizSaveToFile_Changed"/>
@@ -782,14 +805,17 @@
                         <Border x:Name="WizSaveDirRow" Style="{StaticResource WizRow}">
                             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Save directory" FontSize="13" Foreground="{DynamicResource WizFg}"/>
+                                    <TextBlock Text="Save directory" FontSize="13" Foreground="{DynamicResource WizFg}"
+                                               Services:LocalizationService.SourceText="Save directory"/>
                                     <TextBlock x:Name="WizSaveDirText" Text="" FontSize="11"
                                                Foreground="{DynamicResource WizFgMuted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
                                     <TextBlock x:Name="WizSaveDirDisabledHint" Text="Files won't be saved to disk."
                                                FontSize="11" Foreground="{DynamicResource WizFgMuted}"
-                                               Margin="0,2,0,0" TextWrapping="Wrap" Visibility="Collapsed" Opacity="0.85"/>
+                                               Margin="0,2,0,0" TextWrapping="Wrap" Visibility="Collapsed" Opacity="0.85"
+                                               Services:LocalizationService.SourceText="Files won't be saved to disk."/>
                                 </StackPanel>
                                 <Button x:Name="WizBrowseSaveDirBtn" Grid.Column="1" Content="Browse" Style="{StaticResource WizBtnSecondary}"
+                                        Services:LocalizationService.SourceText="Browse"
                                         Padding="12,6" MinWidth="0" MinHeight="0" FontSize="11" Click="BrowseSaveDir_Click"/>
                             </Grid>
                         </Border>
@@ -869,33 +895,65 @@
                             </Grid>
                         </Border>
                         
-                        <!-- PrtSc Snipping Tool Warn Banner (removable warning) -->
+                        <!-- PrtSc occupant banner: title/desc name the real occupant
+                             (Snipping Tool vs known interceptors vs unknown owner),
+                             same as Configuration -> Hotkeys. -->
                         <Border x:Name="WizPrtScWarnBanner" CornerRadius="8" Padding="20,16" Margin="0,0,0,12"
                                 Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1" Visibility="Visible">
+                            <StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                
+
                                 <!-- Info Icon matching style and color of footer -->
                                 <TextBlock Grid.Column="0" Text="&#xE946;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                            FontSize="14" Foreground="{DynamicResource WizAccent}"
                                            VerticalAlignment="Top" Margin="0,2,12,0"/>
-                                      
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="How to unbind Snipping Tool from the PrtSc key?"
-                                               Services:LocalizationService.SourceText="How to unbind Snipping Tool from the PrtSc key?"
-                                               FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource WizFg}" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
-                                               Services:LocalizationService.SourceText="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
-                                               FontSize="11.5" Foreground="{DynamicResource WizFgMuted}" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap" Margin="0,4,0,10" Opacity="0.9"/>
-                                    <Button x:Name="WizOpenWinSettingsBtn" Content="Open Windows Settings"
-                                            Services:LocalizationService.SourceText="Open Windows Settings" Style="{StaticResource WizBtnSecondary}"
-                                            HorizontalAlignment="Left" Padding="12,5" Height="28" MinHeight="28" FontSize="11"
-                                            Cursor="Hand" Click="WizOpenWinSettingsBtn_Click"/>
-                                </StackPanel>
+
+                                <TextBlock x:Name="WizPrtScBannerTitle" Grid.Column="1" VerticalAlignment="Center"
+                                           Text="How to unbind Snipping Tool from the PrtSc key?"
+                                           Services:LocalizationService.SourceText="How to unbind Snipping Tool from the PrtSc key?"
+                                           FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource WizFg}" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"/>
+
+                                <Button Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right"
+                                        Width="24" Height="24" Content="×" FontSize="20"
+                                        Foreground="{DynamicResource WizFg}" Opacity="0.55" Cursor="Hand"
+                                        Click="CloseWizPrtScWarnBanner_Click" ToolTip="Hide"
+                                        Services:LocalizationService.SourceToolTip="Hide" Margin="8,0,0,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="Transparent">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Opacity" Value="1"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                             </Grid>
+
+                            <StackPanel Margin="26,8,0,0">
+                                <TextBlock x:Name="WizPrtScBannerDesc" Text="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
+                                           Services:LocalizationService.SourceText="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
+                                           FontSize="11.5" Foreground="{DynamicResource WizFgMuted}" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap" Margin="0,0,0,10" Opacity="0.9"/>
+                                <Button x:Name="WizOpenWinSettingsBtn" Content="Open Windows Settings"
+                                        Services:LocalizationService.SourceText="Open Windows Settings" Style="{StaticResource WizBtnSecondary}"
+                                        HorizontalAlignment="Left" Padding="12,5" Height="28" MinHeight="28" FontSize="11"
+                                        Cursor="Hand" Click="WizOpenWinSettingsBtn_Click"/>
+                            </StackPanel>
+                            </StackPanel>
                         </Border>
 
                         <StackPanel x:Name="WizAnnotationPanelHotkeys"/>
@@ -915,16 +973,21 @@
                     <TextBlock Text="You're all set!" FontSize="26" FontWeight="SemiBold"
                                FontFamily="Segoe UI Variable Display"
                                Foreground="{DynamicResource WizFg}" HorizontalAlignment="Center"
-                               Margin="0,20,0,0"/>
+                               Margin="0,20,0,0"
+                               Services:LocalizationService.SourceText="You're all set!"/>
                     <TextBlock FontSize="13" FontFamily="Segoe UI Variable Text" TextAlignment="Center"
                                Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center"
-                               Margin="0,12,0,0" LineHeight="22">
-                        Close this wizard to start using CyberSnap.
-                        <LineBreak/>
-                        Your hotkeys and tray icon will be ready once you close this window.
-                    </TextBlock>
+                               Margin="0,12,0,0" LineHeight="22"
+                               Text="Close this wizard to start using CyberSnap."
+                               Services:LocalizationService.SourceText="Close this wizard to start using CyberSnap."/>
+                    <TextBlock FontSize="13" FontFamily="Segoe UI Variable Text" TextAlignment="Center"
+                               Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center"
+                               LineHeight="22"
+                               Text="Your hotkeys and tray icon will be ready once you close this window."
+                               Services:LocalizationService.SourceText="Your hotkeys and tray icon will be ready once you close this window."/>
 
                     <Button Content="Open Settings" Style="{StaticResource WizBtnSecondary}"
+                            Services:LocalizationService.SourceText="Open Settings"
                             HorizontalAlignment="Center" Margin="0,24,0,0"
                             Click="OpenSettings_Click"/>
                 </StackPanel>
@@ -937,10 +1000,13 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Button x:Name="SkipBtn" Content="Skip setup" Style="{StaticResource WizBtnSecondary}"
+                            Services:LocalizationService.SourceText="Skip setup"
                             ToolTip="Accept defaults and close the Setup Wizard"
+                            Services:LocalizationService.SourceToolTip="Accept defaults and close the Setup Wizard"
                             Click="Skip_Click" HorizontalAlignment="Left" VerticalAlignment="Center"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button x:Name="BackBtn" Content="Back" Style="{StaticResource WizBtnSecondary}"
+                                Services:LocalizationService.SourceText="Back"
                                 Click="Back_Click" Visibility="Collapsed" Margin="0,0,8,0"/>
                         <Button x:Name="NextBtn" Content="Next" Style="{StaticResource WizBtnPrimary}"
                                 Click="Next_Click"/>
