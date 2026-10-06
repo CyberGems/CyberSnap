@@ -28,6 +28,7 @@ public partial class SetupWizard : Window
     private System.Windows.Threading.DispatcherTimer? _resetWarningTimer;
     private System.Windows.Threading.DispatcherTimer? _advisoryTimer;
     private System.Windows.Controls.ToolTip _tooltip = null!;
+    private bool _wizPrtScBannerDismissed;
 
     public SetupWizard(SettingsService settingsService)
     {
@@ -65,27 +66,50 @@ public partial class SetupWizard : Window
 
     private void SyncWizPrtScBanner()
     {
-        // A previous dismissal (from here or Settings) wins; otherwise the banner
-        // only earns its space while PrtSc is actually held by something else.
-        if (_settingsService.Settings.HidePrtScBanner)
+        // A dismissal from Settings wins; the wizard X below is session-only so
+        // trying it out never kills the Settings banner.
+        if (_settingsService.Settings.HidePrtScBanner || _wizPrtScBannerDismissed)
         {
             WizPrtScWarnBanner.Visibility = Visibility.Collapsed;
             return;
         }
 
+        // Relevance gate: the banner only earns its space when the user actually
+        // chose PrtSc. Showing Snipping Tool unbind guides to someone happily on
+        // Alt+Shift+A is the "nonsense banner" — PrtSc occupancy alone is not news.
         var (rectMod, rectKey) = _settingsService.Settings.GetToolHotkey("rect");
-        bool occupied;
-        try
+        if (rectMod != 0 || rectKey != Native.User32.VK_SNAPSHOT)
         {
-            occupied = Services.HotkeyConflictProbe.IsPrtScOccupiedElsewhere(rectMod, rectKey);
-        }
-        catch
-        {
-            occupied = true;
+            WizPrtScWarnBanner.Visibility = Visibility.Collapsed;
+            return;
         }
 
-        WizPrtScWarnBanner.Visibility = occupied ? Visibility.Visible : Visibility.Collapsed;
-        if (occupied)
+        // Trouble check: named interceptors (Snipping Tool, ShareX, ...) or another
+        // app owning PrtSc via RegisterHotKey. Probing requires our own hotkeys to
+        // be released first, otherwise we conflict with ourselves.
+        bool trouble;
+        var app = Application.Current as App;
+        try
+        {
+            app?.UnregisterAllHotkeys();
+            try
+            {
+                trouble = HotkeyConflictProbe.DetectPrintScreenInterceptors().Count > 0
+                    || !HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT);
+            }
+            catch
+            {
+                trouble = false;
+            }
+        }
+        finally
+        {
+            try { app?.RegisterHotkeys(showReadyNotification: false); }
+            catch { }
+        }
+
+        WizPrtScWarnBanner.Visibility = trouble ? Visibility.Visible : Visibility.Collapsed;
+        if (trouble)
         {
             try
             {
@@ -1223,7 +1247,8 @@ public partial class SetupWizard : Window
 
     private void StepDot_Click(object sender, MouseButtonEventArgs e)
     {
-        if (sender is Border dot && dot.Tag is string tag && int.TryParse(tag, out int target))
+        // Attached to the whole step row (dot + labels), so Tag lives on the Grid.
+        if (sender is FrameworkElement row && row.Tag is string tag && int.TryParse(tag, out int target))
         {
             e.Handled = true;
             GoToPage(target);
@@ -1262,10 +1287,9 @@ public partial class SetupWizard : Window
 
     private void CloseWizPrtScWarnBanner_Click(object sender, RoutedEventArgs e)
     {
-        // Dismissal is shared with Settings: it stays hidden there too until re-shown
-        // from the Hotkeys tab info button.
-        _settingsService.Settings.HidePrtScBanner = true;
-        try { _settingsService.Save(); } catch { }
+        // Session-only: experimenting with the wizard X must never kill the
+        // Settings banner. Permanent dismissal lives in Configuration -> Hotkeys.
+        _wizPrtScBannerDismissed = true;
         WizPrtScWarnBanner.Visibility = Visibility.Collapsed;
     }
 

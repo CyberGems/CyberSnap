@@ -470,15 +470,16 @@
 
                 <!-- Numbered stepper -->
                 <StackPanel Grid.Row="1" x:Name="StepList" VerticalAlignment="Center">
-                    <Grid x:Name="StepRow1" Margin="0,0,0,20">
+                    <Grid x:Name="StepRow1" Margin="0,0,0,20" Background="Transparent"
+                          Cursor="Hand" Tag="1"
+                          MouseLeftButtonDown="StepDot_MouseDown"
+                          MouseLeftButtonUp="StepDot_Click">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot1" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center"
-                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
-                                MouseLeftButtonUp="StepDot_Click" Tag="1">
+                                BorderThickness="1.5" VerticalAlignment="Center">
                             <TextBlock x:Name="StepNum1" Text="1" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -493,15 +494,16 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid x:Name="StepRow2" Margin="0,0,0,20">
+                    <Grid x:Name="StepRow2" Margin="0,0,0,20" Background="Transparent"
+                          Cursor="Hand" Tag="2"
+                          MouseLeftButtonDown="StepDot_MouseDown"
+                          MouseLeftButtonUp="StepDot_Click">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot2" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center"
-                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
-                                MouseLeftButtonUp="StepDot_Click" Tag="2">
+                                BorderThickness="1.5" VerticalAlignment="Center">
                             <TextBlock x:Name="StepNum2" Text="2" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -516,15 +518,16 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid x:Name="StepRow3" Margin="0,0,0,20">
+                    <Grid x:Name="StepRow3" Margin="0,0,0,20" Background="Transparent"
+                          Cursor="Hand" Tag="3"
+                          MouseLeftButtonDown="StepDot_MouseDown"
+                          MouseLeftButtonUp="StepDot_Click">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot3" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center"
-                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
-                                MouseLeftButtonUp="StepDot_Click" Tag="3">
+                                BorderThickness="1.5" VerticalAlignment="Center">
                             <TextBlock x:Name="StepNum3" Text="3" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -539,15 +542,16 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid x:Name="StepRow4" Margin="0,0,0,20">
+                    <Grid x:Name="StepRow4" Margin="0,0,0,20" Background="Transparent"
+                          Cursor="Hand" Tag="4"
+                          MouseLeftButtonDown="StepDot_MouseDown"
+                          MouseLeftButtonUp="StepDot_Click">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot4" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center"
-                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
-                                MouseLeftButtonUp="StepDot_Click" Tag="4">
+                                BorderThickness="1.5" VerticalAlignment="Center">
                             <TextBlock x:Name="StepNum4" Text="4" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -562,15 +566,16 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid x:Name="StepRow5">
+                    <Grid x:Name="StepRow5" Background="Transparent"
+                          Cursor="Hand" Tag="5"
+                          MouseLeftButtonDown="StepDot_MouseDown"
+                          MouseLeftButtonUp="StepDot_Click">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot5" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center"
-                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
-                                MouseLeftButtonUp="StepDot_Click" Tag="5">
+                                BorderThickness="1.5" VerticalAlignment="Center">
                             <TextBlock x:Name="StepNum5" Text="5" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
