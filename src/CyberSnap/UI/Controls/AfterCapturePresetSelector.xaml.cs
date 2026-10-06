@@ -40,6 +40,10 @@ public partial class AfterCapturePresetSelector : UserControl
 
     public Orientation CardsOrientation { get; set; } = Orientation.Horizontal;
 
+    /// <summary>Two-line cards (title + subtitle on one row, description below)
+    /// for narrow hosts like the SetupWizard.</summary>
+    public bool CompactText { get; set; }
+
     /// <summary>Highlight the preset matching <paramref name="state"/>, or Custom.</summary>
     public void Refresh(AfterCaptureOutcomeState state)
     {
@@ -59,12 +63,21 @@ public partial class AfterCapturePresetSelector : UserControl
         CardsHost.Orientation = Orientation.Vertical;
 
         Panel host = CardsOrientation == Orientation.Horizontal
-            ? new WrapPanel { Orientation = Orientation.Horizontal }
+            // One shared row: three equal thirds, no wrap, no dead space.
+            ? new System.Windows.Controls.Primitives.UniformGrid { Columns = 3 }
             : new StackPanel { Orientation = Orientation.Vertical };
         CardsHost.Children.Add(host);
 
-        foreach (var preset in AfterCaptureOutcomePresets.Selectable)
-            host.Children.Add(BuildPresetCard(preset));
+        var presets = AfterCaptureOutcomePresets.Selectable;
+        for (int i = 0; i < presets.Length; i++)
+        {
+            var card = BuildPresetCard(presets[i]);
+            if (CardsOrientation == Orientation.Horizontal
+                && i == presets.Length - 1
+                && card is Border last)
+                last.Margin = new Thickness(0);
+            host.Children.Add(card);
+        }
 
         if (_hasState && _selected == AfterCapturePreset.Custom)
             host.Children.Add(BuildCustomBadge());
@@ -111,8 +124,21 @@ public partial class AfterCapturePresetSelector : UserControl
         };
 
         var body = new StackPanel { Orientation = Orientation.Vertical };
-        body.Children.Add(titleBlock);
-        body.Children.Add(subtitleBlock);
+        if (CompactText)
+        {
+            var header = new StackPanel { Orientation = Orientation.Horizontal };
+            titleBlock.Margin = new Thickness(0);
+            subtitleBlock.Margin = new Thickness(6, 0, 0, 0);
+            subtitleBlock.VerticalAlignment = VerticalAlignment.Center;
+            header.Children.Add(titleBlock);
+            header.Children.Add(subtitleBlock);
+            body.Children.Add(header);
+        }
+        else
+        {
+            body.Children.Add(titleBlock);
+            body.Children.Add(subtitleBlock);
+        }
         body.Children.Add(descBlock);
 
         var idleBg = TryBrush("ThemeInputBackgroundBrush", MediaColor(0xFF, 0x2A, 0x2D, 0x33));
@@ -125,13 +151,10 @@ public partial class AfterCapturePresetSelector : UserControl
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(12, 10, 12, 10),
             Margin = CardsOrientation == Orientation.Horizontal
-                ? new Thickness(0, 0, 8, 8)
+                ? new Thickness(0, 0, 8, 0)
                 : new Thickness(0, 0, 0, 8),
-            MinWidth = CardsOrientation == Orientation.Horizontal ? 150 : 0,
-            MaxWidth = CardsOrientation == Orientation.Horizontal ? 220 : double.PositiveInfinity,
-            HorizontalAlignment = CardsOrientation == Orientation.Horizontal
-                ? HAlign.Left
-                : HAlign.Stretch,
+            MinWidth = 0,
+            HorizontalAlignment = HAlign.Stretch,
             Background = selected ? activeBg : idleBg,
             BorderBrush = selected ? activeBorder : idleBorder,
             BorderThickness = new Thickness(1),

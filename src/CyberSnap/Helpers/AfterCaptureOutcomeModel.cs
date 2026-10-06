@@ -321,9 +321,9 @@ public static class AfterCaptureOutcomeModel
 
 /// <summary>
 /// Friendly capture presets over <see cref="AfterCaptureOutcomeState"/>.
-/// Basic = save silently, Intermediate = preview then save, Advanced = edit.
-/// Custom is not selectable: it reports a state that matches no preset
-/// (manual chip setup, or a preset with Save toggled off).
+/// Basic = save with a confirming notification, Intermediate = preview then save,
+/// Advanced = edit. Custom is not selectable: it reports a state that matches no
+/// preset (manual chip setup, or a preset with Save toggled off).
 /// </summary>
 public enum AfterCapturePreset
 {
@@ -346,9 +346,11 @@ public static class AfterCaptureOutcomePresets
     public static AfterCaptureOutcomeState GetState(AfterCapturePreset preset) =>
         AfterCaptureOutcomeModel.Normalize(preset switch
         {
+            // Newcomer-friendly: silent save would feel like nothing happened,
+            // so Basic confirms with a notification.
             AfterCapturePreset.Basic => new AfterCaptureOutcomeState(
                 Save: true,
-                Destination: AfterCaptureDestination.None,
+                Destination: AfterCaptureDestination.Notification,
                 SystemViewer: false,
                 Clipboard: false,
                 Preview: false),
@@ -358,9 +360,11 @@ public static class AfterCaptureOutcomePresets
                 SystemViewer: false,
                 Clipboard: true,
                 Preview: false),
+            // The preview window itself is the feedback: no extra notification,
+            // which would linger until the preview closes anyway.
             _ => new AfterCaptureOutcomeState(
                 Save: true,
-                Destination: AfterCaptureDestination.Notification,
+                Destination: AfterCaptureDestination.None,
                 SystemViewer: false,
                 Clipboard: true,
                 Preview: true),
@@ -388,7 +392,7 @@ public static class AfterCaptureOutcomePresets
 
     public static string SubtitleKey(AfterCapturePreset preset) => preset switch
     {
-        AfterCapturePreset.Basic => "Save only",
+        AfterCapturePreset.Basic => "Save with notification",
         AfterCapturePreset.Intermediate => "Save and preview",
         AfterCapturePreset.Advanced => "Save and edit",
         _ => "Custom"
@@ -396,8 +400,8 @@ public static class AfterCaptureOutcomePresets
 
     public static string DescriptionKey(AfterCapturePreset preset) => preset switch
     {
-        AfterCapturePreset.Basic => "Captures are saved silently to your folder.",
-        AfterCapturePreset.Intermediate => "Preview each capture, then save it with a notification.",
+        AfterCapturePreset.Basic => "Saves each capture and confirms it with a notification.",
+        AfterCapturePreset.Intermediate => "Preview each capture, then save it.",
         AfterCapturePreset.Advanced => "Open every capture in the annotation editor.",
         _ => ""
     };
