@@ -1871,11 +1871,13 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void UpdateCopySubmenuVisibility(ToolStripMenuItem submenu)
     {
+        // Disabled, never hidden: a lone item in a submenu reads as broken,
+        // while greyed rows explain themselves and justify the submenu.
         bool hasPath = !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
         if (submenu.Tag is ToolStripMenuItem[] fileItems)
         {
             foreach (var item in fileItems)
-                item.Visible = hasPath;
+                item.Enabled = hasPath;
         }
     }
 

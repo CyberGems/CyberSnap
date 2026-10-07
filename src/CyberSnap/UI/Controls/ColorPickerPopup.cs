@@ -263,8 +263,12 @@ internal sealed class ColorPickerPopup : ContentControl
             }
         };
         goteroBtn.Click += (_, _) => { CloseRequested?.Invoke(); PickFromScreen(); };
-        goteroBtn.MouseEnter += (_, _) => goteroBtn.Background = Theme.Brush(Theme.TabHoverBg);
-        goteroBtn.MouseLeave += (_, _) => goteroBtn.Background = Theme.Brush(SecondaryButtonBg);
+        var goteroIdleBg = Theme.Brush(SecondaryButtonBg);
+        var goteroIdleBorder = Theme.Brush(SecondaryButtonBorder);
+        var goteroHoverBg = Theme.Brush(Theme.AccentSubtle);
+        var goteroHoverBorder = Theme.Brush(WithAlpha(Theme.Accent, 170));
+        goteroBtn.MouseEnter += (_, _) => { goteroBtn.Background = goteroHoverBg; goteroBtn.BorderBrush = goteroHoverBorder; };
+        goteroBtn.MouseLeave += (_, _) => { goteroBtn.Background = goteroIdleBg; goteroBtn.BorderBrush = goteroIdleBorder; };
         ToolTipService.SetToolTip(goteroBtn, LocalizationService.Translate("Pick color from screen (Press Esc to cancel)"));
         goteroHexPanel.Children.Add(goteroBtn);
 
@@ -804,11 +808,15 @@ internal sealed class ColorPickerPopup : ContentControl
         }
         else
         {
-            button.Background = Theme.Brush(SecondaryButtonBg);
-            button.BorderBrush = Theme.Brush(SecondaryButtonBorder);
+            var idleBg = Theme.Brush(SecondaryButtonBg);
+            var idleBorder = Theme.Brush(SecondaryButtonBorder);
+            var hoverBg = Theme.Brush(Theme.AccentSubtle);
+            var hoverBorder = Theme.Brush(WithAlpha(accent, 170));
+            button.Background = idleBg;
+            button.BorderBrush = idleBorder;
             button.Foreground = Theme.Brush(Theme.TextPrimary);
-            button.MouseEnter += (_, _) => button.Background = Theme.Brush(Theme.TabHoverBg);
-            button.MouseLeave += (_, _) => button.Background = Theme.Brush(SecondaryButtonBg);
+            button.MouseEnter += (_, _) => { button.Background = hoverBg; button.BorderBrush = hoverBorder; };
+            button.MouseLeave += (_, _) => { button.Background = idleBg; button.BorderBrush = idleBorder; };
         }
 
         button.Click += (_, _) => click();
