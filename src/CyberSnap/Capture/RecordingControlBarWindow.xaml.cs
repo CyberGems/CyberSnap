@@ -71,6 +71,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
     // ── FPS menu ──
     private ContextMenu? _fpsMenu;
+    private DateTime _fpsMenuOpenedAt;
 
     // ── Positioning ──
     private System.Drawing.Rectangle _lastCaptureRegion;
@@ -894,16 +895,14 @@ public sealed partial class RecordingControlBarWindow : Window
             UpdateTrimmerTooltip();
         };
 
-        // Temporary hunt round 2: log leave/deactivation only while the FPS menu lives.
-        MouseLeave += (_, _) =>
-        {
-            if (_fpsMenu?.IsOpen == true)
-                AppDiagnostics.LogWarning("fps.menu", "bar leave while open");
-        };
+        // Real focus loss still dismisses the manually-kept FPS menu, but not the
+        // spurious deactivation fired ~200ms after opening (activation moving to
+        // the menu popup itself in this ShowActivated=False environment).
         Deactivated += (_, _) =>
         {
-            if (_fpsMenu?.IsOpen == true)
-                AppDiagnostics.LogWarning("fps.menu", "bar deactivated while open");
+            if (_fpsMenu?.IsOpen == true
+                && (DateTime.UtcNow - _fpsMenuOpenedAt).TotalMilliseconds > 500)
+                _fpsMenu.IsOpen = false;
         };
     }
 
@@ -1342,6 +1341,15 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         if (_isRecording || _isEncoding) return;
 
+        // Toggle when already open.
+        if (_fpsMenu?.IsOpen == true)
+        {
+            _fpsMenu.IsOpen = false;
+            return;
+        }
+        if (_fpsMenu != null)
+            _fpsMenu.IsOpen = false;
+
         _fpsMenu = new ContextMenu
         {
             Background = Theme.Brush(Theme.BgCard),
@@ -1353,19 +1361,16 @@ public sealed partial class RecordingControlBarWindow : Window
             Placement = TryGetPopupPlacement(out var menuPlacement)
                 ? menuPlacement
                 : System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            // Manual lifetime: this bar is ShowActivated=False under a fullscreen
+            // overlay, so the menu cannot rely on activation/capture survival —
+            // the leave → deactivated dance auto-dismisses it mid-pick.
+            StaysOpen = true,
         };
-        // While the menu is open the FpsCombo hover tooltip must stay off: its
-        // ~400ms show timer fires mid-menu, steals mouse capture and dismisses it.
+        // While the menu is open the FpsCombo hover tooltip stays off so it never
+        // paints over the options.
         ToolTipService.SetIsEnabled(FpsCombo, false);
-        // Temporary hunt round 2: which event actually kills the menu.
-        FpsCombo.ToolTipOpening += LogFpsTipOpening;
-        FpsCombo.ToolTipClosing += LogFpsTipClosing;
-        _fpsMenu.Closed += (_, _) =>
-        {
-            ToolTipService.SetIsEnabled(FpsCombo, true);
-            FpsCombo.ToolTipOpening -= LogFpsTipOpening;
-            FpsCombo.ToolTipClosing -= LogFpsTipClosing;
-        };
+        _fpsMenu.Closed += (_, _) => ToolTipService.SetIsEnabled(FpsCombo, true);
+        _fpsMenuOpenedAt = DateTime.UtcNow;
 
         foreach (var option in GetFpsOptions(_format))
         {
@@ -1383,18 +1388,17 @@ public sealed partial class RecordingControlBarWindow : Window
             };
 
             int captured = option;
-            item.Click += (_, _) => ApplyFps(captured);
+            item.Click += (_, _) =>
+            {
+                if (_fpsMenu != null)
+                    _fpsMenu.IsOpen = false;
+                ApplyFps(captured);
+            };
             _fpsMenu.Items.Add(item);
         }
 
         _fpsMenu.IsOpen = true;
     }
-
-    private static void LogFpsTipOpening(object? sender, ToolTipEventArgs e) =>
-        AppDiagnostics.LogWarning("fps.menu", "tip opening");
-
-    private static void LogFpsTipClosing(object? sender, ToolTipEventArgs e) =>
-        AppDiagnostics.LogWarning("fps.menu", "tip closing");
 
     private void ApplyFps(int fps)
     {

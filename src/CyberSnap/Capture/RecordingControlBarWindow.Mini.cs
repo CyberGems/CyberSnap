@@ -173,6 +173,15 @@ public sealed partial class RecordingControlBarWindow
 
     private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
+        // Native menu behavior: a press outside the open FPS menu dismisses it and
+        // is swallowed (it must not also trigger whatever sits underneath).
+        if (_fpsMenu?.IsOpen == true)
+        {
+            _fpsMenu.IsOpen = false;
+            e.Handled = true;
+            return;
+        }
+
         if (e.ChangedButton == MouseButton.Right)
         {
             e.Handled = true;
