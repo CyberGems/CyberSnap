@@ -1808,6 +1808,77 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
     }
 
+    private void DoCopyFileName() =>
+        CopyPathText(
+            !string.IsNullOrWhiteSpace(_savedFilePath) ? Path.GetFileName(_savedFilePath) : null,
+            "Copied file name to clipboard");
+
+    private void DoCopyPath() => CopyPathText(_savedFilePath, "Copied path to clipboard");
+
+    private void CopyPathText(string? text, string toastKey)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(text)
+                || string.IsNullOrWhiteSpace(_savedFilePath)
+                || !File.Exists(_savedFilePath))
+            {
+                ToastWindow.Show(
+                    LocalizationService.Translate("System Message"),
+                    LocalizationService.Translate("Save the file before copying it."));
+                return;
+            }
+
+            ClipboardService.CopyTextToClipboard(text);
+            ToastWindow.Show(
+                LocalizationService.Translate("System Message"),
+                LocalizationService.Translate(toastKey),
+                _savedFilePath);
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Copy failed", ex.Message, error: true);
+        }
+    }
+
+    /// <summary>Shared Copy submenu (image / file / file name / path) for the image
+    /// context menu and the burger menu. File-bound rows hide when unsaved.</summary>
+    private ToolStripMenuItem BuildCopySubmenu()
+    {
+        var submenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Copy"), showImages: true);
+        submenu.Image = FluentIcons.RenderBitmap("copy",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
+
+        var imageItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy image"), shortcut: "Ctrl+C");
+        var fileItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy file"), shortcut: "Ctrl+Shift+C");
+        var nameItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy file name"));
+        var pathItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy path"));
+        imageItem.Click += (_, _) => DoCopy();
+        fileItem.Click += (_, _) => DoCopyFile();
+        nameItem.Click += (_, _) => DoCopyFileName();
+        pathItem.Click += (_, _) => DoCopyPath();
+
+        submenu.DropDownItems.Add(imageItem);
+        submenu.DropDownItems.Add(fileItem);
+        submenu.DropDownItems.Add(nameItem);
+        submenu.DropDownItems.Add(pathItem);
+        submenu.Tag = new ToolStripMenuItem[] { fileItem, nameItem, pathItem };
+        WindowsMenuRenderer.NormalizeDropDownWidths(submenu, minWidth: 200);
+        UpdateCopySubmenuVisibility(submenu);
+        return submenu;
+    }
+
+    private void UpdateCopySubmenuVisibility(ToolStripMenuItem submenu)
+    {
+        bool hasPath = !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
+        if (submenu.Tag is ToolStripMenuItem[] fileItems)
+        {
+            foreach (var item in fileItems)
+                item.Visible = hasPath;
+        }
+    }
+
     private void DoShare(UploadProviderKind? providerOverride = null)
     {
         if (_shareInProgress) return;
@@ -2878,8 +2949,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private ContextMenuStrip BuildImageContextMenu()
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
-        var copyItem = WindowsMenuRenderer.Item("Copy image", shortcut: "Ctrl+C", iconId: "copy");
-        var copyFileItem = WindowsMenuRenderer.Item("Copy file", shortcut: "Ctrl+Shift+C", iconId: "copy");
+        var copySubmenu = BuildCopySubmenu();
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
@@ -2894,8 +2964,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
         var exitItem = WindowsMenuRenderer.Item("Close window", iconId: "close", danger: true, dangerIconOnly: true);
 
-        copyItem.Click += (_, _) => DoCopy();
-        copyFileItem.Click += (_, _) => DoCopyFile();
+        copySubmenu.DropDownOpening += (_, _) => UpdateCopySubmenuVisibility(copySubmenu);
         pasteItem.Click += (_, _) => DoPaste();
         pasteItem.Enabled = Clipboard.ContainsImage();
         saveItem.Click += (_, _) => DoSave();
@@ -2915,8 +2984,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var openWithItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open with…"), showImages: true);
         RebuildSendToSubmenu(openWithItem);
 
-        menu.Items.Add(copyItem);
-        menu.Items.Add(copyFileItem);
+        menu.Items.Add(copySubmenu);
         menu.Items.Add(pasteItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
@@ -2929,7 +2997,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(new ToolStripSeparator());
 
         bool hasPath = !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
-        copyFileItem.Visible = hasPath;
+        UpdateCopySubmenuVisibility(copySubmenu);
         openLocItem.Visible = hasPath;
         propsItem.Visible = hasPath;
         menu.Items.Add(openLocItem);

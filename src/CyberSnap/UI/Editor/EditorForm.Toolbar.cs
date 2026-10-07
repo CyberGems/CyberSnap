@@ -2160,8 +2160,8 @@ public sealed partial class EditorForm
         closeDocumentItem.Click += (_, _) => DoCloseDocument();
 
         // ── Standard edit actions ──
-        var copyItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy"), shortcut: "Ctrl+C", iconId: "copy");
-        copyItem.Click += (_, _) => DoCopy();
+        var copySubmenu = BuildCopySubmenu();
+        copySubmenu.DropDownOpening += (_, _) => UpdateCopySubmenuVisibility(copySubmenu);
 
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), shortcut: "Ctrl+V", iconId: "paste");
         pasteItem.Click += (_, _) => DoPaste();
@@ -2410,7 +2410,7 @@ public sealed partial class EditorForm
         menu.Items.Add(shareToItem);
         menu.Items.Add(sendToItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(copyItem);
+        menu.Items.Add(copySubmenu);
         menu.Items.Add(pasteItem);
         menu.Items.Add(resizeCanvasItem);
         menu.Items.Add(transformSubmenu);
