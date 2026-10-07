@@ -72,6 +72,7 @@ public sealed partial class RecordingControlBarWindow : Window
     // ── FPS menu ──
     private ContextMenu? _fpsMenu;
     private DateTime _fpsMenuOpenedAt;
+    private object? _fpsComboTipBackup;
 
     // ── Positioning ──
     private System.Drawing.Rectangle _lastCaptureRegion;
@@ -1366,12 +1367,16 @@ public sealed partial class RecordingControlBarWindow : Window
             // the leave → deactivated dance auto-dismisses it mid-pick.
             StaysOpen = true,
         };
-        // While the menu is open the FpsCombo hover tooltip stays off so it never
-        // paints over the options.
+        // Diagnostic round: remove the tooltip outright while open (suppression via
+        // IsEnabled proved insufficient) to settle whether the ~400ms hover-show
+        // timer is the killer.
+        _fpsComboTipBackup = FpsCombo.ToolTip;
+        FpsCombo.ToolTip = null;
         ToolTipService.SetIsEnabled(FpsCombo, false);
         _fpsMenu.Closed += (_, _) =>
         {
             ToolTipService.SetIsEnabled(FpsCombo, true);
+            FpsCombo.ToolTip = _fpsComboTipBackup;
         };
         // The bar lives TOPMOST under a fullscreen overlay; a plain popup is born
         // below them in z-order and gets buried alive. Pin it topmost (no-activate
