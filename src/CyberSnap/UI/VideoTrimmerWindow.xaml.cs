@@ -127,6 +127,8 @@ namespace CyberSnap.UI
             SaveAsNewBtn.Content = LocalizationService.Translate(lang, "Save As New");
             TrimBtn.Content = LocalizationService.Translate(lang, "Trim");
             ResetBtn.Content = LocalizationService.Translate(lang, "Reset");
+            PropsBtn.Content = LocalizationService.Translate(lang, "Properties");
+            PropsBtn.ToolTip = LocalizationService.Translate(lang, "Show media properties");
             _preciseCut = settingsService.Settings.VideoTrimmerPreciseCut;
             PreciseCutToggleBtn.IsChecked = _preciseCut;
             UpdatePreciseCutTooltip();
@@ -2732,6 +2734,23 @@ namespace CyberSnap.UI
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("trimmer.context-menu.show-in-folder", ex);
+            }
+        }
+
+        private void PropsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                MediaPropertiesWindow.Show(
+                    this,
+                    _mediaFilePath,
+                    _startTimeSeconds,
+                    _endTimeSeconds,
+                    _videoDurationSeconds);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("trimmer.properties", ex);
             }
         }
 

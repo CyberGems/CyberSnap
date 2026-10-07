@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text.Json;
 using CyberSnap.Capture;
 
 namespace CyberSnap.Helpers;
@@ -157,5 +158,147 @@ internal static class MediaProbe
         return double.TryParse(rate, NumberStyles.Float, CultureInfo.InvariantCulture, out double direct)
             ? direct
             : 0;
+    }
+
+    public sealed record VideoStreamInfo(
+        string Codec,
+        int Width,
+        int Height,
+        double Fps,
+        string PixelFormat,
+        long BitRate);
+
+    public sealed record AudioStreamInfo(
+        string Codec,
+        int Channels,
+        int SampleRate,
+        long BitRate);
+
+    public sealed record MediaInfo(
+        double DurationSeconds,
+        long SizeBytes,
+        string FormatName,
+        long FormatBitRate,
+        VideoStreamInfo? Video,
+        AudioStreamInfo? Audio);
+
+    /// <summary>
+    /// Full container + first video/audio stream inspection in a single ffprobe
+    /// call. Best-effort: null when ffprobe is missing or the file is unreadable,
+    /// individual fields fall back to 0/empty when a tag is absent.
+    /// </summary>
+    public static MediaInfo? TryGetMediaInfo(string mediaPath)
+    {
+        string? ffprobe = FindFfprobe();
+        if (ffprobe == null || !File.Exists(mediaPath))
+            return null;
+
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = ffprobe,
+                Arguments = $"-v error -show_format -show_streams -of json \"{mediaPath}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            });
+
+            if (process == null)
+                return null;
+
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(8000);
+            if (string.IsNullOrWhiteSpace(output))
+                return null;
+
+            using var document = JsonDocument.Parse(output);
+            var root = document.RootElement;
+
+            double duration = 0;
+            long size = 0;
+            string formatName = "";
+            long formatBitRate = 0;
+            if (root.TryGetProperty("format", out var format))
+            {
+                duration = GetDouble(format, "duration");
+                size = GetInt64(format, "size");
+                formatName = GetString(format, "format_name");
+                formatBitRate = GetInt64(format, "bit_rate");
+            }
+
+            VideoStreamInfo? video = null;
+            AudioStreamInfo? audio = null;
+            if (root.TryGetProperty("streams", out var streams)
+                && streams.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var stream in streams.EnumerateArray())
+                {
+                    string codecType = GetString(stream, "codec_type");
+                    if (video is null && string.Equals(codecType, "video", StringComparison.OrdinalIgnoreCase))
+                    {
+                        double fps = ParseFrameRate(GetString(stream, "r_frame_rate"));
+                        if (fps <= 0)
+                            fps = ParseFrameRate(GetString(stream, "avg_frame_rate"));
+                        video = new VideoStreamInfo(
+                            GetString(stream, "codec_name"),
+                            GetInt32(stream, "width"),
+                            GetInt32(stream, "height"),
+                            fps,
+                            GetString(stream, "pix_fmt"),
+                            GetInt64(stream, "bit_rate"));
+                    }
+                    else if (audio is null && string.Equals(codecType, "audio", StringComparison.OrdinalIgnoreCase))
+                    {
+                        audio = new AudioStreamInfo(
+                            GetString(stream, "codec_name"),
+                            GetInt32(stream, "channels"),
+                            GetInt32(stream, "sample_rate"),
+                            GetInt64(stream, "bit_rate"));
+                    }
+                }
+            }
+
+            return new MediaInfo(duration, size, formatName, formatBitRate, video, audio);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string GetString(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? ""
+            : "";
+
+    private static double GetDouble(JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value))
+            return 0;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out double number))
+            return number;
+        if (value.ValueKind == JsonValueKind.String
+            && double.TryParse(value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
+            return parsed;
+        return 0;
+    }
+
+    private static long GetInt64(JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value))
+            return 0;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out long number))
+            return number;
+        if (value.ValueKind == JsonValueKind.String
+            && long.TryParse(value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed))
+            return parsed;
+        return 0;
+    }
+
+    private static int GetInt32(JsonElement element, string name)
+    {
+        long value = GetInt64(element, name);
+        return value is >= int.MinValue and <= int.MaxValue ? (int)value : 0;
     }
 }

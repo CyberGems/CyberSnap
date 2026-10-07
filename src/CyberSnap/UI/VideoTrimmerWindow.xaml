@@ -1251,6 +1251,15 @@
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center">
+                        <Button x:Name="PropsBtn"
+                                Content="Properties"
+                                Padding="14,8"
+                                Margin="0,0,8,0"
+                                Click="PropsBtn_Click"
+                                ToolTip="Show media properties"
+                                Style="{StaticResource TrimmerFlatButtonStyle}"
+                                FontWeight="SemiBold"/>
+
                         <Button x:Name="ResetBtn"
                                 Content="Reset"
                                 Padding="14,8"
