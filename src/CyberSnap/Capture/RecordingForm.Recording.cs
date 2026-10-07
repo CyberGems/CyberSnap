@@ -207,6 +207,34 @@ public sealed partial class RecordingForm
 
     private static void PersistRecordingFps(Models.RecordingFormat format, int fps)
     {
+        // Live instance first so the in-memory copy (and every later save from it)
+        // agrees with the file. Detached write is only a fallback.
+        try
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is not null)
+            {
+                if (dispatcher.CheckAccess())
+                {
+                    if (System.Windows.Application.Current is App app)
+                    {
+                        app.PersistRecordingFps(format, fps);
+                        return;
+                    }
+                }
+                else
+                {
+                    dispatcher.Invoke(() =>
+                    {
+                        if (System.Windows.Application.Current is App app)
+                            app.PersistRecordingFps(format, fps);
+                    });
+                    return;
+                }
+            }
+        }
+        catch { /* fall through to detached write */ }
+
         try
         {
             using var svc = new SettingsService();

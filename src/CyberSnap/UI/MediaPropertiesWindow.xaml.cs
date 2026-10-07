@@ -77,6 +77,7 @@ public partial class MediaPropertiesWindow : Window
         Resources["ThemeInputBorderBrush"] = Theme.Brush(Theme.BorderSubtle);
         Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
         Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
+        Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         Foreground = Theme.Brush(Theme.TextPrimary);
     }

@@ -419,6 +419,31 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("capture.persist-open-trimmer", ex); }
     }
 
+    /// <summary>
+    /// Persists the recording-bar FPS for video or GIF on the live App settings
+    /// instance (bar picks must not write through a detached SettingsService,
+    /// whose file write the live copy would later clobber).
+    /// </summary>
+    public void PersistRecordingFps(Models.RecordingFormat format, int fps)
+    {
+        if (_settingsService is null) return;
+
+        var settings = _settingsService.Settings;
+        if (format == Models.RecordingFormat.GIF)
+        {
+            if (settings.GifFps == fps) return;
+            settings.GifFps = fps;
+        }
+        else
+        {
+            if (settings.RecordingFps == fps) return;
+            settings.RecordingFps = fps;
+        }
+
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("capture.persist-recording-fps", ex); }
+    }
+
     /// <summary>Persists the editor undo limit (clamped 1–200).</summary>
     public void PersistEditorUndoLimit(int limit)
     {
