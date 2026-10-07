@@ -1367,9 +1367,8 @@ public sealed partial class RecordingControlBarWindow : Window
             // the leave → deactivated dance auto-dismisses it mid-pick.
             StaysOpen = true,
         };
-        // Diagnostic round: remove the tooltip outright while open (suppression via
-        // IsEnabled proved insufficient) to settle whether the ~400ms hover-show
-        // timer is the killer.
+        // Tooltip off while open so it never paints over the options; restored
+        // on close together with the overlay keyboard handoff.
         _fpsComboTipBackup = FpsCombo.ToolTip;
         FpsCombo.ToolTip = null;
         ToolTipService.SetIsEnabled(FpsCombo, false);
@@ -1418,7 +1417,6 @@ public sealed partial class RecordingControlBarWindow : Window
             int captured = option;
             item.Click += (_, _) =>
             {
-                AppDiagnostics.LogWarning("fps.menu", $"item clicked fps={captured}");
                 if (_fpsMenu != null)
                     _fpsMenu.IsOpen = false;
                 ApplyFps(captured);
@@ -1427,7 +1425,6 @@ public sealed partial class RecordingControlBarWindow : Window
         }
 
         _fpsMenu.IsOpen = true;
-        AppDiagnostics.LogWarning("fps.menu", $"opened v4 mini={_isMini} slide={_miniHoverExpanded}");
     }
 
     private void ApplyFps(int fps)
