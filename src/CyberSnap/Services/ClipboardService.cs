@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 
 namespace CyberSnap.Services;
@@ -43,6 +44,38 @@ public static class ClipboardService
         dataObject.SetData("Preferred DropEffect", ms);
 
         SetClipboardWithRetry(dataObject);
+    }
+
+    /// <summary>
+    /// Image only, no file references: Bitmap + DIB + PNG. DIB is what picky
+    /// targets like Photoshop paste reliably; omitting FileDrop keeps Explorer
+    /// and friends from preferring the file over the pixels.
+    /// </summary>
+    public static void CopyImageToClipboard(Bitmap bitmap)
+    {
+        var dataObject = new System.Windows.Forms.DataObject();
+
+        dataObject.SetData(System.Windows.Forms.DataFormats.Bitmap, bitmap);
+        dataObject.SetData(System.Windows.Forms.DataFormats.Dib, false, ToDibStream(bitmap));
+
+        using var pngStream = new MemoryStream();
+        CaptureOutputService.WritePng(bitmap, pngStream);
+        if (pngStream.TryGetBuffer(out var pngBuffer))
+            dataObject.SetData("PNG", false, new MemoryStream(pngBuffer.Array!, pngBuffer.Offset, pngBuffer.Count, writable: false, publiclyVisible: true));
+        else
+            dataObject.SetData("PNG", false, new MemoryStream(pngStream.ToArray(), writable: false));
+
+        SetClipboardWithRetry(dataObject);
+    }
+
+    /// <summary>DIB is a BMP without its 14-byte file header.</summary>
+    private static MemoryStream ToDibStream(Bitmap bitmap)
+    {
+        using var bmpStream = new MemoryStream();
+        bitmap.Save(bmpStream, ImageFormat.Bmp);
+        var bytes = bmpStream.ToArray();
+        const int fileHeaderSize = 14;
+        return new MemoryStream(bytes, fileHeaderSize, bytes.Length - fileHeaderSize, writable: false);
     }
 
     public static void CopyTextToClipboard(string text)

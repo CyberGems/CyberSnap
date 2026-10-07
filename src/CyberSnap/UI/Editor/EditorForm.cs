@@ -1770,12 +1770,36 @@ public sealed partial class EditorForm : Form, IMessageFilter
         try
         {
             using var output = _canvas.RenderFinal();
-            // CopyToClipboard takes (Bitmap, filePath?). We pass the saved path if known
-            // so the clipboard format also includes the file reference.
-            ClipboardService.CopyToClipboard(output, _savedFilePath);
+            // Image only (no file reference) so pixel targets like Photoshop
+            // paste the bitmap instead of receiving a file. See DoCopyFile.
+            ClipboardService.CopyImageToClipboard(output);
 
             var toastTitle = LocalizationService.Translate("System Message");
-            var toastBody = LocalizationService.Translate("Copied to clipboard");
+            var toastBody = LocalizationService.Translate("Copied image to clipboard");
+            ToastWindow.Show(toastTitle, toastBody, _savedFilePath);
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Copy failed", ex.Message, error: true);
+        }
+    }
+
+    private void DoCopyFile()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_savedFilePath) || !File.Exists(_savedFilePath))
+            {
+                ToastWindow.Show(
+                    LocalizationService.Translate("System Message"),
+                    LocalizationService.Translate("Save the file before copying it."));
+                return;
+            }
+
+            ClipboardService.CopyFileToClipboard(_savedFilePath);
+
+            var toastTitle = LocalizationService.Translate("System Message");
+            var toastBody = LocalizationService.Translate("Copied file to clipboard");
             ToastWindow.Show(toastTitle, toastBody, _savedFilePath);
         }
         catch (Exception ex)
@@ -2249,6 +2273,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (keyData == (Keys.Control | Keys.Tab)) { CycleTab(1); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.Tab)) { CycleTab(-1); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
+        if (keyData == (Keys.Control | Keys.Shift | Keys.C)) { DoCopyFile(); return true; }
         if (keyData == (Keys.Control | Keys.V)) { DoPaste(); return true; }
         if (keyData == (Keys.Control | Keys.A)) { _canvas.SelectAll(); return true; }
 
@@ -2390,6 +2415,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (mod == Keys.Control && key is Keys.Tab) { CycleTab(1); return true; }
         if (mod == (Keys.Control | Keys.Shift) && key is Keys.Tab) { CycleTab(-1); return true; }
         if (mod == Keys.Control && key is Keys.C) { DoCopy(); return true; }
+        if (mod == (Keys.Control | Keys.Shift) && key is Keys.C) { DoCopyFile(); return true; }
         if (mod == Keys.Control && key is Keys.V) { DoPaste(); return true; }
 
         if (mod == Keys.Control && key is Keys.Z)
@@ -2852,7 +2878,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private ContextMenuStrip BuildImageContextMenu()
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
-        var copyItem = WindowsMenuRenderer.Item("Copy", iconId: "copy");
+        var copyItem = WindowsMenuRenderer.Item("Copy image", shortcut: "Ctrl+C", iconId: "copy");
+        var copyFileItem = WindowsMenuRenderer.Item("Copy file", shortcut: "Ctrl+Shift+C", iconId: "copy");
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
@@ -2868,6 +2895,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var exitItem = WindowsMenuRenderer.Item("Close window", iconId: "close", danger: true, dangerIconOnly: true);
 
         copyItem.Click += (_, _) => DoCopy();
+        copyFileItem.Click += (_, _) => DoCopyFile();
         pasteItem.Click += (_, _) => DoPaste();
         pasteItem.Enabled = Clipboard.ContainsImage();
         saveItem.Click += (_, _) => DoSave();
@@ -2888,6 +2916,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         RebuildSendToSubmenu(openWithItem);
 
         menu.Items.Add(copyItem);
+        menu.Items.Add(copyFileItem);
         menu.Items.Add(pasteItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
@@ -2900,6 +2929,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(new ToolStripSeparator());
 
         bool hasPath = !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
+        copyFileItem.Visible = hasPath;
         openLocItem.Visible = hasPath;
         propsItem.Visible = hasPath;
         menu.Items.Add(openLocItem);
