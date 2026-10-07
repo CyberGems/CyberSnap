@@ -1330,12 +1330,6 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         if (_isRecording || _isEncoding) return;
 
-        var usedPlacement = TryGetPopupPlacement(out var menuPlacement)
-            ? menuPlacement
-            : System.Windows.Controls.Primitives.PlacementMode.Bottom;
-        // Temporary hunt for the instant-dismiss bug: log open state + close stack.
-        AppDiagnostics.LogWarning("fps.menu", $"open placement={usedPlacement} barVisible={IsVisible} opacity={Opacity} fpsVisible={FpsCombo.IsVisible} enabled={FpsCombo.IsEnabled}");
-
         _fpsMenu = new ContextMenu
         {
             Background = Theme.Brush(Theme.BgCard),
@@ -1344,13 +1338,14 @@ public sealed partial class RecordingControlBarWindow : Window
             Padding = new Thickness(4),
             HasDropShadow = true,
             PlacementTarget = FpsCombo,
-            Placement = usedPlacement,
+            Placement = TryGetPopupPlacement(out var menuPlacement)
+                ? menuPlacement
+                : System.Windows.Controls.Primitives.PlacementMode.Bottom,
         };
-        _fpsMenu.Closed += (_, _) =>
-        {
-            AppDiagnostics.LogWarning("fps.menu", $"closed barVisible={IsVisible} opacity={Opacity} fpsVisible={FpsCombo.IsVisible}");
-            AppDiagnostics.LogWarning("fps.menu-stack", Environment.StackTrace);
-        };
+        // While the menu is open the FpsCombo hover tooltip must stay off: its
+        // ~400ms show timer fires mid-menu, steals mouse capture and dismisses it.
+        ToolTipService.SetIsEnabled(FpsCombo, false);
+        _fpsMenu.Closed += (_, _) => ToolTipService.SetIsEnabled(FpsCombo, true);
 
         foreach (var option in GetFpsOptions(_format))
         {
