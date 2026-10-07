@@ -195,7 +195,13 @@ public sealed partial class RecordingControlBarWindow
         Dispatcher.BeginInvoke(() =>
         {
             if (OwnerWinFormsForm is RecordingForm form && !form.IsDisposed)
-                form.ReclaimTransportHotkeys();
+            {
+                // An open FPS menu owns this interaction: stealing foreground for
+                // the overlay dismisses the menu mid-pick (and breaks its keyboard
+                // nav). Focus is reclaimed when the menu closes instead.
+                if (_fpsMenu?.IsOpen != true)
+                    form.ReclaimTransportHotkeys();
+            }
             AssertBarTopmost();
         }, DispatcherPriority.Background);
     }

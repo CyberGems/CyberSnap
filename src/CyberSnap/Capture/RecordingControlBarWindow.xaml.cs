@@ -1377,6 +1377,9 @@ public sealed partial class RecordingControlBarWindow : Window
         {
             ToolTipService.SetIsEnabled(FpsCombo, true);
             FpsCombo.ToolTip = _fpsComboTipBackup;
+            // Hand keyboard (Space/Enter) back to the overlay now the menu is gone.
+            if (OwnerWinFormsForm is RecordingForm form && !form.IsDisposed)
+                form.ReclaimTransportHotkeys();
         };
         // The bar lives TOPMOST under a fullscreen overlay; a plain popup is born
         // below them in z-order and gets buried alive. Pin it topmost (no-activate
