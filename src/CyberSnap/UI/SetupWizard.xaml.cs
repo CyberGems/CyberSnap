@@ -420,7 +420,8 @@ public partial class SetupWizard : Window
     {
         try
         {
-            ShowWizAdvisory();
+            _tooltip.IsOpen = true;
+            AppDiagnostics.LogInfo("wiz.prtsc-trace", "advisory opened");
             _advisoryTimer?.Stop();
             var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             timer.Tick += (_, _) =>
@@ -677,11 +678,15 @@ public partial class SetupWizard : Window
     {
         if (!canRegister)
         {
+            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: before Text");
             WizHotkeyTextBox.Text = LocalizationService.Translate("Taken");
+            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: after Text");
             WizHotkeyTextBox.Foreground = System.Windows.Media.Brushes.Red;
             WizHotkeyTextBox.FontWeight = FontWeights.Bold;
             _tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
+            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: before advisory");
             ShowWizAdvisory();
+            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: after advisory");
             return;
         }
 
