@@ -421,7 +421,6 @@ public partial class SetupWizard : Window
         try
         {
             _tooltip.IsOpen = true;
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "advisory opened");
             _advisoryTimer?.Stop();
             var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             timer.Tick += (_, _) =>
@@ -678,15 +677,11 @@ public partial class SetupWizard : Window
     {
         if (!canRegister)
         {
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: before Text");
             WizHotkeyTextBox.Text = LocalizationService.Translate("Taken");
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: after Text");
             WizHotkeyTextBox.Foreground = System.Windows.Media.Brushes.Red;
             WizHotkeyTextBox.FontWeight = FontWeights.Bold;
             _tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: before advisory");
             ShowWizAdvisory();
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "feedback-taken: after advisory");
             return;
         }
 
@@ -708,9 +703,6 @@ public partial class SetupWizard : Window
 
     private void WizPrtScBtn_Click(object sender, RoutedEventArgs e)
     {
-        // Temporary crash-hunt breadcrumbs (taken-PrtSc StackOverflow): each step is
-        // synchronous and flushed to disk, so the log tail shows the last step reached.
-        AppDiagnostics.LogInfo("wiz.prtsc-trace", "button entry");
         ClearWarningState();
         var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
         var app = Application.Current as App;
@@ -719,12 +711,9 @@ public partial class SetupWizard : Window
         if (app is not null)
         {
             app.UnregisterAllHotkeys();
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "after unregister");
             canReg = HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT);
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", $"probe result canReg={canReg}");
         }
         var interceptors = HotkeyConflictProbe.DetectPrintScreenInterceptors();
-        AppDiagnostics.LogInfo("wiz.prtsc-trace", $"interceptors={interceptors.Count}");
 
         if (!canReg)
         {
@@ -732,11 +721,8 @@ public partial class SetupWizard : Window
             // persisting it would leave a dead hotkey (plus a conflict toast on
             // every start), and the previous shortcut stays live.
             app?.RegisterHotkeys(showReadyNotification: false);
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "after re-register");
             ApplyPrintScreenFeedback(canRegister: false, interceptors);
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "after feedback");
             SyncWizPrtScBanner();
-            AppDiagnostics.LogInfo("wiz.prtsc-trace", "after sync (refused)");
             return;
         }
 

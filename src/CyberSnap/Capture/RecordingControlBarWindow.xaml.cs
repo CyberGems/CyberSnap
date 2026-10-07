@@ -872,8 +872,17 @@ public sealed partial class RecordingControlBarWindow : Window
         FpsCombo.MouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
-            if (FpsCombo.IsEnabled)
-                ShowFpsMenu();
+            if (!FpsCombo.IsEnabled)
+                return;
+            // Toggle when already open; otherwise defer past the MouseUp of this
+            // same click — a ContextMenu opened synchronously inside MouseDown is
+            // dismissed by the ensuing MouseUp before anything can be picked.
+            if (_fpsMenu?.IsOpen == true)
+            {
+                _fpsMenu.IsOpen = false;
+                return;
+            }
+            Dispatcher.BeginInvoke(new Action(ShowFpsMenu), DispatcherPriority.Input);
         };
 
         TrimmerBtn.MouseLeftButtonDown += (_, e) =>
