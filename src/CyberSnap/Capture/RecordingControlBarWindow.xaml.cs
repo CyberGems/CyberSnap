@@ -893,6 +893,18 @@ public sealed partial class RecordingControlBarWindow : Window
             UpdateTrimmerButtonIcon(); // updates icon + ring + wash in one place
             UpdateTrimmerTooltip();
         };
+
+        // Temporary hunt round 2: log leave/deactivation only while the FPS menu lives.
+        MouseLeave += (_, _) =>
+        {
+            if (_fpsMenu?.IsOpen == true)
+                AppDiagnostics.LogWarning("fps.menu", "bar leave while open");
+        };
+        Deactivated += (_, _) =>
+        {
+            if (_fpsMenu?.IsOpen == true)
+                AppDiagnostics.LogWarning("fps.menu", "bar deactivated while open");
+        };
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1345,7 +1357,15 @@ public sealed partial class RecordingControlBarWindow : Window
         // While the menu is open the FpsCombo hover tooltip must stay off: its
         // ~400ms show timer fires mid-menu, steals mouse capture and dismisses it.
         ToolTipService.SetIsEnabled(FpsCombo, false);
-        _fpsMenu.Closed += (_, _) => ToolTipService.SetIsEnabled(FpsCombo, true);
+        // Temporary hunt round 2: which event actually kills the menu.
+        FpsCombo.ToolTipOpening += LogFpsTipOpening;
+        FpsCombo.ToolTipClosing += LogFpsTipClosing;
+        _fpsMenu.Closed += (_, _) =>
+        {
+            ToolTipService.SetIsEnabled(FpsCombo, true);
+            FpsCombo.ToolTipOpening -= LogFpsTipOpening;
+            FpsCombo.ToolTipClosing -= LogFpsTipClosing;
+        };
 
         foreach (var option in GetFpsOptions(_format))
         {
@@ -1369,6 +1389,12 @@ public sealed partial class RecordingControlBarWindow : Window
 
         _fpsMenu.IsOpen = true;
     }
+
+    private static void LogFpsTipOpening(object? sender, ToolTipEventArgs e) =>
+        AppDiagnostics.LogWarning("fps.menu", "tip opening");
+
+    private static void LogFpsTipClosing(object? sender, ToolTipEventArgs e) =>
+        AppDiagnostics.LogWarning("fps.menu", "tip closing");
 
     private void ApplyFps(int fps)
     {
