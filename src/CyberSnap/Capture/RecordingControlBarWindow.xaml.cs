@@ -1371,9 +1371,25 @@ public sealed partial class RecordingControlBarWindow : Window
         ToolTipService.SetIsEnabled(FpsCombo, false);
         _fpsMenu.Closed += (_, _) =>
         {
-            AppDiagnostics.LogWarning("fps.menu", $"closed v4 fpsVis={FpsCombo.Visibility} fpsShown={FpsCombo.IsVisible} mini={_isMini} slide={_miniHoverExpanded} barVis={IsVisible}");
             ToolTipService.SetIsEnabled(FpsCombo, true);
         };
+        // The bar lives TOPMOST under a fullscreen overlay; a plain popup is born
+        // below them in z-order and gets buried alive. Pin it topmost (no-activate
+        // so focus behavior stays untouched).
+        _fpsMenu.Opened += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                if (_fpsMenu?.ItemContainerGenerator.ContainerFromIndex(0) is System.Windows.Media.Visual v
+                    && PresentationSource.FromVisual(v) is HwndSource hs
+                    && hs.Handle != IntPtr.Zero)
+                {
+                    User32.SetWindowPos(hs.Handle, User32.HWND_TOPMOST, 0, 0, 0, 0,
+                        User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
+                }
+            }
+            catch { }
+        }, DispatcherPriority.Loaded);
         _fpsMenuOpenedAt = DateTime.UtcNow;
 
         foreach (var option in GetFpsOptions(_format))
