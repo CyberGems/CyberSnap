@@ -1371,7 +1371,7 @@ public sealed partial class RecordingControlBarWindow : Window
         ToolTipService.SetIsEnabled(FpsCombo, false);
         _fpsMenu.Closed += (_, _) =>
         {
-            AppDiagnostics.LogWarning("fps.menu", "closed v4");
+            AppDiagnostics.LogWarning("fps.menu", $"closed v4 fpsVis={FpsCombo.Visibility} fpsShown={FpsCombo.IsVisible} mini={_isMini} slide={_miniHoverExpanded} barVis={IsVisible}");
             ToolTipService.SetIsEnabled(FpsCombo, true);
         };
         _fpsMenuOpenedAt = DateTime.UtcNow;
@@ -1403,7 +1403,7 @@ public sealed partial class RecordingControlBarWindow : Window
         }
 
         _fpsMenu.IsOpen = true;
-        AppDiagnostics.LogWarning("fps.menu", "opened v4");
+        AppDiagnostics.LogWarning("fps.menu", $"opened v4 mini={_isMini} slide={_miniHoverExpanded}");
     }
 
     private void ApplyFps(int fps)
