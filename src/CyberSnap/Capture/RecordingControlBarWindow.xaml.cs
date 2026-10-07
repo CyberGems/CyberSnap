@@ -1330,6 +1330,12 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         if (_isRecording || _isEncoding) return;
 
+        var usedPlacement = TryGetPopupPlacement(out var menuPlacement)
+            ? menuPlacement
+            : System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        // Temporary hunt for the instant-dismiss bug: log open state + close stack.
+        AppDiagnostics.LogWarning("fps.menu", $"open placement={usedPlacement} barVisible={IsVisible} opacity={Opacity} fpsVisible={FpsCombo.IsVisible} enabled={FpsCombo.IsEnabled}");
+
         _fpsMenu = new ContextMenu
         {
             Background = Theme.Brush(Theme.BgCard),
@@ -1338,9 +1344,12 @@ public sealed partial class RecordingControlBarWindow : Window
             Padding = new Thickness(4),
             HasDropShadow = true,
             PlacementTarget = FpsCombo,
-            Placement = TryGetPopupPlacement(out var menuPlacement)
-                ? menuPlacement
-                : System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            Placement = usedPlacement,
+        };
+        _fpsMenu.Closed += (_, _) =>
+        {
+            AppDiagnostics.LogWarning("fps.menu", $"closed barVisible={IsVisible} opacity={Opacity} fpsVisible={FpsCombo.IsVisible}");
+            AppDiagnostics.LogWarning("fps.menu-stack", Environment.StackTrace);
         };
 
         foreach (var option in GetFpsOptions(_format))
