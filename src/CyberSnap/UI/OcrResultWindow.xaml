@@ -322,72 +322,6 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Neutral ghost button: same accent hover as the translate action, kept
-             colorless at rest so the accent CTA keeps its emphasis. -->
-        <Style x:Key="OcrGhostButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
 
         <Style x:Key="OcrContextMenuStyle" TargetType="ContextMenu">
@@ -620,7 +554,7 @@
                                 HorizontalAlignment="Left"
                                 Padding="9,5"
                                 Click="ToggleTranslationBtn_Click"
-                                Style="{StaticResource OcrGhostButton}"
+                                Style="{StaticResource ChromeButtonBase}"
                                 Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                                 Background="#08FFFFFF"
                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}"
@@ -666,7 +600,7 @@
                             </Border>
                             <Button x:Name="CopyOnlyBtn" Click="CopyOnlyBtn_Click"
                                     Margin="0,0,6,0"
-                                    Style="{StaticResource OcrGhostButton}"
+                                    Style="{StaticResource ChromeButtonBase}"
                                     Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                     Background="#08FFFFFF"
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
