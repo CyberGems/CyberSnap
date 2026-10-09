@@ -165,4 +165,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.WINGET_PAT }}
         run: |
-          winget submit winget-manifest-${{ github.event.release.tag_name }}.yaml
+          winget install --id Microsoft.WingetCreate -e --silent --accept-package-agreements --accept-source-agreements
+          wingetcreate submit winget-manifest-${{ github.event.release.tag_name }}.yaml --token $env:GH_TOKEN
