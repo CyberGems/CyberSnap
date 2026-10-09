@@ -1095,7 +1095,8 @@
                         ClipToBounds="True"
                         Background="{DynamicResource ThemeInputBackgroundBrush}"
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                        BorderThickness="1">
+                        BorderThickness="1"
+                        SizeChanged="Filmstrip_SizeChanged">
                     <UniformGrid x:Name="Filmstrip"
                                  Rows="1"
                                  Cursor="Hand"

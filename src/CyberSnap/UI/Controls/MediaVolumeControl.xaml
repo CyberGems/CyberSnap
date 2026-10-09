@@ -18,16 +18,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RepeatButton">
-                        <Border x:Name="Fill"
-                                Height="6"
-                                CornerRadius="3,0,0,3"
-                                Background="{DynamicResource VolumeTrackFillBrush}"
-                                SnapsToDevicePixels="True"/>
-                        <ControlTemplate.Triggers>
-                            <DataTrigger Binding="{Binding IsExportMuted, ElementName=Root}" Value="True">
-                                <Setter TargetName="Fill" Property="Background" Value="{DynamicResource VolumeTrackMutedFillBrush}"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
+                        <!-- Invisible: the fill is drawn by TrackFill (code-sized to the
+                             thumb center) so no Track layout guesswork is involved. -->
+                        <Border Background="Transparent"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -66,6 +59,25 @@
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsExportMuted, ElementName=Root}" Value="True">
                                                 <Setter Property="Background" Value="{DynamicResource VolumeTrackMutedBgBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <Border x:Name="TrackFill"
+                                    Height="6"
+                                    CornerRadius="3"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Width="0"
+                                    Background="{DynamicResource VolumeTrackFillBrush}"
+                                    SnapsToDevicePixels="True"
+                                    IsHitTestVisible="False">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsExportMuted, ElementName=Root}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource VolumeTrackMutedFillBrush}"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -157,7 +169,8 @@
             </Button>
 
             <Slider x:Name="VolumeSlider"
-                    Style="{StaticResource VolumeSliderStyle}"
+                     Style="{StaticResource VolumeSliderStyle}"
+                     SizeChanged="VolumeSlider_SizeChanged"
                     Width="118"
                     Margin="0,0,2,0"
                     VerticalAlignment="Center"

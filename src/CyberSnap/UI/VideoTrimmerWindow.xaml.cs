@@ -70,6 +70,10 @@ namespace CyberSnap.UI
         private bool _isExporting;
         private const double MinSegmentSeconds = 0.05;
         private const int WaveformBuckets = 180;
+        private const double FilmstripThumbHeight = 30;
+        private double _filmstripAspect;
+        private int _filmstripCount;
+        private DispatcherTimer? _filmstripResizeTimer;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService, Bitmap? posterFrame = null)
         {
@@ -1434,6 +1438,9 @@ namespace CyberSnap.UI
         private void BuildFilmstrip()
         {
             Filmstrip.Children.Clear();
+            _filmstripAspect = 0;
+            _filmstripCount = 0;
+            _filmstripResizeTimer?.Stop();
 
             bool hasFrames = _isGif ? _gifSequence != null : _mp4Sequence != null;
             if (!hasFrames || _videoDurationSeconds <= 0.05)
@@ -1448,8 +1455,20 @@ namespace CyberSnap.UI
 
         private async Task BuildFilmstripAsync(int version)
         {
-            const int thumbCount = 8;
-            const double thumbHeight = 30;
+            const double thumbHeight = FilmstripThumbHeight;
+
+            // First frame settles the aspect so the strip can be divided into
+            // cells that match the content: no voids, no deceptive crops.
+            double aspect = _filmstripAspect;
+            if (aspect <= 0)
+            {
+                aspect = GetFirstFrameAspect();
+                if (aspect > 0)
+                    _filmstripAspect = aspect;
+            }
+
+            int thumbCount = ComputeFilmstripCount(aspect, thumbHeight);
+            _filmstripCount = thumbCount;
             var thumbs = new List<BitmapSource>(thumbCount);
 
             for (int i = 0; i < thumbCount; i++)
@@ -1457,7 +1476,9 @@ namespace CyberSnap.UI
                 if ((_isGif ? _gifLoadVersion : _mp4LoadVersion) != version)
                     return;
 
-                double t = _videoDurationSeconds * i / (thumbCount - 1);
+                double t = thumbCount > 1
+                    ? _videoDurationSeconds * i / (thumbCount - 1)
+                    : 0;
                 try
                 {
                     int frameIndex = _isGif
@@ -1510,6 +1531,59 @@ namespace CyberSnap.UI
             }
 
             FilmstripHost.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>Aspect of the first decodable frame, or 0 when unknown.</summary>
+        private double GetFirstFrameAspect()
+        {
+            try
+            {
+                int frameIndex = _isGif ? _gifSequence!.GetFrameIndexAt(0) : _mp4Sequence!.GetFrameIndexAt(0);
+                BitmapSource source = _isGif
+                    ? _gifSequence!.GetFrameSource(frameIndex)
+                    : _mp4Sequence!.GetFrameSource(frameIndex);
+                if (source.PixelHeight > 0 && source.PixelWidth > 0)
+                    return (double)source.PixelWidth / source.PixelHeight;
+            }
+            catch { /* best effort: caller falls back to 8 */ }
+            return 0;
+        }
+
+        /// <summary>
+        /// How many thumbs fill the strip with cells close to the content shape.
+        /// Math cannot fully close the gap (fixed height, mixed aspects, bounded
+        /// decode cost), but matching the count to the aspect keeps voids minimal.
+        /// </summary>
+        private int ComputeFilmstripCount(double aspect, double thumbHeight)
+        {
+            double stripWidth = Filmstrip.ActualWidth;
+            if (stripWidth <= 0 || aspect <= 0)
+                return 8;
+            int count = (int)Math.Round(stripWidth / (thumbHeight * aspect));
+            return Math.Clamp(count, 6, 24);
+        }
+
+        private void Filmstrip_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_filmstripAspect <= 0 || _videoDurationSeconds <= 0.05)
+                return;
+
+            if (_filmstripResizeTimer is null)
+            {
+                _filmstripResizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                _filmstripResizeTimer.Tick += FilmstripResizeTimer_Tick;
+            }
+            _filmstripResizeTimer.Stop();
+            _filmstripResizeTimer.Start();
+        }
+
+        private void FilmstripResizeTimer_Tick(object? sender, EventArgs e)
+        {
+            _filmstripResizeTimer?.Stop();
+            if (ComputeFilmstripCount(_filmstripAspect, FilmstripThumbHeight) == _filmstripCount)
+                return;
+            int version = _isGif ? _gifLoadVersion : _mp4LoadVersion;
+            _ = BuildFilmstripAsync(version);
         }
 
         private void Filmstrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

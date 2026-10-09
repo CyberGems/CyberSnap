@@ -56,6 +56,7 @@ public partial class MediaVolumeControl : UserControl
 
     private bool _isSliderDragging;
     private bool _isTrackDrag;
+    private Border? _trackFill;
 
     public MediaVolumeControl()
     {
@@ -185,11 +186,32 @@ public partial class MediaVolumeControl : UserControl
     {
         IsExportMuted = !IsExportMuted;
     }
-
-    private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void VolumeSlider_ValueChanged(object sender,
+        RoutedPropertyChangedEventArgs<double> e)
     {
         if (_isSliderDragging && IsExportMuted && Volume > 0.001)
             IsExportMuted = false;
+        UpdateTrackFill();
+    }
+
+    private void VolumeSlider_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        UpdateTrackFill();
+
+    /// <summary>
+    /// Sizes the fill so it ends exactly at the thumb center: travel runs from
+    /// half a thumb (12px knob) to full width minus half a thumb. Computed here
+    /// instead of trusting the Track decrease rect, which stopped 6px short.
+    /// </summary>
+    private void UpdateTrackFill()
+    {
+        _trackFill ??= VolumeSlider.Template?.FindName("TrackFill", VolumeSlider) as Border;
+        if (_trackFill is null)
+            return;
+
+        // Template Grid carries Margin 6,0,8,0 around the full slider width.
+        double gridW = Math.Max(0, VolumeSlider.ActualWidth - 14);
+        double travel = Math.Max(0, gridW - 12);
+        _trackFill.Width = Volume <= 0 || travel <= 0 ? 0 : 6 + Volume * travel;
     }
 
     private void VolumeSlider_PreviewMouseDown(object sender, MouseButtonEventArgs e)
