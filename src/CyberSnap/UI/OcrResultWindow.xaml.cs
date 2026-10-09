@@ -484,7 +484,9 @@ public partial class OcrResultWindow : Window
             return;
 
         bool copied = IsOcrTextCopied();
-        CopiedBadge.Visibility = copied ? Visibility.Visible : Visibility.Collapsed;
+        // Opacity (not collapse): the badge space stays reserved so the row
+        // never jumps when copy state flips.
+        CopiedBadge.Opacity = copied ? 1 : 0;
         CopyBtnText.Text = LocalizationService.Translate(copied ? "Close" : "Copy and close");
         CopyBtnIcon.Visibility = copied ? Visibility.Collapsed : Visibility.Visible;
         // The ghost copy is pointless while the box holds exactly what is already
