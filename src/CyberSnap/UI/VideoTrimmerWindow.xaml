@@ -632,13 +632,14 @@
             <Setter Property="MinWidth" Value="48"/>
         </Style>
 
-        <!-- Long tooltips wrap over two or more lines instead of stretching wide. -->
-        <Style TargetType="ToolTip">
+        <!-- Long tooltips wrap over two or more lines instead of stretching wide.
+             Based on the global dark tooltip style so its chrome is preserved. -->
+        <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
             <Setter Property="MaxWidth" Value="300"/>
             <Setter Property="ContentTemplate">
                 <Setter.Value>
                     <DataTemplate>
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
                     </DataTemplate>
                 </Setter.Value>
             </Setter>

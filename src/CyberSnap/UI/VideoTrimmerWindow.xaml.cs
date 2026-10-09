@@ -1496,11 +1496,15 @@ namespace CyberSnap.UI
             Filmstrip.Children.Clear();
             foreach (BitmapSource thumb in thumbs)
             {
+                // Uniform (never fill): every aspect ratio shows its full frame.
+                // Cropping sides or bands off misleads trimming, so letterbox gaps
+                // are preferable to a deceptive crop.
                 Filmstrip.Children.Add(new System.Windows.Controls.Image
                 {
                     Source = thumb,
-                    Stretch = Stretch.UniformToFill,
+                    Stretch = Stretch.Uniform,
                     Height = thumbHeight,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                     Margin = new Thickness(1, 0, 1, 0)
                 });
             }
