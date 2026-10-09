@@ -675,11 +675,24 @@
                                     Background="{DynamicResource ThemeAccentSubtleBrush}"
                                     BorderBrush="{DynamicResource ThemeAccentBrush}"
                                     BorderThickness="1">
-                                <TextBlock x:Name="CopiedBadgeText"
-                                           Text="Copied"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="M 1,6 L 4.5,9.5 L 11,1.5"
+                                          Stroke="{DynamicResource ThemeAccentBrush}"
+                                          StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Width="11" Height="10"
+                                          Stretch="Uniform"
+                                          VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="CopiedBadgeText"
+                                               Text="Copied"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Margin="6,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                </StackPanel>
                             </Border>
                             <Button x:Name="CopyOnlyBtn" Click="CopyOnlyBtn_Click"
                                     Margin="0,0,6,0"
