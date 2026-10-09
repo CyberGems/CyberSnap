@@ -76,6 +76,37 @@ public sealed class HotkeyBadge : Border
 
     private void Rebuild()
     {
+        // Hover-aware cap chrome: on an accent-filled CTA the pale keycap boxes
+        // vanish, so hovering any ancestor button swaps them to dark glass.
+        // Built as a Style (not local brushes) so rest/hover stay theme-live.
+        System.Windows.Style BadgeCapStyle()
+        {
+            var style = new System.Windows.Style(typeof(System.Windows.Controls.Border));
+            style.Setters.Add(new System.Windows.Setter(
+                System.Windows.Controls.Border.BackgroundProperty,
+                ChromeBrush("HotkeyBadgeBackgroundBrush", true)));
+            style.Setters.Add(new System.Windows.Setter(
+                System.Windows.Controls.Border.BorderBrushProperty,
+                ChromeBrush("HotkeyBadgeBorderBrush", false)));
+            var hover = new System.Windows.DataTrigger
+            {
+                Binding = new System.Windows.Data.Binding("IsMouseOver")
+                {
+                    RelativeSource = new System.Windows.Data.RelativeSource(
+                        System.Windows.Data.RelativeSourceMode.FindAncestor,
+                        typeof(System.Windows.Controls.Control),
+                        1)
+                },
+                Value = true
+            };
+            hover.Setters.Add(new System.Windows.Setter(
+                System.Windows.Controls.Border.BackgroundProperty, DarkGlassBrush(true)));
+            hover.Setters.Add(new System.Windows.Setter(
+                System.Windows.Controls.Border.BorderBrushProperty, DarkGlassBrush(false)));
+            style.Triggers.Add(hover);
+            return style;
+        }
+
         if (Kind is HotkeyBadgeKind.Enter or HotkeyBadgeKind.CtrlEnter)
         {
             // Two matching keycaps ("Ctrl" + arrow) instead of one wide pill,
@@ -88,16 +119,9 @@ public sealed class HotkeyBadge : Border
                     BorderThickness = new Thickness(1),
                     Padding = new Thickness(4, 2, 4, 2),
                     VerticalAlignment = VerticalAlignment.Center,
+                    Style = BadgeCapStyle(),
                     Child = content
                 };
-            }
-
-            void ApplyChrome(System.Windows.Controls.Border cap)
-            {
-                // Explicit brushes (resource-backed with computed fallback): a missing
-                // or late resource dictionary must never render an invisible keycap.
-                cap.Background = ChromeBrush("HotkeyBadgeBackgroundBrush", true);
-                cap.BorderBrush = ChromeBrush("HotkeyBadgeBorderBrush", false);
             }
 
             var arrow = new System.Windows.Shapes.Path
@@ -135,8 +159,6 @@ public sealed class HotkeyBadge : Border
                 });
                 TextOptions.SetTextFormattingMode((TextBlock)ctrlCap.Child, TextFormattingMode.Display);
                 var arrowCap = MiniCap(arrow);
-                ApplyChrome(ctrlCap);
-                ApplyChrome(arrowCap);
 
                 var row = new StackPanel
                 {
@@ -166,6 +188,9 @@ public sealed class HotkeyBadge : Border
             arrow.StrokeThickness = 2.2;
             arrow.Width = 11;
             arrow.Height = 11;
+            ClearValue(BackgroundProperty);
+            ClearValue(BorderBrushProperty);
+            Style = BadgeCapStyle();
             Child = arrow;
             return;
         }
@@ -180,6 +205,9 @@ public sealed class HotkeyBadge : Border
             VerticalAlignment = VerticalAlignment.Center
         };
         TextOptions.SetTextFormattingMode(label, TextFormattingMode.Display);
+        ClearValue(BackgroundProperty);
+        ClearValue(BorderBrushProperty);
+        Style = BadgeCapStyle();
         Child = label;
     }
 
@@ -201,5 +229,16 @@ public sealed class HotkeyBadge : Border
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         return brush;
+    }
+
+    private static System.Windows.Media.Brush DarkGlassBrush(bool background)
+    {
+        // Dark translucent keycap readable on accent fills, both themes.
+        var color = background
+            ? System.Windows.Media.Color.FromArgb(89, 0, 0, 0)
+            : System.Windows.Media.Color.FromArgb(153, 0, 0, 0);
+        var darkBrush = new SolidColorBrush(color);
+        darkBrush.Freeze();
+        return darkBrush;
     }
 }

@@ -593,7 +593,19 @@ public partial class OcrResultWindow : Window
     private void AutoCopyCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (_suppressAutoCopyCheck) return;
-        SettingsService.SetOcrAutoCopyToClipboard(AutoCopyCheck.IsChecked == true);
+
+        // Independent kind toggle: enabling also lifts the master (SetKindEnabled),
+        // so this switch never lies with a snap-back. Disabling only excludes OCR.
+        var settings = _settingsService.Settings;
+        AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Ocr, AutoCopyCheck.IsChecked == true);
+        var plan = ResultDelivery.Normalize(
+            AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr),
+            settings.OcrShowResultWindow);
+        settings.OcrShowResultWindow = plan.ShowWindow;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("ocr-result.auto-copy", ex); }
+        SettingsService.PublishAutoCopyState(settings);
+        RefreshAutoCopyCheck();
     }
 
     private void OnOcrAutoCopySettingChanged(bool _)
