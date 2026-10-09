@@ -47,6 +47,33 @@ namespace CyberSnap.UI
             };
         }
 
+        /// <summary>
+        /// Maximize/restore swaps the viewport size out from under the zoom math and
+        /// leaves stale scroll offsets behind (off-center frame). Refit when fitted,
+        /// otherwise clamp offsets into the new extents — never touching the zoom.
+        /// </summary>
+        private void RecenterPreviewOnStateChange()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (GifPreviewImage.Source is null)
+                    return;
+                if (IsZoomFitted())
+                {
+                    ZoomToFitWindow();
+                    return;
+                }
+                ApplyZoom();
+                ZoomViewport.UpdateLayout();
+                ZoomViewport.ScrollToHorizontalOffset(Math.Min(
+                    ZoomViewport.HorizontalOffset,
+                    Math.Max(0, ZoomViewport.ScrollableWidth)));
+                ZoomViewport.ScrollToVerticalOffset(Math.Min(
+                    ZoomViewport.VerticalOffset,
+                    Math.Max(0, ZoomViewport.ScrollableHeight)));
+            }), DispatcherPriority.Loaded);
+        }
+
         private void ResetPreviewZoom()
         {
             _didInitialContain = false;

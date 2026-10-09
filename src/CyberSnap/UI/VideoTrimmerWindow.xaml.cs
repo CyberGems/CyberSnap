@@ -119,6 +119,7 @@ namespace CyberSnap.UI
             
             _lastPlaybackUpdate = DateTime.UtcNow;
             CompositionTarget.Rendering += OnRendering;
+            StateChanged += (_, _) => RecenterPreviewOnStateChange();
             
             // Determine FPS from settings
             _fps = _isGif ? settingsService.Settings.GifFps : settingsService.Settings.RecordingFps;
@@ -1515,7 +1516,8 @@ namespace CyberSnap.UI
                 return;
 
             Filmstrip.Children.Clear();
-            foreach (BitmapSource thumb in thumbs)
+            Filmstrip.Columns = Math.Max(1, thumbCount);
+            foreach (BitmapSource thumb in TopUpThumbs(thumbs, thumbCount))
             {
                 // Uniform (never fill): every aspect ratio shows its full frame.
                 // Cropping sides or bands off misleads trimming, so letterbox gaps
@@ -1531,6 +1533,21 @@ namespace CyberSnap.UI
             }
 
             FilmstripHost.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>
+        /// Pads decode shortfalls by cycling decoded frames so the row always has
+        /// exactly thumbCount cells: a repeated neighbor beats a trailing void.
+        /// </summary>
+        private static List<BitmapSource> TopUpThumbs(List<BitmapSource> thumbs, int thumbCount)
+        {
+            if (thumbs.Count == 0 || thumbs.Count >= thumbCount)
+                return thumbs;
+
+            var filled = new List<BitmapSource>(thumbs);
+            for (int i = filled.Count; i < thumbCount; i++)
+                filled.Add(thumbs[i % thumbs.Count]);
+            return filled;
         }
 
         /// <summary>Aspect of the first decodable frame, or 0 when unknown.</summary>
@@ -1560,7 +1577,7 @@ namespace CyberSnap.UI
             if (stripWidth <= 0 || aspect <= 0)
                 return 8;
             int count = (int)Math.Round(stripWidth / (thumbHeight * aspect));
-            return Math.Clamp(count, 6, 24);
+            return Math.Clamp(count, 6, 32);
         }
 
         private void Filmstrip_SizeChanged(object sender, SizeChangedEventArgs e)
