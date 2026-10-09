@@ -401,7 +401,7 @@
   "Open the OCR window after recognition, whether or not the text was copied.": "Abre la ventana de OCR después del reconocimiento, se haya copiado el texto o no.",
   "Show the QR & Barcode result window": "Mostrar la ventana de resultados de QR y códigos de barras",
   "Open the result window after a scan, whether or not the code was copied.": "Abre la ventana de resultados después de un escaneo, se haya copiado el código o no.",
-  "Copy the text and keep this window open.": "Copia el texto y deja esta ventana abierta.",
+  "Copy the text and keep this window open.": "Copia el texto y deja esta ventana abierta. (Ctrl+Shift+C)",
   "Copy and close (Ctrl+Enter)": "Copiar y cerrar (Ctrl+Enter)",
   "Don't auto-copy recordings": "No auto-copiar grabaciones",
   "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.": "Aunque el Auto-copy global esté activo, no colocar el video o GIF guardado en el portapapeles.",

@@ -363,7 +363,7 @@
   "Open the OCR window after recognition, whether or not the text was copied.": "Open the OCR window after recognition, whether or not the text was copied.",
   "Show the QR & Barcode result window": "Show the QR & Barcode result window",
   "Open the result window after a scan, whether or not the code was copied.": "Open the result window after a scan, whether or not the code was copied.",
-  "Copy the text and keep this window open.": "Copy the text and keep this window open.",
+  "Copy the text and keep this window open.": "Copy the text and keep this window open. (Ctrl+Shift+C)",
   "Copy and close (Ctrl+Enter)": "Copy and close (Ctrl+Enter)",
   "Don't auto-copy recordings": "Don't auto-copy recordings",
   "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.": "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.",

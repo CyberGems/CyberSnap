@@ -67,16 +67,15 @@ public partial class OcrResultWindow : Window
         UpdateCharCount();
 
         // Dominance swap: hovering the ghost Copy hands it the cyan voice while
-        // the accent CTA falls back to plain text. Resource references (not local
-        // brushes) so both stay theme-live; leave clears back to the CTA style.
-        // The CTA also self-heals on enter, so a missed ghost-leave can never
-        // leave it stuck mid-swap (and its own tooltip then replaces the ghost's).
+        // the accent CTA falls back to plain text. The CTA side is restored with
+        // ClearValue (never a local brush), so its own hover trigger keeps working
+        // and cyan-on-cyan can never stick.
         CopyOnlyBtn.MouseEnter += (_, _) =>
             CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeTextPrimaryBrush");
         CopyOnlyBtn.MouseLeave += (_, _) =>
-            CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeAccentBrush");
+            CopyBtn.ClearValue(System.Windows.Controls.Control.ForegroundProperty);
         CopyBtn.MouseEnter += (_, _) =>
-            CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeAccentBrush");
+            CopyBtn.ClearValue(System.Windows.Controls.Control.ForegroundProperty);
 
         SetupOcrContextMenu();
 
@@ -538,6 +537,17 @@ public partial class OcrResultWindow : Window
                 CopyTranslationBtn_Click(CopyTranslationBtn, new RoutedEventArgs());
             else
                 CopyBtn_Click(CopyBtn, new RoutedEventArgs());
+            return;
+        }
+
+        // Ctrl+Shift+C copies and keeps the window open (the ghost button's
+        // gesture; TextBox has no binding for it, so nothing is hijacked).
+        if (e.Key == Key.C
+            && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)
+            && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            e.Handled = true;
+            CopyOnlyBtn_Click(CopyOnlyBtn, new RoutedEventArgs());
             return;
         }
 
