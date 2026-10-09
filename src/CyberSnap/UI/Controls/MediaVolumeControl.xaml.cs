@@ -167,17 +167,12 @@ public partial class MediaVolumeControl : UserControl
         if (!HasAudioTrack)
             return;
 
-        string lang = InterfaceLanguage;
-        string exportTip = IsExportMuted
-            ? LocalizationService.Translate(lang, "Muted. Audio will be excluded from the exported file.")
-            : LocalizationService.Translate(lang, "Adjust volume. Export will include audio at this level.");
-
-        MuteBtn.ToolTip = IsExportMuted
-            ? LocalizationService.Translate(lang, "Unmute audio")
-            : LocalizationService.Translate(lang, "Mute audio");
-
-        PillBorder.ToolTip = exportTip;
-        VolumeSlider.ToolTip = exportTip;
+        // Single tooltip for the whole control: slider and mute button share one
+        // explanation so hovering either half never shows a partial story.
+        ToolTip = LocalizationService.Translate(InterfaceLanguage, "Drag to adjust volume. The speaker button mutes; muted audio is excluded from exports.");
+        MuteBtn.ToolTip = null;
+        PillBorder.ToolTip = null;
+        VolumeSlider.ToolTip = null;
     }
 
     public void RefreshThemeBrushes()

@@ -69,6 +69,7 @@ namespace CyberSnap.UI
         private CancellationTokenSource? _previewLoadCts;
         private bool _isExporting;
         private const double MinSegmentSeconds = 0.05;
+        private const int WaveformBuckets = 180;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService, Bitmap? posterFrame = null)
         {
@@ -375,8 +376,8 @@ namespace CyberSnap.UI
             DisposeGifSequence();
             DisposeMp4Sequence();
             Filmstrip.Children.Clear();
-            Waveform.Peaks = null;
-            WaveformHost.Visibility = Visibility.Collapsed;
+            Waveform.Peaks = new float[WaveformBuckets];
+            UpdateWaveformSelection();
         }
 
         private void ReattachPreviewRendering()
@@ -1437,7 +1438,7 @@ namespace CyberSnap.UI
             bool hasFrames = _isGif ? _gifSequence != null : _mp4Sequence != null;
             if (!hasFrames || _videoDurationSeconds <= 0.05)
             {
-                FilmstripHost.Visibility = Visibility.Collapsed;
+                // Host stays reserved (blank) so late data never shifts the layout.
                 return;
             }
 
@@ -1504,7 +1505,7 @@ namespace CyberSnap.UI
                 });
             }
 
-            FilmstripHost.Visibility = thumbs.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            FilmstripHost.Visibility = Visibility.Visible;
         }
 
         private void Filmstrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1520,18 +1521,25 @@ namespace CyberSnap.UI
         {
             if (_isGif || !_hasAudioTrack)
             {
-                WaveformHost.Visibility = Visibility.Collapsed;
+                // Reserved flat line: the file carries no audio to draw.
+                Waveform.Peaks = new float[WaveformBuckets];
+                UpdateWaveformSelection();
+                WaveformHost.ToolTip = LocalizationService.Translate(
+                    _settingsService.Settings.InterfaceLanguage,
+                    "No audio track in this file");
                 return;
             }
 
+            WaveformHost.ToolTip = LocalizationService.Translate(
+                _settingsService.Settings.InterfaceLanguage,
+                "Audio waveform — click to seek");
             CancellationToken ct = _previewLoadCts?.Token ?? CancellationToken.None;
             _ = LoadWaveformAsync(version, ct);
         }
 
         private async Task LoadWaveformAsync(int version, CancellationToken ct)
         {
-            const int buckets = 180;
-            float[]? peaks = await AudioWaveform.GetPeaksAsync(_mediaFilePath, buckets, ct);
+            float[]? peaks = await AudioWaveform.GetPeaksAsync(_mediaFilePath, WaveformBuckets, ct);
             if (version != _mp4LoadVersion)
                 return;
 
@@ -1540,14 +1548,8 @@ namespace CyberSnap.UI
                 if (version != _mp4LoadVersion)
                     return;
 
-                if (peaks == null || peaks.Length == 0)
-                {
-                    Waveform.Peaks = null;
-                    WaveformHost.Visibility = Visibility.Collapsed;
-                    return;
-                }
-
-                Waveform.Peaks = peaks;
+                // Blank flat line on failure: the host stays reserved either way.
+                Waveform.Peaks = peaks is { Length: > 0 } ? peaks : new float[WaveformBuckets];
                 UpdateWaveformSelection();
                 WaveformHost.Visibility = Visibility.Visible;
             });
@@ -1945,11 +1947,13 @@ namespace CyberSnap.UI
             string lang = _settingsService.Settings.InterfaceLanguage;
             StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (← · Shift+← −1s)";
             StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (→ · Shift+→ +1s)";
-            CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the original file (untrimmed) to the clipboard");
+            CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the original file (without audio when muted)");
             SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed segment as a new file, keeping the original") + " (Ctrl+S)";
             TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version") + " (Ctrl+T)";
             ResetBtn.ToolTip = LocalizationService.Translate(lang, "Reset crop range") + " (R)";
-            WaveformHost.ToolTip = LocalizationService.Translate(lang, "Audio waveform — click to seek");
+            WaveformHost.ToolTip = (_isGif || !_hasAudioTrack)
+                ? LocalizationService.Translate(lang, "No audio track in this file")
+                : LocalizationService.Translate(lang, "Audio waveform — click to seek");
             UpdateLoopTooltip();
             UpdatePreciseCutTooltip();
             InitZoomIcons();
@@ -2754,11 +2758,11 @@ namespace CyberSnap.UI
             }
         }
 
-        private void CopyFileBtn_Click(object sender, RoutedEventArgs e) => CopyMediaFileToClipboard();
+        private void CopyFileBtn_Click(object sender, RoutedEventArgs e) => _ = CopyMediaFileToClipboardAsync();
 
-        private void MenuCopyFile_Click(object sender, RoutedEventArgs e) => CopyMediaFileToClipboard();
+        private void MenuCopyFile_Click(object sender, RoutedEventArgs e) => _ = CopyMediaFileToClipboardAsync();
 
-        private void CopyMediaFileToClipboard()
+        private async System.Threading.Tasks.Task CopyMediaFileToClipboardAsync()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
             if (string.IsNullOrEmpty(_mediaFilePath) || !File.Exists(_mediaFilePath))
@@ -2766,10 +2770,33 @@ namespace CyberSnap.UI
                 ShowBanner(LocalizationService.Translate(lang, "Clipboard copy failed"));
                 return;
             }
+            if (_isExporting)
+                return;
 
             try
             {
-                ClipboardService.CopyFileToClipboard(_mediaFilePath);
+                // Fast path: untouched audio rides along in the original file.
+                // Otherwise export the full range (mute/volume honored) to temp.
+                bool passthrough = _isGif
+                    || !_hasAudioTrack
+                    || (!VolumeControl.IsExportMuted
+                        && VolumeControl.Volume > 0.001
+                        && Math.Abs(VolumeControl.Volume - 1.0) < 0.001);
+                string copyPath = _mediaFilePath;
+                if (!passthrough)
+                {
+                    string tempPath = GetClipboardTempPath(Path.GetExtension(_mediaFilePath));
+                    PruneStaleClipboardTempFiles();
+                    bool success = await RunFfmpegTrimAsync(_mediaFilePath, tempPath, 0, _videoDurationSeconds);
+                    if (!success)
+                    {
+                        TryDeleteFile(tempPath);
+                        return;
+                    }
+                    copyPath = tempPath;
+                }
+
+                ClipboardService.CopyFileToClipboard(copyPath);
                 ShowBanner(LocalizationService.Translate(lang, "File copied to clipboard"));
             }
             catch (Exception ex)
@@ -2777,6 +2804,33 @@ namespace CyberSnap.UI
                 AppDiagnostics.LogError("trimmer.copy-file", ex);
                 ShowBanner(LocalizationService.Translate(lang, "Clipboard copy failed"));
             }
+        }
+
+        private static string GetClipboardTempPath(string extension)
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "CyberSnapClipboard");
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, $"copy-{Guid.NewGuid():N}{extension}");
+        }
+
+        private static void PruneStaleClipboardTempFiles()
+        {
+            try
+            {
+                string dir = Path.Combine(Path.GetTempPath(), "CyberSnapClipboard");
+                if (!Directory.Exists(dir))
+                    return;
+                foreach (string file in Directory.GetFiles(dir, "copy-*"))
+                {
+                    try
+                    {
+                        if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddDays(-7))
+                            TryDeleteFile(file);
+                    }
+                    catch { /* per-file best effort */ }
+                }
+            }
+            catch { /* housekeeping must never break copy */ }
         }
 
         private void MenuOpenInGallery_Click(object sender, RoutedEventArgs e)

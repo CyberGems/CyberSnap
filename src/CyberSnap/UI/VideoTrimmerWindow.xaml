@@ -340,8 +340,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#70B91C1C"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#A0F87171"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#99DC2626"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FFF87171"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#88B91C1C"/>
@@ -630,6 +630,18 @@
             <Setter Property="MaxLength" Value="12"/>
             <Setter Property="Padding" Value="2,0"/>
             <Setter Property="MinWidth" Value="48"/>
+        </Style>
+
+        <!-- Long tooltips wrap over two or more lines instead of stretching wide. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="MaxWidth" Value="300"/>
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -1072,16 +1084,17 @@
                     </Grid>
                 </Border>
 
-                <!-- Filmstrip: evenly spaced preview thumbnails across the full duration -->
+                <!-- Filmstrip: evenly spaced preview thumbnails across the full duration.
+                     Always reserves its space so late thumbnails never shift the layout. -->
                 <Border x:Name="FilmstripHost"
                         Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
                         Margin="0,6,0,0"
+                        Height="34"
                         CornerRadius="6"
                         ClipToBounds="True"
                         Background="{DynamicResource ThemeInputBackgroundBrush}"
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                        BorderThickness="1"
-                        Visibility="Collapsed">
+                        BorderThickness="1">
                     <UniformGrid x:Name="Filmstrip"
                                  Rows="1"
                                  Cursor="Hand"
@@ -1090,7 +1103,8 @@
                 </Border>
 
                 <!-- Audio waveform: peaks across the full duration, dimmed outside
-                     the kept segment. Click to seek. Collapsed when no audio. -->
+                     the kept segment. Click to seek. Always reserves its space; a
+                     flat line when the file carries no audio. -->
                 <Border x:Name="WaveformHost"
                         Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
                         Margin="0,6,0,0"
@@ -1101,7 +1115,6 @@
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                         BorderThickness="1"
                         Cursor="Hand"
-                        Visibility="Collapsed"
                         MouseLeftButtonDown="Waveform_MouseLeftButtonDown">
                     <controls:WaveformControl x:Name="Waveform"
                                               Margin="8,3,8,3"

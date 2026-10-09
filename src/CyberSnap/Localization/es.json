@@ -2147,6 +2147,8 @@
   "Precise cut off: fast keyframe cut (boundaries are approximate)": "Corte preciso desactivado: corte rápido por keyframes (límites aproximados)",
   "Save the trimmed segment as a new file, keeping the original": "Guarda el segmento recortado como archivo nuevo, conservando el original",
   "Copy the original file (untrimmed) to the clipboard": "Copia el archivo original (sin recortar) al portapapeles",
+  "Copy the original file (without audio when muted)": "Copia el archivo original (sin audio si está silenciado)",
+  "Drag to adjust volume. The speaker button mutes; muted audio is excluded from exports.": "Arrastra para ajustar el volumen. El botón de altavoz silencia; el audio silenciado se excluye de las exportaciones.",
   "Audio waveform — click to seek": "Forma de onda de audio — clic para saltar",
   "Crop start handle": "Control de inicio de recorte",
   "Crop end handle": "Control de fin de recorte",
