@@ -364,6 +364,7 @@
   "Show the QR & Barcode result window": "Show the QR & Barcode result window",
   "Open the result window after a scan, whether or not the code was copied.": "Open the result window after a scan, whether or not the code was copied.",
   "Copy the text and keep this window open.": "Copy the text and keep this window open.",
+  "Copy and close (Ctrl+Enter)": "Copy and close (Ctrl+Enter)",
   "Don't auto-copy recordings": "Don't auto-copy recordings",
   "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.": "When global Auto-copy is on, still don't place the saved video or GIF on the clipboard.",
   "Auto-copy OCR text": "Auto-copy OCR text",

@@ -69,9 +69,13 @@ public partial class OcrResultWindow : Window
         // Dominance swap: hovering the ghost Copy hands it the cyan voice while
         // the accent CTA falls back to plain text. Resource references (not local
         // brushes) so both stay theme-live; leave clears back to the CTA style.
+        // The CTA also self-heals on enter, so a missed ghost-leave can never
+        // leave it stuck mid-swap (and its own tooltip then replaces the ghost's).
         CopyOnlyBtn.MouseEnter += (_, _) =>
             CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeTextPrimaryBrush");
         CopyOnlyBtn.MouseLeave += (_, _) =>
+            CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeAccentBrush");
+        CopyBtn.MouseEnter += (_, _) =>
             CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeAccentBrush");
 
         SetupOcrContextMenu();
@@ -223,6 +227,7 @@ public partial class OcrResultWindow : Window
         OcrTitleBar.CloseToolTip = LocalizationService.Translate(lang, "Close");
         OcrTitleBar.RefreshTooltips();
         CopyOnlyBtn.ToolTip = LocalizationService.Translate(lang, "Copy the text and keep this window open.");
+        CopyBtn.ToolTip = LocalizationService.Translate(lang, "Copy and close (Ctrl+Enter)");
         CopyOnlyBtnText.Text = LocalizationService.Translate(lang, "Copy");
         CopiedBadgeText.Text = LocalizationService.Translate(lang, "Copied");
         UpdateCharCount();
@@ -1034,12 +1039,41 @@ public partial class OcrResultWindow : Window
 
     private void SetupOcrContextMenu()
     {
+        OcrTextBox.ContextMenu = BuildThemedTextBoxMenu(
+            OcrTextBox,
+            undoAction: () => OcrTextBox.Undo(),
+            cutAction: () => OcrTextBox.Cut(),
+            copyAction: () => OcrTextBox.Copy(),
+            pasteAction: () => OcrTextBox.Paste(),
+            selectAllAction: () => OcrTextBox.SelectAll(),
+            deleteAction: () => OcrTextBox.SelectedText = "");
+        SearchTextBox.ContextMenu = BuildThemedTextBoxMenu(
+            SearchTextBox,
+            undoAction: () => SearchTextBox.Undo(),
+            cutAction: () => SearchTextBox.Cut(),
+            copyAction: () => SearchTextBox.Copy(),
+            pasteAction: () => SearchTextBox.Paste(),
+            selectAllAction: () => SearchTextBox.SelectAll(),
+            deleteAction: () => SearchTextBox.SelectedText = "");
+    }
+
+    /// <summary>Shared dark menu for text boxes; selection-bound rows disable
+    /// themselves when there is nothing selected instead of confusing anyone.</summary>
+    private ContextMenu BuildThemedTextBoxMenu(
+        TextBox target,
+        Action undoAction,
+        Action cutAction,
+        Action copyAction,
+        Action pasteAction,
+        Action selectAllAction,
+        Action deleteAction)
+    {
         var menu = new ContextMenu();
         if (TryFindResource("OcrContextMenuStyle") is Style menuStyle)
             menu.Style = menuStyle;
         menu.Focusable = false;
 
-        void AddItem(string header, string gesture, string iconId, Action action)
+        MenuItem AddItem(string header, string gesture, string iconId, Action action)
         {
             var item = new MenuItem
             {
@@ -1056,18 +1090,30 @@ public partial class OcrResultWindow : Window
                 action();
             };
             menu.Items.Add(item);
+            return item;
         }
 
-        AddItem("Undo", "Ctrl+Z", "undo", () => OcrTextBox.Undo());
+        var undoItem = AddItem("Undo", "Ctrl+Z", "undo", undoAction);
         menu.Items.Add(new Separator { Style = (TryFindResource("OcrSeparatorStyle") as Style) });
-        AddItem("Cut", "Ctrl+X", "cut", () => OcrTextBox.Cut());
-        AddItem("Copy", "Ctrl+C", "copy", () => OcrTextBox.Copy());
-        AddItem("Paste", "Ctrl+V", "paste", () => OcrTextBox.Paste());
+        var cutItem = AddItem("Cut", "Ctrl+X", "cut", cutAction);
+        var copyItem = AddItem("Copy", "Ctrl+C", "copy", copyAction);
+        var pasteItem = AddItem("Paste", "Ctrl+V", "paste", pasteAction);
         menu.Items.Add(new Separator { Style = (TryFindResource("OcrSeparatorStyle") as Style) });
-        AddItem("Select All", "Ctrl+A", "select", () => OcrTextBox.SelectAll());
-        AddItem("Delete", "Del", "trash", () => OcrTextBox.SelectedText = "");
+        AddItem("Select All", "Ctrl+A", "select", selectAllAction);
+        var deleteItem = AddItem("Delete", "Del", "trash", deleteAction);
 
-        OcrTextBox.ContextMenu = menu;
+        menu.Opened += (_, _) =>
+        {
+            bool hasSelection = target.SelectionLength > 0;
+            bool editable = !target.IsReadOnly;
+            undoItem.IsEnabled = target.CanUndo;
+            cutItem.IsEnabled = hasSelection && editable;
+            copyItem.IsEnabled = hasSelection;
+            pasteItem.IsEnabled = editable && System.Windows.Clipboard.ContainsText();
+            deleteItem.IsEnabled = hasSelection && editable;
+        };
+
+        return menu;
     }
 
     private static System.Windows.Controls.Image CreateMenuIcon(string iconId)

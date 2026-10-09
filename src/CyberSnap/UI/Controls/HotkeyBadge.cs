@@ -77,31 +77,36 @@ public sealed class HotkeyBadge : Border
     {
         if (Kind is HotkeyBadgeKind.Enter or HotkeyBadgeKind.CtrlEnter)
         {
-            var row = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
-            if (Kind == HotkeyBadgeKind.CtrlEnter)
+            // Two matching keycaps ("Ctrl" + arrow) instead of one wide pill,
+            // with a "+" between them. Same chrome, same metrics both sides.
+            System.Windows.Controls.Border MiniCap(System.Windows.FrameworkElement content)
             {
-                row.Children.Add(new TextBlock
+                return new System.Windows.Controls.Border
                 {
-                    Text = "Ctrl",
-                    FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-                    FontSize = 9,
-                    FontWeight = FontWeights.Bold,
+                    CornerRadius = new CornerRadius(4),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(4, 2, 4, 2),
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 3, 0)
-                });
-                TextOptions.SetTextFormattingMode((TextBlock)row.Children[0], TextFormattingMode.Display);
+                    Child = content
+                };
             }
-            Padding = new Thickness(3, 2, 3, 2);
+
+            void ApplyChrome(System.Windows.Controls.Border cap)
+            {
+                cap.SetResourceReference(BackgroundProperty, "HotkeyBadgeBackgroundBrush");
+                cap.SetResourceReference(BorderBrushProperty, "HotkeyBadgeBorderBrush");
+            }
+
             var arrow = new System.Windows.Shapes.Path
             {
                 Data = EnterArrow,
-                StrokeThickness = 2.2,
+                StrokeThickness = 2,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
                 StrokeLineJoin = PenLineJoin.Round,
                 Fill = System.Windows.Media.Brushes.Transparent,
-                Width = 11,
-                Height = 11,
+                Width = 10,
+                Height = 10,
                 Stretch = Stretch.Uniform,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -114,8 +119,51 @@ public sealed class HotkeyBadge : Border
                         typeof(System.Windows.Controls.Control),
                         1)
                 });
-            row.Children.Add(arrow);
-            Child = row;
+
+            if (Kind == HotkeyBadgeKind.CtrlEnter)
+            {
+                var ctrlCap = MiniCap(new TextBlock
+                {
+                    Text = "Ctrl",
+                    FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                TextOptions.SetTextFormattingMode((TextBlock)ctrlCap.Child, TextFormattingMode.Display);
+                var arrowCap = MiniCap(arrow);
+                ApplyChrome(ctrlCap);
+                ApplyChrome(arrowCap);
+
+                var row = new StackPanel
+                {
+                    Orientation = System.Windows.Controls.Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                row.Children.Add(ctrlCap);
+                row.Children.Add(new TextBlock
+                {
+                    Text = "+",
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(3, 0, 3, 0),
+                    Opacity = 0.7
+                });
+                row.Children.Add(arrowCap);
+
+                Padding = new Thickness(0);
+                Background = System.Windows.Media.Brushes.Transparent;
+                BorderThickness = new Thickness(0);
+                Child = row;
+                return;
+            }
+
+            Padding = new Thickness(3, 2, 3, 2);
+            arrow.StrokeThickness = 2.2;
+            arrow.Width = 11;
+            arrow.Height = 11;
+            Child = arrow;
             return;
         }
 
