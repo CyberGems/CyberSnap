@@ -7,11 +7,13 @@ namespace CyberSnap.UI.Controls;
 /// <summary>
 /// Small keycap shown inside a confirm or cancel button. Escape is the word
 /// "Esc". Enter is the return arrow, matching CyberClock's .btn-kbd.
+/// CtrlEnter pairs the "Ctrl" caption with the same arrow.
 /// </summary>
 public enum HotkeyBadgeKind
 {
     Escape,
-    Enter
+    Enter,
+    CtrlEnter
 }
 
 public sealed class HotkeyBadge : Border
@@ -73,8 +75,22 @@ public sealed class HotkeyBadge : Border
 
     private void Rebuild()
     {
-        if (Kind == HotkeyBadgeKind.Enter)
+        if (Kind is HotkeyBadgeKind.Enter or HotkeyBadgeKind.CtrlEnter)
         {
+            var row = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+            if (Kind == HotkeyBadgeKind.CtrlEnter)
+            {
+                row.Children.Add(new TextBlock
+                {
+                    Text = "Ctrl",
+                    FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 3, 0)
+                });
+                TextOptions.SetTextFormattingMode((TextBlock)row.Children[0], TextFormattingMode.Display);
+            }
             Padding = new Thickness(3, 2, 3, 2);
             var arrow = new System.Windows.Shapes.Path
             {
@@ -98,7 +114,8 @@ public sealed class HotkeyBadge : Border
                         typeof(System.Windows.Controls.Control),
                         1)
                 });
-            Child = arrow;
+            row.Children.Add(arrow);
+            Child = row;
             return;
         }
 

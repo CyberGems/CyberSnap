@@ -66,6 +66,14 @@ public partial class OcrResultWindow : Window
         OcrTextBox.TextChanged += OcrTextBox_TextChanged;
         UpdateCharCount();
 
+        // Dominance swap: hovering the ghost Copy hands it the cyan voice while
+        // the accent CTA falls back to plain text. Resource references (not local
+        // brushes) so both stay theme-live; leave clears back to the CTA style.
+        CopyOnlyBtn.MouseEnter += (_, _) =>
+            CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeTextPrimaryBrush");
+        CopyOnlyBtn.MouseLeave += (_, _) =>
+            CopyBtn.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeAccentBrush");
+
         SetupOcrContextMenu();
 
         OcrTextBoxBorder.PreviewMouseRightButtonDown += OcrTextBoxBorder_PreviewMouseRightButtonDown;
@@ -512,6 +520,19 @@ public partial class OcrResultWindow : Window
         {
             e.Handled = true;
             CloseWindow();
+            return;
+        }
+
+        // Ctrl+Enter copies + closes from anywhere, including inside text boxes
+        // where plain Enter must keep making new lines.
+        if (e.Key is Key.Enter or Key.Return
+            && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            e.Handled = true;
+            if (CopyTranslationBtn.Visibility == Visibility.Visible)
+                CopyTranslationBtn_Click(CopyTranslationBtn, new RoutedEventArgs());
+            else
+                CopyBtn_Click(CopyBtn, new RoutedEventArgs());
             return;
         }
 
