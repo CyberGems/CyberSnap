@@ -480,13 +480,16 @@ public partial class OcrResultWindow : Window
 
     private void ApplyCopyActionState()
     {
-        if (CopyBtnText is null || CopiedBadge is null)
+        if (CopyBtnText is null || CopiedBadge is null || CopyOnlyBtn is null)
             return;
 
         bool copied = IsOcrTextCopied();
         CopiedBadge.Visibility = copied ? Visibility.Visible : Visibility.Collapsed;
         CopyBtnText.Text = LocalizationService.Translate(copied ? "Close" : "Copy and close");
         CopyBtnIcon.Visibility = copied ? Visibility.Collapsed : Visibility.Visible;
+        // The ghost copy is pointless while the box holds exactly what is already
+        // on the clipboard (e.g. just auto-copied): it wakes up on the first edit.
+        CopyOnlyBtn.IsEnabled = !copied && !string.IsNullOrWhiteSpace(OcrTextBox.Text);
     }
 
     private async void CopyTranslationBtn_Click(object sender, RoutedEventArgs e)
