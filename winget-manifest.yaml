@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.6.0.schema.json
 PackageIdentifier: CyberGems.CyberSnap
 PackageVersion: {{VERSION}}
 PackageName: CyberSnap
@@ -20,8 +21,6 @@ Commands:
 - cybersnap
 PackageUrl: https://cybergems.org/apps/cybersnap/
 ReleaseNotesUrl: https://github.com/CyberGems/CyberSnap/releases/tag/{{VERSION}}
-DocumentationUrl: https://github.com/CyberGems/CyberSnap/wiki
-ProjectUrl: https://github.com/CyberGems/CyberSnap
 Installers:
 - Architecture: x64
   InstallerType: inno
@@ -32,19 +31,10 @@ Installers:
   - interactive
   - silent
   - silentWithProgress
-  Switches:
+  InstallerSwitches:
     Silent: /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
     SilentWithProgress: /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
     Custom: /NORESTART /SUPPRESSMSGBOXES
-  ExpectedReturnCodes:
-  - InstallerReturnCode: 0
-    ReturnResponse: success
-  - InstallerReturnCode: 1605
-    ReturnResponse: notInstalled
-  - InstallerReturnCode: 1641
-    ReturnResponse: rebootRequired
-  - InstallerReturnCode: 3010
-    ReturnResponse: rebootRequired
 PackageLocale: en-US
 ManifestType: singleton
-ManifestVersion: 1.8.0
+ManifestVersion: 1.6.0
