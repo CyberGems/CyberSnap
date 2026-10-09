@@ -700,8 +700,6 @@
                             </Button>
                             <Button x:Name="CopyBtn" Click="CopyBtn_Click"
                                     IsDefault="True"
-                                    MinWidth="225"
-                                    HorizontalContentAlignment="Center"
                                     Style="{StaticResource CyberSnapAccentButton}">
                                 <StackPanel Orientation="Horizontal">
                                     <Path x:Name="CopyBtnIcon"

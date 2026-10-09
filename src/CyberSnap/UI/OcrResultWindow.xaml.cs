@@ -483,12 +483,11 @@ public partial class OcrResultWindow : Window
         if (CopyBtnText is null || CopiedBadge is null || CopyOnlyBtn is null)
             return;
 
+        // The CTA keeps a fixed label ("Copiar y cerrar" still just closes when
+        // already copied): morphing its text resized the button and shifted the
+        // whole right-aligned row. Copied state reads from the badge + ghost.
         bool copied = IsOcrTextCopied();
-        // Opacity (not collapse): the badge space stays reserved so the row
-        // never jumps when copy state flips.
         CopiedBadge.Opacity = copied ? 1 : 0;
-        CopyBtnText.Text = LocalizationService.Translate(copied ? "Close" : "Copy and close");
-        CopyBtnIcon.Visibility = copied ? Visibility.Collapsed : Visibility.Visible;
         // The ghost copy is pointless while the box holds exactly what is already
         // on the clipboard (e.g. just auto-copied): it wakes up on the first edit.
         CopyOnlyBtn.IsEnabled = !copied && !string.IsNullOrWhiteSpace(OcrTextBox.Text);
