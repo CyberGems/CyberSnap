@@ -650,6 +650,15 @@
                                     Orientation="Horizontal"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center">
+                            <CheckBox x:Name="AutoCopyCheck"
+                                        Content="Auto-copy OCR"
+                                        Services:LocalizationService.SourceContent="Auto-copy OCR"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,10,0"
+                                        ToolTip="Copy OCR results automatically (requires the Auto-copy master switch)"
+                                        Services:LocalizationService.SourceToolTip="Copy OCR results automatically (requires the Auto-copy master switch)"
+                                        Checked="AutoCopyCheck_Changed"
+                                        Unchecked="AutoCopyCheck_Changed"/>
                             <Border x:Name="CopiedBadge"
                                     Visibility="Collapsed"
                                     CornerRadius="8"

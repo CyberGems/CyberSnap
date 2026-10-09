@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using CyberSnap.UI;
 
 namespace CyberSnap.UI.Controls;
 
@@ -93,8 +94,10 @@ public sealed class HotkeyBadge : Border
 
             void ApplyChrome(System.Windows.Controls.Border cap)
             {
-                cap.SetResourceReference(BackgroundProperty, "HotkeyBadgeBackgroundBrush");
-                cap.SetResourceReference(BorderBrushProperty, "HotkeyBadgeBorderBrush");
+                // Explicit brushes (resource-backed with computed fallback): a missing
+                // or late resource dictionary must never render an invisible keycap.
+                cap.Background = ChromeBrush("HotkeyBadgeBackgroundBrush", true);
+                cap.BorderBrush = ChromeBrush("HotkeyBadgeBorderBrush", false);
             }
 
             var arrow = new System.Windows.Shapes.Path
@@ -178,5 +181,25 @@ public sealed class HotkeyBadge : Border
         };
         TextOptions.SetTextFormattingMode(label, TextFormattingMode.Display);
         Child = label;
+    }
+
+    private static System.Windows.Media.Brush ChromeBrush(string key, bool background)
+    {
+        if (System.Windows.Application.Current?.TryFindResource(key)
+            is System.Windows.Media.Brush found)
+            return found;
+
+        // Same values as Theme for dark / light; guarantees a visible keycap.
+        bool dark = Theme.IsDark;
+        var color = (background, dark) switch
+        {
+            (true, true) => System.Windows.Media.Color.FromArgb(20, 255, 255, 255),
+            (true, false) => System.Windows.Media.Color.FromArgb(16, 0, 0, 0),
+            (false, true) => System.Windows.Media.Color.FromArgb(41, 255, 255, 255),
+            (false, false) => System.Windows.Media.Color.FromArgb(32, 0, 0, 0),
+        };
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
     }
 }

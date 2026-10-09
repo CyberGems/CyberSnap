@@ -66,6 +66,10 @@ public partial class OcrResultWindow : Window
         OcrTextBox.TextChanged += OcrTextBox_TextChanged;
         UpdateCharCount();
 
+        RefreshAutoCopyCheck();
+        SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopySettingChanged;
+        SettingsService.AutoCopyToClipboardChanged += OnOcrAutoCopySettingChanged;
+
         // Dominance swap: hovering the ghost Copy hands it the cyan voice while
         // the accent CTA falls back to plain text. The CTA side is restored with
         // ClearValue (never a local brush), so its own hover trigger keeps working
@@ -566,8 +570,46 @@ public partial class OcrResultWindow : Window
     }
 
 
+    private bool _suppressAutoCopyCheck;
+
+    private void RefreshAutoCopyCheck()
+    {
+        bool effective;
+        try
+        {
+            var settings = SettingsService.LoadStatic() ?? _settingsService.Settings;
+            effective = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr);
+        }
+        catch
+        {
+            effective = false;
+        }
+
+        _suppressAutoCopyCheck = true;
+        try { AutoCopyCheck.IsChecked = effective; }
+        finally { _suppressAutoCopyCheck = false; }
+    }
+
+    private void AutoCopyCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoCopyCheck) return;
+        SettingsService.SetOcrAutoCopyToClipboard(AutoCopyCheck.IsChecked == true);
+    }
+
+    private void OnOcrAutoCopySettingChanged(bool _)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() => RefreshAutoCopyCheck()));
+            return;
+        }
+        RefreshAutoCopyCheck();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
+        SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopySettingChanged;
+        SettingsService.AutoCopyToClipboardChanged -= OnOcrAutoCopySettingChanged;
         _translateCts?.Cancel();
         _translateCts?.Dispose();
         _translateCts = null;
