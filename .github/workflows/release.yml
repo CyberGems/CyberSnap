@@ -154,11 +154,11 @@ jobs:
       pull-requests: write
     steps:
       - name: Download winget manifest from release
-        uses: actions/download-release-asset@v2
-        with:
-          name: winget-manifest-${{ github.event.release.tag_name }}.yaml
-          path: .
-          repo: ${{ github.repository }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --pattern "winget-manifest-*.yaml" --dir .
 
       - name: Submit to winget
         shell: pwsh
