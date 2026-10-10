@@ -1,12 +1,13 @@
-# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.6.0.schema.json
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 PackageIdentifier: CyberGems.CyberSnap
 PackageVersion: {{VERSION}}
-PackageName: CyberSnap
+PackageLocale: en-US
 Publisher: CyberGems
-License: GPL-3.0
+PackageName: CyberSnap
+PackageUrl: https://cybergems.org/apps/cybersnap/
+License: GPL-3.0-or-later
 LicenseUrl: https://github.com/CyberGems/CyberSnap/blob/main/LICENSE
 Copyright: Copyright (C) 2026 CyberGems
-CopyrightUrl: https://github.com/CyberGems/CyberSnap/blob/main/LICENSE
 ShortDescription: All-in-one screen capture and annotation suite for Windows
 Description: CyberSnap is an all-in-one screen capture and annotation suite for Windows, built to take a capture from first click to finished result without interrupting your workflow. Capture areas, windows, full screens, or scrolling content; record MP4 or GIF; annotate with vector tools; extract and translate text with OCR; and sample on-screen colors. A searchable local gallery, built-in video trimming, and multiple upload destinations make past captures easy to find, refine, and share. Built with .NET 9 and WPF.
 Tags:
@@ -17,24 +18,6 @@ Tags:
 - screen-recording
 - color-picker
 Moniker: cybersnap
-Commands:
-- cybersnap
-PackageUrl: https://cybergems.org/apps/cybersnap/
 ReleaseNotesUrl: https://github.com/CyberGems/CyberSnap/releases/tag/{{TAG}}
-Installers:
-- Architecture: x64
-  InstallerType: inno
-  InstallerUrl: https://github.com/CyberGems/CyberSnap/releases/download/{{TAG}}/CyberSnap-Setup-{{TAG}}.exe
-  InstallerSha256: {{INSTALLER_HASH}}
-  Scope: machine
-  InstallModes:
-  - interactive
-  - silent
-  - silentWithProgress
-  InstallerSwitches:
-    Silent: /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
-    SilentWithProgress: /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
-    Custom: /NORESTART /SUPPRESSMSGBOXES
-PackageLocale: en-US
-ManifestType: singleton
+ManifestType: defaultLocale
 ManifestVersion: 1.6.0

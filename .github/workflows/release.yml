@@ -119,18 +119,26 @@ jobs:
           $notes = $template.Replace("{{VERSION}}", "${{ github.ref_name }}").Replace("{{INSTALLER_HASH}}", $installerHash).Replace("{{PORTABLE_HASH}}", $portableHash)
           [System.IO.File]::WriteAllText("release_notes.md", $notes, [System.Text.Encoding]::UTF8)
 
-          $manifestTemplate = [System.IO.File]::ReadAllText("winget-manifest.yaml", [System.Text.Encoding]::UTF8)
           $tag = "${{ github.ref_name }}"
           # winget versions carry no 'v' prefix (1.18.0, not v1.18.0); URLs keep it.
           $bareVersion = if ($tag.StartsWith("v")) { $tag.Substring(1) } else { $tag }
-          $manifest = $manifestTemplate.Replace("{{VERSION}}", $bareVersion).Replace("{{TAG}}", $tag).Replace("{{INSTALLER_HASH}}", $installerHash)
-          [System.IO.File]::WriteAllText("winget-manifest-${{ github.ref_name }}.yaml", $manifest, [System.Text.Encoding]::UTF8)
-          Write-Host "Generated winget-manifest-${{ github.ref_name }}.yaml with hash: $installerHash"
+          $manifestFiles = @{
+              "winget-version.yaml"   = "CyberGems.CyberSnap.yaml"
+              "winget-locale.yaml"    = "CyberGems.CyberSnap.locale.en-US.yaml"
+              "winget-installer.yaml" = "CyberGems.CyberSnap.installer.yaml"
+          }
+          New-Item -ItemType Directory -Path winget-pkg -Force | Out-Null
+          foreach ($entry in $manifestFiles.GetEnumerator()) {
+              $manifestTemplate = [System.IO.File]::ReadAllText($entry.Key, [System.Text.Encoding]::UTF8)
+              $manifest = $manifestTemplate.Replace("{{VERSION}}", $bareVersion).Replace("{{TAG}}", $tag).Replace("{{INSTALLER_HASH}}", $installerHash)
+              [System.IO.File]::WriteAllText("winget-pkg/$($entry.Value)", $manifest, [System.Text.Encoding]::UTF8)
+          }
+          Write-Host "Generated winget manifests for $tag with hash: $installerHash"
 
-      - name: Validate winget manifest
+      - name: Validate winget manifests
         shell: pwsh
         run: |
-          winget validate winget-manifest-${{ github.ref_name }}.yaml
+          winget validate winget-pkg
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
@@ -140,7 +148,9 @@ jobs:
           files: |
             ./CyberSnap-${{ github.ref_name }}-Portable-win-x64.zip
             ./CyberSnap-Setup-${{ github.ref_name }}.exe
-            ./winget-manifest-${{ github.ref_name }}.yaml
+            ./winget-pkg/CyberSnap.CyberSnap.yaml
+            ./winget-pkg/CyberSnap.CyberSnap.locale.en-US.yaml
+            ./winget-pkg/CyberSnap.CyberSnap.installer.yaml
           draft: true
           prerelease: false
           body_path: ./release_notes.md
@@ -156,12 +166,13 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Download winget manifest from release
+      - name: Download winget manifests from release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --pattern "winget-manifest-*.yaml" --dir .
+          New-Item -ItemType Directory -Path winget-pkg -Force | Out-Null
+          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --pattern "CyberSnap.CyberSnap*.yaml" --dir winget-pkg
 
       - name: Submit to winget
         shell: pwsh
@@ -169,4 +180,4 @@ jobs:
           GH_TOKEN: ${{ secrets.WINGET_PAT }}
         run: |
           winget install --id Microsoft.WingetCreate -e --silent --accept-package-agreements --accept-source-agreements
-          wingetcreate submit winget-manifest-${{ github.event.release.tag_name }}.yaml --token $env:GH_TOKEN
+          wingetcreate submit winget-pkg --token $env:GH_TOKEN
