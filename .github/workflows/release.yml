@@ -120,7 +120,10 @@ jobs:
           [System.IO.File]::WriteAllText("release_notes.md", $notes, [System.Text.Encoding]::UTF8)
 
           $manifestTemplate = [System.IO.File]::ReadAllText("winget-manifest.yaml", [System.Text.Encoding]::UTF8)
-          $manifest = $manifestTemplate.Replace("{{VERSION}}", "${{ github.ref_name }}").Replace("{{INSTALLER_HASH}}", $installerHash)
+          $tag = "${{ github.ref_name }}"
+          # winget versions carry no 'v' prefix (1.18.0, not v1.18.0); URLs keep it.
+          $bareVersion = if ($tag.StartsWith("v")) { $tag.Substring(1) } else { $tag }
+          $manifest = $manifestTemplate.Replace("{{VERSION}}", $bareVersion).Replace("{{TAG}}", $tag).Replace("{{INSTALLER_HASH}}", $installerHash)
           [System.IO.File]::WriteAllText("winget-manifest-${{ github.ref_name }}.yaml", $manifest, [System.Text.Encoding]::UTF8)
           Write-Host "Generated winget-manifest-${{ github.ref_name }}.yaml with hash: $installerHash"
 

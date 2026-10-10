@@ -20,11 +20,11 @@ Moniker: cybersnap
 Commands:
 - cybersnap
 PackageUrl: https://cybergems.org/apps/cybersnap/
-ReleaseNotesUrl: https://github.com/CyberGems/CyberSnap/releases/tag/{{VERSION}}
+ReleaseNotesUrl: https://github.com/CyberGems/CyberSnap/releases/tag/{{TAG}}
 Installers:
 - Architecture: x64
   InstallerType: inno
-  InstallerUrl: https://github.com/CyberGems/CyberSnap/releases/download/{{VERSION}}/CyberSnap-Setup-{{VERSION}}.exe
+  InstallerUrl: https://github.com/CyberGems/CyberSnap/releases/download/{{TAG}}/CyberSnap-Setup-{{TAG}}.exe
   InstallerSha256: {{INSTALLER_HASH}}
   Scope: machine
   InstallModes:
