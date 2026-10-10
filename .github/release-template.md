@@ -8,53 +8,61 @@
 
 <!-- Maintainer: Rewrite the marked paragraph for every release. Use 25-45 words, lead with user-facing changes, and do not repeat the app name or version. -->
 <!-- changelog-summary:start -->
-The tray panel gains a neutral donate heart, a ⋯ options menu with hideable animated sections, and every suite menu now toggles deterministically on second click. Hotkeys move fully to the standalone flow with wired recording shortcuts, an honest reset, and a smarter Print Screen banner.
+The setup wizard is overhauled with capture presets and a smarter hotkey step, the trimmer gains a media properties dialog, editor copy splits image and file targets, and the OCR window gets a refined copy row with global shortcuts.
 <!-- changelog-summary:end -->
 
 > **New to CyberSnap?** A fast, privacy-focused Windows toolkit for screenshots, annotation, OCR, QR scanning, screen recording, and sharing.
 
 ---
 
-### 🚀 Key Features & Highlights
+### ✨ Key Features & Highlights
 
-- ❤️ **Calmer tray panel**:
-  - The donate heart rests in neutral gray and only blushes rose on hover, so Exit stays the single red.
-  - The header ⋯ menu replaces the chevron and toggles capture modes, recording, tools, and gallery sections with smooth animations and a reposition helper.
+- 🧙 **Setup wizard, rebuilt**:
+  - After-capture presets (Basic / Intermediate / Advanced) with a live result preview, in the wizard and in Settings.
+  - Smarter Print Screen step: names the real occupant, warns only when relevant, and refuses taken keys instead of saving dead hotkeys.
+  - Sober sidebar, full translations, clickable steps.
 
-- 🖱️ **Menus that toggle**:
-  - Title-bar, gallery, card, filter, and preview menus all close reliably on second click.
+- 🎬 **Video trimmer levels up**:
+  - New Properties dialog: container, codecs, resolution, fps, bitrate, audio and trim selection via ffprobe.
+  - Permanent filmstrip and waveform (flat line when there is no audio), aspect-matched thumbnails, recentered preview.
+  - Copy honors mute, wrapped tooltips, livelier Cut hover.
 
-- ⌨️ **Hotkeys in order**:
-  - One standalone row per utility; recording shortcuts actually register; reset writes honest unassigned defaults.
-  - Undo defaults to Ctrl+Z; long tooltips wrap and dismiss themselves.
+- 📋 **Copy that goes where you paste**:
+  - Editor Copy image (Photoshop-friendly) vs Copy file / name / path, grouped in a submenu in both menus, with Ctrl+C / Ctrl+Shift+C.
+  - OCR window: copy row with auto-copy toggle, Ctrl+Enter and Ctrl+Shift+C badges, no layout jumps.
 
-- 🖨️ **Print Screen banner that earns its space**:
-  - Appears only while PrtSc is held elsewhere, names the occupant, collapses quietly, and can assign PrtSc directly.
+- 📦 **Distribution**:
+  - Winget pipeline: every release now ships a validated manifest and submits to winget-pkgs automatically.
+  - Spanish README.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
-El panel incluye corazón neutral, menú ⋯ con secciones ocultables y animadas, y todos los menús responden al segundo clic. Los atajos pasan al flujo standalone con grabación funcional, reseteo honesto y aviso de Print Screen más inteligente.
+El asistente se renueva con preajustes de captura y paso de atajos más inteligente, el recortador estrena diálogo de propiedades, la copia del editor separa imagen y archivo, y la ventana OCR refina su fila de copiado con atajos globales.
 
 ---
 
-### 🚀 Novedades destacadas
+### ✨ Novedades destacadas
 
-- ❤️ **Panel más calmado**:
-  - El corazón descansa en gris y solo se tiñe rosa al pasar el cursor, así Salir queda como único rojo.
-  - El menú ⋯ sustituye al chevron y muestra u oculta modos, grabación, herramientas y galería con animación.
+- 🧙 **Asistente renovado**:
+  - Preajustes tras la captura (Básico / Intermedio / Avanzado) con vista previa del resultado, en el asistente y en Configuración.
+  - Paso de Print Screen más inteligente: nombra al ocupante real, avisa solo cuando importa y rechaza teclas ocupadas.
+  - Lateral sobrio, traducción completa, pasos clicables.
 
-- 🖱️ **Menús que alternan**:
-  - Los menús de títulos, galería, tarjetas, filtros y vista previa cierran bien al segundo clic.
+- 🎬 **Recortador mejorado**:
+  - Nuevo diálogo de Propiedades: contenedor, códecs, resolución, fps, bitrate, audio y selección (vía ffprobe).
+  - Tira y forma de onda permanentes (línea plana sin audio), miniaturas según aspecto, vista recentrada.
+  - Copiar respeta el silencio, tooltips ajustados, mejor hover en Cortar.
 
-- ⌨️ **Atajos en orden**:
-  - Una fila standalone por utilidad; los atajos de grabación sí registran; el reseteo escribe valores honestos.
-  - Deshacer usa Ctrl+Z por defecto; los avisos largos se ajustan y se cierran solos.
+- 📋 **Copiar donde pegas**:
+  - Copiar imagen (compatible con Photoshop) frente a copiar archivo / nombre / ruta, en submenú en ambos menús, con Ctrl+C / Ctrl+Shift+C.
+  - Ventana OCR: fila de copiado con auto-copiado, insignias Ctrl+Enter y Ctrl+Shift+C, sin saltos.
 
-- 🖨️ **Aviso de Print Screen oportuno**:
-  - Solo aparece mientras PrtSc está ocupada, nombra al ocupante y permite asignarla desde el aviso.
+- 📦 **Distribución**:
+  - Pipeline de Winget: cada release genera un manifiesto validado y lo envía a winget-pkgs automáticamente.
+  - README en español.
 
 </details>
 
