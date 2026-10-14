@@ -37,12 +37,13 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="MinHeight" Value="26"/>
-            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
                     <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -61,6 +62,7 @@
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
                     <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -90,7 +92,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
@@ -209,10 +211,13 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
