@@ -8,6 +8,7 @@ using System.Windows.Media;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
+using CyberSnap.UI.Controls;
 using WpfButton = System.Windows.Controls.Button;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
@@ -46,16 +47,15 @@ internal sealed class ColorDetailWindow : Window
     private WpfTextBox _hslBox = null!;
     private WrapPanel _recentPanel = null!;
     private WpfComboBox _formatCombo = null!;
-    private System.Windows.Controls.Image _expanderIcon = null!;
-    private WpfButton _expanderBtn = null!;
     private WpfButton _copyCloseBtn = null!;
+    private WpfButton? _copyOnlyBtn;
     private TextBlock? _primaryLabel;
     private System.Windows.Shapes.Path? _primaryCopyGlyph;
     private Border? _copiedBadge;
     private string? _copiedText;
     private Action<bool>? _setShowToggle;
-    private Grid _headerBar = null!;
-    private TextBlock _titleBlock = null!;
+    private Action<bool>? _setAutoToggle;
+    private CyberSnapTitleBar _titleBar = null!;
 
     private string _builtLang = "";
     private WpfColor _builtAccent;
@@ -75,13 +75,13 @@ internal sealed class ColorDetailWindow : Window
         try { Theme.ApplyTo(Resources); } catch { }
         LoadPrefs();
 
-        Title = LocalizationService.Translate("Color picker");
+        Title = LocalizationService.Translate(WindowTitles.Color);
         try { Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/Icons/ColorPicker.ico")); } catch { }
         Width = 400;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
-        ShowInTaskbar = false;
+        ShowInTaskbar = true;
         AllowsTransparency = true;
         Background = WpfBrushes.Transparent;
         Topmost = true;
@@ -126,12 +126,10 @@ internal sealed class ColorDetailWindow : Window
 
             try { Theme.ApplyTo(Resources); } catch { }
             LoadPrefs();
-            bool expanded = _footerExpanded;
-            Title = LocalizationService.Translate("Color picker");
+            Title = LocalizationService.Translate(WindowTitles.Color);
             Content = BuildContent();
             SnapshotLiveState();
-            if (!expanded)
-                ToggleFooterOptions();
+            ApplyFooterExpansionState();
             RefreshAll();
         }
         catch (Exception ex) { AppDiagnostics.LogError("color-detail.live", ex); }
@@ -214,144 +212,66 @@ internal sealed class ColorDetailWindow : Window
         return card;
     }
 
+    /// <summary>
+    /// Standard suite title bar (logo, title, More menu, close), like the OCR
+    /// and QR windows. Minimize/maximize stay hidden: this is a fixed tool
+    /// popup. The advanced-options chevron moved into the More menu.
+    /// </summary>
     private FrameworkElement BuildHeader()
     {
-        var grid = new Grid { Margin = new Thickness(0, 0, 0, 10), Background = WpfBrushes.Transparent };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        _headerBar = grid;
-
-        var iconSource = new System.Windows.Media.Imaging.BitmapImage();
-        iconSource.BeginInit();
-        iconSource.UriSource = new Uri("pack://application:,,,/Assets/Icons/ColorPicker.ico");
-        iconSource.DecodePixelWidth = 64;
-        iconSource.EndInit();
-        iconSource.Freeze();
-        var icon = new System.Windows.Controls.Image
+        _titleBar = new CyberSnapTitleBar
         {
-            Source = iconSource,
-            Width = 20,
-            Height = 20,
-            VerticalAlignment = VerticalAlignment.Center,
+            Title = Title,
+            // Full-bleed inside the card padding so More/Close sit in the
+            // corner like every other window; 10px gap to the pick row below.
+            Margin = new Thickness(-14, -14, -14, 10),
         };
-        System.Windows.Media.RenderOptions.SetBitmapScalingMode(icon, System.Windows.Media.BitmapScalingMode.HighQuality);
-        Grid.SetColumn(icon, 0);
-        grid.Children.Add(icon);
-
-        _titleBlock = new TextBlock
-        {
-            Text = T("Color picker"),
-            FontSize = 15,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = Theme.Brush(Theme.TextPrimary),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(8, 0, 0, 0),
-            Cursor = System.Windows.Input.Cursors.SizeAll,
-        };
-        Grid.SetColumn(_titleBlock, 1);
-        grid.Children.Add(_titleBlock);
-
-        _expanderIcon = new System.Windows.Controls.Image
-        {
-            Source = FluentIcons.RenderWpf("chevronDown", ToDrawing(Theme.TextSecondary), 28),
-            Width = 14,
-            Height = 14,
-            RenderTransformOrigin = new System.Windows.Point(0.5, 0.5),
-            RenderTransform = new RotateTransform(180),
-        };
-        _expanderBtn = new WpfButton
-        {
-            Width = 28,
-            Height = 28,
-            Cursor = WpfCursors.Hand,
-            Background = WpfBrushes.Transparent,
-            BorderThickness = new Thickness(0),
-            Content = _expanderIcon,
-        };
-        ToolTipService.SetToolTip(_expanderBtn, T("Hide options"));
-        _expanderBtn.Click += (_, _) => ToggleFooterOptions();
-        Grid.SetColumn(_expanderBtn, 2);
-        grid.Children.Add(_expanderBtn);
-
-        var close = new WpfButton
-        {
-            Width = 28,
-            Height = 28,
-            Cursor = WpfCursors.Hand,
-            Background = WpfBrushes.Transparent,
-            BorderThickness = new Thickness(0),
-            Content = new System.Windows.Controls.Image
-            {
-                Source = FluentIcons.RenderWpf("close", ToDrawing(Theme.TextMuted), 24),
-                Width = 12,
-                Height = 12,
-            },
-        };
-        ToolTipService.SetToolTip(close, T("Close"));
-        close.Click += (_, _) => Close();
-        Grid.SetColumn(close, 3);
-        grid.Children.Add(close);
-
-        return grid;
+        _titleBar.CloseRequested += (_, _) => Close();
+        return _titleBar;
     }
 
+    /// <summary>
+    /// Recent-colors history, full width. The re-pick gotero moved to the
+    /// footer next to Copy: up here it sat too close to Close (missclicks).
+    /// </summary>
     private FrameworkElement BuildPickRow()
     {
-        var grid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
         _recentPanel = new WrapPanel
         {
             VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 10),
         };
-        Grid.SetColumn(_recentPanel, 0);
-        grid.Children.Add(_recentPanel);
-
-        // Eyedropper button like the annotation editor's flyout gotero.
-        var pick = new WpfButton
-        {
-            Width = 32,
-            Height = 32,
-            Cursor = WpfCursors.Hand,
-            BorderThickness = new Thickness(1),
-            Background = Theme.Brush(Theme.IsDark
-                ? WpfColor.FromArgb(255, 48, 50, 66)
-                : WpfColor.FromArgb(255, 228, 230, 237)),
-            BorderBrush = Theme.Brush(Theme.BorderSubtle),
-            Content = new System.Windows.Controls.Image
-            {
-                Source = FluentIcons.RenderWpf("picker", ToDrawing(Theme.TextPrimary), 30),
-                Width = 15,
-                Height = 15,
-            },
-        };
-        ToolTipService.SetToolTip(pick, T("Pick") + ": " + T("Pick another color from the screen"));
-        pick.Click += (_, _) => { Close(); RepickRequested?.Invoke(); };
-        pick.MouseEnter += (_, _) => pick.Background = Theme.Brush(Theme.TabHoverBg);
-        pick.MouseLeave += (_, _) => pick.Background = Theme.Brush(Theme.IsDark
-            ? WpfColor.FromArgb(255, 48, 50, 66)
-            : WpfColor.FromArgb(255, 228, 230, 237));
-        Grid.SetColumn(pick, 1);
-        grid.Children.Add(pick);
-
-        return grid;
+        return _recentPanel;
     }
 
     private bool _footerExpanded = true;
 
-    private void ToggleFooterOptions()
+    internal bool IsOptionsExpanded => _footerExpanded;
+
+    /// <summary>Entry point for the title-bar More menu's checkable item.</summary>
+    internal void SetOptionsExpanded(bool expanded)
     {
-        _footerExpanded = !_footerExpanded;
-        if (_footer is not null)
-            _footer.Visibility = _footerExpanded ? Visibility.Visible : Visibility.Collapsed;
-        if (_expanderIcon is not null)
-            _expanderIcon.RenderTransform = new RotateTransform(_footerExpanded ? 180 : 0);
-        if (_expanderBtn is not null)
-            ToolTipService.SetToolTip(_expanderBtn, T(_footerExpanded ? "Hide options" : "Show options"));
+        _footerExpanded = expanded;
+        ApplyFooterExpansionState();
         Dispatcher.BeginInvoke(new Action(ClampToMonitor), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>Entry point for the title-bar More menu's re-pick item.</summary>
+    internal void RequestRepick()
+    {
+        Close();
+        RepickRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Applies the expanded/collapsed state without flipping it. Only the
+    /// advanced options collapse; the Copied badge and the footer action
+    /// buttons always stay visible.
+    /// </summary>
+    private void ApplyFooterExpansionState()
+    {
+        if (_optionsPanel is not null)
+            _optionsPanel.Visibility = _footerExpanded ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private bool _headerDragging;
@@ -360,19 +280,22 @@ internal sealed class ColorDetailWindow : Window
     /// <summary>
     /// Manual header drag (instead of blocking DragMove, which misbehaves on this
     /// layered window: mouse-capture loss and mid-drag rebuilds could stall it).
-    /// Covers the header and its surrounding margin/padding; interactive controls
-    /// (buttons, text fields, combos) keep their own behavior.
+    /// Covers the title bar plus its surrounding margin/padding; interactive
+    /// controls keep their own behavior. Swallows the press so the standard
+    /// title bar does not start its own DragMove: this stays the single drag
+    /// authority. Title-bar chrome buttons are Borders with a Hand cursor;
+    /// logo/title/separators keep the Arrow cursor and stay draggable.
     /// </summary>
     private void OnWindowDragDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Left || _headerBar is null)
+        if (e.ChangedButton != MouseButton.Left || _titleBar is null)
             return;
 
         double headerBottom;
         try
         {
-            var topLeft = _headerBar.TranslatePoint(new System.Windows.Point(0, 0), this);
-            headerBottom = topLeft.Y + _headerBar.ActualHeight;
+            var topLeft = _titleBar.TranslatePoint(new System.Windows.Point(0, 0), this);
+            headerBottom = topLeft.Y + _titleBar.ActualHeight;
         }
         catch { return; }
 
@@ -386,6 +309,8 @@ internal sealed class ColorDetailWindow : Window
                 || current is System.Windows.Controls.TextBox
                 || current is WpfComboBox)
                 return;
+            if (current is Border border && ReferenceEquals(border.Cursor, WpfCursors.Hand))
+                return;
             current = VisualTreeHelper.GetParent(current);
         }
 
@@ -393,6 +318,7 @@ internal sealed class ColorDetailWindow : Window
         _headerDragOffset = e.GetPosition(this);
         try { Mouse.Capture(this, System.Windows.Input.CaptureMode.Element); } catch { }
         Cursor = System.Windows.Input.Cursors.SizeAll;
+        e.Handled = true;
     }
 
     private void OnHeaderDragMove(object sender, System.Windows.Input.MouseEventArgs e)
@@ -424,6 +350,7 @@ internal sealed class ColorDetailWindow : Window
     }
 
     private FrameworkElement? _footer;
+    private StackPanel? _optionsPanel;
 
     private FrameworkElement BuildPreview()
     {
@@ -435,7 +362,7 @@ internal sealed class ColorDetailWindow : Window
         {
             Height = 56,
             CornerRadius = new CornerRadius(8),
-            BorderBrush = Theme.Brush(WithAlpha(Colors.Black, 60)),
+            BorderBrush = Theme.Brush(NeutralSwatchBorder()),
             BorderThickness = new Thickness(1),
         };
         Grid.SetColumn(_previewBorder, 0);
@@ -468,7 +395,14 @@ internal sealed class ColorDetailWindow : Window
 
     private FrameworkElement BuildFormatRow(string label, out WpfTextBox box, string copyTooltip)
     {
-        var grid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        // The whole row copies (same action as its copy button, which swallows
+        // its own clicks so there is never a double copy).
+        var grid = new Grid
+        {
+            Margin = new Thickness(0, 0, 0, 8),
+            Cursor = WpfCursors.Hand,
+            Background = WpfBrushes.Transparent,
+        };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -484,15 +418,16 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(lbl, 0);
         grid.Children.Add(lbl);
 
+        WpfColor idleFieldBg = Theme.IsDark
+            ? WpfColor.FromArgb(255, 20, 22, 33)
+            : WpfColor.FromArgb(255, 238, 240, 245);
         var tb = new WpfTextBox
         {
             Height = 32,
             FontSize = 13,
             Padding = new Thickness(10, 0, 10, 0),
             VerticalContentAlignment = VerticalAlignment.Center,
-            Background = Theme.Brush(Theme.IsDark
-                ? WpfColor.FromArgb(255, 20, 22, 33)
-                : WpfColor.FromArgb(255, 238, 240, 245)),
+            Background = Theme.Brush(idleFieldBg),
             Foreground = Theme.Brush(Theme.TextPrimary),
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
@@ -501,38 +436,42 @@ internal sealed class ColorDetailWindow : Window
             FocusVisualStyle = new Style(),
             Cursor = System.Windows.Input.Cursors.Arrow,
         };
-        ToolTipService.SetToolTip(tb, T("Click to select, use the copy button"));
-        tb.ContextMenu = BuildValueMenu(tb);
-        tb.GotFocus += (_, _) => tb.SelectAll();
-        tb.PreviewMouseLeftButtonDown += (_, _) =>
-        {
-            if (!tb.IsFocused)
-            {
-                tb.Focus();
-                tb.SelectAll();
-            }
-        };
+        // Display-only values: not focusable/selectable, no context menu, and
+        // click-through so the row grid below receives the click and copies.
+        tb.Focusable = false;
+        tb.IsHitTestVisible = false;
+        tb.ContextMenu = new ContextMenu { Visibility = Visibility.Collapsed };
         box = tb;
         Grid.SetColumn(box, 1);
         grid.Children.Add(box);
 
+        var copyGlyph = new System.Windows.Shapes.Path
+        {
+            Width = 13,
+            Height = 13,
+            Stretch = System.Windows.Media.Stretch.Uniform,
+            VerticalAlignment = VerticalAlignment.Center,
+            StrokeThickness = 2.2,
+            StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
+            Fill = System.Windows.Media.Brushes.Transparent,
+        };
+        if (TryFindResource("CopyIconGeometry") is System.Windows.Media.Geometry copyData)
+            copyGlyph.Data = copyData;
+        copyGlyph.SetBinding(
+            System.Windows.Shapes.Shape.StrokeProperty,
+            new System.Windows.Data.Binding(nameof(WpfButton.Foreground))
+            {
+                RelativeSource = new System.Windows.Data.RelativeSource(
+                    System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(WpfButton), 1),
+            });
         var copy = new WpfButton
         {
             Width = 34,
             Height = 32,
             Margin = new Thickness(6, 0, 0, 0),
             Cursor = WpfCursors.Hand,
-            Background = Theme.Brush(Theme.IsDark
-                ? WpfColor.FromArgb(255, 48, 50, 66)
-                : WpfColor.FromArgb(255, 228, 230, 237)),
-            BorderBrush = Theme.Brush(Theme.BorderSubtle),
-            BorderThickness = new Thickness(1),
-            Content = new System.Windows.Controls.Image
-            {
-                Source = FluentIcons.RenderWpf("copy", ToDrawing(Theme.TextPrimary), 28),
-                Width = 14,
-                Height = 14,
-            },
+            Style = GhostButtonStyle(6),
+            Content = copyGlyph,
         };
         string captured = label;
         ToolTipService.SetToolTip(copy, T(copyTooltip));
@@ -540,26 +479,25 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(copy, 2);
         grid.Children.Add(copy);
 
-        return grid;
-    }
+        ToolTipService.SetToolTip(grid, T(copyTooltip));
+        grid.MouseLeftButtonDown += (_, _) => CopyRow(captured);
+        grid.MouseEnter += (_, _) => tb.Background = Theme.Brush(Theme.AccentSubtle);
+        grid.MouseLeave += (_, _) => tb.Background = Theme.Brush(idleFieldBg);
 
-    /// <summary>Minimal text menu: partial selection is allowed, but nothing else (no cut/paste/undo).</summary>
-    private static ContextMenu BuildValueMenu(WpfTextBox tb)
-    {
-        var menu = new ContextMenu();
-        var copyItem = new MenuItem { Header = T("Copy") };
-        copyItem.Click += (_, _) => tb.Copy();
-        var selectItem = new MenuItem { Header = T("Select all") };
-        selectItem.Click += (_, _) => { tb.Focus(); tb.SelectAll(); };
-        menu.Items.Add(copyItem);
-        menu.Items.Add(selectItem);
-        return menu;
+        return grid;
     }
 
     private FrameworkElement BuildFooter()
     {
         var stack = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
         _footer = stack;
+
+        // Advanced options collapse via the title-bar chevron. The Copied
+        // badge and the action buttons live outside this panel so they
+        // always stay visible.
+        _optionsPanel = new StackPanel();
+        _optionsPanel.Visibility = _footerExpanded ? Visibility.Visible : Visibility.Collapsed;
+        stack.Children.Add(_optionsPanel);
 
         var formatRow = new Grid { Margin = new Thickness(0, 0, 0, 8) };
         formatRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -607,33 +545,68 @@ internal sealed class ColorDetailWindow : Window
         };
         Grid.SetColumn(_formatCombo, 1);
         formatRow.Children.Add(_formatCombo);
-        stack.Children.Add(formatRow);
+        _optionsPanel.Children.Add(formatRow);
 
-        stack.Children.Add(OptionToggleRow(T("Auto-copy on pick"), _autoCopy, v =>
+        _optionsPanel.Children.Add(OptionToggleRow(T("Auto-copy"), _autoCopy, v =>
         {
+            // Interlocked pair: switching auto-copy off while the window is
+            // hidden shows the window, so a pick is never silently lost.
+            if (!v && !_showWindowPref)
+            {
+                _showWindowPref = true;
+                _setShowToggle?.Invoke(true);
+            }
             _autoCopy = v;
-            var plan = ResultDelivery.Normalize(_autoCopy, _showWindowPref);
-            if (plan.ShowWindow != _showWindowPref)
-            {
-                _showWindowPref = plan.ShowWindow;
-                _setShowToggle?.Invoke(plan.ShowWindow);
-            }
             SavePrefs();
-        }));
-        stack.Children.Add(OptionToggleRow(T("Include # in HEX"), _includeHash, v => { _includeHash = v; SavePrefs(); RefreshAll(); }));
-        stack.Children.Add(OptionToggleRow(T("Show this window after picking"), _showWindowPref, v =>
+        }, set => _setAutoToggle = set,
+            T("Copy the picked color automatically. Turning this off shows this window instead.")));
+        _optionsPanel.Children.Add(OptionToggleRow(T("Include # in HEX"), _includeHash, v => { _includeHash = v; SavePrefs(); RefreshAll(); }));
+        _optionsPanel.Children.Add(OptionToggleRow(T("Show this window"), _showWindowPref, v =>
         {
-            var plan = ResultDelivery.Normalize(_autoCopy, v);
-            if (plan.ShowWindow != v)
+            // Interlocked pair: hiding the window while auto-copy is off
+            // enables auto-copy instead of bricking both deliveries.
+            if (!v && !_autoCopy)
             {
-                _setShowToggle?.Invoke(plan.ShowWindow);
-                return;
+                _autoCopy = true;
+                _setAutoToggle?.Invoke(true);
+                _showWindowPref = false;
             }
-
-            _showWindowPref = plan.ShowWindow;
+            else
+            {
+                _showWindowPref = v;
+            }
             SavePrefs();
-        }, set => _setShowToggle = set));
+        }, set => _setShowToggle = set,
+            T("Show this window after picking. Turning this off enables auto-copy instead.")));
 
+        var badgeLabel = new TextBlock
+        {
+            Text = T("Copied"),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(6, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = Theme.Brush(Theme.TextPrimary),
+        };
+        var badgeRow = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        badgeRow.Children.Add(new System.Windows.Shapes.Path
+        {
+            Data = System.Windows.Media.Geometry.Parse("M 1,6 L 4.5,9.5 L 11,1.5"),
+            Stroke = Theme.Brush(Theme.Accent),
+            StrokeThickness = 2,
+            StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
+            StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
+            StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
+            Width = 11,
+            Height = 10,
+            Stretch = System.Windows.Media.Stretch.Uniform,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        badgeRow.Children.Add(badgeLabel);
         _copiedBadge = new Border
         {
             HorizontalAlignment = WpfHAlign.Right,
@@ -644,25 +617,42 @@ internal sealed class ColorDetailWindow : Window
             Background = Theme.Brush(WithAlpha(Theme.Accent, Theme.IsDark ? (byte)48 : (byte)36)),
             BorderBrush = Theme.Brush(Theme.Accent),
             BorderThickness = new Thickness(1),
-            Child = new TextBlock
-            {
-                Text = T("Copied"),
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = Theme.Brush(Theme.TextPrimary),
-            },
+            Child = badgeRow,
         };
         stack.Children.Add(_copiedBadge);
 
         var actions = new Grid { Margin = new Thickness(0, 8, 0, 0) };
+        actions.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
         actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
+        // Re-pick gotero, moved here from the history row where it sat too
+        // close to Close. Same ghost treatment as the copy buttons.
+        var repick = new WpfButton
+        {
+            Width = 34,
+            Height = 30,
+            Cursor = WpfCursors.Hand,
+            Style = GhostButtonStyle(6),
+            Content = new System.Windows.Controls.Image
+            {
+                Source = FluentIcons.RenderWpf("picker", ToDrawing(Theme.TextPrimary), 30),
+                Width = 15,
+                Height = 15,
+            },
+        };
+        ToolTipService.SetToolTip(repick, T("Pick") + ": " + T("Pick another color from the screen"));
+        repick.Click += (_, _) => RequestRepick();
+        Grid.SetColumn(repick, 0);
+        actions.Children.Add(repick);
+
         var copyOnly = StyledButton(T("Copy"), isAccent: false, leadingCopy: true);
         ToolTipService.SetToolTip(copyOnly, T("Copy the text and keep this window open."));
         copyOnly.Click += (_, _) => CopyFavorite();
-        Grid.SetColumn(copyOnly, 0);
+        _copyOnlyBtn = copyOnly;
+        Grid.SetColumn(copyOnly, 2);
         actions.Children.Add(copyOnly);
 
         var copyClose = StyledButton(T("Copy and close"), isAccent: true);
@@ -672,7 +662,7 @@ internal sealed class ColorDetailWindow : Window
             if (IsFavoriteCopied() || CopyFavorite())
                 Close();
         };
-        Grid.SetColumn(copyClose, 2);
+        Grid.SetColumn(copyClose, 4);
         actions.Children.Add(copyClose);
         _copyCloseBtn = copyClose;
 
@@ -680,10 +670,12 @@ internal sealed class ColorDetailWindow : Window
         return stack;
     }
 
-    /// <summary>Settings-style option row: label on the left, widget-like toggle on the right.</summary>
-    private static FrameworkElement OptionToggleRow(string text, bool initial, Action<bool> onChange, Action<Action<bool>>? registerSet = null)
+    /// <summary>Settings-style option row: label on the left, app-wide pill toggle on the right.</summary>
+    private static FrameworkElement OptionToggleRow(string text, bool initial, Action<bool> onChange, Action<Action<bool>>? registerSet = null, string? tooltip = null)
     {
         var grid = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+        if (!string.IsNullOrEmpty(tooltip))
+            ToolTipService.SetToolTip(grid, tooltip);
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
@@ -697,107 +689,98 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(label, 0);
         grid.Children.Add(label);
 
-        var toggle = BuildToggle(initial, onChange, registerSet);
+        // Global CheckBox style from App.xaml (same 44x24 pill with check
+        // used in Settings/About/History). Content stays empty like there.
+        bool suppress = false;
+        var toggle = new System.Windows.Controls.CheckBox
+        {
+            Content = "",
+            IsChecked = initial,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = WpfHAlign.Right,
+        };
+        toggle.Checked += (_, _) => { if (!suppress) onChange(true); };
+        toggle.Unchecked += (_, _) => { if (!suppress) onChange(false); };
+        registerSet?.Invoke(value =>
+        {
+            suppress = true;
+            try { toggle.IsChecked = value; }
+            finally { suppress = false; }
+        });
         Grid.SetColumn(toggle, 1);
         grid.Children.Add(toggle);
 
         return grid;
     }
 
-    /// <summary>Widget-style toggle switch (34x18 sliding thumb, accent track when on).</summary>
-    private static WpfButton BuildToggle(bool initial, Action<bool> onChange, Action<Action<bool>>? registerSet = null)
+    /// <summary>
+    /// Neutral swatch edge so very dark/light picked colors stay visible on
+    /// any card background. Deliberately gray, never the accent tint.
+    /// </summary>
+    private static WpfColor NeutralSwatchBorder() => Theme.IsDark
+        ? WpfColor.FromArgb(64, 255, 255, 255)
+        : WpfColor.FromArgb(48, 0, 0, 0);
+
+    /// <summary>
+    /// Ghost button mirroring the OCR ghost buttons: neutral at rest, accent
+    /// wash + accent border + accent foreground on hover. Template triggers
+    /// own the visuals so the default Button chrome cannot swallow them.
+    /// </summary>
+    private static Style GhostButtonStyle(int cornerRadius = 6)
     {
-        bool isOn = initial;
-        var accent = Theme.Accent;
+        var idleBg = Theme.IsDark
+            ? WpfColor.FromArgb(255, 48, 50, 66)
+            : WpfColor.FromArgb(255, 228, 230, 237);
+        var style = new Style(typeof(WpfButton));
+        style.Setters.Add(new Setter(System.Windows.Controls.Control.BackgroundProperty, Theme.Brush(idleBg)));
+        style.Setters.Add(new Setter(System.Windows.Controls.Control.BorderBrushProperty, Theme.Brush(Theme.BorderSubtle)));
+        style.Setters.Add(new Setter(System.Windows.Controls.Control.BorderThicknessProperty, new Thickness(1)));
+        style.Setters.Add(new Setter(System.Windows.Controls.Control.ForegroundProperty, Theme.Brush(Theme.TextPrimary)));
+        style.Setters.Add(new Setter(FrameworkElement.CursorProperty, WpfCursors.Hand));
+        style.Setters.Add(new Setter(FrameworkElement.FocusVisualStyleProperty, null));
 
-        var track = new Border
-        {
-            Width = 34,
-            Height = 18,
-            CornerRadius = new CornerRadius(9),
-            BorderThickness = new Thickness(1.2),
-            SnapsToDevicePixels = true,
-        };
-        var thumb = new Border
-        {
-            Width = 12,
-            Height = 12,
-            CornerRadius = new CornerRadius(6),
-            SnapsToDevicePixels = true,
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
-            {
-                Color = Colors.Black,
-                BlurRadius = 3,
-                ShadowDepth = 1,
-                Direction = 270,
-                Opacity = 0.35,
-            },
-        };
-        var host = new Grid
-        {
-            Width = 34,
-            Height = 18,
-            Background = WpfBrushes.Transparent,
-            SnapsToDevicePixels = true,
-        };
-        host.Children.Add(track);
-        host.Children.Add(thumb);
-
-        void Refresh()
-        {
-            track.Background = isOn
-                ? Theme.Brush(accent)
-                : Theme.Brush(Theme.IsDark
-                    ? WpfColor.FromArgb(255, 48, 50, 66)
-                    : WpfColor.FromArgb(255, 214, 218, 229));
-            track.BorderBrush = isOn
-                ? Theme.Brush(accent)
-                : Theme.Brush(Theme.BorderSubtle);
-            thumb.Background = isOn
-                ? Theme.Brush(Colors.White)
-                : Theme.Brush(Theme.IsDark
-                    ? WpfColor.FromRgb(150, 156, 170)
-                    : WpfColor.FromRgb(120, 124, 135));
-            thumb.HorizontalAlignment = isOn ? WpfHAlign.Right : WpfHAlign.Left;
-            thumb.VerticalAlignment = VerticalAlignment.Center;
-            thumb.Margin = isOn ? new Thickness(0, 0, 3, 0) : new Thickness(3, 0, 0, 0);
-        }
-        Refresh();
-        registerSet?.Invoke(value =>
-        {
-            isOn = value;
-            Refresh();
-        });
-
-        var toggle = new WpfButton
-        {
-            Width = 34,
-            Height = 18,
-            Padding = new Thickness(0),
-            Cursor = WpfCursors.Hand,
-            Background = WpfBrushes.Transparent,
-            BorderThickness = new Thickness(0),
-            Content = host,
-            Template = BlankButtonTemplate(),
-        };
-        toggle.Click += (_, _) =>
-        {
-            isOn = !isOn;
-            Refresh();
-            onChange(isOn);
-        };
-        return toggle;
-    }
-
-    private static ControlTemplate BlankButtonTemplate()
-    {
-        var border = new FrameworkElementFactory(typeof(Border));
-        border.SetValue(Border.BackgroundProperty, WpfBrushes.Transparent);
+        var borderFactory = new FrameworkElementFactory(typeof(Border));
+        borderFactory.Name = "Bd";
+        borderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(cornerRadius));
+        borderFactory.SetBinding(Border.BackgroundProperty,
+            new System.Windows.Data.Binding(nameof(WpfButton.Background))
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+        borderFactory.SetBinding(Border.BorderBrushProperty,
+            new System.Windows.Data.Binding(nameof(WpfButton.BorderBrush))
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+        borderFactory.SetBinding(Border.BorderThicknessProperty,
+            new System.Windows.Data.Binding(nameof(WpfButton.BorderThickness))
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+        borderFactory.SetBinding(Border.PaddingProperty,
+            new System.Windows.Data.Binding(nameof(WpfButton.Padding))
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+        borderFactory.SetValue(Border.SnapsToDevicePixelsProperty, true);
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, WpfHAlign.Center);
         presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
-        border.AppendChild(presenter);
-        return new ControlTemplate(typeof(WpfButton)) { VisualTree = border };
+        borderFactory.AppendChild(presenter);
+        var template = new ControlTemplate(typeof(WpfButton)) { VisualTree = borderFactory };
+        // Named setters (TargetName "Bd") are only legal in template triggers,
+        // not in style triggers: Style.Triggers threw and broke the window.
+        var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+        hover.Setters.Add(new Setter(Border.BackgroundProperty, Theme.Brush(Theme.AccentSubtle), "Bd"));
+        hover.Setters.Add(new Setter(Border.BorderBrushProperty, Theme.Brush(Theme.Accent), "Bd"));
+        hover.Setters.Add(new Setter(System.Windows.Controls.Control.ForegroundProperty, Theme.Brush(Theme.Accent)));
+        template.Triggers.Add(hover);
+
+        var pressed = new Trigger { Property = WpfButton.IsPressedProperty, Value = true };
+        pressed.Setters.Add(new Setter(Border.BackgroundProperty, Theme.Brush(Theme.AccentSubtle), "Bd"));
+        pressed.Setters.Add(new Setter(Border.BorderBrushProperty, Theme.Brush(Theme.Accent), "Bd"));
+        pressed.Setters.Add(new Setter(Border.OpacityProperty, 0.8, "Bd"));
+        template.Triggers.Add(pressed);
+
+        var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
+        disabled.Setters.Add(new Setter(Border.OpacityProperty, 0.45, "Bd"));
+        template.Triggers.Add(disabled);
+
+        style.Setters.Add(new Setter(System.Windows.Controls.Control.TemplateProperty, template));
+
+        return style;
     }
 
     private static WpfComboBoxItem BuildThemedComboBoxItem(string text)
@@ -1022,32 +1005,20 @@ internal sealed class ColorDetailWindow : Window
                 label.Margin = new Thickness(6, 0, 0, 0);
             }
             row.Children.Add(label);
-            // Same return-arrow glyph as the confirm dock Done pill (FluentIcons "enter").
-            var enterGlyph = new System.Windows.Shapes.Path
+            // Enter keycap like the QR/OCR copy buttons (plain Enter confirms here).
+            row.Children.Add(new HotkeyBadge
             {
-                Data = System.Windows.Media.Geometry.Parse("M2 10.5 L7 5.2 L4.8 9 L14.6 9 L14.6 2.5 L17.4 2.5 L17.4 9 A2.8 2.8 0 0 1 14.6 11.8 L4.8 11.8 L7 15.8 Z"),
-                Width = 13,
-                Height = 13,
-                Stretch = System.Windows.Media.Stretch.Uniform,
-                VerticalAlignment = VerticalAlignment.Center,
+                Kind = HotkeyBadgeKind.Enter,
                 Margin = new Thickness(7, 0, 0, 0),
-            };
-            enterGlyph.SetBinding(
-                System.Windows.Shapes.Shape.FillProperty,
-                new System.Windows.Data.Binding(nameof(WpfButton.Foreground))
-                {
-                    RelativeSource = new System.Windows.Data.RelativeSource(
-                        System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(WpfButton), 1),
-                });
-            row.Children.Add(enterGlyph);
+            });
             btn.Content = row;
         }
         else
         {
-            var bg = Theme.IsDark ? WpfColor.FromArgb(255, 48, 50, 66) : WpfColor.FromArgb(255, 228, 230, 237);
-            btn.Background = Theme.Brush(bg);
-            btn.BorderBrush = Theme.Brush(Theme.BorderSubtle);
-            label.Foreground = Theme.Brush(Theme.TextPrimary);
+            // Same ghost treatment as the OCR copy buttons: the style's
+            // template triggers paint the accent hover, and the glyph binds
+            // to Foreground so the icon turns accent with the text.
+            btn.Style = GhostButtonStyle(6);
             if (leadingCopy && TryFindResource("CopyIconGeometry") is System.Windows.Media.Geometry copyData)
             {
                 btn.Content = null;
@@ -1062,19 +1033,24 @@ internal sealed class ColorDetailWindow : Window
                     Data = copyData,
                     StrokeThickness = 2.2,
                     StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
+                    Fill = System.Windows.Media.Brushes.Transparent,
                     Width = 12,
                     Height = 12,
                     Stretch = System.Windows.Media.Stretch.Uniform,
                     VerticalAlignment = VerticalAlignment.Center,
-                    Stroke = Theme.Brush(Theme.TextPrimary),
                 };
+                copyGlyph.SetBinding(
+                    System.Windows.Shapes.Shape.StrokeProperty,
+                    new System.Windows.Data.Binding(nameof(WpfButton.Foreground))
+                    {
+                        RelativeSource = new System.Windows.Data.RelativeSource(
+                            System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(WpfButton), 1),
+                    });
                 label.Margin = new Thickness(6, 0, 0, 0);
                 row.Children.Add(copyGlyph);
                 row.Children.Add(label);
                 btn.Content = row;
             }
-            btn.MouseEnter += (_, _) => btn.Background = Theme.Brush(Theme.TabHoverBg);
-            btn.MouseLeave += (_, _) => btn.Background = Theme.Brush(bg);
         }
         return btn;
     }
@@ -1127,7 +1103,7 @@ internal sealed class ColorDetailWindow : Window
                     Height = 22,
                     CornerRadius = new CornerRadius(11),
                     Background = new SolidColorBrush(WpfColor.FromRgb(r, g, b)),
-                    BorderBrush = Theme.Brush(WithAlpha(Colors.Black, 50)),
+                    BorderBrush = Theme.Brush(NeutralSwatchBorder()),
                     BorderThickness = new Thickness(1),
                     Margin = new Thickness(0, 0, 5, 0),
                     Cursor = WpfCursors.Hand,
@@ -1178,6 +1154,10 @@ internal sealed class ColorDetailWindow : Window
         bool copied = IsFavoriteCopied();
         if (_copiedBadge != null)
             _copiedBadge.Visibility = copied ? Visibility.Visible : Visibility.Collapsed;
+        // Like the OCR ghost Copy: pointless while the favorite value is
+        // exactly what is already on the clipboard (e.g. just auto-copied).
+        if (_copyOnlyBtn is not null)
+            _copyOnlyBtn.IsEnabled = !copied;
         _primaryLabel.Text = T(copied ? "Close" : "Copy and close");
         if (_primaryCopyGlyph != null)
         {
