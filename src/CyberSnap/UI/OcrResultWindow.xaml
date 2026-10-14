@@ -655,8 +655,8 @@
                                         Services:LocalizationService.SourceContent="Auto-copy OCR"
                                         VerticalAlignment="Center"
                                         Margin="0,0,10,0"
-                                        ToolTip="Copy OCR results automatically (requires the Auto-copy master switch)"
-                                        Services:LocalizationService.SourceToolTip="Copy OCR results automatically (requires the Auto-copy master switch)"
+                                        ToolTip="Copy OCR results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
+                                        Services:LocalizationService.SourceToolTip="Copy OCR results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
                                         Checked="AutoCopyCheck_Changed"
                                         Unchecked="AutoCopyCheck_Changed"/>
                             <Border Width="1"

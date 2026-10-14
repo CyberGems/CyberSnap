@@ -613,6 +613,34 @@ public partial class OcrResultWindow : Window
         RefreshAutoCopyCheck();
     }
 
+    internal bool IsShowResultWindow => _settingsService.Settings.OcrShowResultWindow;
+
+    /// <summary>
+    /// Title-bar More menu counterpart of the auto-copy toggle. Interlocked
+    /// pair like the color picker: hiding the window while auto-copy is off
+    /// enables auto-copy instead of bricking both deliveries (enabling a kind
+    /// also lifts the master). Returns the effective value so the menu
+    /// checkmark never lies. The header pill refreshes via the published
+    /// auto-copy events.
+    /// </summary>
+    internal bool SetShowResultWindow(bool show)
+    {
+        var settings = _settingsService.Settings;
+        if (!show && !AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr))
+        {
+            AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Ocr, true);
+            settings.OcrShowResultWindow = false;
+        }
+        else
+        {
+            settings.OcrShowResultWindow = show;
+        }
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("ocr-result.show-window", ex); }
+        SettingsService.PublishAutoCopyState(settings);
+        return settings.OcrShowResultWindow;
+    }
+
     private void OnOcrAutoCopySettingChanged(bool _)
     {
         if (!Dispatcher.CheckAccess())

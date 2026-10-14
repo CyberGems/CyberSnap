@@ -196,7 +196,11 @@ public partial class CyberSnapTitleBar : UserControl
         AnnotationIcon.Opacity = 1.0;
 
         // About is a compact info window — no maximize (same idea as Toast / widget chrome).
-        MaximizeBtn.Visibility = OwnerWindow is AboutWindow
+        // The color picker is a fixed tool popup: no minimize/maximize at all.
+        MaximizeBtn.Visibility = OwnerWindow is AboutWindow or ColorDetailWindow
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        MinimizeBtn.Visibility = OwnerWindow is ColorDetailWindow
             ? Visibility.Collapsed
             : Visibility.Visible;
 
@@ -506,6 +510,97 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.Visibility = Visibility.Collapsed;
             BurgerBtn.Visibility = Visibility.Collapsed;
         }
+        else if (OwnerWindow is ColorDetailWindow pickerWin)
+        {
+            // Fixed tool popup: More menu carries the picker-specific actions
+            // (advanced-options collapse moved here from the old chevron).
+            AnnotationBtn.Visibility = Visibility.Collapsed;
+            ActionBtn.Visibility = Visibility.Collapsed;
+
+            BurgerBtn.Visibility = Visibility.Visible;
+            BurgerBtn.ToolTip = LocalizationService.Translate("More");
+
+            var menu = new ContextMenu();
+            StyleBurgerMenu(menu);
+            InsertDonateFirst(menu);
+
+            var optionsToggle = new MenuItem
+            {
+                Header = LocalizationService.Translate("Advanced options"),
+                IsCheckable = true,
+                ToolTip = LocalizationService.Translate("Show or hide the advanced options")
+            };
+            optionsToggle.Checked += (_, _) => pickerWin.SetOptionsExpanded(true);
+            optionsToggle.Unchecked += (_, _) => pickerWin.SetOptionsExpanded(false);
+            menu.Items.Add(optionsToggle);
+
+            var repickItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Pick another color..."),
+                Icon = CreateMenuIcon("picker", titleIcon, 16),
+                ToolTip = LocalizationService.Translate("Pick another color from the screen")
+            };
+            repickItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                pickerWin.RequestRepick();
+            };
+            menu.Items.Add(repickItem);
+
+            menu.Items.Add(new Separator());
+
+            var configItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Configuration..."),
+                Icon = CreateMenuIcon("gear", titleIcon, 16),
+                ToolTip = LocalizationService.Translate("Open the full Configuration window")
+            };
+            configItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowSettings());
+            };
+            menu.Items.Add(configItem);
+
+            var achievementsItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Achievements..."),
+                Icon = CreateMenuIcon("trophy", titleIcon, 16),
+                ToolTip = LocalizationService.Translate("Open Achievements")
+            };
+            achievementsItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowAchievements());
+            };
+            menu.Items.Add(achievementsItem);
+
+            menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.StandaloneToolsPage,
+                "Wiki: Standalone Tools...", "Open the Standalone Tools page in the CyberSnap wiki.", titleIcon));
+
+            ApplyMenuItemStyles(menu);
+
+            menu.Opened += (_, _) =>
+            {
+                _burgerMenuOpen = true;
+                optionsToggle.IsChecked = pickerWin.IsOptionsExpanded;
+                ApplyButtonHoverVisual(BurgerBtn, true);
+                System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
+            };
+            menu.Closed += (_, _) =>
+            {
+                _burgerMenuOpen = false;
+                if (!BurgerBtn.IsMouseOver)
+                    ApplyButtonHoverVisual(BurgerBtn, false);
+                System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
+            };
+
+            BurgerBtn.ContextMenu = menu;
+        }
         else if (OwnerWindow is not null)
         {
             // OCR / Trimmer / Capture Preview / Achievements / other chrome windows: About + Configuration
@@ -518,6 +613,55 @@ public partial class CyberSnapTitleBar : UserControl
             var menu = new ContextMenu();
             StyleBurgerMenu(menu);
             InsertDonateFirst(menu);
+
+            // OCR result window: in-window parity with the color picker's
+            // delivery toggles (Capture Preview's autoclose precedent).
+            MenuItem? ocrShowToggle = null;
+            if (OwnerWindow is OcrResultWindow ocrWin)
+            {
+                ocrShowToggle = new MenuItem
+                {
+                    Header = LocalizationService.Translate("Show the OCR result window"),
+                    IsCheckable = true,
+                    ToolTip = LocalizationService.Translate("Open the OCR window after recognition, whether or not the text was copied.")
+                };
+                ocrShowToggle.Checked += (_, _) =>
+                {
+                    if (ocrShowToggle is not null)
+                        ocrShowToggle.IsChecked = ocrWin.SetShowResultWindow(true);
+                };
+                ocrShowToggle.Unchecked += (_, _) =>
+                {
+                    if (ocrShowToggle is not null)
+                        ocrShowToggle.IsChecked = ocrWin.SetShowResultWindow(false);
+                };
+                menu.Items.Add(ocrShowToggle);
+                menu.Items.Add(new Separator());
+            }
+
+            // QR result window: same delivery-toggle parity as OCR.
+            MenuItem? qrShowToggle = null;
+            if (OwnerWindow is QrResultWindow qrWin)
+            {
+                qrShowToggle = new MenuItem
+                {
+                    Header = LocalizationService.Translate("Show the QR & Barcode result window"),
+                    IsCheckable = true,
+                    ToolTip = LocalizationService.Translate("Open the result window after a scan, whether or not the code was copied.")
+                };
+                qrShowToggle.Checked += (_, _) =>
+                {
+                    if (qrShowToggle is not null)
+                        qrShowToggle.IsChecked = qrWin.SetShowResultWindow(true);
+                };
+                qrShowToggle.Unchecked += (_, _) =>
+                {
+                    if (qrShowToggle is not null)
+                        qrShowToggle.IsChecked = qrWin.SetShowResultWindow(false);
+                };
+                menu.Items.Add(qrShowToggle);
+                menu.Items.Add(new Separator());
+            }
 
             if (OwnerWindow is CapturePreviewDialog previewWindow)
             {
@@ -571,6 +715,7 @@ public partial class CyberSnapTitleBar : UserControl
             string wikiPage = OwnerWindow switch
             {
                 OcrResultWindow => WikiLinks.OcrAndTranslationPage,
+                QrResultWindow => WikiLinks.StandaloneToolsPage,
                 VideoTrimmerWindow => WikiLinks.ScreenRecordingPage,
                 CapturePreviewDialog => WikiLinks.CapturePreviewPage,
                 _ => WikiLinks.HomePage
@@ -578,6 +723,7 @@ public partial class CyberSnapTitleBar : UserControl
             string wikiHeaderKey = OwnerWindow switch
             {
                 OcrResultWindow => "Wiki: OCR & Translation...",
+                QrResultWindow => "Wiki: Standalone Tools...",
                 VideoTrimmerWindow => "Wiki: Screen Recording...",
                 CapturePreviewDialog => "Wiki: Capture Preview...",
                 _ => "Wiki: CyberSnap Help..."
@@ -585,6 +731,7 @@ public partial class CyberSnapTitleBar : UserControl
             string wikiTooltipKey = OwnerWindow switch
             {
                 OcrResultWindow => "Open the OCR & Translation page in the CyberSnap wiki.",
+                QrResultWindow => "Open the Standalone Tools page in the CyberSnap wiki.",
                 VideoTrimmerWindow => "Open the Screen Recording page in the CyberSnap wiki.",
                 CapturePreviewDialog => "Open the Capture Preview page in the CyberSnap wiki.",
                 _ => "Open the CyberSnap wiki home page."
@@ -596,6 +743,10 @@ public partial class CyberSnapTitleBar : UserControl
             menu.Opened += (_, _) =>
             {
                 _burgerMenuOpen = true;
+                if (ocrShowToggle is not null && OwnerWindow is OcrResultWindow ocrSync)
+                    ocrShowToggle.IsChecked = ocrSync.IsShowResultWindow;
+                if (qrShowToggle is not null && OwnerWindow is QrResultWindow qrSync)
+                    qrShowToggle.IsChecked = qrSync.IsShowResultWindow;
                 ApplyButtonHoverVisual(BurgerBtn, true);
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
@@ -687,7 +838,7 @@ public partial class CyberSnapTitleBar : UserControl
 
         if (e.ClickCount == 2)
         {
-            if (OwnerWindow is not AboutWindow)
+            if (OwnerWindow is not AboutWindow and not ColorDetailWindow)
                 ToggleMaximize();
             return;
         }
@@ -716,7 +867,7 @@ public partial class CyberSnapTitleBar : UserControl
 
     private void ToggleMaximize()
     {
-        if (OwnerWindow is not { } window || window is AboutWindow)
+        if (OwnerWindow is not { } window || window is AboutWindow or ColorDetailWindow)
             return;
 
         window.WindowState = window.WindowState == WindowState.Maximized
