@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:CyberSnap.UI"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
+        xmlns:Services="clr-namespace:CyberSnap.Services"
         Title="QR &amp; Barcode Scanner"
         Height="440" Width="560"
         MinHeight="340" MinWidth="420"
@@ -26,47 +27,6 @@
         <SolidColorBrush x:Key="ThemeAccentBrush" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="ThemeAccentHoverBrush" Color="#40FFFFFF"/>
         <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
-        <Style x:Key="QrPrimaryButton" TargetType="Button">
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
-            <Setter Property="FontSize" Value="12.5"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="MinHeight" Value="36"/>
-            <Setter Property="MinWidth" Value="110"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="7"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.45"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
 
         <Style x:Key="QrTextBox" TargetType="TextBox">
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
@@ -89,6 +49,46 @@
                                 Padding="{TemplateBinding Padding}">
                             <ScrollViewer x:Name="PART_ContentHost"/>
                         </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Neutral ghost button: same accent hover as the OCR ghost buttons,
+             colorless at rest so the accent CTA keeps its emphasis. -->
+        <Style x:Key="QrGhostButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -179,28 +179,56 @@
                              IsReadOnly="True"
                              Text=""/>
 
-                    <StackPanel Grid.Row="3" Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                Margin="0,10,0,0">
-                        <Border x:Name="CopyStatusText"
-                                Visibility="Collapsed"
-                                CornerRadius="8"
-                                Padding="7,2"
-                                Margin="0,0,8,0"
-                                VerticalAlignment="Center"
-                                Background="{DynamicResource ThemeAccentSubtleBrush}"
-                                BorderBrush="{DynamicResource ThemeAccentBrush}"
-                                BorderThickness="1">
-                            <TextBlock x:Name="CopyStatusLabel"
-                                       Text="Copied"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                        </Border>
+                     <StackPanel Grid.Row="3" Orientation="Horizontal"
+                                 HorizontalAlignment="Right"
+                                 Margin="0,10,0,0">
+                         <CheckBox x:Name="AutoCopyCheck"
+                                   Content="Auto-copy scan"
+                                   Services:LocalizationService.SourceContent="Auto-copy scan"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"
+                                   ToolTip="Copy scan results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
+                                   Services:LocalizationService.SourceToolTip="Copy scan results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
+                                   Checked="AutoCopyCheck_Changed"
+                                   Unchecked="AutoCopyCheck_Changed"/>
+                         <Border Width="1"
+                                 Height="20"
+                                 Background="{DynamicResource ThemeSeparatorBrush}"
+                                 Margin="2,0,10,0"
+                                 VerticalAlignment="Center"/>
+                         <Border x:Name="CopyStatusText"
+                                 Visibility="Collapsed"
+                                 IsHitTestVisible="False"
+                                 CornerRadius="8"
+                                 Padding="7,2"
+                                 Margin="0,0,8,0"
+                                 VerticalAlignment="Center"
+                                 Background="{DynamicResource ThemeAccentSubtleBrush}"
+                                 BorderBrush="{DynamicResource ThemeAccentBrush}"
+                                 BorderThickness="1">
+                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                 <Path Data="M 1,6 L 4.5,9.5 L 11,1.5"
+                                       Stroke="{DynamicResource ThemeAccentBrush}"
+                                       StrokeThickness="2"
+                                       StrokeStartLineCap="Round"
+                                       StrokeEndLineCap="Round"
+                                       StrokeLineJoin="Round"
+                                       Width="11" Height="10"
+                                       Stretch="Uniform"
+                                       VerticalAlignment="Center"/>
+                                 <TextBlock x:Name="CopyStatusLabel"
+                                            Text="Copied"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Margin="6,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                             </StackPanel>
+                         </Border>
                         <Button x:Name="CopyOnlyButton"
                                 Click="CopyOnlyButton_Click"
                                 Margin="0,0,6,0"
-                                Style="{StaticResource ChromeButtonBase}"
+                                Style="{StaticResource QrGhostButton}"
                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                 Background="#08FFFFFF"
                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}"

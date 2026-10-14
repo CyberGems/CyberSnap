@@ -16,7 +16,7 @@ public partial class QrResultWindow : Window
     private readonly SettingsService _settingsService;
     private readonly BarcodeFormat _format;
     private string? _copiedText;
-    private bool _copyFailed;
+    private bool _suppressAutoCopyCheck;
 
     public QrResultWindow(
         string codeText,
@@ -42,6 +42,9 @@ public partial class QrResultWindow : Window
         Theme.Refresh();
         ApplyTheme();
         RefreshLocalization();
+
+        RefreshAutoCopyCheck();
+        SettingsService.AutoCopyToClipboardChanged += OnScanAutoCopySettingChanged;
 
         Activated += (_, _) => ApplyTheme();
 
@@ -179,12 +182,12 @@ public partial class QrResultWindow : Window
         if (!ResultDelivery.TryCopyText(text))
         {
             _copiedText = null;
-            _copyFailed = true;
             ApplyCopyActionState();
+            ToastWindow.ShowError(
+                "Copy failed",
+                "CyberSnap could not copy the code. Keep this window open and try again.");
             return;
         }
-
-        _copyFailed = false;
 
         _copiedText = text;
         ApplyCopyActionState();
@@ -197,16 +200,97 @@ public partial class QrResultWindow : Window
 
     private void ApplyCopyActionState()
     {
-        if (CopyButtonText is null)
+        if (CopyButtonText is null || CopyStatusText is null || CopyOnlyButton is null)
             return;
 
+        // The CTA morphs to a compact "Close" when copied and the badge sits
+        // by the toggle that caused it, like the OCR window.
         bool copied = IsCodeCopied();
-        if (copied)
-            _copyFailed = false;
-        CopyStatusLabel.Text = LocalizationService.Translate(copied ? "Copied" : "Copy failed");
-        CopyStatusText.Visibility = copied || _copyFailed ? Visibility.Visible : Visibility.Collapsed;
+        CopyStatusText.Visibility = copied ? Visibility.Visible : Visibility.Collapsed;
+        CopyStatusLabel.Text = LocalizationService.Translate("Copied");
         CopyButtonText.Text = LocalizationService.Translate(copied ? "Close" : "Copy and close");
         CopyButtonIcon.Visibility = copied ? Visibility.Collapsed : Visibility.Visible;
+        // The ghost copy is pointless while the box holds exactly what is already
+        // on the clipboard (e.g. just auto-copied): it wakes up on the first edit.
+        CopyOnlyButton.IsEnabled = !copied && !string.IsNullOrWhiteSpace(ContentTextBox.Text);
+    }
+
+    private void RefreshAutoCopyCheck()
+    {
+        bool effective;
+        try
+        {
+            effective = Helpers.AutoCopyPreferences.ShouldCopy(_settingsService.Settings, Helpers.AutoCopyKind.Scan);
+        }
+        catch
+        {
+            effective = false;
+        }
+
+        _suppressAutoCopyCheck = true;
+        try { AutoCopyCheck.IsChecked = effective; }
+        finally { _suppressAutoCopyCheck = false; }
+    }
+
+    private void AutoCopyCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoCopyCheck) return;
+
+        // Independent kind toggle: enabling also lifts the master (SetKindEnabled),
+        // so this switch never lies with a snap-back. Disabling only excludes scans.
+        var settings = _settingsService.Settings;
+        Helpers.AutoCopyPreferences.SetKindEnabled(settings, Helpers.AutoCopyKind.Scan, AutoCopyCheck.IsChecked == true);
+        var plan = ResultDelivery.Normalize(
+            Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Scan),
+            settings.ScanShowResultWindow);
+        settings.ScanShowResultWindow = plan.ShowWindow;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("qr-result.auto-copy", ex); }
+        SettingsService.PublishAutoCopyState(settings);
+        RefreshAutoCopyCheck();
+    }
+
+    private void OnScanAutoCopySettingChanged(bool _)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() => RefreshAutoCopyCheck()));
+            return;
+        }
+        RefreshAutoCopyCheck();
+    }
+
+    internal bool IsShowResultWindow => _settingsService.Settings.ScanShowResultWindow;
+
+    /// <summary>
+    /// Title-bar More menu counterpart of the auto-copy toggle. Interlocked
+    /// pair like the OCR and color picker windows: hiding the window while
+    /// auto-copy is off enables auto-copy instead of bricking both
+    /// deliveries. Returns the effective value so the menu checkmark never
+    /// lies. The header pill refreshes via the published auto-copy events.
+    /// </summary>
+    internal bool SetShowResultWindow(bool show)
+    {
+        var settings = _settingsService.Settings;
+        if (!show && !Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Scan))
+        {
+            Helpers.AutoCopyPreferences.SetKindEnabled(settings, Helpers.AutoCopyKind.Scan, true);
+            settings.ScanShowResultWindow = false;
+        }
+        else
+        {
+            settings.ScanShowResultWindow = show;
+        }
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("qr-result.show-window", ex); }
+        SettingsService.PublishAutoCopyState(settings);
+        return settings.ScanShowResultWindow;
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        SettingsService.AutoCopyToClipboardChanged -= OnScanAutoCopySettingChanged;
+        base.OnClosed(e);
     }
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
