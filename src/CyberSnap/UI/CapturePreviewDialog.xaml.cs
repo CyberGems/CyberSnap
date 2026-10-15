@@ -1174,6 +1174,7 @@ namespace CyberSnap.UI
             Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
             Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
             Resources["ThemeAccentHoverBrush"] = Theme.Brush(Theme.AccentHover);
+            Resources["ThemeBgHoverBrush"] = Theme.Brush(Theme.BgHover);
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
             Resources["ThemePrimaryButtonForegroundBrush"] = Theme.IsDark && !Theme.IsGray
                 ? Theme.Brush(System.Windows.Media.Color.FromRgb(11, 18, 32))

@@ -21,11 +21,13 @@ public readonly record struct PreviewTabInfo(string Title, bool Active);
 public sealed class PreviewTabStrip : UserControl
 {
     public const double PreferredHeight = 34;
-    // Neutral X at rest and on hover; the red disc alone carries the
-    // destructive hint. Live property so a theme switch re-renders.
+    // Neutral X at rest; brighter on hover so it stays legible over the red
+    // wash. Live properties so a theme switch re-renders with the palette.
     private static System.Drawing.Color CloseIconColor =>
         System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
-    // Red wash disc on hover (same treatment as the editor tabs): the neutral
+    private static System.Drawing.Color CloseIconHoverColor =>
+        System.Drawing.Color.FromArgb(240, Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B);
+    // Red wash disc on hover (same treatment as the editor tabs): the light
     // X stays legible over it. Live property for theme switches.
     private static System.Windows.Media.Color CloseHoverWash =>
         Theme.IsDark
@@ -147,7 +149,7 @@ public sealed class PreviewTabStrip : UserControl
         {
             bool hover = _hoverCloseIndex == index;
             close.Background = hover ? Theme.Brush(CloseHoverWash) : Brushes.Transparent;
-            closeIcon.Source = FluentIcons.RenderWpf("close", CloseIconColor, 12, false);
+            closeIcon.Source = FluentIcons.RenderWpf("close", hover ? CloseIconHoverColor : CloseIconColor, 12, false);
         }
         close.MouseEnter += (_, _) =>
         {
@@ -212,7 +214,7 @@ public sealed class PreviewTabStrip : UserControl
         {
             _hoverIndex = index;
             if (!tab.Active)
-                card.SetResourceReference(Border.BackgroundProperty, "ThemeAccentHoverBrush");
+                card.SetResourceReference(Border.BackgroundProperty, "ThemeBgHoverBrush");
         };
         card.MouseLeave += (_, _) =>
         {

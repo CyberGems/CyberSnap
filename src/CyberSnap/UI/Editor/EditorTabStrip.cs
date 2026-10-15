@@ -16,10 +16,11 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
 {
     public const int PreferredHeight = 34;
     private const int WmContextMenu = 0x007B;
-    // Neutral X at rest and on hover; the red disc alone carries the
-    // destructive hint (same treatment as the preview tabs).
+    // Neutral X at rest; brighter on hover so it stays legible over the red
+    // wash (same treatment as the preview tabs).
     private static Color CloseIconColor => Color.FromArgb(210, EditorColors.TextSecondary);
-    // Red wash disc on hover: the neutral X stays legible over it.
+    private static Color CloseIconHoverColor => Color.FromArgb(240, EditorColors.TextPrimary);
+    // Red wash disc on hover: the light X stays legible over it.
     private static Color CloseHoverWash => EditorColors.IsDark
         ? Color.FromArgb(64, 255, 68, 68)
         : Color.FromArgb(36, 196, 43, 28);
@@ -279,7 +280,7 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
                 using var bg = new SolidBrush(CloseHoverWash);
                 g.FillEllipse(bg, close);
             }
-            var closeColor = CloseIconColor;
+            var closeColor = closeHover ? CloseIconHoverColor : CloseIconColor;
             // Render at 2x and downscale into an explicitly centered box: tiny
             // direct rasterizations can snap the strokes off-center by a pixel.
             using var glyph = FluentIcons.RenderBitmap("close", closeColor, 24, false);

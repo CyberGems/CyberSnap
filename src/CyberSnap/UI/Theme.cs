@@ -86,6 +86,7 @@ public static class Theme
         resources["ChromeButtonForeground"] = Brush(TextPrimary);
         resources["ChromeButtonBorderBrush"] = Brush(BorderSubtle);
         resources["ChromeButtonHoverBrush"] = Brush(BgHover);
+        resources["ThemeBgHoverBrush"] = Brush(BgHover);
         resources["ChromeButtonPressedBrush"] = Brush(SelectionBg);
         resources["ChromeDangerButtonBackground"] = Brush(IsDark ? CA(196, 43, 28, 42) : CA(196, 43, 28, 24));
         resources["ChromeDangerButtonBorderBrush"] = Brush(IsDark ? CA(196, 43, 28, 92) : CA(196, 43, 28, 72));

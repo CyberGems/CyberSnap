@@ -27,6 +27,7 @@
         <SolidColorBrush x:Key="ThemeAccentBrush" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="ThemeAccentSubtleBrush" Color="#15FFFFFF"/>
         <SolidColorBrush x:Key="ThemeAccentHoverBrush" Color="#40FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeBgHoverBrush" Color="#21263A"/>
         <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
         <SolidColorBrush x:Key="ThemePrimaryButtonForegroundBrush" Color="#FF0B1220"/>
         <SolidColorBrush x:Key="ThemePrimaryCtaBorderBrush" Color="#3800FFFF"/>
