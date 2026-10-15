@@ -66,6 +66,7 @@ public partial class AboutWindow : Window
         Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
         Resources["ThemePanelBackgroundBrush"] = Theme.Brush(Theme.BgPrimary);
         Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
+        Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         OuterBorder.Background = Theme.Brush(Theme.BgPrimary);
         OuterBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
@@ -638,20 +639,20 @@ public partial class AboutWindow : Window
     private void AboutFooterIcon_MouseEnter(object sender, MouseEventArgs e)
     {
         if (sender is not Border border) return;
-        border.Background = Theme.Brush(Theme.TabHoverBg);
-        SetFooterIconAccent(border, primary: true);
+        border.Background = Theme.Brush(Theme.AccentSubtle);
+        SetFooterIconAccent(border, hovered: true);
     }
 
     private void AboutFooterIcon_MouseLeave(object sender, MouseEventArgs e)
     {
         if (sender is not Border border) return;
         border.Background = System.Windows.Media.Brushes.Transparent;
-        SetFooterIconAccent(border, primary: false);
+        SetFooterIconAccent(border, hovered: false);
     }
 
-    private void SetFooterIconAccent(Border border, bool primary)
+    private void SetFooterIconAccent(Border border, bool hovered)
     {
-        var brushKey = primary ? "ThemeTextPrimaryBrush" : "ThemeMutedBrush";
+        var brushKey = hovered ? "ThemeAccentBrush" : "ThemeMutedBrush";
         if (border == AboutFooterWebsiteBtn)
         {
             AboutFooterWebsiteIcon.SetResourceReference(Shape.StrokeProperty, brushKey);
@@ -696,12 +697,12 @@ public partial class AboutWindow : Window
         AboutFooterReleasesBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterDocsBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterDonateBtn.Background = System.Windows.Media.Brushes.Transparent;
-        SetFooterIconAccent(AboutFooterWebsiteBtn, primary: false);
-        SetFooterIconAccent(AboutFooterGithubBtn, primary: false);
-        SetFooterIconAccent(AboutFooterIssuesBtn, primary: false);
-        SetFooterIconAccent(AboutFooterDiagBtn, primary: false);
-        SetFooterIconAccent(AboutFooterReleasesBtn, primary: false);
-        SetFooterIconAccent(AboutFooterDocsBtn, primary: false);
+        SetFooterIconAccent(AboutFooterWebsiteBtn, hovered: false);
+        SetFooterIconAccent(AboutFooterGithubBtn, hovered: false);
+        SetFooterIconAccent(AboutFooterIssuesBtn, hovered: false);
+        SetFooterIconAccent(AboutFooterDiagBtn, hovered: false);
+        SetFooterIconAccent(AboutFooterReleasesBtn, hovered: false);
+        SetFooterIconAccent(AboutFooterDocsBtn, hovered: false);
     }
 
     private void SetFooterIconsEnabled(bool enabled)

@@ -147,7 +147,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Image x:Name="TipIcon" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <Image x:Name="TipIcon" Width="24" Height="24" Margin="0,0,8,0" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TitleText"
                                Grid.Column="1"
                                FontSize="14" FontWeight="SemiBold"
@@ -191,13 +191,19 @@
                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                            TextWrapping="Wrap" LineHeight="18"/>
 
-                <CheckBox x:Name="DontShowAgainCheck"
-                          Grid.Row="2" Grid.ColumnSpan="2"
-                          Margin="0,12,0,0"
-                          IsChecked="True"
-                          FontSize="12"
-                          Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                          VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,12,0,0">
+                    <TextBlock x:Name="DontShowAgainLabel"
+                               FontSize="12"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <CheckBox x:Name="DontShowAgainCheck"
+                              IsChecked="True"
+                              VerticalAlignment="Center"/>
+                </StackPanel>
 
                 <StackPanel Grid.Row="3" Grid.ColumnSpan="2"
                             Orientation="Horizontal"
