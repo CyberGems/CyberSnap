@@ -14,7 +14,9 @@ public enum HotkeyBadgeKind
 {
     Escape,
     Enter,
-    CtrlEnter
+    CtrlEnter,
+    /// <summary>Single-letter keycap (e.g. N for No).</summary>
+    KeyN
 }
 
 public sealed class HotkeyBadge : Border
@@ -198,7 +200,7 @@ public sealed class HotkeyBadge : Border
         Padding = new Thickness(4, 2, 4, 2);
         var label = new TextBlock
         {
-            Text = "Esc",
+            Text = Kind == HotkeyBadgeKind.KeyN ? "N" : "Esc",
             FontFamily = new System.Windows.Media.FontFamily("Consolas"),
             FontSize = 9,
             FontWeight = FontWeights.Bold,

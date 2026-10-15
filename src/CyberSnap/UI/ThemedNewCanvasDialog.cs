@@ -709,10 +709,10 @@ internal sealed class ThemedNewCanvasDialog : Window
             Content = HotkeyBadge.Labeled(
                 Services.LocalizationService.Translate(text).ToUpper(CultureInfo.CurrentCulture),
                 isPrimary ? HotkeyBadgeKind.Enter : HotkeyBadgeKind.Escape),
-            MinWidth = 94,
+            MinWidth = 110,
             Height = 34,
             Margin = new Thickness(isPrimary ? 10 : 0, 0, 0, 0),
-            Padding = new Thickness(14, 0, 14, 0),
+            Padding = new Thickness(24, 0, 24, 0),
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Cursor = WpfCursors.Hand,
@@ -738,8 +738,8 @@ internal sealed class ThemedNewCanvasDialog : Window
             button.Background = Theme.Brush(SecondaryButtonBg);
             button.BorderBrush = Theme.Brush(SecondaryButtonBorder);
             button.Foreground = Theme.Brush(Theme.TextPrimary);
-            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(Theme.TabHoverBg); };
-            button.MouseLeave += (_, _) => { button.Background = Theme.Brush(SecondaryButtonBg); };
+            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(Theme.AccentSubtle); button.BorderBrush = Theme.Brush(accent); button.Foreground = Theme.Brush(accent); };
+            button.MouseLeave += (_, _) => { button.Background = Theme.Brush(SecondaryButtonBg); button.BorderBrush = Theme.Brush(SecondaryButtonBorder); button.Foreground = Theme.Brush(Theme.TextPrimary); };
         }
 
         button.Click += (_, _) => click();

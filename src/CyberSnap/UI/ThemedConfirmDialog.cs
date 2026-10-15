@@ -90,6 +90,13 @@ internal sealed class ThemedConfirmDialog : Window
                 e.Handled = true;
                 Close();
             }
+            // Save prompt only: N answers No (badge on the button).
+            else if (e.Key == Key.N && kind == Kind.SavePrompt)
+            {
+                e.Handled = true;
+                _saveResult = SavePromptResult.DontSave;
+                Close();
+            }
         };
 
         Loaded += (s, e) =>
@@ -388,7 +395,7 @@ internal sealed class ThemedConfirmDialog : Window
             {
                 _saveResult = SavePromptResult.DontSave;
                 Close();
-            }, hint: null));
+            }, HotkeyBadgeKind.KeyN));
             buttons.Children.Add(BuildButton(Services.LocalizationService.Translate("Yes"), isPrimary: true, kind, () =>
             {
                 _saveResult = SavePromptResult.Save;
@@ -411,18 +418,28 @@ internal sealed class ThemedConfirmDialog : Window
         root.Children.Add(buttons);
 
         // Row 5: "Don't show again" checkbox (only when requested by the caller).
+        // The label is a separate TextBlock: the global pill toggle style does
+        // not render CheckBox content, so a bare pill would be meaningless.
         if (showSuppressCheck)
         {
             var suppressRow = new StackPanel
             {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
                 HorizontalAlignment = WpfHorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(10, 2, 10, 10)
             };
-            var check = new CheckBox
+            suppressRow.Children.Add(new TextBlock
             {
-                Content = Services.LocalizationService.Translate("Don't show again"),
+                Text = Services.LocalizationService.Translate("Don't show again"),
                 FontSize = 11.5,
                 Foreground = Theme.Brush(Theme.TextSecondary),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0)
+            });
+            var check = new CheckBox
+            {
+                Content = "",
                 VerticalAlignment = VerticalAlignment.Center
             };
             check.Checked += (_, _) => _suppress = true;
@@ -597,9 +614,9 @@ internal sealed class ThemedConfirmDialog : Window
             button.Foreground = Theme.Brush(Theme.TextSecondary);
             button.MouseEnter += (_, _) =>
             {
-                button.Background = Theme.Brush(Theme.TabHoverBg);
-                button.BorderBrush = Theme.Brush(WithAlpha(accent, 120));
-                button.Foreground = Theme.Brush(Theme.TextPrimary);
+                button.Background = Theme.Brush(Theme.AccentSubtle);
+                button.BorderBrush = Theme.Brush(accent);
+                button.Foreground = Theme.Brush(accent);
             };
             button.MouseLeave += (_, _) =>
             {
