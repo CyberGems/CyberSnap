@@ -2568,7 +2568,6 @@
   "Copy RGB": "Copiar RGB",
   "Copy HSL": "Copiar HSL",
   "Favorite format": "Formato favorito",
-  "Auto-copy": "Autocopiar",
   "Copy the picked color automatically. Turning this off shows this window instead.": "Copia el color elegido automáticamente.\nAl desactivarlo se muestra esta ventana en su lugar.",
   "Include # in HEX": "Incluir # en HEX",
   "Show this window": "Mostrar esta ventana",

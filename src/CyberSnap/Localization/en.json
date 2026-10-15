@@ -2308,7 +2308,6 @@
   "Copy RGB": "Copy RGB",
   "Copy HSL": "Copy HSL",
   "Favorite format": "Favorite format",
-  "Auto-copy": "Auto-copy",
   "Copy the picked color automatically. Turning this off shows this window instead.": "Copy the picked color automatically.\nTurning this off shows this window instead.",
   "Include # in HEX": "Include # in HEX",
   "Show this window": "Show this window",
