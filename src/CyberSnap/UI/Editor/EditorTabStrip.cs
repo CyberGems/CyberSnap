@@ -16,17 +16,13 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
 {
     public const int PreferredHeight = 34;
     private const int WmContextMenu = 0x007B;
-    // Neutral at rest, red only on hover (same treatment as the preview tabs).
+    // Neutral X at rest and on hover; the red disc alone carries the
+    // destructive hint (same treatment as the preview tabs).
     private static Color CloseIconColor => Color.FromArgb(210, EditorColors.TextSecondary);
-    private static readonly Color CloseIconHoverColor = Color.FromArgb(239, 68, 68);
-    // Bold neutral disc (fill + ring) so the hover target is unmistakable on
-    // any tab fill; the red glyph alone carries the destructive hint.
+    // Red wash disc on hover: the neutral X stays legible over it.
     private static Color CloseHoverWash => EditorColors.IsDark
-        ? Color.FromArgb(88, 255, 255, 255)
-        : Color.FromArgb(40, 0, 0, 0);
-    private static Color CloseHoverRing => EditorColors.IsDark
-        ? Color.FromArgb(130, 255, 255, 255)
-        : Color.FromArgb(70, 0, 0, 0);
+        ? Color.FromArgb(64, 255, 68, 68)
+        : Color.FromArgb(36, 196, 43, 28);
 
     private readonly List<EditorTabInfo> _tabs = new();
     private readonly List<Rectangle> _tabRects = new();
@@ -251,10 +247,14 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
 
             if (tab.Active)
             {
-                // Confined to the title zone: ends before the close circle so the
-                // accent line never runs under the X (same as the preview tabs).
-                using var accent = new Pen(EditorColors.Accent, 2f);
-                g.DrawLine(accent, rect.Left + 8, rect.Bottom - 2, _closeRects[i].Left - 4, rect.Bottom - 2);
+                // Spans the whole tab (under the close circle too) so the
+                // accent line reads as a full underline, not a cut segment.
+                using var accent = new Pen(EditorColors.Accent, 2f)
+                {
+                    StartCap = LineCap.Round,
+                    EndCap = LineCap.Round,
+                };
+                g.DrawLine(accent, rect.Left + 8, rect.Bottom - 2, rect.Right - 8, rect.Bottom - 2);
             }
 
             int textLeft = rect.Left + 8;
@@ -278,10 +278,8 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
                 // Browser-style circle target around the glyph.
                 using var bg = new SolidBrush(CloseHoverWash);
                 g.FillEllipse(bg, close);
-                using var ring = new Pen(CloseHoverRing, 1.5f);
-                g.DrawEllipse(ring, Rectangle.Inflate(close, -1, -1));
             }
-            var closeColor = closeHover ? CloseIconHoverColor : CloseIconColor;
+            var closeColor = CloseIconColor;
             // Render at 2x and downscale into an explicitly centered box: tiny
             // direct rasterizations can snap the strokes off-center by a pixel.
             using var glyph = FluentIcons.RenderBitmap("close", closeColor, 24, false);

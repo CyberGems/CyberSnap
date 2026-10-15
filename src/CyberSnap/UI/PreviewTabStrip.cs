@@ -21,21 +21,16 @@ public readonly record struct PreviewTabInfo(string Title, bool Active);
 public sealed class PreviewTabStrip : UserControl
 {
     public const double PreferredHeight = 34;
-    // Neutral at rest (title-bar icon treatment), red only on hover. Live
-    // properties so a theme switch re-renders with the current palette.
+    // Neutral X at rest and on hover; the red disc alone carries the
+    // destructive hint. Live property so a theme switch re-renders.
     private static System.Drawing.Color CloseIconColor =>
         System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
-    private static readonly System.Drawing.Color CloseIconHoverColor = System.Drawing.Color.FromArgb(239, 68, 68);
-    // Bold neutral disc (fill + ring) so the hover target is unmistakable on
-    // any tab fill; the red glyph alone carries the destructive hint.
+    // Red wash disc on hover (same treatment as the editor tabs): the neutral
+    // X stays legible over it. Live property for theme switches.
     private static System.Windows.Media.Color CloseHoverWash =>
         Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(88, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(40, 0, 0, 0);
-    private static System.Windows.Media.Color CloseHoverRing =>
-        Theme.IsDark
-            ? System.Windows.Media.Color.FromArgb(130, 255, 255, 255)
-            : System.Windows.Media.Color.FromArgb(70, 0, 0, 0);
+            ? System.Windows.Media.Color.FromArgb(64, 255, 68, 68)
+            : System.Windows.Media.Color.FromArgb(36, 196, 43, 28);
 
     private readonly ScrollViewer _scroller;
     private readonly StackPanel _host;
@@ -58,7 +53,7 @@ public sealed class PreviewTabStrip : UserControl
         _host = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Margin = new Thickness(6, 2, 6, 2),
+            Margin = new Thickness(6, 0, 6, 0),
             Background = Brushes.Transparent
         };
         _scroller = new ScrollViewer
@@ -152,9 +147,7 @@ public sealed class PreviewTabStrip : UserControl
         {
             bool hover = _hoverCloseIndex == index;
             close.Background = hover ? Theme.Brush(CloseHoverWash) : Brushes.Transparent;
-            close.BorderBrush = hover ? Theme.Brush(CloseHoverRing) : Brushes.Transparent;
-            close.BorderThickness = hover ? new Thickness(1) : new Thickness(0);
-            closeIcon.Source = FluentIcons.RenderWpf("close", hover ? CloseIconHoverColor : CloseIconColor, 12, false);
+            closeIcon.Source = FluentIcons.RenderWpf("close", CloseIconColor, 12, false);
         }
         close.MouseEnter += (_, _) =>
         {
@@ -177,19 +170,20 @@ public sealed class PreviewTabStrip : UserControl
         var header = new DockPanel
         {
             LastChildFill = true,
-            Margin = new Thickness(10, 6, 6, 6)
+            Margin = new Thickness(10, 5, 6, 5)
         };
         DockPanel.SetDock(close, Dock.Right);
         header.Children.Add(close);
         header.Children.Add(title);
 
-        // Confined to the title zone (right margin reserves the 22px close
-        // circle + gaps): the accent line never runs under the X.
+        // Spans the whole tab (under the close circle too) so the accent line
+        // reads as a full underline instead of a cut-off segment.
         var underline = new Border
         {
             Height = 2,
+            CornerRadius = new CornerRadius(1),
             VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(6, 0, 32, 2),
+            Margin = new Thickness(6, 0, 6, 2),
             Visibility = tab.Active ? Visibility.Visible : Visibility.Collapsed
         };
         underline.SetResourceReference(Border.BackgroundProperty, "ThemeAccentBrush");
