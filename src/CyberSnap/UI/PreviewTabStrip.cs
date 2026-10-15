@@ -17,10 +17,12 @@ public readonly record struct PreviewTabInfo(string Title, bool Active);
 /// <summary>
 /// Compact capture tabs under the preview title bar when more than one
 /// capture is open. Hidden with a single capture so chrome stays unchanged.
+/// Chevron buttons appear at the ends once the tabs no longer fit.
 /// </summary>
 public sealed class PreviewTabStrip : UserControl
 {
     public const double PreferredHeight = 34;
+    private const double ChevronWidth = 20;
     // Neutral X at rest; brighter on hover so it stays legible over the red
     // wash. Live properties so a theme switch re-renders with the palette.
     private static System.Drawing.Color CloseIconColor =>
@@ -37,6 +39,8 @@ public sealed class PreviewTabStrip : UserControl
     private readonly ScrollViewer _scroller;
     private readonly StackPanel _host;
     private readonly List<PreviewTabInfo> _tabs = new();
+    private readonly Border _leftChevron;
+    private readonly Border _rightChevron;
     private int _hoverIndex = -1;
     private int _hoverCloseIndex = -1;
 
@@ -70,14 +74,42 @@ public sealed class PreviewTabStrip : UserControl
         var edge = new Border
         {
             Background = Brushes.Transparent,
-            BorderThickness = new Thickness(0, 0, 0, 1),
             Child = _scroller
         };
-        edge.SetResourceReference(Border.BorderBrushProperty, "ThemeSeparatorBrush");
-        Content = edge;
+
+        _leftChevron = BuildChevron(forward: false);
+        _rightChevron = BuildChevron(forward: true);
+
+        // Chevrons flank the scroll host so they stay pinned at the ends while
+        // the tabs scroll between them.
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(_leftChevron, 0);
+        Grid.SetColumn(edge, 1);
+        Grid.SetColumn(_rightChevron, 2);
+        grid.Children.Add(_leftChevron);
+        grid.Children.Add(edge);
+        grid.Children.Add(_rightChevron);
+
+        // Separator wraps the whole bar (chevrons included) so the hairline
+        // keeps spanning the full width, as before.
+        var shell = new Border
+        {
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Child = grid
+        };
+        shell.SetResourceReference(Border.BorderBrushProperty, "ThemeSeparatorBrush");
+        Content = shell;
+
         PreviewMouseWheel += OnMouseWheel;
         MouseRightButtonUp += OnRightButtonUp;
         _scroller.MouseRightButtonUp += OnRightButtonUp;
+        _scroller.ScrollChanged += (_, _) => UpdateChevrons();
+        SizeChanged += (_, _) => UpdateChevrons();
+        Loaded += (_, _) => UpdateChevrons();
     }
 
     public void SetTabs(IReadOnlyList<PreviewTabInfo> tabs)
@@ -87,6 +119,66 @@ public sealed class PreviewTabStrip : UserControl
         _hoverIndex = -1;
         _hoverCloseIndex = -1;
         Rebuild();
+        // The scroll extent is only known after a layout pass, so recheck then.
+        Dispatcher.BeginInvoke((Action)UpdateChevrons);
+    }
+
+    private Border BuildChevron(bool forward)
+    {
+        var icon = new System.Windows.Controls.Image
+        {
+            Source = FluentIcons.RenderWpf(forward ? "chevronRight" : "chevronLeft", CloseIconColor, 16, false),
+            Width = 16,
+            Height = 16,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var border = new Border
+        {
+            Width = ChevronWidth,
+            Height = 26,
+            Margin = new Thickness(forward ? 2 : 4, 0, forward ? 4 : 2, 0),
+            CornerRadius = new CornerRadius(4),
+            Background = Brushes.Transparent,
+            Cursor = Cursors.Hand,
+            Child = icon,
+            Visibility = Visibility.Collapsed
+        };
+        border.MouseLeftButtonDown += (_, e) =>
+        {
+            e.Handled = true;
+            ScrollBy(forward);
+        };
+        border.MouseEnter += (_, _) =>
+            border.SetResourceReference(Border.BackgroundProperty, "ThemeBgHoverBrush");
+        border.MouseLeave += (_, _) => border.Background = Brushes.Transparent;
+        ToolTipService.SetToolTip(border, LocalizationService.Translate(forward ? "Scroll tabs right" : "Scroll tabs left"));
+        return border;
+    }
+
+    private void ScrollBy(bool forward)
+    {
+        // One viewport-ish step per click, matching the sibling apps.
+        double step = Math.Max(_scroller.ViewportWidth * 0.65, 160);
+        _scroller.ScrollToHorizontalOffset(_scroller.HorizontalOffset + (forward ? step : -step));
+    }
+
+    private void UpdateChevrons()
+    {
+        double extent = _scroller.ExtentWidth;
+        double viewport = _scroller.ViewportWidth;
+        // 2px slack so sub-pixel rounding never makes the buttons flap.
+        bool overflow = extent > viewport + 2;
+        _leftChevron.Visibility = overflow ? Visibility.Visible : Visibility.Collapsed;
+        _rightChevron.Visibility = overflow ? Visibility.Visible : Visibility.Collapsed;
+        SetChevronEnabled(_leftChevron, overflow && _scroller.HorizontalOffset > 2);
+        SetChevronEnabled(_rightChevron, overflow && _scroller.HorizontalOffset + viewport < extent - 2);
+    }
+
+    private static void SetChevronEnabled(Border border, bool enabled)
+    {
+        border.IsHitTestVisible = enabled;
+        border.Opacity = enabled ? 1.0 : 0.4;
     }
 
     private void OnMouseWheel(object sender, MouseWheelEventArgs e)

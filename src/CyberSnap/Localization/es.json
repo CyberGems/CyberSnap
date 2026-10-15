@@ -1879,6 +1879,8 @@
   "Open the post-capture editor for annotations.": "Abrir el editor de anotaciones después de la captura.",
   "Untitled": "Sin título",
   "Close tab": "Cerrar pestaña",
+  "Scroll tabs left": "Desplazar pestañas a la izquierda",
+  "Scroll tabs right": "Desplazar pestañas a la derecha",
   "Close all": "Cerrar todas",
   "Reopen last closed tab": "Reabrir última cerrada",
   "Copy location": "Copiar ubicación",

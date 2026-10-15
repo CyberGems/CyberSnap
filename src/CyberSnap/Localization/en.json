@@ -1582,6 +1582,8 @@
   "Open the post-capture editor for annotations.": "Open the post-capture editor for annotations.",
   "Untitled": "Untitled",
   "Close tab": "Close tab",
+  "Scroll tabs left": "Scroll tabs left",
+  "Scroll tabs right": "Scroll tabs right",
   "Close all": "Close all",
   "Reopen last closed tab": "Reopen last closed tab",
   "Copy location": "Copy location",
