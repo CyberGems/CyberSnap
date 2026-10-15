@@ -14,10 +14,19 @@ internal readonly record struct EditorTabInfo(string Title, bool Dirty, bool Has
 /// </summary>
 internal sealed class EditorTabStrip : DoubleBufferedPanel
 {
-    public const int PreferredHeight = 28;
+    public const int PreferredHeight = 34;
     private const int WmContextMenu = 0x007B;
-    private static readonly Color CloseIconColor = Color.FromArgb(239, 68, 68);
-    private static readonly Color CloseIconHoverColor = Color.FromArgb(255, 110, 110);
+    // Neutral at rest, red only on hover (same treatment as the preview tabs).
+    private static Color CloseIconColor => Color.FromArgb(210, EditorColors.TextSecondary);
+    private static readonly Color CloseIconHoverColor = Color.FromArgb(239, 68, 68);
+    // Bold neutral disc (fill + ring) so the hover target is unmistakable on
+    // any tab fill; the red glyph alone carries the destructive hint.
+    private static Color CloseHoverWash => EditorColors.IsDark
+        ? Color.FromArgb(88, 255, 255, 255)
+        : Color.FromArgb(40, 0, 0, 0);
+    private static Color CloseHoverRing => EditorColors.IsDark
+        ? Color.FromArgb(130, 255, 255, 255)
+        : Color.FromArgb(70, 0, 0, 0);
 
     private readonly List<EditorTabInfo> _tabs = new();
     private readonly List<Rectangle> _tabRects = new();
@@ -219,7 +228,7 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         using (var edge = new Pen(EditorColors.BorderSubtle))
             g.DrawLine(edge, 0, Height - 1, Width, Height - 1);
 
-        using var titleFont = UiChrome.ChromeFont(8f, FontStyle.Bold);
+        using var titleFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
 
         for (int i = 0; i < _tabs.Count; i++)
         {
@@ -242,8 +251,10 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
 
             if (tab.Active)
             {
+                // Confined to the title zone: ends before the close circle so the
+                // accent line never runs under the X (same as the preview tabs).
                 using var accent = new Pen(EditorColors.Accent, 2f);
-                g.DrawLine(accent, rect.Left + 8, rect.Bottom - 2, rect.Right - 8, rect.Bottom - 2);
+                g.DrawLine(accent, rect.Left + 8, rect.Bottom - 2, _closeRects[i].Left - 4, rect.Bottom - 2);
             }
 
             int textLeft = rect.Left + 8;
@@ -262,8 +273,26 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
 
             bool closeHover = i == _hoverCloseIndex;
+            if (closeHover)
+            {
+                // Browser-style circle target around the glyph.
+                using var bg = new SolidBrush(CloseHoverWash);
+                g.FillEllipse(bg, close);
+                using var ring = new Pen(CloseHoverRing, 1.5f);
+                g.DrawEllipse(ring, Rectangle.Inflate(close, -1, -1));
+            }
             var closeColor = closeHover ? CloseIconHoverColor : CloseIconColor;
-            FluentIcons.DrawIcon(g, "close", close, closeColor, iconInset: 2f);
+            // Render at 2x and downscale into an explicitly centered box: tiny
+            // direct rasterizations can snap the strokes off-center by a pixel.
+            using var glyph = FluentIcons.RenderBitmap("close", closeColor, 24, false);
+            if (glyph is not null)
+            {
+                const float s = 12f;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.DrawImage(glyph,
+                    close.X + (close.Width - s) / 2f,
+                    close.Y + (close.Height - s) / 2f, s, s);
+            }
         }
     }
 
@@ -275,15 +304,15 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         int tabH = Math.Max(20, Height - 4);
         int x = pad - _scrollX;
         int y = Math.Max(1, (Height - tabH) / 2);
-        using var font = UiChrome.ChromeFont(8f, FontStyle.Bold);
+        using var font = UiChrome.ChromeFont(9f, FontStyle.Bold);
         foreach (var tab in _tabs)
         {
             int titleW = TextRenderer.MeasureText(tab.Title, font, Size.Empty,
                 TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
-            int w = Math.Clamp(titleW + 14 + 32, 96, 210);
+            int w = Math.Clamp(titleW + 14 + 34, 112, 240);
             var rect = new Rectangle(x, y, w, tabH);
             _tabRects.Add(rect);
-            _closeRects.Add(new Rectangle(rect.Right - 20, rect.Top + 2, 16, rect.Height - 4));
+            _closeRects.Add(new Rectangle(rect.Right - 26, rect.Top + (rect.Height - 22) / 2, 22, 22));
             x += w + 3;
         }
         _contentWidth = x + pad + _scrollX;

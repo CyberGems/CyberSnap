@@ -20,9 +20,22 @@ public readonly record struct PreviewTabInfo(string Title, bool Active);
 /// </summary>
 public sealed class PreviewTabStrip : UserControl
 {
-    public const double PreferredHeight = 28;
-    private static readonly System.Drawing.Color CloseIconColor = System.Drawing.Color.FromArgb(239, 68, 68);
-    private static readonly System.Drawing.Color CloseIconHoverColor = System.Drawing.Color.FromArgb(255, 110, 110);
+    public const double PreferredHeight = 34;
+    // Neutral at rest (title-bar icon treatment), red only on hover. Live
+    // properties so a theme switch re-renders with the current palette.
+    private static System.Drawing.Color CloseIconColor =>
+        System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+    private static readonly System.Drawing.Color CloseIconHoverColor = System.Drawing.Color.FromArgb(239, 68, 68);
+    // Bold neutral disc (fill + ring) so the hover target is unmistakable on
+    // any tab fill; the red glyph alone carries the destructive hint.
+    private static System.Windows.Media.Color CloseHoverWash =>
+        Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(88, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(40, 0, 0, 0);
+    private static System.Windows.Media.Color CloseHoverRing =>
+        Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(130, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(70, 0, 0, 0);
 
     private readonly ScrollViewer _scroller;
     private readonly StackPanel _host;
@@ -103,36 +116,56 @@ public sealed class PreviewTabStrip : UserControl
         var title = new TextBlock
         {
             Text = tab.Title,
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
-            Margin = new Thickness(0, 0, 4, 0),
-            MaxWidth = 160
+            Margin = new Thickness(0, 0, 6, 0),
+            MaxWidth = 170
         };
         title.SetResourceReference(
             TextBlock.ForegroundProperty,
             tab.Active ? "ThemeTextPrimaryBrush" : "ThemeTextSecondaryBrush");
 
-        var close = new System.Windows.Controls.Image
+        var closeIcon = new System.Windows.Controls.Image
         {
             Source = FluentIcons.RenderWpf("close", CloseIconColor, 12, false),
             Width = 12,
             Height = 12,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        // 22px circle target around the 12px glyph (browser-style): a bigger
+        // hit area with a neutral hover wash plus red glyph, instead of a bare tiny X.
+        var close = new Border
+        {
+            Width = 22,
+            Height = 22,
+            CornerRadius = new CornerRadius(11),
+            Background = Brushes.Transparent,
             Margin = new Thickness(2, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
-            Cursor = Cursors.Hand
+            Cursor = Cursors.Hand,
+            Child = closeIcon
         };
+        void RefreshClose()
+        {
+            bool hover = _hoverCloseIndex == index;
+            close.Background = hover ? Theme.Brush(CloseHoverWash) : Brushes.Transparent;
+            close.BorderBrush = hover ? Theme.Brush(CloseHoverRing) : Brushes.Transparent;
+            close.BorderThickness = hover ? new Thickness(1) : new Thickness(0);
+            closeIcon.Source = FluentIcons.RenderWpf("close", hover ? CloseIconHoverColor : CloseIconColor, 12, false);
+        }
         close.MouseEnter += (_, _) =>
         {
             _hoverCloseIndex = index;
-            close.Source = FluentIcons.RenderWpf("close", CloseIconHoverColor, 12, false);
+            RefreshClose();
         };
         close.MouseLeave += (_, _) =>
         {
             if (_hoverCloseIndex == index)
                 _hoverCloseIndex = -1;
-            close.Source = FluentIcons.RenderWpf("close", CloseIconColor, 12, false);
+            RefreshClose();
         };
         close.MouseLeftButtonDown += (_, e) =>
         {
@@ -144,17 +177,19 @@ public sealed class PreviewTabStrip : UserControl
         var header = new DockPanel
         {
             LastChildFill = true,
-            Margin = new Thickness(8, 4, 4, 4)
+            Margin = new Thickness(10, 6, 6, 6)
         };
         DockPanel.SetDock(close, Dock.Right);
         header.Children.Add(close);
         header.Children.Add(title);
 
+        // Confined to the title zone (right margin reserves the 22px close
+        // circle + gaps): the accent line never runs under the X.
         var underline = new Border
         {
             Height = 2,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(6, 0, 6, 2),
+            Margin = new Thickness(6, 0, 32, 2),
             Visibility = tab.Active ? Visibility.Visible : Visibility.Collapsed
         };
         underline.SetResourceReference(Border.BackgroundProperty, "ThemeAccentBrush");
@@ -165,8 +200,8 @@ public sealed class PreviewTabStrip : UserControl
 
         var card = new Border
         {
-            MinWidth = 96,
-            MaxWidth = 210,
+            MinWidth = 112,
+            MaxWidth = 240,
             Padding = new Thickness(0),
             Margin = new Thickness(0, 0, 3, 0),
             CornerRadius = new CornerRadius(4),
