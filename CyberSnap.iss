@@ -6,8 +6,7 @@ AppName=CyberSnap
 AppVersion={#AppVersion}
 AppPublisher=CyberGems
 DefaultDirName={autopf}\CyberSnap
-DefaultGroupName=CyberSnap
-AllowNoIcons=yes
+DisableProgramGroupPage=yes
 OutputDir=.
 OutputBaseFilename=CyberSnap-Setup-{#AppVersion}
 SetupIconFile=.\src\CyberSnap\CyberSnap.ico
@@ -46,8 +45,8 @@ Name: "startup"; Description: "{cm:RunAtStartup}"; GroupDescription: "{cm:Option
 Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; IconFilename: "{app}\Assets\Icons\CyberSnap.ico"
-Name: "{group}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; IconFilename: "{app}\Assets\Icons\Editor.ico"
+Name: "{autoprograms}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; IconFilename: "{app}\Assets\Icons\CyberSnap.ico"
+Name: "{autoprograms}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; IconFilename: "{app}\Assets\Icons\Editor.ico"
 Name: "{autodesktop}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: desktopicon; IconFilename: "{app}\Assets\Icons\CyberSnap.ico"
 Name: "{autodesktop}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; Tasks: editordesktopicon; IconFilename: "{app}\Assets\Icons\Editor.ico"
 
