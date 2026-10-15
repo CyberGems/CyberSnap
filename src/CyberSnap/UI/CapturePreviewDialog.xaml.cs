@@ -36,8 +36,8 @@ namespace CyberSnap.UI
         private const double CtaBorderBreatheSeconds = 3.6;
         private const double EnterInviteZoomScale = 0.88;
         private const int EnterInviteMs = 180;
-        private const int PillSimInitialDelayMs = 200;
-        private const int PillSimWorkMs = 1000;
+        private const int PillSimInitialDelayMs = 100;
+        private const int PillSimWorkMs = 500;
 
         private readonly SettingsService _settingsService;
         private readonly System.Drawing.Point _targetMonitorPoint;
@@ -324,15 +324,14 @@ namespace CyberSnap.UI
             SaveText.Text = LocalizationService.Translate("Save");
             SaveAsText.Text = LocalizationService.Translate("Save as...");
             CopyText.Text = LocalizationService.Translate("Copy");
-            EditText.Text = LocalizationService.Translate("Edit");
-            ExtractTextText.Text = LocalizationService.Translate("Extract text");
+            EditText.Text = LocalizationService.Translate("Send to Editor...");
+            ExtractTextText.Text = LocalizationService.Translate("Extract text...");
             ExtractTextBtn.ToolTip = WithHotkeyHint(
                 LocalizationService.Translate("Extract text from this image using OCR."),
                 "Ctrl+T");
-            OpenViewerText.Text = LocalizationService.Translate("Open in viewer");
-            PrintText.Text = LocalizationService.Translate("Print");
-            PrintBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Print this capture."), "Ctrl+P");
-            DeleteText.Text = LocalizationService.Translate("Delete");
+            OpenViewerText.Text = LocalizationService.Translate("Open in viewer...");
+            PrintText.Text = LocalizationService.Translate("Print...");
+            DeleteText.Text = LocalizationService.Translate("Delete...");
             DeleteBtn.ToolTip = LocalizationService.Translate(
                 "The saved file will be permanently deleted from disk and removed from the Gallery.");
             MoreText.Text = LocalizationService.Translate("More");
@@ -2455,10 +2454,16 @@ namespace CyberSnap.UI
                 ViewerHintBadge.Visibility = Visibility.Collapsed;
             }
 
+            // The "continue with pending actions" phrasing only makes sense while
+            // the completion simulation is still running. Once every pill shows
+            // its check (or none were configured), closing just closes.
+            bool stillPending = _pillSimRunning;
             CancelBtn.ToolTip = WithHotkeyHint(
-                HasMultipleSessions
-                    ? LocalizationService.Translate("Close and continue with pending actions for each capture")
-                    : LocalizationService.Translate("Close and continue with pending actions"),
+                !stillPending
+                    ? LocalizationService.Translate("Close this window")
+                    : HasMultipleSessions
+                        ? LocalizationService.Translate("Close and continue with pending actions for each capture")
+                        : LocalizationService.Translate("Close and continue with pending actions"),
                 "Enter");
 
             // Re-apply invite nudge if the cursor is already over Done (e.g. after

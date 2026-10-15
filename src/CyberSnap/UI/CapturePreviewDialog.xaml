@@ -475,10 +475,21 @@
                                            Margin="0,0,0,4"
                                            TextTrimming="CharacterEllipsis"/>
 
-                                <WrapPanel x:Name="OptionalActionsPanel" Orientation="Horizontal">
-                                    <Button x:Name="SaveBtn" Click="SaveBtn_Click"
-                                            Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,4">
+                                 <Button x:Name="EditBtn" Click="EditBtn_Click"
+                                         Style="{StaticResource PreviewActionButton}"
+                                         HorizontalAlignment="Stretch"
+                                         Margin="0,0,0,4">
+                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                         <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                VerticalAlignment="Center"
+                                                RenderOptions.BitmapScalingMode="HighQuality"/>
+                                         <TextBlock x:Name="EditText" Text="Send to Editor..." VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                     </StackPanel>
+                                 </Button>
+                                 <WrapPanel x:Name="OptionalActionsPanel" Orientation="Horizontal">
+                                     <Button x:Name="SaveBtn" Click="SaveBtn_Click"
+                                             Style="{StaticResource PreviewActionButton}"
+                                             Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="SaveIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
@@ -506,46 +517,36 @@
                                             <TextBlock x:Name="CopyText" Text="Copy" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button x:Name="EditBtn" Click="EditBtn_Click"
-                                            Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,4">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                                   VerticalAlignment="Center"
-                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button x:Name="ExtractTextBtn" Click="ExtractTextBtn_Click"
-                                            Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,4">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Image x:Name="ExtractTextIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                                   VerticalAlignment="Center"
-                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock x:Name="ExtractTextText" Text="Extract text" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button x:Name="OpenViewerBtn" Click="OpenViewerBtn_Click"
-                                            Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,4">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Image x:Name="OpenViewerIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                                   VerticalAlignment="Center"
-                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock x:Name="OpenViewerText" Text="Open in viewer" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button x:Name="PrintBtn" Click="PrintBtn_Click"
-                                            Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,4">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0"
-                                                   VerticalAlignment="Center"
-                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock x:Name="PrintText" Text="Print" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Button>
+                                     <Button x:Name="ExtractTextBtn" Click="ExtractTextBtn_Click"
+                                             Style="{StaticResource PreviewActionButton}"
+                                             Margin="0,0,6,4">
+                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                             <Image x:Name="ExtractTextIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                    VerticalAlignment="Center"
+                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
+                                             <TextBlock x:Name="ExtractTextText" Text="Extract text..." VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                         </StackPanel>
+                                     </Button>
+                                     <Button x:Name="OpenViewerBtn" Click="OpenViewerBtn_Click"
+                                             Style="{StaticResource PreviewActionButton}"
+                                             Margin="0,0,6,4">
+                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                             <Image x:Name="OpenViewerIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                    VerticalAlignment="Center"
+                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
+                                             <TextBlock x:Name="OpenViewerText" Text="Open in viewer..." VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                         </StackPanel>
+                                     </Button>
+                                     <Button x:Name="PrintBtn" Click="PrintBtn_Click"
+                                             Style="{StaticResource PreviewActionButton}"
+                                             Margin="0,0,6,4">
+                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                             <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                                    VerticalAlignment="Center"
+                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
+                                             <TextBlock x:Name="PrintText" Text="Print..." VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                         </StackPanel>
+                                     </Button>
                                     <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
                                             Margin="0,0,6,4"
@@ -554,7 +555,7 @@
                                             <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock x:Name="DeleteText" Text="Delete" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                             <TextBlock x:Name="DeleteText" Text="Delete..." VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Button>
                                     <Button x:Name="MoreBtn" Click="MoreBtn_Click"
