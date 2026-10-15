@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using UserControl = System.Windows.Controls.UserControl;
@@ -41,6 +42,11 @@ public sealed class PreviewTabStrip : UserControl
     private readonly List<PreviewTabInfo> _tabs = new();
     private readonly Border _leftChevron;
     private readonly Border _rightChevron;
+    private readonly DispatcherTimer _scrollTimer;
+    private double _scrollFrom;
+    private double _scrollTo;
+    private DateTime _scrollStart;
+    private const int ScrollDurationMs = 220;
     private int _hoverIndex = -1;
     private int _hoverCloseIndex = -1;
 
@@ -110,6 +116,13 @@ public sealed class PreviewTabStrip : UserControl
         _scroller.ScrollChanged += (_, _) => UpdateChevrons();
         SizeChanged += (_, _) => UpdateChevrons();
         Loaded += (_, _) => UpdateChevrons();
+
+        // Browser-style eased glide instead of an instant jump.
+        _scrollTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(16)
+        };
+        _scrollTimer.Tick += OnScrollTick;
     }
 
     public void SetTabs(IReadOnlyList<PreviewTabInfo> tabs)
@@ -160,7 +173,36 @@ public sealed class PreviewTabStrip : UserControl
     {
         // One viewport-ish step per click, matching the sibling apps.
         double step = Math.Max(_scroller.ViewportWidth * 0.65, 160);
-        _scroller.ScrollToHorizontalOffset(_scroller.HorizontalOffset + (forward ? step : -step));
+        double target = Math.Clamp(
+            _scroller.HorizontalOffset + (forward ? step : -step), 0, _scroller.ScrollableWidth);
+        AnimateScrollTo(target);
+    }
+
+    private void AnimateScrollTo(double target)
+    {
+        _scrollFrom = _scroller.HorizontalOffset;
+        _scrollTo = target;
+        if (Math.Abs(_scrollTo - _scrollFrom) < 0.5 || Motion.Disabled)
+        {
+            _scroller.ScrollToHorizontalOffset(_scrollTo);
+            return;
+        }
+        _scrollStart = DateTime.UtcNow;
+        _scrollTimer.Start();
+    }
+
+    private void OnScrollTick(object? sender, EventArgs e)
+    {
+        double t = (DateTime.UtcNow - _scrollStart).TotalMilliseconds / ScrollDurationMs;
+        if (t >= 1)
+        {
+            _scroller.ScrollToHorizontalOffset(_scrollTo);
+            _scrollTimer.Stop();
+            return;
+        }
+        // Cubic ease-out: fast start, gentle settle, like a browser tab strip.
+        double eased = 1 - Math.Pow(1 - t, 3);
+        _scroller.ScrollToHorizontalOffset(_scrollFrom + (_scrollTo - _scrollFrom) * eased);
     }
 
     private void UpdateChevrons()

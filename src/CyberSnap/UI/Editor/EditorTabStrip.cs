@@ -41,6 +41,11 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
     private bool _showChevrons;
     private Rectangle _leftChevronRect;
     private Rectangle _rightChevronRect;
+    private readonly System.Windows.Forms.Timer _scrollTimer;
+    private int _scrollFrom;
+    private int _scrollTo;
+    private DateTime _scrollStart;
+    private const int ScrollDurationMs = 220;
 
     public event EventHandler<int>? TabSelected;
     public event EventHandler<int>? TabCloseRequested;
@@ -55,6 +60,10 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         SetStyle(ControlStyles.StandardDoubleClick | ControlStyles.UserMouse, true);
         BackColor = EditorColors.BgPrimary;
         Cursor = Cursors.Default;
+
+        // Browser-style eased glide instead of an instant jump.
+        _scrollTimer = new System.Windows.Forms.Timer { Interval = 16 };
+        _scrollTimer.Tick += (_, _) => OnScrollTick();
     }
 
     public void SetTabs(IReadOnlyList<EditorTabInfo> tabs)
@@ -73,6 +82,13 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         base.OnResize(e);
         RecalcLayout();
         Invalidate();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _scrollTimer.Dispose();
+        base.Dispose(disposing);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -367,7 +383,36 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
     {
         // One viewport-ish step per click, matching the sibling apps.
         int step = Math.Max((int)(ViewportWidth * 0.65), 160);
-        _scrollX = Math.Clamp(_scrollX + direction * step, 0, MaxScroll);
+        int target = Math.Clamp(_scrollX + direction * step, 0, MaxScroll);
+        if (target == _scrollX)
+            return;
+        _scrollFrom = _scrollX;
+        _scrollTo = target;
+        if (Motion.Disabled)
+        {
+            _scrollX = target;
+            RecalcLayout();
+            Invalidate();
+            return;
+        }
+        _scrollStart = DateTime.UtcNow;
+        _scrollTimer.Start();
+    }
+
+    private void OnScrollTick()
+    {
+        double t = (DateTime.UtcNow - _scrollStart).TotalMilliseconds / ScrollDurationMs;
+        if (t >= 1)
+        {
+            _scrollTimer.Stop();
+            _scrollX = _scrollTo;
+        }
+        else
+        {
+            // Cubic ease-out: fast start, gentle settle, like a browser tab strip.
+            double eased = 1 - Math.Pow(1 - t, 3);
+            _scrollX = (int)Math.Round(_scrollFrom + (_scrollTo - _scrollFrom) * eased);
+        }
         RecalcLayout();
         Invalidate();
     }
@@ -388,7 +433,11 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         {
             int titleW = TextRenderer.MeasureText(_tabs[i].Title, font, Size.Empty,
                 TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
-            widths[i] = Math.Clamp(titleW + 14 + 34, 112, 240);
+            // Left inset 8 + status LED 14 + gap 4 + close target 26 = 52px of fixed
+            // chrome before the 22px glyph box; the text column is exactly
+            // width-52. The old +48 left titles 4px short, so EndEllipsis fired
+            // even on short names. 56 adds a hair of slack against rounding.
+            widths[i] = Math.Clamp(titleW + 56, 112, 240);
             content += widths[i] + 3;
         }
         _contentWidth = content;
