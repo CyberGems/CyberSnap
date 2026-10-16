@@ -72,12 +72,14 @@ public sealed partial class RegionOverlayForm
             RequestRetrySelection();
             return true;
         }
-        // Confirm-mode: P toggles capture preview on/off.
+        // Confirm-mode: P toggles capture preview on/off (image destination only;
+        // the pill is hidden for OCR/QR/video/GIF/scroll).
         if ((keyData & Keys.KeyCode) == Keys.P
             && (keyData & Keys.Modifiers) == Keys.None
             && _isConfirmingSelection
             && !_isTyping
-            && !_emojiPickerOpen)
+            && !_emojiPickerOpen
+            && IsPreviewToggleVisible())
         {
             ToggleConfirmPreview();
             return true;
@@ -178,7 +180,8 @@ public sealed partial class RegionOverlayForm
         }
 
         if (e.KeyCode == Keys.P && e.Modifiers == Keys.None
-            && _isConfirmingSelection && !_isTyping && !_emojiPickerOpen)
+            && _isConfirmingSelection && !_isTyping && !_emojiPickerOpen
+            && IsPreviewToggleVisible())
         {
             e.SuppressKeyPress = true;
             e.Handled = true;

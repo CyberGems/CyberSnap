@@ -3114,14 +3114,19 @@ public sealed partial class RegionOverlayForm
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
             fullWidths[i] = MeasureConfirmChromeButtonWidth(_confirmChromeKinds[i], bh);
-            widths[i] = IsRetractableConfirmMode(_confirmChromeKinds[i])
-                ? (int)Math.Round(fullWidths[i] * expandAmt)
-                : fullWidths[i];
+            bool hidePreviewToggle = _confirmChromeKinds[i] == ConfirmChromeKind.TogglePreview
+                && !IsPreviewToggleVisible();
+            widths[i] = hidePreviewToggle
+                ? 0
+                : IsRetractableConfirmMode(_confirmChromeKinds[i])
+                    ? (int)Math.Round(fullWidths[i] * expandAmt)
+                    : fullWidths[i];
         }
 
         int[] collapsedWidths = new int[_confirmChromeKinds.Length];
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
-            collapsedWidths[i] = IsRetractableConfirmMode(_confirmChromeKinds[i]) ? 0 : fullWidths[i];
+            collapsedWidths[i] = (_confirmChromeKinds[i] == ConfirmChromeKind.TogglePreview && !IsPreviewToggleVisible())
+                || IsRetractableConfirmMode(_confirmChromeKinds[i]) ? 0 : fullWidths[i];
 
         int gripW = UiChrome.ScaleInt(12);
         int gripLen = UiChrome.ScaleInt(22);
@@ -3516,6 +3521,14 @@ public sealed partial class RegionOverlayForm
 
     private static bool IsConfirmModesClusterKind(ConfirmChromeKind kind)
         => kind == ConfirmChromeKind.ModeImage || IsRetractableConfirmMode(kind);
+
+    /// <summary>
+    /// The Preview pill toggles the image capture preview, so it only shows when the
+    /// confirmed destination is an image. For OCR/QR/video/GIF/scroll it would read as
+    /// controlling their result windows (which it doesn't), so it collapses to zero width
+    /// like the retractable modes (paint, hit-test, separators and gaps already skip those).
+    /// </summary>
+    private bool IsPreviewToggleVisible() => SelectedConfirmModeKind() == ConfirmChromeKind.ModeImage;
 
     private void ResetConfirmModesExpanded(bool collapsed)
     {
