@@ -1117,6 +1117,14 @@ public partial class App
         {
             try
             {
+                // The OCR toggles also live on surfaces that persist via the static
+                // cache/disk (standalone OCR menu) without touching this live instance.
+                // Reload like the image path does so the copy/show plan honors the
+                // latest preference no matter which surface wrote it.
+                var latestOcrSettings = Services.SettingsService.LoadStatic();
+                if (latestOcrSettings != null)
+                    _settingsService!.Settings = latestOcrSettings;
+
                 var langTag = _settingsService?.Settings.OcrLanguageTag;
                 string text = await OcrService.RecognizeAsync(result, langTag);
                 if (!string.IsNullOrWhiteSpace(text))

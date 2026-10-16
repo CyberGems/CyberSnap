@@ -395,8 +395,15 @@ public sealed class StandaloneScanForm : Form
 
     private static SettingsService GetSettingsService()
     {
+        // Prefer the static cache: it already includes in-memory changes that are
+        // still inside the debounced disk-write window. A blind Load() would read
+        // stale disk bytes and overwrite that fresher cache.
         var service = new SettingsService();
-        service.Load();
+        var cached = SettingsService.LoadStatic();
+        if (cached != null)
+            service.Settings = cached;
+        else
+            service.Load();
         return service;
     }
 }
