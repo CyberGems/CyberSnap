@@ -2439,6 +2439,7 @@
   "Show Done button label": "Mostrar etiqueta del botón Listo",
   "Show preview after capture": "Mostrar vista previa después de capturar",
   "Toggle capture preview on confirm": "Activar vista previa de captura al confirmar",
+  "Toggle scrolling capture preview": "Activar vista previa tras la captura con desplazamiento",
   "Capture as Image": "Capturar como imagen",
   "Image capture mode": "Modo captura de imagen",
   "Extract Text (OCR)": "Extraer texto (OCR)",

@@ -3359,6 +3359,10 @@ public sealed partial class RegionOverlayForm
         int sepH = Math.Max(UiChrome.ScaleInt(14), (int)(bh * 0.55f));
         PlaceConfirmChromeSeparator(ConfirmChromeKind.ModeImage, ConfirmChromeKind.TogglePreview, y, bh, sepW, sepH, ref _confirmChromeSeparatorRect1);
         PlaceConfirmChromeSeparator(ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, y, bh, sepW, sepH, ref _confirmChromeSeparatorRect2);
+        // With the Preview toggle hidden (non-image/scroll destination), keep the group
+        // divider left of Retry so it never glues to the modes cluster.
+        if (_confirmChromeSeparatorRect2.IsEmpty)
+            PlaceConfirmChromeSeparator(ConfirmChromeKind.ModeImage, ConfirmChromeKind.Retry, y, bh, sepW, sepH, ref _confirmChromeSeparatorRect2);
 
         // Dock wrapper behind all pills so icon buttons stay readable on light/busy wallpapers.
         var pillUnion = Rectangle.Empty;
@@ -3532,12 +3536,14 @@ public sealed partial class RegionOverlayForm
         => kind == ConfirmChromeKind.ModeImage || IsRetractableConfirmMode(kind);
 
     /// <summary>
-    /// The Preview pill toggles the image capture preview, so it only shows when the
-    /// confirmed destination is an image. For OCR/QR/video/GIF/scroll it would read as
-    /// controlling their result windows (which it doesn't), so it collapses to zero width
-    /// like the retractable modes (paint, hit-test, separators and gaps already skip those).
+    /// The Preview pill toggles the capture preview, so it only shows for destinations
+    /// that open one: image captures and scrolling captures (which route through the
+    /// same preview). For OCR/QR/video/GIF it would read as controlling their result
+    /// windows (which it doesn't), so it collapses to zero width like the retractable
+    /// modes (paint, hit-test, separators and gaps already skip those).
     /// </summary>
-    private bool IsPreviewToggleVisible() => SelectedConfirmModeKind() == ConfirmChromeKind.ModeImage;
+    private bool IsPreviewToggleVisible() => SelectedConfirmModeKind() is
+        ConfirmChromeKind.ModeImage or ConfirmChromeKind.ModeScroll;
 
     private void ResetConfirmModesExpanded(bool collapsed)
     {

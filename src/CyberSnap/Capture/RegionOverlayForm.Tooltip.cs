@@ -425,6 +425,12 @@ public sealed partial class RegionOverlayForm
             ? LocalizationService.Translate("Image capture mode")
             : ConfirmChromeTitle(kind);
 
+        // The Preview pill doubles for scrolling captures (same preview window):
+        // name the mode it actually affects so it never reads as an OCR/QR switch.
+        if (slotKind == ConfirmChromeKind.TogglePreview
+            && SelectedConfirmModeKind() == ConfirmChromeKind.ModeScroll)
+            title = LocalizationService.Translate("Toggle scrolling capture preview");
+
         string text = kind switch
         {
             ConfirmChromeKind.Retry => title + "  (R)",
