@@ -2753,8 +2753,14 @@ public sealed partial class RegionOverlayForm
         LayoutConfirmChromeRects();
 
         // Annotation chrome only re-presents when entering an annotatable mode from OCR, and the
-        // user hadn't hidden it. Entering OCR (hide) is handled by EnsureToolbarReady's early-out.
-        if (!isOcr && wasOcr && ShowAnnotationChrome)
+        // user hadn't hidden it. Entering OCR hides the toolbar form outright: otherwise it
+        // would keep showing the annotation tools (or CalcToolbar's capture-tools fallback),
+        // resurfacing the pre-confirm bar until a hover re-lays it out.
+        if (isOcr)
+        {
+            HideToolbarImmediately();
+        }
+        else if (!isOcr && wasOcr && ShowAnnotationChrome)
         {
             PresentAnnotationToolbarNow();
             EnsureToolbarReady();
