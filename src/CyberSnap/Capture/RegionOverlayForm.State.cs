@@ -2715,15 +2715,12 @@ public sealed partial class RegionOverlayForm
             case ConfirmChromeKind.ModeGif:
             case ConfirmChromeKind.ModeScroll:
             case ConfirmChromeKind.ModeQr:
-                // Crossing the image boundary only switches the pending destination
-                // (edit/annotate vs extract/scan/record): Done/Enter still commits.
-                // Picking the already-selected destination fires immediately
-                // (fast path, as before).
+                // Picking a different destination only switches the pending one:
+                // Done/Enter still commits. Picking the already-selected destination
+                // fires immediately (fast path, as before).
                 var dest = DisplayConfirmChromeKind(_confirmChromeKinds[button]);
                 var src = SelectedConfirmModeKind();
-                bool crossesImageBoundary =
-                    (src == ConfirmChromeKind.ModeImage) != (dest == ConfirmChromeKind.ModeImage);
-                if (crossesImageBoundary)
+                if (dest != src)
                     SwitchConfirmDestination(dest);
                 else
                     RunConfirmDestination(dest);
