@@ -3736,8 +3736,13 @@ public sealed partial class RegionOverlayForm
         if (index >= widths.Length)
             return gap;
 
-        // Skip gaps next to collapsed (zero-width) retractable modes.
-        if (widths[index] <= 0 || widths[index - 1] <= 0)
+        if (widths[index] <= 0)
+            return 0;
+        // Skip gaps next to collapsed (zero-width) retractable modes, except when the
+        // zero-width neighbor is the hidden Preview toggle: Retry keeps its group gap
+        // instead of gluing to the modes cluster.
+        if (widths[index - 1] <= 0
+            && _confirmChromeKinds[index - 1] != ConfirmChromeKind.TogglePreview)
             return 0;
 
         var kind = _confirmChromeKinds[index];
