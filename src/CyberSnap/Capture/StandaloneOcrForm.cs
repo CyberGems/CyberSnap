@@ -356,6 +356,7 @@ public sealed class StandaloneOcrForm : Form
                             // Same cold-first-show burial as the overlay path: assert
                             // explicitly on top of the window's own Loaded hook.
                             CyberSnapWindowChrome.EnsureForeground(window);
+                            LogOcrResultShown(window);
                         }
                         else
                         {
@@ -504,6 +505,47 @@ public sealed class StandaloneOcrForm : Form
             : null;
     }
 
+    private static void LogOcrResultShown(System.Windows.Window window)
+    {
+        // TEMPORARY hunt diagnostic (remove once the first-show burial is fixed):
+        // fires unconditionally so an empty log proves stale code is running.
+        try
+        {
+            string fgTitle = DescribeForegroundWindow();
+            AppDiagnostics.LogWarning("ocr-result.shown",
+                $"IsActive={window.IsActive} IsVisible={window.IsVisible} Topmost={window.Topmost} Foreground='{fgTitle}'.");
+            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    AppDiagnostics.LogWarning("ocr-result.settled",
+                        $"IsActive={window.IsActive} IsVisible={window.IsVisible} Topmost={window.Topmost} Foreground='{DescribeForegroundWindow()}'.");
+                }
+                catch { }
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+        catch { }
+    }
+
+    private static string DescribeForegroundWindow()
+    {
+        try
+        {
+            var fg = CyberSnap.Native.User32.GetForegroundWindow();
+            if (fg == IntPtr.Zero)
+                return "<none>";
+            int len = CyberSnap.Native.User32.GetWindowTextLengthW(fg);
+            if (len <= 0 || len > 512)
+                return $"hwnd=0x{fg:X}";
+            var buf = new char[len + 1];
+            int read = CyberSnap.Native.User32.GetWindowTextW(fg, buf, buf.Length);
+            return read > 0 ? new string(buf, 0, read) : $"hwnd=0x{fg:X}";
+        }
+        catch
+        {
+            return "<error>";
+        }
+    }
     private static SettingsService GetSettingsService()
     {
         // Prefer the static cache: it already includes in-memory changes that are
