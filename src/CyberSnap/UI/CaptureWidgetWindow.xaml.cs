@@ -41,6 +41,12 @@ public partial class CaptureWidgetWindow : Window
     private bool _awaitingSessionRestore;
     private bool _sessionRestoreInProgress;
 
+    // Topmost watchdog: WPF sets WS_EX_TOPMOST once, but Windows can demote the HWND
+    // within the topmost Z-band over time (other topmost windows, UAC/fullscreen,
+    // Show desktop, sleep/resume, Hide→Show cycles). The managed Topmost property
+    // stays true, so the user sees "activado pero no arriba". Re-assert natively.
+    private readonly DispatcherTimer _topmostWatchdogTimer;
+
     // Layout constants
     private const double PanelWidth = 196;
     private const double PanelHeight = 276; // room for Auto-copy + Send to Editor toggles
@@ -97,6 +103,13 @@ public partial class CaptureWidgetWindow : Window
                 FinishSessionRestore();
         };
 
+        _topmostWatchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _topmostWatchdogTimer.Tick += (_, _) =>
+        {
+            if (_settings.WidgetAlwaysOnTop && IsVisible)
+                AssertWidgetTopmost();
+        };
+
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
         Closed += OnClosed;
@@ -113,10 +126,56 @@ public partial class CaptureWidgetWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        try { _topmostWatchdogTimer.Stop(); } catch { }
         CancelHideLaunch();
         CancelSessionRestore();
         UnhookDisplayEvents();
         StopLayoutAnimations();
+    }
+
+    /// <summary>
+    /// Re-inserts the widget HWND at the top of the topmost Z-band without
+    /// activating it. Setting <see cref="Window.Topmost"/> only takes effect when
+    /// the value changes, so a widget that is already Topmost=true but was demoted
+    /// in Z-order (other topmost window, Hide/Show, Show desktop, sleep/resume)
+    /// needs this native re-assert. Mirrors RecordingControlBarWindow.AssertBarTopmost.
+    /// </summary>
+    public void AssertWidgetTopmost()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(AssertWidgetTopmost);
+            return;
+        }
+
+        if (!_settings.WidgetAlwaysOnTop) return;
+        if (!IsLoaded) return;
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            Native.User32.SetWindowPos(hwnd, Native.User32.HWND_TOPMOST, 0, 0, 0, 0,
+                Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE);
+        }
+        catch { /* best-effort: watchdog retries */ }
+    }
+
+    /// <summary>
+    /// Applies the settings value to both the WPF property and the native Z-order.
+    /// Needed because assigning Topmost=true when it is already true is a no-op and
+    /// would not restore a demoted HWND.
+    /// </summary>
+    public void SyncTopmostFromSettings()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(SyncTopmostFromSettings);
+            return;
+        }
+
+        Topmost = _settings.WidgetAlwaysOnTop;
+        if (_settings.WidgetAlwaysOnTop)
+            AssertWidgetTopmost();
     }
 
     private void HookDisplayEvents()
@@ -151,6 +210,7 @@ public partial class CaptureWidgetWindow : Window
             // Snap layout after resolution / monitor topology changes so the widget
             // never stays parked on a vanished display.
             PositionWindow();
+            AssertWidgetTopmost();
         });
     }
 
@@ -265,6 +325,8 @@ public partial class CaptureWidgetWindow : Window
         HookDisplayEvents();
         ClampMonitorIndexToAvailableScreens();
         PositionWindow();
+        AssertWidgetTopmost();
+        try { _topmostWatchdogTimer.Start(); } catch { }
         // Template parts exist now: park both thumbs on their rest position
         // without playing the slide on startup.
         SnapToggleThumbs();
@@ -1214,7 +1276,7 @@ public partial class CaptureWidgetWindow : Window
         menu.Items.Add(BuildCaptureToggle("Always on top", _settings.WidgetAlwaysOnTop,
             () => {
                 _settings.WidgetAlwaysOnTop = !_settings.WidgetAlwaysOnTop;
-                Topmost = _settings.WidgetAlwaysOnTop;
+                SyncTopmostFromSettings();
                 ((App)System.Windows.Application.Current).SyncSettingsAlwaysOnTopCheck();
             }));
 
@@ -1264,7 +1326,7 @@ public partial class CaptureWidgetWindow : Window
         widgetMenu.DropDownItems.Add(BuildCaptureToggle("Always on top", _settings.WidgetAlwaysOnTop,
             () => {
                 _settings.WidgetAlwaysOnTop = !_settings.WidgetAlwaysOnTop;
-                Topmost = _settings.WidgetAlwaysOnTop;
+                SyncTopmostFromSettings();
                 ((App)System.Windows.Application.Current).SyncSettingsAlwaysOnTopCheck();
             }));
         widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
@@ -1759,6 +1821,7 @@ public partial class CaptureWidgetWindow : Window
             CollapseImmediately();
             if (!IsVisible)
                 Show();
+            AssertWidgetTopmost();
             // After Show, DPI/work-area math is definitive — snap again, then reveal on the
             // next render pass so layout has flushed (avoids a one-frame expanded ghost).
             CollapseImmediately();
@@ -1777,6 +1840,7 @@ public partial class CaptureWidgetWindow : Window
                     Show();
                 if (IsLoaded)
                     PositionWindow();
+                AssertWidgetTopmost();
             }
             catch (Exception ex)
             {

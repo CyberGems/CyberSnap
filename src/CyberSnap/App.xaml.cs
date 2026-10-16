@@ -720,6 +720,8 @@ public partial class App : Application
         if (_widgetWindow != null)
         {
             _widgetWindow.Topmost = alwaysOnTop;
+            if (alwaysOnTop)
+                _widgetWindow.AssertWidgetTopmost();
         }
     }
 
