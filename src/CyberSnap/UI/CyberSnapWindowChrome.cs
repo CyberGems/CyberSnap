@@ -16,6 +16,9 @@ public static class CyberSnapWindowChrome
     /// Brings a freshly shown result window to the foreground. A single Activate()
     /// fails silently when another app still owns the foreground (then Enter/Escape
     /// never reach the window), so retry briefly until it sticks.
+    /// Trusts the OS foreground window, not WPF's IsActive: IsActive can read true
+    /// from the first millisecond while the window is visibly behind another app,
+    /// which used to take the "already foreground" exit without attempting anything.
     /// </summary>
     public static void EnsureForeground(Window window, IInputElement? focusTarget = null)
     {
@@ -37,7 +40,7 @@ public static class CyberSnapWindowChrome
                         timer?.Stop();
                     return;
                 }
-                if (window.IsActive)
+                if (IsEffectivelyForeground(window))
                 {
                     timer?.Stop();
                     try { window.Topmost = false; } catch { }
@@ -62,7 +65,7 @@ public static class CyberSnapWindowChrome
                     AppDiagnostics.LogWarning("window.activate-failed",
                         $"Activate threw for {window.GetType().Name}.", ex);
                 }
-                if (window.IsActive)
+                if (IsEffectivelyForeground(window))
                 {
                     timer?.Stop();
                     try { window.Topmost = false; } catch { }
@@ -75,6 +78,17 @@ public static class CyberSnapWindowChrome
                 if (--remaining <= 0)
                 {
                     timer?.Stop();
+                    if (TryForceForeground(window))
+                    {
+                        try { window.Topmost = false; } catch { }
+                        if (focusTarget is not null)
+                        {
+                            try { focusTarget.Focus(); } catch { }
+                        }
+                        AppDiagnostics.LogWarning("window.foreground-forced",
+                            $"Normal activation failed for {window.GetType().Name}; thread-input forcing succeeded.");
+                        return;
+                    }
                     // Do NOT demote here: dropping Topmost on a never-activated
                     // window can restack it behind everything. Leave it pinned;
                     // the one-shot below clears it once the user actually sees it.
@@ -97,6 +111,68 @@ public static class CyberSnapWindowChrome
             }
         };
         timer.Start();
+    }
+
+    /// <summary>
+    /// True only when WPF and the OS agree the window is foreground. Guards against
+    /// the cold-show state where IsActive reads true while GetForegroundWindow still
+    /// points at another app.
+    /// </summary>
+    private static bool IsEffectivelyForeground(Window window)
+    {
+        try
+        {
+            if (!window.IsActive)
+                return false;
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero)
+                return false;
+            return User32.GetForegroundWindow() == hwnd;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Last resort: borrow the foreground thread's input so SetForegroundWindow is
+    /// honored (same technique as the recording overlay's hotkey reclaim). Only used
+    /// after the polite retries failed, for a window the user explicitly summoned.
+    /// </summary>
+    private static bool TryForceForeground(Window window)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero || !window.IsLoaded)
+                return false;
+            IntPtr fg = User32.GetForegroundWindow();
+            if (fg == hwnd)
+                return true;
+            uint fgThread = fg != IntPtr.Zero ? User32.GetWindowThreadProcessId(fg, out _) : 0;
+            uint thisThread = Kernel32.GetCurrentThreadId();
+            bool attached = false;
+            try
+            {
+                if (fgThread != 0 && fgThread != thisThread)
+                    attached = User32.AttachThreadInput(fgThread, thisThread, true);
+                User32.SetForegroundWindow(hwnd);
+                User32.SetFocus(hwnd);
+            }
+            finally
+            {
+                if (attached)
+                    User32.AttachThreadInput(fgThread, thisThread, false);
+            }
+            return IsEffectivelyForeground(window);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("window.force-foreground-failed",
+                $"Thread-input forcing failed for {window.GetType().Name}.", ex);
+            return false;
+        }
     }
 
     public static void Apply(Window window)
