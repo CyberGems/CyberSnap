@@ -23,6 +23,7 @@ public static class CyberSnapWindowChrome
             return;
 
         int remaining = 4;
+        int notLoadedTicks = 0;
         DispatcherTimer? timer = null;
         timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         timer.Tick += (_, _) =>
@@ -30,7 +31,12 @@ public static class CyberSnapWindowChrome
             try
             {
                 if (!window.IsLoaded)
+                {
+                    // Pre-first-Loaded is transient; a closed window never loads.
+                    if (++notLoadedTicks > 40)
+                        timer?.Stop();
                     return;
+                }
                 if (window.IsActive)
                 {
                     timer?.Stop();
@@ -41,8 +47,21 @@ public static class CyberSnapWindowChrome
                     }
                     return;
                 }
-                window.Topmost = true;
-                window.Activate();
+                // Independent steps: a failing Topmost flip must not kill the
+                // Activate retries (and vice versa). The old single try/catch
+                // stopped the timer silently on the first hiccup.
+                try { window.Topmost = true; }
+                catch (Exception ex)
+                {
+                    AppDiagnostics.LogWarning("window.topmost-flip-failed",
+                        $"Could not re-pin {window.GetType().Name} topmost.", ex);
+                }
+                try { window.Activate(); }
+                catch (Exception ex)
+                {
+                    AppDiagnostics.LogWarning("window.activate-failed",
+                        $"Activate threw for {window.GetType().Name}.", ex);
+                }
                 if (window.IsActive)
                 {
                     timer?.Stop();
@@ -56,14 +75,25 @@ public static class CyberSnapWindowChrome
                 if (--remaining <= 0)
                 {
                     timer?.Stop();
-                    try { window.Topmost = false; } catch { }
+                    // Do NOT demote here: dropping Topmost on a never-activated
+                    // window can restack it behind everything. Leave it pinned;
+                    // the one-shot below clears it once the user actually sees it.
+                    void ClearOnFirstActivated(object? s, EventArgs e)
+                    {
+                        try { window.Topmost = false; } catch { }
+                        try { window.Activated -= ClearOnFirstActivated; } catch { }
+                    }
+                    try { window.Activated += ClearOnFirstActivated; } catch { }
+                    try { window.Closed += (_, _) => timer?.Stop(); } catch { }
                     AppDiagnostics.LogWarning("window.foreground-giveup",
-                        $"Foreground retries exhausted for {window.GetType().Name}; IsActive={window.IsActive}.");
+                        $"Foreground retries exhausted for {window.GetType().Name}; IsActive={window.IsActive}. Kept topmost until first activation.");
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 timer?.Stop();
+                AppDiagnostics.LogWarning("window.foreground-tick-failed",
+                    $"Foreground retry tick failed for {window.GetType().Name}.", ex);
             }
         };
         timer.Start();
