@@ -2177,7 +2177,10 @@ public sealed partial class RegionOverlayForm
         var rect = _confirmRect;
         var captureMode = _modeBeforeConfirm;
         _isConfirmingSelection = false;
-        _confirmRect = Rectangle.Empty;
+        // The recording handoff reads overlay.ConfirmRect after the commit, so keep it
+        // for record destinations (the overlay closes right away; nothing else reuses it).
+        if (captureMode != CaptureMode.Record && captureMode != CaptureMode.RecordGif)
+            _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
         ResetConfirmPress();
@@ -2427,6 +2430,8 @@ public sealed partial class RegionOverlayForm
         else if (mode == CaptureMode.Sticker) StickerRegionSelected?.Invoke(rect);
         else if (mode == CaptureMode.Upscale) UpscaleRegionSelected?.Invoke(rect);
         else if (mode == CaptureMode.ScrollCapture) ScrollRegionSelected?.Invoke(rect);
+        else if (mode == CaptureMode.Record) RecordingRequested?.Invoke(Models.RecordingFormat.MP4);
+        else if (mode == CaptureMode.RecordGif) RecordingRequested?.Invoke(Models.RecordingFormat.GIF);
         else RegionSelected?.Invoke(rect);
     }
 
@@ -2710,15 +2715,15 @@ public sealed partial class RegionOverlayForm
             case ConfirmChromeKind.ModeGif:
             case ConfirmChromeKind.ModeScroll:
             case ConfirmChromeKind.ModeQr:
-                // Only OCR <-> Image is a two-way mode SWAP (edit/annotate vs extract text).
-                // Video/GIF/Scroll/QR are one-shot destinations: they capture immediately, as
-                // before the swap feature. Picking the same destination as the source also captures.
+                // Crossing the image boundary only switches the pending destination
+                // (edit/annotate vs extract/scan/record): Done/Enter still commits.
+                // Picking the already-selected destination fires immediately
+                // (fast path, as before).
                 var dest = DisplayConfirmChromeKind(_confirmChromeKinds[button]);
                 var src = SelectedConfirmModeKind();
-                bool isSwapPair =
-                    (src == ConfirmChromeKind.ModeOcr && dest == ConfirmChromeKind.ModeImage)
-                    || (src == ConfirmChromeKind.ModeImage && dest == ConfirmChromeKind.ModeOcr);
-                if (isSwapPair)
+                bool crossesImageBoundary =
+                    (src == ConfirmChromeKind.ModeImage) != (dest == ConfirmChromeKind.ModeImage);
+                if (crossesImageBoundary)
                     SwitchConfirmDestination(dest);
                 else
                     RunConfirmDestination(dest);
@@ -2735,6 +2740,10 @@ public sealed partial class RegionOverlayForm
         _modeBeforeConfirm = newDestination switch
         {
             ConfirmChromeKind.ModeOcr => CaptureMode.Ocr,
+            ConfirmChromeKind.ModeQr => CaptureMode.Scan,
+            ConfirmChromeKind.ModeVideo => CaptureMode.Record,
+            ConfirmChromeKind.ModeGif => CaptureMode.RecordGif,
+            ConfirmChromeKind.ModeScroll => CaptureMode.ScrollCapture,
             _ => CaptureMode.Rectangle,
         };
         bool isOcr = newDestination == ConfirmChromeKind.ModeOcr;
