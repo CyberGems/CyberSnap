@@ -148,9 +148,9 @@ jobs:
           files: |
             ./CyberSnap-${{ github.ref_name }}-Portable-win-x64.zip
             ./CyberSnap-Setup-${{ github.ref_name }}.exe
-            ./winget-pkg/CyberSnap.CyberSnap.yaml
-            ./winget-pkg/CyberSnap.CyberSnap.locale.en-US.yaml
-            ./winget-pkg/CyberSnap.CyberSnap.installer.yaml
+            ./winget-pkg/CyberGems.CyberSnap.yaml
+            ./winget-pkg/CyberGems.CyberSnap.locale.en-US.yaml
+            ./winget-pkg/CyberGems.CyberSnap.installer.yaml
           draft: true
           prerelease: false
           body_path: ./release_notes.md
@@ -172,7 +172,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           New-Item -ItemType Directory -Path winget-pkg -Force | Out-Null
-          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --pattern "CyberSnap.CyberSnap*.yaml" --dir winget-pkg
+          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --pattern "CyberGems.CyberSnap*.yaml" --dir winget-pkg
 
       - name: Submit to winget
         shell: pwsh
