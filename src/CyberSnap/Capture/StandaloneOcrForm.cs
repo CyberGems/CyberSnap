@@ -353,6 +353,9 @@ public sealed class StandaloneOcrForm : Form
                                 previewSource,
                                 alreadyCopiedText: copied ? text : null);
                             window.Show();
+                            // Same cold-first-show burial as the overlay path: assert
+                            // explicitly on top of the window's own Loaded hook.
+                            CyberSnapWindowChrome.EnsureForeground(window);
                         }
                         else
                         {

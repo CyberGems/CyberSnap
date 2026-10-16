@@ -4,6 +4,7 @@ using System.Windows.Interop;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using CyberSnap.Native;
+using CyberSnap.Services;
 
 namespace CyberSnap.UI;
 
@@ -56,6 +57,8 @@ public static class CyberSnapWindowChrome
                 {
                     timer?.Stop();
                     try { window.Topmost = false; } catch { }
+                    AppDiagnostics.LogWarning("window.foreground-giveup",
+                        $"Foreground retries exhausted for {window.GetType().Name}; IsActive={window.IsActive}.");
                 }
             }
             catch
