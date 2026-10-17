@@ -288,13 +288,12 @@ public sealed class StandaloneScanForm : Form
                         var preview = decoded.Text.Length > 100 ? decoded.Text[..100] + "..." : decoded.Text;
                         if (plan.ShowWindow || (plan.Copy && !copySucceeded))
                         {
-                            var window = new QrResultWindow(
+                            QrResultWindow.ShowResult(
                                 decoded.Text,
                                 decoded.Format,
                                 settingsService,
                                 previewSource,
                                 alreadyCopiedText: copySucceeded ? decoded.Text : null);
-                            window.Show();
                         }
                         else
                         {

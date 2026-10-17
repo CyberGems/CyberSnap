@@ -903,13 +903,12 @@ public partial class App
                                 if (plan.ShowWindow || (plan.Copy && !copySucceeded))
                                 {
                                     var previewSource = BitmapPerf.ToBitmapSource(scanned);
-                                    var window = new QrResultWindow(
+                                    QrResultWindow.ShowResult(
                                         decoded.Text,
                                         decoded.Format,
                                         _settingsService,
                                         previewSource,
                                         alreadyCopiedText: copySucceeded ? decoded.Text : null);
-                                    window.Show();
                                 }
                                 else
                                 {

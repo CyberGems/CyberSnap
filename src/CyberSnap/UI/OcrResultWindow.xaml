@@ -474,6 +474,7 @@
         <Grid Margin="0,0,0,14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -484,7 +485,9 @@
                                       CloseRequested="TitleBar_CloseRequested"/>
 
             <!-- OCR workbench: source preview on the left and recognized text on the right. -->
-            <Grid x:Name="OcrWorkbench" Grid.Row="1" Margin="14,2,14,0">
+            <ui:PreviewTabStrip x:Name="ResultTabStrip" Grid.Row="1" Visibility="Collapsed"/>
+
+            <Grid x:Name="OcrWorkbench" Grid.Row="2" Margin="14,2,14,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="1.05*"/>
                     <ColumnDefinition Width="*"/>
@@ -610,7 +613,7 @@
                 </Grid>
             </Grid>
 
-            <Border Grid.Row="2" Margin="14,8,14,0">
+            <Border Grid.Row="3" Margin="14,8,14,0">
                 <StackPanel>
                     <!-- Divider separating the OCR zone from the translation zone -->
                     <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,0,0,8"/>
@@ -788,7 +791,7 @@
             </Border>
 
             <!-- Translation zone: section header (label + copy) over the translated text box -->
-            <StackPanel x:Name="TranslatedSection" Grid.Row="3" Margin="14,8,14,0" Visibility="Collapsed">
+            <StackPanel x:Name="TranslatedSection" Grid.Row="4" Margin="14,8,14,0" Visibility="Collapsed">
                 <Grid Margin="2,0,2,5">
                     <TextBlock Text="Translation" Style="{StaticResource OcrSectionHeaderText}"/>
                         <Button x:Name="CopyTranslationBtn" Click="CopyTranslationBtn_Click"

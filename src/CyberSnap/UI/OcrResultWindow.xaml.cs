@@ -21,13 +21,10 @@ namespace CyberSnap.UI;
 public partial class OcrResultWindow : Window
 {
     private const int SearchHighlightMinLength = 2;
-    private const double WindowCascadeOffset = 28;
 
     private readonly SettingsService _settingsService;
-    private readonly ImageSource? _previewSource;
     private string? _copiedText;
     private readonly OcrResultWindowLifecycle _lifecycle = new();
-    private CancellationTokenSource? _translateCts;
 
     // Store full item lists for filtering
     private readonly List<ComboBoxItem> _fromLanguageItems = new();
@@ -47,9 +44,12 @@ public partial class OcrResultWindow : Window
         string? alreadyCopiedText = null)
     {
         _settingsService = settingsService;
-        _previewSource = previewSource;
         _copiedText = alreadyCopiedText;
         InitializeComponent();
+        _tabs = new ResultTabHost<OcrResultSession>(this, ResultTabStrip,
+            CreateSession(ocrText, previewSource, alreadyCopiedText),
+            session => string.Format(LocalizationService.Translate("OCR {0}"), session.Ordinal),
+            CaptureSession, ApplySession, session => session.CancelTranslation());
         CyberSnapWindowChrome.Apply(this);
         UiScale.Set(settingsService.Settings.UiScale);
         UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
@@ -60,9 +60,9 @@ public partial class OcrResultWindow : Window
 
         OcrTextBox.Text = ocrText;
         ApplyCopyActionState();
-        OcrPreviewImage.Source = _previewSource;
-        OcrPreviewImage.Visibility = _previewSource is null ? Visibility.Collapsed : Visibility.Visible;
-        OcrPreviewEmptyText.Visibility = _previewSource is null ? Visibility.Visible : Visibility.Collapsed;
+        OcrPreviewImage.Source = previewSource;
+        OcrPreviewImage.Visibility = previewSource is null ? Visibility.Collapsed : Visibility.Visible;
+        OcrPreviewEmptyText.Visibility = previewSource is null ? Visibility.Visible : Visibility.Collapsed;
         OcrTextBox.TextChanged += OcrTextBox_TextChanged;
         UpdateCharCount();
 
@@ -101,7 +101,6 @@ public partial class OcrResultWindow : Window
 
         Loaded += (_, _) =>
         {
-            OffsetFromOpenOcrWindows();
             ApplyMicaBackdrop();
             HookOcrTextScrollViewer();
             RedrawSearchHighlights();
@@ -166,27 +165,7 @@ public partial class OcrResultWindow : Window
 
     private void CloseWindow()
     {
-        if (!_lifecycle.TryBeginClose())
-            return;
-
-        _translateCts?.Cancel();
-        StopTranslateTimer();
-        Close();
-    }
-
-    private void OffsetFromOpenOcrWindows()
-    {
-        var previousOcrWindows = Application.Current.Windows
-            .OfType<OcrResultWindow>()
-            .Where(window => !ReferenceEquals(window, this) && window.IsVisible)
-            .ToList();
-        if (previousOcrWindows.Count == 0)
-            return;
-
-        var offset = WindowCascadeOffset * previousOcrWindows.Count;
-        var workArea = SystemParameters.WorkArea;
-        Left = Math.Min(Left + offset, Math.Max(workArea.Left, workArea.Right - ActualWidth));
-        Top = Math.Min(Top + offset, Math.Max(workArea.Top, workArea.Bottom - ActualHeight));
+        _tabs.CloseActive();
     }
 
     public void ApplyTheme()
@@ -207,12 +186,14 @@ public partial class OcrResultWindow : Window
         Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
         Resources["ThemeAccentForegroundBrush"] = Theme.Brush(Theme.AccentForeground);
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
+        Resources["ThemeBgHoverBrush"] = Theme.Brush(Theme.BgHover);
         Resources["TranslationTintBrush"] = Theme.Brush(Theme.AccentSubtle);
         Resources["TranslationTintBorderBrush"] = Theme.Brush(Theme.AccentHover);
         OcrCheckerboardHost.Background = Theme.CreateCheckerboardBrush();
         OcrPreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
         Icon = WindowIcons.Wpf(WindowIconKind.Ocr);
         OcrTitleBar?.RefreshIcons();
+        _tabs?.Refresh();
     }
 
     public void RefreshLocalization()
@@ -235,7 +216,11 @@ public partial class OcrResultWindow : Window
         CopiedBadgeText.Text = LocalizationService.Translate(lang, "Copied");
         UpdateCharCount();
         ApplyCopyActionState();
-        PopulateLanguageCombos();
+        bool wasSuppressed = _suppressTranslationPreferenceChange;
+        _suppressTranslationPreferenceChange = true;
+        try { PopulateLanguageCombos(); }
+        finally { _suppressTranslationPreferenceChange = wasSuppressed; }
+        _tabs?.Refresh();
     }
 
     private void ApplyMicaBackdrop()
@@ -401,7 +386,7 @@ public partial class OcrResultWindow : Window
         RefreshSearchMatches(keepCurrentMatch: true);
         ApplyCopyActionState();
 
-        if (!IsLoaded)
+        if (!IsLoaded || _applyingSession)
             return;
 
         ResetTranslationForSourceEdit();
@@ -413,11 +398,9 @@ public partial class OcrResultWindow : Window
 
     private void ResetTranslationForTranslationInputChange()
     {
-        if (_translateCts is not null)
-        {
-            _translateCts.Cancel();
-            _translateCts = null;
-        }
+        _tabs.Active.CancelTranslation();
+        _tabs.Active.TranslatedText = string.Empty;
+        _tabs.Active.TranslationStatus = string.Empty;
 
         StopTranslationConfigurationCheck();
         StopTranslationLoading(keepStatusVisible: false);
@@ -431,7 +414,7 @@ public partial class OcrResultWindow : Window
         CopyBtnKeyBadge.Visibility = visible ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void TitleBar_CloseRequested(object? sender, EventArgs e) => CloseWindow();
+    private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
     private void CopyOnlyBtn_Click(object sender, RoutedEventArgs e)
     {
@@ -496,6 +479,7 @@ public partial class OcrResultWindow : Window
 
     private async void CopyTranslationBtn_Click(object sender, RoutedEventArgs e)
     {
+        var session = _tabs.Active;
         var text = TranslatedTextBox.Text;
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -510,11 +494,12 @@ public partial class OcrResultWindow : Window
             ToastWindow.Show(ToastSpec.Standard("Copied translation", FormatCopyToastPreview(text)) with { SuppressSound = true });
             CopyTranslationBtn.IsHitTestVisible = false;
             await Task.Delay(120);
-            CloseWindow();
+            _tabs.Close(session);
         }
         catch (Exception ex)
         {
-            CopyTranslationBtn.IsHitTestVisible = true;
+            if (ReferenceEquals(_tabs.Active, session))
+                CopyTranslationBtn.IsHitTestVisible = true;
             ToastWindow.ShowError(
                 "Copy failed",
                 $"CyberSnap could not copy the translated text. Keep the result window open and try again.\n{ex.Message}");
@@ -529,6 +514,8 @@ public partial class OcrResultWindow : Window
 
     private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (_tabs.HandleHotkey(e))
+            return;
         if (e.Key == Key.Escape)
         {
             e.Handled = true;
@@ -653,11 +640,9 @@ public partial class OcrResultWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _lifecycle.TryBeginClose();
         SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopySettingChanged;
         SettingsService.AutoCopyToClipboardChanged -= OnOcrAutoCopySettingChanged;
-        _translateCts?.Cancel();
-        _translateCts?.Dispose();
-        _translateCts = null;
         StopTranslateTimer();
         if (_ocrTextScrollViewer != null)
             _ocrTextScrollViewer.ScrollChanged -= OcrTextScrollViewer_ScrollChanged;
@@ -674,6 +659,7 @@ public partial class OcrResultWindow : Window
         if (string.Equals(previous, selected, StringComparison.OrdinalIgnoreCase))
         {
             SetTranslationPreferenceStatus(string.Empty);
+            ResetTranslationForTranslationOptionChange();
             return;
         }
 
@@ -699,6 +685,7 @@ public partial class OcrResultWindow : Window
         if (string.Equals(previous, selected, StringComparison.OrdinalIgnoreCase))
         {
             SetTranslationPreferenceStatus(string.Empty);
+            ResetTranslationForTranslationOptionChange();
             return;
         }
 
@@ -723,6 +710,7 @@ public partial class OcrResultWindow : Window
         if (previous == selected)
         {
             SetTranslationPreferenceStatus(string.Empty);
+            ResetTranslationForTranslationOptionChange();
             return;
         }
 
@@ -920,7 +908,8 @@ public partial class OcrResultWindow : Window
 
     private void StartTranslateTimer()
     {
-        _translateStartTime = DateTime.Now;
+        StopTranslateTimer();
+        _translateStartTime = _tabs.Active.TranslationStartedAt;
         _translateTimer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(500)
@@ -988,12 +977,6 @@ public partial class OcrResultWindow : Window
             TranslateStatus.Visibility = Visibility.Collapsed;
     }
 
-    private void ShowTranslateError(string message)
-    {
-        StopTranslationLoading(keepStatusVisible: true);
-        TranslateStatus.Text = $"Error: {message}";
-    }
-
     private void UpdateTranslateStatusText(int elapsedSeconds)
     {
         var model = GetSelectedModel();
@@ -1008,11 +991,6 @@ public partial class OcrResultWindow : Window
         LoadingTextShimmer.Stop(TranslateStatus, Theme.Brush(Theme.TextPrimary), 0.25);
         TranslateStatus.Visibility = Visibility.Visible;
         TranslateStatus.Text = message;
-    }
-
-    private bool IsActiveTranslationRequest(CancellationTokenSource requestCts)
-    {
-        return ReferenceEquals(_translateCts, requestCts);
     }
 
     private static string GetTranslationStatusLabel(TranslationModel model, int elapsedSeconds)
@@ -1048,86 +1026,64 @@ public partial class OcrResultWindow : Window
             toItem.Tag as string,
             _settingsService.Settings.InterfaceLanguage);
 
-        _translateCts?.Cancel();
-        _translateCts = new CancellationTokenSource();
-        var requestCts = _translateCts;
+        var session = _tabs.Active;
+        CaptureSession(session);
+        session.CancelTranslation();
+        var requestCts = new CancellationTokenSource();
+        session.TranslationCts = requestCts;
         var token = requestCts.Token;
         var model = GetSelectedModel();
+        session.TranslatedText = "";
+        session.TranslationStatus = "";
+        session.CheckingTranslation = true;
+        ApplyTranslationSession(session);
 
-        StartTranslationConfigurationCheck();
+        bool IsCurrentRequest() => !_lifecycle.IsCloseRequested
+            && ReferenceEquals(session.TranslationCts, requestCts) && !token.IsCancellationRequested;
 
         try
         {
             var configurationError = await TranslationService.GetConfigurationErrorAsync(fromCode, model, token);
-            if (_lifecycle.IsCloseRequested)
+            if (!IsCurrentRequest())
                 return;
-            if (!IsActiveTranslationRequest(requestCts))
-                return;
-            if (token.IsCancellationRequested)
-            {
-                StopTranslationConfigurationCheck();
-                TranslateStatus.Visibility = Visibility.Collapsed;
-                return;
-            }
 
             if (!string.IsNullOrWhiteSpace(configurationError))
             {
-                ShowTranslateError(configurationError);
+                session.TranslationStatus = $"Error: {configurationError}";
                 return;
             }
 
-            StopTranslationConfigurationCheck();
-            StartTranslationLoading(model);
-            StartTranslateTimer();
+            session.CheckingTranslation = false;
+            session.Translating = true;
+            session.TranslationStartedAt = DateTime.Now;
+            ApplyTranslationSession(session);
 
             await TranslationService.EnsureReadyAsync(fromCode, model, token);
-            if (_lifecycle.IsCloseRequested)
+            if (!IsCurrentRequest())
                 return;
-            if (!IsActiveTranslationRequest(requestCts))
-                return;
-            if (token.IsCancellationRequested)
-            {
-                StopTranslationLoading(keepStatusVisible: false);
-                return;
-            }
 
             var result = await TranslationService.TranslateAsync(text, fromCode, toCode, model, token);
-            if (_lifecycle.IsCloseRequested)
+            if (!IsCurrentRequest())
                 return;
-            if (!IsActiveTranslationRequest(requestCts))
-                return;
-            if (token.IsCancellationRequested)
-            {
-                StopTranslationLoading(keepStatusVisible: false);
-                return;
-            }
-
-            StopTranslationLoading(keepStatusVisible: false);
-            TranslatedTextBox.Text = result;
-            SetTranslationCopyVisible(true);
+            session.TranslatedText = result;
         }
         catch (OperationCanceledException)
         {
-            if (_lifecycle.IsCloseRequested)
-                return;
-
-            if (IsActiveTranslationRequest(requestCts))
-                StopTranslationLoading(keepStatusVisible: false);
+            // Closing or editing invalidates only this result's request.
         }
         catch (Exception ex)
         {
-            if (_lifecycle.IsCloseRequested)
-                return;
-            if (!IsActiveTranslationRequest(requestCts))
-                return;
-
-            ShowTranslateError(ex.Message);
+            if (IsCurrentRequest())
+                session.TranslationStatus = $"Error: {ex.Message}";
         }
         finally
         {
-            if (IsActiveTranslationRequest(requestCts))
+            if (ReferenceEquals(session.TranslationCts, requestCts))
             {
-                _translateCts = null;
+                session.TranslationCts = null;
+                session.CheckingTranslation = false;
+                session.Translating = false;
+                ApplyTranslationSession(session);
             }
 
             requestCts.Dispose();

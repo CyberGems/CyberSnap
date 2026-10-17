@@ -136,6 +136,16 @@ public sealed class PreviewTabStrip : UserControl
         Dispatcher.BeginInvoke((Action)UpdateChevrons);
     }
 
+    internal void RevealActiveTab()
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            int index = _tabs.FindIndex(tab => tab.Active);
+            if (index >= 0 && index < _host.Children.Count)
+                ((FrameworkElement)_host.Children[index]).BringIntoView();
+        }, DispatcherPriority.Loaded);
+    }
+
     private Border BuildChevron(bool forward)
     {
         var icon = new System.Windows.Controls.Image
@@ -166,6 +176,8 @@ public sealed class PreviewTabStrip : UserControl
             border.SetResourceReference(Border.BackgroundProperty, "ThemeBgHoverBrush");
         border.MouseLeave += (_, _) => border.Background = Brushes.Transparent;
         ToolTipService.SetToolTip(border, LocalizationService.Translate(forward ? "Scroll tabs right" : "Scroll tabs left"));
+        System.Windows.Automation.AutomationProperties.SetName(border,
+            LocalizationService.Translate(forward ? "Scroll tabs right" : "Scroll tabs left"));
         return border;
     }
 
@@ -302,6 +314,7 @@ public sealed class PreviewTabStrip : UserControl
             TabCloseRequested?.Invoke(this, index);
         };
         ToolTipService.SetToolTip(close, LocalizationService.Translate("Close tab"));
+        System.Windows.Automation.AutomationProperties.SetName(close, LocalizationService.Translate("Close tab"));
 
         var header = new DockPanel
         {
@@ -368,7 +381,14 @@ public sealed class PreviewTabStrip : UserControl
             e.Handled = true;
             TabContextMenuRequested?.Invoke(this, index);
         };
-        ToolTipService.SetToolTip(card, tab.Title);
+        System.Windows.Automation.AutomationProperties.SetName(card, tab.Title);
+        title.SizeChanged += (_, _) =>
+        {
+            var formatted = new FormattedText(tab.Title, System.Globalization.CultureInfo.CurrentUICulture,
+                title.FlowDirection, new Typeface(title.FontFamily, title.FontStyle, title.FontWeight, title.FontStretch),
+                title.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(title).PixelsPerDip);
+            card.ToolTip = formatted.Width > title.ActualWidth + 1 ? tab.Title : null;
+        };
         return card;
     }
 

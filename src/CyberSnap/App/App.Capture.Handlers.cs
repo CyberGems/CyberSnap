@@ -1145,17 +1145,11 @@ public partial class App
                     bool copied = plan.Copy && TryCopyCaptureTextToClipboard(text);
                     if (plan.ShowWindow || (plan.Copy && !copied))
                     {
-                        var window = new OcrResultWindow(
+                        OcrResultWindow.ShowResult(
                             text,
                             _settingsService,
                             BitmapPerf.ToBitmapSource(result),
                             alreadyCopiedText: copied ? text : null);
-                        window.Show();
-                        // Cold first show (OCR engine + first window build) lands seconds
-                        // after the overlay closed, past the foreground grace period, so a
-                        // single Activate only flashes the taskbar. Assert explicitly on top
-                        // of the window's own Loaded hook, like the preview path does.
-                        CyberSnapWindowChrome.EnsureForeground(window);
                     }
                     else
                     {

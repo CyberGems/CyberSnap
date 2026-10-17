@@ -321,15 +321,11 @@ public partial class HistoryWindow
 
                         bool copied = ResultDelivery.ForOcr(_settingsService.Settings).Copy
                             && ResultDelivery.TryCopyText(text);
-                        var window = new OcrResultWindow(
+                        OcrResultWindow.ShowResult(
                             text,
                             _settingsService,
                             previewSource,
-                            alreadyCopiedText: copied ? text : null)
-                        {
-                            Owner = this
-                        };
-                        window.Show();
+                            alreadyCopiedText: copied ? text : null);
                     }
                     else
                     {

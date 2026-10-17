@@ -14,7 +14,7 @@ namespace CyberSnap.UI;
 public partial class QrResultWindow : Window
 {
     private readonly SettingsService _settingsService;
-    private readonly BarcodeFormat _format;
+    private BarcodeFormat _format;
     private string? _copiedText;
     private bool _suppressAutoCopyCheck;
 
@@ -29,6 +29,10 @@ public partial class QrResultWindow : Window
         _format = format;
         _copiedText = alreadyCopiedText;
         InitializeComponent();
+        _tabs = new ResultTabHost<QrResultSession>(this, ResultTabStrip,
+            new QrResultSession(codeText, format, previewSource, alreadyCopiedText, _nextOrdinal++),
+            session => $"{GetFormatLabel(session.Format)} {session.Ordinal}",
+            CaptureSession, ApplySession, _ => { });
         CyberSnapWindowChrome.Apply(this);
         UiScale.Set(settingsService.Settings.UiScale);
         UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
@@ -114,9 +118,11 @@ public partial class QrResultWindow : Window
         Resources["ThemeAccentForegroundBrush"] = Theme.Brush(Theme.AccentForeground);
         Resources["ThemeAccentHoverBrush"] = Theme.Brush(Theme.AccentHover);
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
+        Resources["ThemeBgHoverBrush"] = Theme.Brush(Theme.BgHover);
         CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
         Icon = WindowIcons.Wpf(WindowIconKind.Qr);
         QrTitleBar.RefreshIcons();
+        _tabs?.Refresh();
     }
 
     public void RefreshLocalization()
@@ -135,6 +141,7 @@ public partial class QrResultWindow : Window
         ApplyCopyActionState();
         QrTitleBar.CloseToolTip = LocalizationService.Translate(language, "Close");
         QrTitleBar.RefreshTooltips();
+        _tabs?.Refresh();
     }
 
     private string GetFormatLabel(BarcodeFormat format)
@@ -169,7 +176,7 @@ public partial class QrResultWindow : Window
     {
         if (IsCodeCopied())
         {
-            Close();
+            _tabs.CloseActive();
             return;
         }
 
@@ -192,7 +199,7 @@ public partial class QrResultWindow : Window
         _copiedText = text;
         ApplyCopyActionState();
         if (closeAfter)
-            Close();
+            _tabs.CloseActive();
     }
 
     private bool IsCodeCopied() =>
@@ -297,9 +304,11 @@ public partial class QrResultWindow : Window
 
     private void Window_PreviewKeyDown(object sender, WpfKeyEventArgs e)
     {
+        if (_tabs.HandleHotkey(e))
+            return;
         if (e.Key == Key.Escape)
         {
-            Close();
+            _tabs.CloseActive();
             e.Handled = true;
         }
         else if (e.Key is Key.Enter or Key.Return)

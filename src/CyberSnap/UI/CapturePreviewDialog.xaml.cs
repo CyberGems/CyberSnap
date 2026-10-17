@@ -2680,13 +2680,11 @@ namespace CyberSnap.UI
 
                 // This button asks for the window. Copy still follows the OCR copy setting.
                 bool copied = ResultDelivery.ForOcr(settings).Copy && ResultDelivery.TryCopyText(text);
-                var window = new OcrResultWindow(
+                OcrResultWindow.ShowResult(
                     text,
                     _settingsService,
                     BitmapPerf.ToBitmapSource(EffectiveBitmap),
                     alreadyCopiedText: copied ? text : null);
-                window.Show();
-                CyberSnapWindowChrome.EnsureForeground(window);
             }
             catch (Exception ex)
             {

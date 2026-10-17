@@ -392,7 +392,7 @@ public partial class HistoryWindow
         };
         // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(ocrContainer);
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(80, 190, 180), () => { var window = new OcrResultWindow(text, _settingsService); window.Show(); });
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(80, 190, 180), () => OcrResultWindow.ShowResult(text, _settingsService));
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
