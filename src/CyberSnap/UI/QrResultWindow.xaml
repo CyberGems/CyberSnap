@@ -101,6 +101,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="QrTitleBar" Grid.Row="0"
@@ -109,13 +110,13 @@
 
             <ui:PreviewTabStrip x:Name="ResultTabStrip" Grid.Row="1" Visibility="Collapsed"/>
 
-            <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid x:Name="QrWorkbench" Grid.Row="2" Margin="0,10,0,0" ClipToBounds="True">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="1.05*"/>
                     <ColumnDefinition Width="1.2*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Margin="0,0,10,0"
+                <Border x:Name="PreviewFrame" Grid.Column="0" Margin="0,0,10,0"
                         Background="{DynamicResource ThemeCardBrush}"
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                         BorderThickness="1"
@@ -146,7 +147,6 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,1,0,8">
@@ -182,29 +182,52 @@
                              IsReadOnly="True"
                              Text=""/>
 
-                     <StackPanel Grid.Row="3" Orientation="Horizontal"
-                                 HorizontalAlignment="Right"
-                                 Margin="0,10,0,0">
-                         <CheckBox x:Name="AutoCopyCheck"
-                                   Content="Auto-copy scan"
-                                   Services:LocalizationService.SourceContent="Auto-copy scan"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,10,0"
-                                   ToolTip="Copy scan results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
-                                   Services:LocalizationService.SourceToolTip="Copy scan results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
-                                   Checked="AutoCopyCheck_Changed"
-                                   Unchecked="AutoCopyCheck_Changed"/>
-                         <Border Width="1"
-                                 Height="20"
-                                 Background="{DynamicResource ThemeSeparatorBrush}"
-                                 Margin="2,0,10,0"
-                                 VerticalAlignment="Center"/>
+                </Grid>
+            </Grid>
+
+            <StackPanel x:Name="FooterPanel" Grid.Row="3" Margin="0,12,0,0">
+                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,0,0,8"/>
+                <WrapPanel x:Name="DeliveryOptions" HorizontalAlignment="Right" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,24,4">
+                        <Label x:Name="AutoCopyLabel" Content="Auto-copy"
+                               Services:LocalizationService.SourceContent="Auto-copy"
+                               Target="{Binding ElementName=AutoCopyCheck}"
+                               MouseLeftButtonUp="DeliveryLabel_MouseLeftButtonUp"
+                               Cursor="Hand" Padding="0" Margin="0,0,10,0"
+                               FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        <CheckBox x:Name="AutoCopyCheck" Content="Auto-copy"
+                                  Services:LocalizationService.SourceContent="Auto-copy"
+                                  AutomationProperties.LabeledBy="{Binding ElementName=AutoCopyLabel}"
+                                  VerticalAlignment="Center"
+                                  ToolTip="Turning off auto-copy keeps this window enabled for future results."
+                                  Services:LocalizationService.SourceToolTip="Turning off auto-copy keeps this window enabled for future results."
+                                  Checked="AutoCopyCheck_Changed" Unchecked="AutoCopyCheck_Changed"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                        <Label x:Name="ShowWindowLabel" Content="Show this window"
+                               Services:LocalizationService.SourceContent="Show this window"
+                               Target="{Binding ElementName=ShowWindowCheck}"
+                               MouseLeftButtonUp="DeliveryLabel_MouseLeftButtonUp"
+                               Cursor="Hand" Padding="0" Margin="0,0,10,0"
+                               FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        <CheckBox x:Name="ShowWindowCheck" Content="Show this window"
+                                  Services:LocalizationService.SourceContent="Show this window"
+                                  AutomationProperties.LabeledBy="{Binding ElementName=ShowWindowLabel}"
+                                  VerticalAlignment="Center"
+                                  ToolTip="Show future results here. Turning this off enables auto-copy if needed."
+                                  Services:LocalizationService.SourceToolTip="Show future results here. Turning this off enables auto-copy if needed."
+                                  Checked="ShowWindowCheck_Changed" Unchecked="ShowWindowCheck_Changed"/>
+                    </StackPanel>
+                </WrapPanel>
+                <WrapPanel x:Name="CopyActions" Orientation="Horizontal" HorizontalAlignment="Right">
                          <Border x:Name="CopyStatusText"
                                  Visibility="Collapsed"
                                  IsHitTestVisible="False"
                                  CornerRadius="8"
                                  Padding="7,2"
-                                 Margin="0,0,8,0"
+                                 Margin="0,0,14,0"
                                  VerticalAlignment="Center"
                                  Background="{DynamicResource ThemeAccentSubtleBrush}"
                                  BorderBrush="{DynamicResource ThemeAccentBrush}"
@@ -230,14 +253,14 @@
                          </Border>
                         <Button x:Name="CopyOnlyButton"
                                 Click="CopyOnlyButton_Click"
-                                Margin="0,0,6,0"
+                                Margin="0,0,10,0"
                                 Style="{StaticResource QrGhostButton}"
                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                 Background="#08FFFFFF"
                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                 BorderThickness="1"
-                                MinHeight="24"
-                                Padding="8,3">
+                                MinHeight="38" MinWidth="104"
+                                Padding="16,8">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource CopyIconGeometry}"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
@@ -256,6 +279,7 @@
                         <Button x:Name="CopyButton"
                                 Click="CopyButton_Click"
                                 IsDefault="True"
+                                MinHeight="38" MinWidth="132" Padding="16,8"
                                 Style="{StaticResource CyberSnapAccentButton}">
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="CopyButtonIcon"
@@ -274,9 +298,8 @@
                                 <controls:HotkeyBadge Kind="Enter" Margin="6,0,0,0"/>
                             </StackPanel>
                         </Button>
-                    </StackPanel>
-                </Grid>
-            </Grid>
+                </WrapPanel>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>

@@ -2575,6 +2575,8 @@
   "Copy the picked color automatically. Turning this off shows this window instead.": "Copia el color elegido automáticamente.\nAl desactivarlo se muestra esta ventana en su lugar.",
   "Include # in HEX": "Incluir # en HEX",
   "Show this window": "Mostrar esta ventana",
+  "Turning off auto-copy keeps this window enabled for future results.": "Al desactivar la autocopia, esta ventana permanece habilitada para los próximos resultados.",
+  "Show future results here. Turning this off enables auto-copy if needed.": "Muestra aquí los próximos resultados. Al desactivarlo, se activa la autocopia si hace falta.",
   "Show this window after picking. Turning this off enables auto-copy instead.": "Muestra esta ventana tras elegir.\nAl desactivarla se activa la autocopia en su lugar.",
   "Advanced options": "Opciones avanzadas",
   "Show or hide the advanced options": "Mostrar u ocultar las opciones avanzadas",

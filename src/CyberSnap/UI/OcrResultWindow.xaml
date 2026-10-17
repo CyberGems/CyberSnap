@@ -613,15 +613,16 @@
                 </Grid>
             </Grid>
 
-            <Border Grid.Row="3" Margin="14,8,14,0">
+            <Border x:Name="FooterPanel" Grid.Row="3" Margin="14,8,14,0">
                 <StackPanel>
                     <!-- Divider separating the OCR zone from the translation zone -->
                     <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,0,0,8"/>
 
-                    <!-- Collapse toggle and always-available copy action. -->
-                    <Grid Margin="0,0,0,4">
+                    <DockPanel Margin="0,0,0,8">
                         <Button x:Name="ToggleTranslationBtn"
+                                DockPanel.Dock="Left"
                                 HorizontalAlignment="Left"
+                                Margin="0,0,24,0"
                                 Padding="9,5"
                                 Click="ToggleTranslationBtn_Click"
                                 Style="{StaticResource OcrGhostButton}"
@@ -649,30 +650,51 @@
                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                             </StackPanel>
                         </Button>
+                        <WrapPanel x:Name="DeliveryOptions" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Margin="0,4,24,4">
+                                <Label x:Name="AutoCopyLabel" Content="Auto-copy"
+                                       Services:LocalizationService.SourceContent="Auto-copy"
+                                       Target="{Binding ElementName=AutoCopyCheck}"
+                                       MouseLeftButtonUp="DeliveryLabel_MouseLeftButtonUp"
+                                       Cursor="Hand" Padding="0" Margin="0,0,10,0"
+                                       FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                <CheckBox x:Name="AutoCopyCheck" Content="Auto-copy"
+                                          Services:LocalizationService.SourceContent="Auto-copy"
+                                          AutomationProperties.LabeledBy="{Binding ElementName=AutoCopyLabel}"
+                                          VerticalAlignment="Center"
+                                          ToolTip="Turning off auto-copy keeps this window enabled for future results."
+                                          Services:LocalizationService.SourceToolTip="Turning off auto-copy keeps this window enabled for future results."
+                                          Checked="AutoCopyCheck_Changed" Unchecked="AutoCopyCheck_Changed"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                <Label x:Name="ShowWindowLabel" Content="Show this window"
+                                       Services:LocalizationService.SourceContent="Show this window"
+                                       Target="{Binding ElementName=ShowWindowCheck}"
+                                       MouseLeftButtonUp="DeliveryLabel_MouseLeftButtonUp"
+                                       Cursor="Hand" Padding="0" Margin="0,0,10,0"
+                                       FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                <CheckBox x:Name="ShowWindowCheck" Content="Show this window"
+                                          Services:LocalizationService.SourceContent="Show this window"
+                                          AutomationProperties.LabeledBy="{Binding ElementName=ShowWindowLabel}"
+                                          VerticalAlignment="Center"
+                                          ToolTip="Show future results here. Turning this off enables auto-copy if needed."
+                                          Services:LocalizationService.SourceToolTip="Show future results here. Turning this off enables auto-copy if needed."
+                                          Checked="ShowWindowCheck_Changed" Unchecked="ShowWindowCheck_Changed"/>
+                            </StackPanel>
+                        </WrapPanel>
+                    </DockPanel>
                         <StackPanel x:Name="CopyHeaderHost"
                                     Orientation="Horizontal"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center">
-                            <CheckBox x:Name="AutoCopyCheck"
-                                        Content="Auto-copy OCR"
-                                        Services:LocalizationService.SourceContent="Auto-copy OCR"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,10,0"
-                                        ToolTip="Copy OCR results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
-                                        Services:LocalizationService.SourceToolTip="Copy OCR results automatically (requires the Auto-copy master switch). Turning this off while the result window is hidden shows it instead."
-                                        Checked="AutoCopyCheck_Changed"
-                                        Unchecked="AutoCopyCheck_Changed"/>
-                            <Border Width="1"
-                                    Height="20"
-                                    Background="{DynamicResource ThemeSeparatorBrush}"
-                                    Margin="2,0,10,0"
-                                    VerticalAlignment="Center"/>
                             <Border x:Name="CopiedBadge"
                                     Visibility="Collapsed"
                                     IsHitTestVisible="False"
                                     CornerRadius="8"
                                     Padding="7,2"
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,14,0"
                                     VerticalAlignment="Center"
                                     Background="{DynamicResource ThemeAccentSubtleBrush}"
                                     BorderBrush="{DynamicResource ThemeAccentBrush}"
@@ -697,13 +719,13 @@
                                 </StackPanel>
                             </Border>
                             <Button x:Name="CopyOnlyBtn" Click="CopyOnlyBtn_Click"
-                                    Margin="0,0,6,0"
+                                    Margin="0,0,10,0"
                                     Style="{StaticResource OcrGhostButton}"
                                     Background="#08FFFFFF"
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                     BorderThickness="1"
-                                    MinHeight="24"
-                                    Padding="8,3"
+                                    MinHeight="38" MinWidth="104"
+                                    Padding="16,8"
                                     ToolTip="Copy the text and keep this window open.">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Data="{StaticResource CopyIconGeometry}"
@@ -715,6 +737,7 @@
                             </Button>
                             <Button x:Name="CopyBtn" Click="CopyBtn_Click"
                                     IsDefault="True"
+                                    MinHeight="38" MinWidth="132" Padding="16,8"
                                     Style="{StaticResource CyberSnapAccentButton}">
                                 <StackPanel Orientation="Horizontal">
                                     <Path x:Name="CopyBtnIcon"
@@ -727,10 +750,9 @@
                                 </StackPanel>
                             </Button>
                         </StackPanel>
-                    </Grid>
 
                     <!-- Translation controls (collapsed by default) -->
-                    <StackPanel x:Name="TranslationPanel" Visibility="Collapsed">
+                    <StackPanel x:Name="TranslationPanel" Visibility="Collapsed" Margin="0,10,0,0">
                         <!-- Fixed-column grid: each control is anchored so the row never reflows
                              regardless of the selected language name length. -->
                         <Grid VerticalAlignment="Center">
@@ -774,9 +796,6 @@
                                         HorizontalAlignment="Left"
                                         Click="TranslateBtn_Click"
                                         Style="{StaticResource OcrTranslateButton}"/>
-                                <ContentControl x:Name="CopyTranslationHost"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"/>
                             </Grid>
                         </Grid>
                         <TextBlock x:Name="TranslationPreferenceStatusText"
@@ -795,6 +814,7 @@
                 <Grid Margin="2,0,2,5">
                     <TextBlock Text="Translation" Style="{StaticResource OcrSectionHeaderText}"/>
                         <Button x:Name="CopyTranslationBtn" Click="CopyTranslationBtn_Click"
+                                MinHeight="38" MinWidth="132" Padding="16,8"
                                 HorizontalAlignment="Right"
                                 Style="{StaticResource CyberSnapAccentButton}" Visibility="Collapsed">
                             <StackPanel Orientation="Horizontal">

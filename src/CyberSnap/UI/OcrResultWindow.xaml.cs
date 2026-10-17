@@ -66,7 +66,7 @@ public partial class OcrResultWindow : Window
         OcrTextBox.TextChanged += OcrTextBox_TextChanged;
         UpdateCharCount();
 
-        RefreshAutoCopyCheck();
+        RefreshDeliveryOptions();
         SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopySettingChanged;
         SettingsService.AutoCopyToClipboardChanged += OnOcrAutoCopySettingChanged;
 
@@ -309,7 +309,6 @@ public partial class OcrResultWindow : Window
     {
         TranslationPanel.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
         TranslatedSection.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
-        MoveCopyButton(expand);
 
         var targetAngle = expand ? 90.0 : 0.0;
         if (animate && !Motion.Disabled)
@@ -325,36 +324,6 @@ public partial class OcrResultWindow : Window
             // Clear any running animation before setting the value directly.
             TranslationChevronRotation.BeginAnimation(RotateTransform.AngleProperty, null);
             TranslationChevronRotation.Angle = targetAngle;
-        }
-    }
-
-    private void MoveCopyButton(bool translationExpanded)
-    {
-        if (translationExpanded)
-        {
-            Detach(CopyBtn);
-            CopyTranslationHost.Content = CopyBtn;
-            return;
-        }
-
-        CopyTranslationHost.Content = null;
-        if (CopyBtn.Parent != CopyHeaderHost)
-        {
-            Detach(CopyBtn);
-            CopyHeaderHost.Children.Add(CopyBtn);
-        }
-    }
-
-    private static void Detach(FrameworkElement element)
-    {
-        switch (element.Parent)
-        {
-            case System.Windows.Controls.Panel panel:
-                panel.Children.Remove(element);
-                break;
-            case ContentControl host:
-                host.Content = null;
-                break;
         }
     }
 
@@ -562,32 +531,29 @@ public partial class OcrResultWindow : Window
     }
 
 
-    private bool _suppressAutoCopyCheck;
+    private bool _suppressDeliveryOptions;
 
-    private void RefreshAutoCopyCheck()
+    private void RefreshDeliveryOptions()
     {
-        bool effective;
+        _settingsService.RefreshResultDeliveryPreferences();
+        var plan = ResultDelivery.ForOcr(_settingsService.Settings);
+
+        _suppressDeliveryOptions = true;
         try
         {
-            var settings = SettingsService.LoadStatic() ?? _settingsService.Settings;
-            effective = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr);
+            AutoCopyCheck.IsChecked = plan.Copy;
+            ShowWindowCheck.IsChecked = plan.ShowWindow;
         }
-        catch
-        {
-            effective = false;
-        }
-
-        _suppressAutoCopyCheck = true;
-        try { AutoCopyCheck.IsChecked = effective; }
-        finally { _suppressAutoCopyCheck = false; }
+        finally { _suppressDeliveryOptions = false; }
     }
 
     private void AutoCopyCheck_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressAutoCopyCheck) return;
+        if (_suppressDeliveryOptions) return;
 
         // Independent kind toggle: enabling also lifts the master (SetKindEnabled),
         // so this switch never lies with a snap-back. Disabling only excludes OCR.
+        _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
         AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Ocr, AutoCopyCheck.IsChecked == true);
         var plan = ResultDelivery.Normalize(
@@ -597,7 +563,7 @@ public partial class OcrResultWindow : Window
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("ocr-result.auto-copy", ex); }
         SettingsService.PublishAutoCopyState(settings);
-        RefreshAutoCopyCheck();
+        RefreshDeliveryOptions();
     }
 
     internal bool IsShowResultWindow => _settingsService.Settings.OcrShowResultWindow;
@@ -607,11 +573,11 @@ public partial class OcrResultWindow : Window
     /// pair like the color picker: hiding the window while auto-copy is off
     /// enables auto-copy instead of bricking both deliveries (enabling a kind
     /// also lifts the master). Returns the effective value so the menu
-    /// checkmark never lies. The header pill refreshes via the published
-    /// auto-copy events.
+    /// checkmark stays in sync. Both footer toggles refresh from published preferences.
     /// </summary>
     internal bool SetShowResultWindow(bool show)
     {
+        _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
         if (!show && !AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr))
         {
@@ -625,17 +591,34 @@ public partial class OcrResultWindow : Window
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("ocr-result.show-window", ex); }
         SettingsService.PublishAutoCopyState(settings);
+        RefreshDeliveryOptions();
         return settings.OcrShowResultWindow;
+    }
+
+    private void ShowWindowCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_suppressDeliveryOptions)
+            SetShowResultWindow(ShowWindowCheck.IsChecked == true);
+    }
+
+    private void DeliveryLabel_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Label { Target: System.Windows.Controls.CheckBox toggle })
+        {
+            toggle.IsChecked = toggle.IsChecked != true;
+            toggle.Focus();
+            e.Handled = true;
+        }
     }
 
     private void OnOcrAutoCopySettingChanged(bool _)
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.BeginInvoke(new Action(() => RefreshAutoCopyCheck()));
+            Dispatcher.BeginInvoke(new Action(() => RefreshDeliveryOptions()));
             return;
         }
-        RefreshAutoCopyCheck();
+        RefreshDeliveryOptions();
     }
 
     protected override void OnClosed(EventArgs e)

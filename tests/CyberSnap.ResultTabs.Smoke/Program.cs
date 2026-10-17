@@ -2,6 +2,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Automation;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -9,6 +10,8 @@ using System.Windows.Markup;
 using System.Windows.Threading;
 using System.Xml.Linq;
 using CyberSnap.Services;
+using CyberSnap.Helpers;
+using CyberSnap.Models;
 using CyberSnap.UI;
 using ZXing;
 
@@ -41,12 +44,17 @@ internal static class Program
         app.Resources = (ResourceDictionary)XamlReader.Parse(dictionary.ToString());
         string temp = Path.Combine(Path.GetTempPath(), "CyberSnap-ResultTabs-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
-        using var settings = new SettingsService(Path.Combine(temp, "settings.json"));
+        string settingsPath = Path.Combine(temp, "settings.json");
+        using var settings = new SettingsService(settingsPath);
         settings.Settings.InterfaceLanguage = "en";
+        settings.Settings.AutoCopySettingsSchemaVersion = AutoCopyPreferences.SchemaVersion;
+        settings.Settings.ResultDeliverySchemaVersion = ResultDelivery.SchemaVersion;
+        settings.Save();
         try
         {
             CheckOcr(settings, args.FirstOrDefault());
             CheckQr(settings, args.FirstOrDefault());
+            CheckFooters(settings, settingsPath, args.FirstOrDefault());
             Console.WriteLine($"PASS: {_checks} result-tab integration checks.");
             return 0;
         }
@@ -184,6 +192,160 @@ internal static class Program
     private static void SelectTag(ComboBox combo, string tag) =>
         combo.SelectedItem = combo.Items.Cast<ComboBoxItem>().First(item => item.Tag as string == tag);
 
+    private static void CheckFooters(SettingsService settings, string settingsPath, string? renderDirectory)
+    {
+        var pixels = new BarcodeWriterPixelData
+        {
+            Format = BarcodeFormat.QR_CODE,
+            Options = new ZXing.Common.EncodingOptions { Width = 1000, Height = 1000, Margin = 2 }
+        }.Write("Green QR");
+        var preview = BitmapSource.Create(pixels.Width, pixels.Height, 96, 96, PixelFormats.Bgra32, null, pixels.Pixels, pixels.Width * 4);
+        preview.Freeze();
+        foreach (string language in new[] { "en", "es" })
+        foreach (double scale in new[] { 1.0, 1.4 })
+        {
+            settings.Settings.InterfaceLanguage = language;
+            settings.Settings.UiScale = scale;
+            settings.Settings.OcrShowResultWindow = true;
+            settings.Settings.ScanShowResultWindow = true;
+            settings.Save();
+            var ocr = OcrResultWindow.ShowResult("Footer OCR sample", settings, preview);
+            var qr = QrResultWindow.ShowResult("Green QR", BarcodeFormat.QR_CODE, settings, preview);
+            CheckDeliveryOptions(ocr, settings, settingsPath, AutoCopyKind.Ocr);
+            CheckDeliveryOptions(qr, settings, settingsPath, AutoCopyKind.Scan);
+            OcrResultWindow.ShowResult("Second OCR sample", settings, preview);
+            QrResultWindow.ShowResult("Green QR", BarcodeFormat.QR_CODE, settings, preview);
+
+            foreach (var mode in new[] { AppThemeMode.Dark, AppThemeMode.Light })
+            {
+                Theme.SetMode(mode);
+                Theme.ApplyTo(Application.Current.Resources);
+                ocr.ApplyTheme();
+                qr.ApplyTheme();
+                foreach (bool copied in new[] { false, true })
+                {
+                    ocr.Width = 900 * scale;
+                    ocr.Height = 600 * scale;
+                    qr.Width = 560 * scale;
+                    qr.Height = 440 * scale;
+                    Call(ocr, "SetTranslationPanelExpanded", false, false);
+                    SetField(ocr, "_copiedText", copied ? "Second OCR sample" : null);
+                    SetField(qr, "_copiedText", copied ? "Green QR" : null);
+                    Call(ocr, "ApplyCopyActionState");
+                    Call(qr, "ApplyCopyActionState");
+                    CheckFooterBounds(ocr, "OcrWorkbench", "CopyOnlyBtn", "CopyBtn", "CopiedBadge");
+                    CheckFooterBounds(qr, "QrWorkbench", "CopyOnlyButton", "CopyButton", "CopyStatusText");
+                    ocr.Width = ocr.MinWidth;
+                    ocr.Height = ocr.MinHeight;
+                    qr.Width = qr.MinWidth;
+                    qr.Height = qr.MinHeight;
+                    Call(ocr, "SetTranslationPanelExpanded", true, false);
+                    CheckFooterBounds(ocr, "OcrWorkbench", "CopyOnlyBtn", "CopyBtn", "CopiedBadge");
+                    CheckFooterBounds(qr, "QrWorkbench", "CopyOnlyButton", "CopyButton", "CopyStatusText");
+                }
+            }
+            Console.WriteLine($"PASS: footer layout for {language}, scale {scale:0.0}, dark/light, copied/uncopied, default/minimum sizes.");
+            Theme.SetMode(AppThemeMode.Dark);
+            Theme.ApplyTo(Application.Current.Resources);
+            ocr.ApplyTheme();
+            qr.ApplyTheme();
+            ocr.Width = 900 * scale;
+            ocr.Height = 600 * scale;
+            qr.Width = 560 * scale;
+            qr.Height = 440 * scale;
+            if (scale == 1.0)
+            {
+                Render(ocr, renderDirectory, $"ocr-footer-{language}.png");
+                Render(qr, renderDirectory, $"qr-footer-{language}.png");
+                qr.Width = qr.MinWidth;
+                qr.Height = qr.MinHeight;
+                Render(qr, renderDirectory, $"qr-footer-{language}-minimum.png");
+            }
+            Call(Field(ocr, "_tabs"), "CloseActive");
+            Call(Field(ocr, "_tabs"), "CloseActive");
+            Call(Field(qr, "_tabs"), "CloseActive");
+            Call(Field(qr, "_tabs"), "CloseActive");
+        }
+    }
+
+    private static void CheckDeliveryOptions(Window window, SettingsService settings, string settingsPath, AutoCopyKind kind)
+    {
+        var auto = Element<CheckBox>(window, "AutoCopyCheck");
+        var show = Element<CheckBox>(window, "ShowWindowCheck");
+        var autoLabel = Element<Label>(window, "AutoCopyLabel");
+        var showLabel = Element<Label>(window, "ShowWindowLabel");
+        Assert((string)autoLabel.Content == LocalizationService.Translate("Auto-copy")
+            && (string)showLabel.Content == LocalizationService.Translate("Show this window"), "delivery labels are visible and localized");
+        Assert(ReferenceEquals(AutomationProperties.GetLabeledBy(auto), autoLabel)
+            && ReferenceEquals(AutomationProperties.GetLabeledBy(show), showLabel), "delivery toggles have associated accessible labels");
+        show.IsChecked = true;
+        auto.IsChecked = false;
+        show.IsChecked = false;
+        Assert(auto.IsChecked == true && show.IsChecked == false && AutoCopyPreferences.ShouldCopy(settings.Settings, kind), "hiding the window enables auto-copy");
+        auto.IsChecked = false;
+        Assert(auto.IsChecked == false && show.IsChecked == true, "disabling the last delivery restores the window");
+        var click = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+        {
+            RoutedEvent = UIElement.MouseLeftButtonUpEvent
+        };
+        autoLabel.RaiseEvent(click);
+        Assert(auto.IsChecked == true && show.IsChecked == true, "clicking a label toggles its option and permits both deliveries");
+        Call(window, "SetShowResultWindow", false);
+        Assert(show.IsChecked == false && auto.IsChecked == true, "title-bar preference changes refresh footer toggles");
+
+        settings.FlushPendingWrites();
+        using var external = new SettingsService(settingsPath);
+        external.Load();
+        bool savedShowWindow = kind == AutoCopyKind.Ocr ? external.Settings.OcrShowResultWindow : external.Settings.ScanShowResultWindow;
+        Assert(!savedShowWindow && AutoCopyPreferences.ShouldCopy(external.Settings, kind), "delivery choices persist to the settings file");
+        external.Settings.AutoCopyToClipboard = false;
+        external.Settings.AutoCopyExcludeImages = true;
+        external.Settings.OcrShowResultWindow = true;
+        external.Settings.ScanShowResultWindow = true;
+        external.Save();
+        SettingsService.PublishAutoCopyState(external.Settings);
+        Assert(auto.IsChecked == false && show.IsChecked == true, "footer refreshes preferences changed by a separate service");
+        auto.IsChecked = true;
+        Assert(settings.Settings.AutoCopyToClipboard && settings.Settings.AutoCopyExcludeImages, "enabling auto-copy lifts the master without overwriting other exclusions");
+        external.FlushPendingWrites();
+        settings.FlushPendingWrites();
+    }
+
+    private static void CheckFooterBounds(Window window, string workbenchName, string copyName, string closeName, string badgeName)
+    {
+        Pump();
+        window.UpdateLayout();
+        var root = (FrameworkElement)window.Content;
+        var footer = Element<FrameworkElement>(window, "FooterPanel");
+        Rect footerBounds = Bounds(footer);
+        Check(Bounds(Element<FrameworkElement>(window, workbenchName)).Bottom <= footerBounds.Top + 0.5,
+            $"{window.GetType().Name} preview respects the footer ({window.ActualWidth:0}x{window.ActualHeight:0})");
+        Rect rootBounds = Bounds(root);
+        foreach (string name in new[] { "AutoCopyLabel", "AutoCopyCheck", "ShowWindowLabel", "ShowWindowCheck", copyName, closeName, badgeName })
+        {
+            var control = Element<FrameworkElement>(window, name);
+            if (control.Visibility != Visibility.Visible)
+                continue;
+            Rect bounds = Bounds(control);
+            Check(bounds.Width > 0 && bounds.Height > 0 && bounds.Left >= rootBounds.Left - 0.5
+                && bounds.Right <= rootBounds.Right + 0.5 && bounds.Top >= footerBounds.Top - 0.5
+                && bounds.Bottom <= rootBounds.Bottom + 0.5, $"{name} is fully inside the footer");
+        }
+        var copy = Element<Button>(window, copyName);
+        var close = Element<Button>(window, closeName);
+        Check(copy.ActualHeight >= 38 && close.ActualHeight >= 38 && copy.Padding.Left >= 16 && close.Padding.Left >= 16,
+            "copy actions have larger targets and padding");
+        var badge = Element<FrameworkElement>(window, badgeName);
+        if (badge.Visibility == Visibility.Visible)
+            Check(badge.ActualHeight + 8 <= copy.ActualHeight && !Bounds(badge).IntersectsWith(Bounds(copy)), "copied badge is distinct from copy buttons");
+
+        Rect Bounds(FrameworkElement control) => control.TransformToAncestor(window).TransformBounds(new Rect(control.RenderSize));
+        void Check(bool condition, string message) => Assert(condition, message, announce: false);
+    }
+
+    private static void SetField(object target, string name, object? value) =>
+        target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
+
     private static T Element<T>(Window window, string name) where T : class => (T)window.FindName(name);
     private static object Field(object target, string name) => target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target)!;
     private static object Property(object target, string name) => target.GetType().GetProperty(name)!.GetValue(target)!;
@@ -236,12 +398,13 @@ internal static class Program
         encoder.Save(file);
     }
 
-    private static void Assert(bool condition, string message)
+    private static void Assert(bool condition, string message, bool announce = true)
     {
         if (!condition)
             throw new InvalidOperationException("FAIL: " + message);
         _checks++;
-        Console.WriteLine("PASS: " + message);
+        if (announce)
+            Console.WriteLine("PASS: " + message);
     }
 
 }

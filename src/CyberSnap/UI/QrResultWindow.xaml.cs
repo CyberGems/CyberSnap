@@ -16,7 +16,7 @@ public partial class QrResultWindow : Window
     private readonly SettingsService _settingsService;
     private BarcodeFormat _format;
     private string? _copiedText;
-    private bool _suppressAutoCopyCheck;
+    private bool _suppressDeliveryOptions;
 
     public QrResultWindow(
         string codeText,
@@ -47,7 +47,7 @@ public partial class QrResultWindow : Window
         ApplyTheme();
         RefreshLocalization();
 
-        RefreshAutoCopyCheck();
+        RefreshDeliveryOptions();
         SettingsService.AutoCopyToClipboardChanged += OnScanAutoCopySettingChanged;
 
         Activated += (_, _) => ApplyTheme();
@@ -222,29 +222,27 @@ public partial class QrResultWindow : Window
         CopyOnlyButton.IsEnabled = !copied && !string.IsNullOrWhiteSpace(ContentTextBox.Text);
     }
 
-    private void RefreshAutoCopyCheck()
+    private void RefreshDeliveryOptions()
     {
-        bool effective;
+        _settingsService.RefreshResultDeliveryPreferences();
+        var plan = ResultDelivery.ForScan(_settingsService.Settings);
+
+        _suppressDeliveryOptions = true;
         try
         {
-            effective = Helpers.AutoCopyPreferences.ShouldCopy(_settingsService.Settings, Helpers.AutoCopyKind.Scan);
+            AutoCopyCheck.IsChecked = plan.Copy;
+            ShowWindowCheck.IsChecked = plan.ShowWindow;
         }
-        catch
-        {
-            effective = false;
-        }
-
-        _suppressAutoCopyCheck = true;
-        try { AutoCopyCheck.IsChecked = effective; }
-        finally { _suppressAutoCopyCheck = false; }
+        finally { _suppressDeliveryOptions = false; }
     }
 
     private void AutoCopyCheck_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressAutoCopyCheck) return;
+        if (_suppressDeliveryOptions) return;
 
         // Independent kind toggle: enabling also lifts the master (SetKindEnabled),
         // so this switch never lies with a snap-back. Disabling only excludes scans.
+        _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
         Helpers.AutoCopyPreferences.SetKindEnabled(settings, Helpers.AutoCopyKind.Scan, AutoCopyCheck.IsChecked == true);
         var plan = ResultDelivery.Normalize(
@@ -254,17 +252,17 @@ public partial class QrResultWindow : Window
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("qr-result.auto-copy", ex); }
         SettingsService.PublishAutoCopyState(settings);
-        RefreshAutoCopyCheck();
+        RefreshDeliveryOptions();
     }
 
     private void OnScanAutoCopySettingChanged(bool _)
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.BeginInvoke(new Action(() => RefreshAutoCopyCheck()));
+            Dispatcher.BeginInvoke(new Action(() => RefreshDeliveryOptions()));
             return;
         }
-        RefreshAutoCopyCheck();
+        RefreshDeliveryOptions();
     }
 
     internal bool IsShowResultWindow => _settingsService.Settings.ScanShowResultWindow;
@@ -273,11 +271,12 @@ public partial class QrResultWindow : Window
     /// Title-bar More menu counterpart of the auto-copy toggle. Interlocked
     /// pair like the OCR and color picker windows: hiding the window while
     /// auto-copy is off enables auto-copy instead of bricking both
-    /// deliveries. Returns the effective value so the menu checkmark never
-    /// lies. The header pill refreshes via the published auto-copy events.
+    /// deliveries. Returns the effective value so the menu checkmark and both
+    /// footer toggles stay in sync with published preferences.
     /// </summary>
     internal bool SetShowResultWindow(bool show)
     {
+        _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
         if (!show && !Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Scan))
         {
@@ -291,7 +290,24 @@ public partial class QrResultWindow : Window
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("qr-result.show-window", ex); }
         SettingsService.PublishAutoCopyState(settings);
+        RefreshDeliveryOptions();
         return settings.ScanShowResultWindow;
+    }
+
+    private void ShowWindowCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_suppressDeliveryOptions)
+            SetShowResultWindow(ShowWindowCheck.IsChecked == true);
+    }
+
+    private void DeliveryLabel_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Label { Target: System.Windows.Controls.CheckBox toggle })
+        {
+            toggle.IsChecked = toggle.IsChecked != true;
+            toggle.Focus();
+            e.Handled = true;
+        }
     }
 
     protected override void OnClosed(EventArgs e)

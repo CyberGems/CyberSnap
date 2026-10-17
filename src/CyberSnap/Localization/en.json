@@ -2315,6 +2315,8 @@
   "Copy the picked color automatically. Turning this off shows this window instead.": "Copy the picked color automatically.\nTurning this off shows this window instead.",
   "Include # in HEX": "Include # in HEX",
   "Show this window": "Show this window",
+  "Turning off auto-copy keeps this window enabled for future results.": "Turning off auto-copy keeps this window enabled for future results.",
+  "Show future results here. Turning this off enables auto-copy if needed.": "Show future results here. Turning this off enables auto-copy if needed.",
   "Show this window after picking. Turning this off enables auto-copy instead.": "Show this window after picking.\nTurning this off enables auto-copy instead.",
   "Advanced options": "Advanced options",
   "Show or hide the advanced options": "Show or hide the advanced options",

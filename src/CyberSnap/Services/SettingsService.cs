@@ -410,6 +410,28 @@ public sealed class SettingsService : IDisposable
         }, null, System.Threading.Timeout.InfiniteTimeSpan, System.Threading.Timeout.InfiniteTimeSpan);
     }
 
+    /// <summary>Synchronize delivery preferences across result windows backed by separate services.</summary>
+    internal void RefreshResultDeliveryPreferences()
+    {
+        var current = LoadStatic(_settingsPath);
+        if (current is null)
+            return;
+        Settings.AutoCopyToClipboard = current.AutoCopyToClipboard;
+        Settings.AutoCopyExcludeImages = current.AutoCopyExcludeImages;
+        Settings.AutoCopyExcludeOcr = current.AutoCopyExcludeOcr;
+        Settings.AutoCopyExcludeRecording = current.AutoCopyExcludeRecording;
+        Settings.AutoCopyExcludeGif = current.AutoCopyExcludeGif;
+        Settings.AutoCopyExcludeScan = current.AutoCopyExcludeScan;
+        Settings.OcrAutoCopyToClipboard = current.OcrAutoCopyToClipboard;
+        Settings.OcrShowResultWindow = current.OcrShowResultWindow;
+        Settings.ScanShowResultWindow = current.ScanShowResultWindow;
+        Settings.AfterCapture = current.AfterCapture;
+        Settings.OpenEditorAfterCapture = current.OpenEditorAfterCapture;
+        Settings.OpenInSystemViewerAfterCapture = current.OpenInSystemViewerAfterCapture;
+        Settings.AutoCopySettingsSchemaVersion = current.AutoCopySettingsSchemaVersion;
+        Settings.ResultDeliverySchemaVersion = current.ResultDeliverySchemaVersion;
+    }
+
     /// <summary>Quick static load for read-only access (e.g. tooltips). Returns null on error.</summary>
     public static AppSettings? LoadStatic(string? settingsPath = null)
     {
