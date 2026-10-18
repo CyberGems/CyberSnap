@@ -196,6 +196,7 @@ public partial class App : Application
         s.ColorDetailIncludeHash = includeHash;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-color-detail", ex); }
+        SettingsService.PublishAutoCopyPreferences(s);
     }
 
     /// <summary>Persists the annotation editor's "auto-fit vs real size on open" preference.</summary>
@@ -682,30 +683,6 @@ public partial class App : Application
         }
 
         _widgetWindow?.RefreshCaptureCursorToggle();
-    }
-
-    // Settings → widget: push the global Auto-copy master onto the widget toggle.
-    public void SyncWidgetAutoCopyToggle()
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            _ = Dispatcher.BeginInvoke(SyncWidgetAutoCopyToggle);
-            return;
-        }
-
-        _widgetWindow?.RefreshAutoCopyToggle();
-    }
-
-    // Widget → Settings: when the widget's auto-copy master changes, refresh Settings controls.
-    public void SyncSettingsAutoCopyChecks()
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            _ = Dispatcher.BeginInvoke(SyncSettingsAutoCopyChecks);
-            return;
-        }
-
-        _settingsWindow?.RefreshAutoCopyChecks();
     }
 
     // Settings → widget: push the AlwaysOnTop value onto the widget window.

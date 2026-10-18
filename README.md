@@ -49,6 +49,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ### 📷 Capture
 - **Floating Capture Widget**: Always-available on-screen widget for one-click capture
+- **Independent Auto-Copy**: Choose clipboard delivery separately for screenshots, OCR, QR/barcodes, MP4, GIF, and colors. Image presets affect screenshots only. OCR, QR, and color tools keep their result window enabled when auto-copy is off.
 - **Flexible Capture Modes**: Area, active window, full screen, and scroll capture (long pages stitched into one image)
 - **Screen Recording**: Record to MP4 or GIF with a full video trimmer (filmstrip, waveform, precise cut)
 - **Precision Tools**: Crosshair guides, capture magnifier, and smart window detection

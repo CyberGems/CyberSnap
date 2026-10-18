@@ -110,7 +110,7 @@ public sealed class StandaloneOcrForm : Form
         _autoCopyToggle = WindowsMenuRenderer.Item(
             LocalizationService.Translate("Enable OCR auto-copy"));
         _autoCopyToggle.ToolTipText = LocalizationService.Translate(
-            "Copy recognized text to the clipboard. Showing the result window is a separate choice. Requires global Auto-copy.");
+            "Copy recognized text to the clipboard. Showing the result window is a separate choice.");
         _autoCopyToggle.Image = autoCopy ? FluentIcons.RenderBitmap("check",
             UiChrome.AccentColor, 20, true) : null;
         _autoCopyToggle.Click += (_, _) =>
@@ -147,14 +147,14 @@ public sealed class StandaloneOcrForm : Form
 
         WindowsMenuRenderer.NormalizeItemWidths(_contextMenu, minWidth: 260);
 
-        SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
+        SettingsService.AutoCopyPreferencesChanged += OnAutoCopyPreferencesChanged;
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopyToClipboardChanged;
+            SettingsService.AutoCopyPreferencesChanged -= OnAutoCopyPreferencesChanged;
             _processingAnimationTimer.Stop();
             _processingAnimationTimer.Dispose();
             if (IsHandleCreated)
@@ -465,16 +465,16 @@ public sealed class StandaloneOcrForm : Form
 
     private static void SetOcrAutoCopySetting(bool value)
     {
-        SettingsService.SetOcrAutoCopyToClipboard(value);
+        SettingsService.SetAutoCopy(AutoCopyKind.Ocr, value);
     }
 
-    private void OnOcrAutoCopyToClipboardChanged(bool value)
+    private void OnAutoCopyPreferencesChanged()
     {
         if (InvokeRequired)
         {
             try
             {
-                BeginInvoke(new Action(() => OnOcrAutoCopyToClipboardChanged(value)));
+                BeginInvoke(new Action(() => OnAutoCopyPreferencesChanged()));
             }
             catch (ObjectDisposedException) { }
             return;
@@ -482,7 +482,7 @@ public sealed class StandaloneOcrForm : Form
 
         if (_autoCopyToggle != null)
         {
-            _autoCopyToggle.Image = value
+            _autoCopyToggle.Image = GetOcrAutoCopySetting()
                 ? FluentIcons.RenderBitmap("check", UiChrome.AccentColor, 20, true)
                 : null;
         }

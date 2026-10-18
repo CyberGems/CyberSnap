@@ -1085,17 +1085,10 @@ public partial class SetupWizard : Window
                         s.AfterCapture,
                         s.OpenEditorAfterCapture,
                         s.OpenInSystemViewerAfterCapture,
-                        s.AutoCopyToClipboard,
-                        s.AutoCopyExcludeImages,
-                        s.AutoCopyExcludeOcr,
-                        s.AutoCopyExcludeRecording,
-                        s.AutoCopyExcludeGif,
-                        s.AutoCopyExcludeScan,
-                        s.OcrAutoCopyToClipboard);
+                        s.ImageAutoCopyToClipboard);
                     try
                     {
                         AfterCaptureOutcomeModel.ApplyToSettings(_wizOutcome, s);
-                        s.AutoCopySettingsSchemaVersion = AutoCopyPreferences.SchemaVersion;
                         _settingsService.Save();
                     }
                     catch
@@ -1104,13 +1097,7 @@ public partial class SetupWizard : Window
                         s.AfterCapture = previousSaving.AfterCapture;
                         s.OpenEditorAfterCapture = previousSaving.OpenEditorAfterCapture;
                         s.OpenInSystemViewerAfterCapture = previousSaving.OpenInSystemViewerAfterCapture;
-                        s.AutoCopyToClipboard = previousSaving.AutoCopyToClipboard;
-                        s.AutoCopyExcludeImages = previousSaving.AutoCopyExcludeImages;
-                        s.AutoCopyExcludeOcr = previousSaving.AutoCopyExcludeOcr;
-                        s.AutoCopyExcludeRecording = previousSaving.AutoCopyExcludeRecording;
-                        s.AutoCopyExcludeGif = previousSaving.AutoCopyExcludeGif;
-                        s.AutoCopyExcludeScan = previousSaving.AutoCopyExcludeScan;
-                        s.OcrAutoCopyToClipboard = previousSaving.OcrAutoCopyToClipboard;
+                        s.ImageAutoCopyToClipboard = previousSaving.ImageAutoCopyToClipboard;
                         LoadDefaults();
                         throw;
                     }

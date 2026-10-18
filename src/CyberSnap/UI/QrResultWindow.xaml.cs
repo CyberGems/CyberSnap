@@ -48,7 +48,7 @@ public partial class QrResultWindow : Window
         RefreshLocalization();
 
         RefreshDeliveryOptions();
-        SettingsService.AutoCopyToClipboardChanged += OnScanAutoCopySettingChanged;
+        SettingsService.AutoCopyPreferencesChanged += OnDeliveryPreferencesChanged;
 
         Activated += (_, _) => ApplyTheme();
 
@@ -240,22 +240,16 @@ public partial class QrResultWindow : Window
     {
         if (_suppressDeliveryOptions) return;
 
-        // Independent kind toggle: enabling also lifts the master (SetKindEnabled),
-        // so this switch never lies with a snap-back. Disabling only excludes scans.
         _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
-        Helpers.AutoCopyPreferences.SetKindEnabled(settings, Helpers.AutoCopyKind.Scan, AutoCopyCheck.IsChecked == true);
-        var plan = ResultDelivery.Normalize(
-            Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Scan),
-            settings.ScanShowResultWindow);
-        settings.ScanShowResultWindow = plan.ShowWindow;
+        ResultDelivery.SetCopyEnabled(settings, AutoCopyKind.Scan, AutoCopyCheck.IsChecked == true);
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("qr-result.auto-copy", ex); }
-        SettingsService.PublishAutoCopyState(settings);
+        SettingsService.PublishAutoCopyPreferences(settings);
         RefreshDeliveryOptions();
     }
 
-    private void OnScanAutoCopySettingChanged(bool _)
+    private void OnDeliveryPreferencesChanged()
     {
         if (!Dispatcher.CheckAccess())
         {
@@ -267,29 +261,15 @@ public partial class QrResultWindow : Window
 
     internal bool IsShowResultWindow => _settingsService.Settings.ScanShowResultWindow;
 
-    /// <summary>
-    /// Title-bar More menu counterpart of the auto-copy toggle. Interlocked
-    /// pair like the OCR and color picker windows: hiding the window while
-    /// auto-copy is off enables auto-copy instead of bricking both
-    /// deliveries. Returns the effective value so the menu checkmark and both
-    /// footer toggles stay in sync with published preferences.
-    /// </summary>
+    /// <summary>Change delivery for this tool and refresh its footer and title-bar menu.</summary>
     internal bool SetShowResultWindow(bool show)
     {
         _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
-        if (!show && !Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Scan))
-        {
-            Helpers.AutoCopyPreferences.SetKindEnabled(settings, Helpers.AutoCopyKind.Scan, true);
-            settings.ScanShowResultWindow = false;
-        }
-        else
-        {
-            settings.ScanShowResultWindow = show;
-        }
+        ResultDelivery.SetShowWindow(settings, AutoCopyKind.Scan, show);
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("qr-result.show-window", ex); }
-        SettingsService.PublishAutoCopyState(settings);
+        SettingsService.PublishAutoCopyPreferences(settings);
         RefreshDeliveryOptions();
         return settings.ScanShowResultWindow;
     }
@@ -312,7 +292,7 @@ public partial class QrResultWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        SettingsService.AutoCopyToClipboardChanged -= OnScanAutoCopySettingChanged;
+        SettingsService.AutoCopyPreferencesChanged -= OnDeliveryPreferencesChanged;
         base.OnClosed(e);
     }
 

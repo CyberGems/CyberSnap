@@ -28,7 +28,6 @@ public partial class CaptureWidgetWindow : Window
     private bool _isDragArmed;
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
     private bool _suppressCaptureCursorToggle; // reflecting ShowCursor into the toggle without re-saving/syncing
-    private bool _suppressAutoCopyToggle; // reflecting AutoCopyToClipboard into the toggle without re-saving/syncing
     private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
     private System.Windows.Media.Effects.Effect? _panelShadow; // soft shadow, applied only when expanded
     private System.Windows.Point _dragStartPoint;
@@ -49,7 +48,7 @@ public partial class CaptureWidgetWindow : Window
 
     // Layout constants
     private const double PanelWidth = 196;
-    private const double PanelHeight = 276; // room for Auto-copy + Send to Editor toggles
+    private const double PanelHeight = 246; // capture actions and cursor toggle
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
@@ -119,7 +118,6 @@ public partial class CaptureWidgetWindow : Window
         LoadIcons();
         RefreshLayout();
         UpdateCaptureCursorState();
-        UpdateAutoCopyState();
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
         RefreshUpdateBadge();
     }
@@ -342,7 +340,6 @@ public partial class CaptureWidgetWindow : Window
 
         ApplyTheme();
         UpdateCaptureCursorState();
-        UpdateAutoCopyState();
         LoadIcons();
         RefreshUpdateBadge();
 
@@ -428,16 +425,6 @@ public partial class CaptureWidgetWindow : Window
     // Settings → widget: re-read ShowCursor so the toggle matches the Capture tab checkbox.
     public void RefreshCaptureCursorToggle() => UpdateCaptureCursorState();
 
-    private void UpdateAutoCopyState()
-    {
-        _suppressAutoCopyToggle = true;
-        try { AutoCopyToggle.IsChecked = _settings.AutoCopyToClipboard; }
-        finally { _suppressAutoCopyToggle = false; }
-    }
-
-    // Settings → widget: re-read the global Auto-copy master.
-    public void RefreshAutoCopyToggle() => UpdateAutoCopyState();
-
     private const double WidgetToggleThumbTravel = 16.0;
     private const int WidgetToggleSlideMs = 140;
     private const int WidgetCapturePopMs = 120;
@@ -470,7 +457,6 @@ public partial class CaptureWidgetWindow : Window
 
     private void SnapToggleThumbs()
     {
-        AnimateToggleThumb(AutoCopyToggle, animate: false);
         AnimateToggleThumb(CaptureCursorToggle, animate: false);
     }
 
@@ -978,7 +964,6 @@ public partial class CaptureWidgetWindow : Window
         // Re-sync toggles from live settings (SettingsService.Settings may have been
         // replaced while the peek was collapsed).
         UpdateCaptureCursorState();
-        UpdateAutoCopyState();
         RefreshUpdateBadge();
 
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Arrow;
@@ -1627,21 +1612,6 @@ public partial class CaptureWidgetWindow : Window
         _settingsService.Save();
         _settingsService.FlushPendingWrites();
         ((App)System.Windows.Application.Current).SyncSettingsShowCursorCheck();
-    }
-
-    private void AutoCopyToggle_Changed(object sender, RoutedEventArgs e)
-    {
-        bool programmatic = _suppressAutoCopyToggle;
-        AnimateToggleThumb(AutoCopyToggle, animate: !programmatic && IsLoaded);
-        if (programmatic) return;
-
-        var enabled = AutoCopyToggle.IsChecked == true;
-        AutoCopyPreferences.SetMaster(_settings, enabled);
-        AutoCopyPreferences.SyncAfterCaptureCopyBits(_settings);
-        _settingsService.Save();
-        _settingsService.FlushPendingWrites();
-        SettingsService.PublishAutoCopyState(_settings);
-        ((App)System.Windows.Application.Current).SyncSettingsAutoCopyChecks();
     }
 
     private void WidgetBranding_Click(object sender, RoutedEventArgs e)

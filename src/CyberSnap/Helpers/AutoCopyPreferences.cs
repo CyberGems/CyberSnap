@@ -6,144 +6,58 @@ public enum AutoCopyKind
 {
     Image,
     Ocr,
-    /// <summary>Legacy alias for <see cref="Video"/> (MP4).</summary>
-    Recording,
     Video,
     Gif,
-    Scan
+    Scan,
+    Color
 }
 
-/// <summary>
-/// Global auto-copy master + per-kind exclusions.
-/// Effective rule: AutoCopyToClipboard &amp;&amp; !Exclude(kind).
-/// </summary>
+/// <summary>Independent clipboard preferences for each result type.</summary>
 public static class AutoCopyPreferences
 {
-    public const int SchemaVersion = 1;
-
-    public static bool ShouldCopy(AppSettings settings, AutoCopyKind kind)
+    public static bool ShouldCopy(AppSettings settings, AutoCopyKind kind) => kind switch
     {
-        if (settings is null || !settings.AutoCopyToClipboard)
-            return false;
+        AutoCopyKind.Image => settings.ImageAutoCopyToClipboard,
+        AutoCopyKind.Ocr => settings.OcrAutoCopyToClipboard,
+        AutoCopyKind.Video => settings.VideoAutoCopyToClipboard,
+        AutoCopyKind.Gif => settings.GifAutoCopyToClipboard,
+        AutoCopyKind.Scan => settings.ScanAutoCopyToClipboard,
+        AutoCopyKind.Color => settings.ColorDetailAutoCopy,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
 
-        return kind switch
-        {
-            AutoCopyKind.Image => !settings.AutoCopyExcludeImages,
-            AutoCopyKind.Ocr => !settings.AutoCopyExcludeOcr,
-            AutoCopyKind.Recording or AutoCopyKind.Video => !settings.AutoCopyExcludeRecording,
-            AutoCopyKind.Gif => !settings.AutoCopyExcludeGif,
-            AutoCopyKind.Scan => !settings.AutoCopyExcludeScan,
-            _ => false
-        };
-    }
-
-    public static bool IsExcluded(AppSettings settings, AutoCopyKind kind) =>
-        kind switch
-        {
-            AutoCopyKind.Image => settings.AutoCopyExcludeImages,
-            AutoCopyKind.Ocr => settings.AutoCopyExcludeOcr,
-            AutoCopyKind.Recording or AutoCopyKind.Video => settings.AutoCopyExcludeRecording,
-            AutoCopyKind.Gif => settings.AutoCopyExcludeGif,
-            AutoCopyKind.Scan => settings.AutoCopyExcludeScan,
-            _ => false
-        };
-
-    public static void SetMaster(AppSettings settings, bool enabled)
-    {
-        settings.AutoCopyToClipboard = enabled;
-        SyncLegacyAliases(settings);
-    }
-
-    public static void SetExcluded(AppSettings settings, AutoCopyKind kind, bool excluded)
+    public static void SetKindEnabled(AppSettings settings, AutoCopyKind kind, bool enabled)
     {
         switch (kind)
         {
             case AutoCopyKind.Image:
-                settings.AutoCopyExcludeImages = excluded;
+                settings.ImageAutoCopyToClipboard = enabled;
+                SyncImageCopyPreference(settings);
                 break;
             case AutoCopyKind.Ocr:
-                settings.AutoCopyExcludeOcr = excluded;
+                settings.OcrAutoCopyToClipboard = enabled;
                 break;
-            case AutoCopyKind.Recording:
             case AutoCopyKind.Video:
-                settings.AutoCopyExcludeRecording = excluded;
+                settings.VideoAutoCopyToClipboard = enabled;
                 break;
             case AutoCopyKind.Gif:
-                settings.AutoCopyExcludeGif = excluded;
+                settings.GifAutoCopyToClipboard = enabled;
                 break;
             case AutoCopyKind.Scan:
-                settings.AutoCopyExcludeScan = excluded;
+                settings.ScanAutoCopyToClipboard = enabled;
                 break;
-        }
-
-        SyncLegacyAliases(settings);
-    }
-
-    /// <summary>
-    /// Enables or disables auto-copy for a single kind without turning the global master off.
-    /// Enabling a kind turns the master on and clears that kind's exclusion.
-    /// Disabling a kind only sets its exclusion.
-    /// </summary>
-    public static void SetKindEnabled(AppSettings settings, AutoCopyKind kind, bool enabled)
-    {
-        if (enabled)
-        {
-            settings.AutoCopyToClipboard = true;
-            SetExcluded(settings, kind, excluded: false);
-        }
-        else
-        {
-            SetExcluded(settings, kind, excluded: true);
+            case AutoCopyKind.Color:
+                settings.ColorDetailAutoCopy = enabled;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(kind));
         }
     }
 
-    /// <summary>
-    /// One-time migration from AfterCapture.Copy + OcrAutoCopyToClipboard.
-    /// Recording historically always copied, so the master is turned on and kinds that
-    /// were previously off become exclusions.
-    /// </summary>
-    public static void MigrateIfNeeded(AppSettings settings)
-    {
-        if (settings.AutoCopySettingsSchemaVersion >= SchemaVersion)
-        {
-            SyncLegacyAliases(settings);
-            return;
-        }
-
-        var action = AfterCapturePreferences.NormalizeAction(settings.AfterCapture);
-        bool imageCopy = action is AfterCaptureAction.CopyToClipboard or AfterCaptureAction.PreviewAndCopy;
-        bool ocrCopy = settings.OcrAutoCopyToClipboard;
-
-        // Preserve prior schema-v0→v1 behavior for images/OCR; recordings default to excluded
-        // (auto-copy off) unless the user opts in from Video & GIF settings.
-        settings.AutoCopyToClipboard = true;
-        settings.AutoCopyExcludeImages = !imageCopy;
-        settings.AutoCopyExcludeOcr = !ocrCopy;
-        settings.AutoCopyExcludeRecording = true;
-        settings.AutoCopyExcludeGif = true;
-        settings.AutoCopySettingsSchemaVersion = SchemaVersion;
-
-        SyncLegacyAliases(settings);
-        SyncAfterCaptureCopyBits(settings);
-    }
-
-    /// <summary>
-    /// Keeps <see cref="AppSettings.OcrAutoCopyToClipboard"/> aligned for residual readers
-    /// and menus that still treat OCR copy as a single bool.
-    /// </summary>
-    public static void SyncLegacyAliases(AppSettings settings)
-    {
-        settings.OcrAutoCopyToClipboard = ShouldCopy(settings, AutoCopyKind.Ocr);
-    }
-
-    /// <summary>
-    /// Rewrites AfterCapture so its historical copy variants match the image auto-copy flag
-    /// (except System viewer, which never encoded copy in the enum).
-    /// </summary>
-    public static void SyncAfterCaptureCopyBits(AppSettings settings)
+    /// <summary>Keep the image destination's copy action aligned with its own preference.</summary>
+    public static void SyncImageCopyPreference(AppSettings settings)
     {
         var view = AfterCapturePreferences.FromSettingsDestinationOnly(settings);
-        bool copy = ShouldCopy(settings, AutoCopyKind.Image);
-        AfterCapturePreferences.ApplyDestinationAndLegacyCopy(view.WindowIndex, copy, settings);
+        AfterCapturePreferences.ApplyDestinationAndCopy(view.WindowIndex, settings.ImageAutoCopyToClipboard, settings);
     }
 }

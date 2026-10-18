@@ -9,22 +9,33 @@ namespace CyberSnap.Helpers;
 /// </summary>
 public static class ResultDelivery
 {
-    public const int SchemaVersion = 1;
-
     public readonly record struct Plan(bool Copy, bool ShowWindow);
 
-    /// <summary>
-    /// One-time map from the old exclusive behavior: auto-copy on meant the window
-    /// was skipped. Run after <see cref="AutoCopyPreferences.MigrateIfNeeded"/>.
-    /// </summary>
-    public static void MigrateIfNeeded(AppSettings settings)
+    public static void SetCopyEnabled(AppSettings settings, AutoCopyKind kind, bool enabled)
     {
-        if (settings.ResultDeliverySchemaVersion >= SchemaVersion)
-            return;
+        AutoCopyPreferences.SetKindEnabled(settings, kind, enabled);
+        if (!enabled)
+        {
+            switch (kind)
+            {
+                case AutoCopyKind.Ocr: settings.OcrShowResultWindow = true; break;
+                case AutoCopyKind.Scan: settings.ScanShowResultWindow = true; break;
+                case AutoCopyKind.Color: settings.ShowColorDetailWindow = true; break;
+            }
+        }
+    }
 
-        settings.OcrShowResultWindow = !AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr);
-        settings.ScanShowResultWindow = !AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Scan);
-        settings.ResultDeliverySchemaVersion = SchemaVersion;
+    public static void SetShowWindow(AppSettings settings, AutoCopyKind kind, bool show)
+    {
+        switch (kind)
+        {
+            case AutoCopyKind.Ocr: settings.OcrShowResultWindow = show; break;
+            case AutoCopyKind.Scan: settings.ScanShowResultWindow = show; break;
+            case AutoCopyKind.Color: settings.ShowColorDetailWindow = show; break;
+            default: throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+        if (!show)
+            AutoCopyPreferences.SetKindEnabled(settings, kind, true);
     }
 
     public static Plan Normalize(bool copy, bool showWindow)

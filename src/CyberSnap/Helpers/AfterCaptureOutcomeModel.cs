@@ -103,7 +103,7 @@ public static class AfterCaptureOutcomeModel
             systemViewer = false;
 
         bool save = settings.SaveToFile;
-        bool clipboard = settings.AutoCopyToClipboard;
+        bool clipboard = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Image);
         bool preview = settings.ShowCapturePreview;
         bool share = settings.AutoShareAfterCapture;
 
@@ -120,8 +120,7 @@ public static class AfterCaptureOutcomeModel
         settings.OpenInSystemViewerAfterCapture = state.SystemViewer
             && state.Destination != AfterCaptureDestination.Editor;
 
-        // Keep chip ↔ widget in lockstep: both drive the global Auto-copy master.
-        AutoCopyPreferences.SetMaster(settings, state.Clipboard);
+        AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Image, state.Clipboard);
 
         int windowIndex = state.Destination switch
         {
@@ -130,7 +129,7 @@ public static class AfterCaptureOutcomeModel
             _ => 2 // save only / no preview window
         };
 
-        AfterCapturePreferences.ApplyDestinationAndLegacyCopy(
+        AfterCapturePreferences.ApplyDestinationAndCopy(
             windowIndex,
             AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Image),
             settings);

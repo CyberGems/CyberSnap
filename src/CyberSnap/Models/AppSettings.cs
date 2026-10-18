@@ -254,50 +254,26 @@ public sealed class AppSettings
     public int OcrModelQuality { get; set; } // 0 = Fast (~1 MB), 1 = Standard (~4 MB)
     public string OcrDefaultTranslateFrom { get; set; } = "auto";
     public string OcrDefaultTranslateTo { get; set; } = "auto";
-    /// <summary>
-    /// Legacy OCR-only alias. Kept in sync with global auto-copy + OCR exclusion
-    /// (<see cref="Helpers.AutoCopyPreferences"/>). Prefer AutoCopy* settings for new code.
-    /// </summary>
+    /// <summary>Copy recognized OCR text automatically.</summary>
     public bool OcrAutoCopyToClipboard { get; set; }
 
-    /// <summary>
-    /// Global master: when true, finished results are copied unless the kind is excluded.
-    /// Covers screenshots, OCR text, and video/GIF recordings.
-    /// </summary>
-    public bool AutoCopyToClipboard { get; set; } = true;
+    /// <summary>Copy finished image captures automatically.</summary>
+    public bool ImageAutoCopyToClipboard { get; set; } = true;
 
-    /// <summary>When true, image captures are not auto-copied even if the global master is on.</summary>
-    public bool AutoCopyExcludeImages { get; set; }
+    /// <summary>Copy finished MP4 files automatically.</summary>
+    public bool VideoAutoCopyToClipboard { get; set; }
 
-    /// <summary>When true, OCR text is not auto-copied even if the global master is on.</summary>
-    public bool AutoCopyExcludeOcr { get; set; } = true;
+    /// <summary>Copy finished GIF files automatically.</summary>
+    public bool GifAutoCopyToClipboard { get; set; }
 
-    /// <summary>When true, MP4 video files are not auto-copied even if the global master is on.</summary>
-    public bool AutoCopyExcludeRecording { get; set; } = true;
-
-    /// <summary>When true, GIF files are not auto-copied even if the global master is on.</summary>
-    public bool AutoCopyExcludeGif { get; set; } = true;
-
-    /// <summary>When true, QR/barcode results are not auto-copied even if the global master is on.</summary>
-    public bool AutoCopyExcludeScan { get; set; } = true;
-
-    /// <summary>
-    /// 0 = not yet migrated from AfterCapture.Copy / OcrAutoCopyToClipboard.
-    /// 1 = global auto-copy schema.
-    /// </summary>
-    public int AutoCopySettingsSchemaVersion { get; set; }
+    /// <summary>Copy decoded QR and barcode content automatically.</summary>
+    public bool ScanAutoCopyToClipboard { get; set; }
 
     /// <summary>Open the OCR result window after recognition. Independent of auto-copy.</summary>
     public bool OcrShowResultWindow { get; set; } = true;
 
     /// <summary>Open the QR and barcode result window after a scan. Independent of auto-copy.</summary>
     public bool ScanShowResultWindow { get; set; } = true;
-
-    /// <summary>
-    /// 0 = not yet migrated from the exclusive copy-or-window behavior.
-    /// 1 = copy and result window are independent.
-    /// </summary>
-    public int ResultDeliverySchemaVersion { get; set; }
 
     public bool OcrTranslationPanelExpanded { get; set; }
     public string? GoogleTranslateApiKey { get; set; }

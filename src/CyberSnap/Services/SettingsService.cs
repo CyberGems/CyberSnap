@@ -29,99 +29,30 @@ public sealed class SettingsService : IDisposable
     public AppSettings Settings { get; internal set; } = new();
     public event Action<string>? SaveFailed;
 
-    public static event Action<bool>? OcrAutoCopyToClipboardChanged;
-    public static event Action<bool>? AutoCopyToClipboardChanged;
+    public static event Action? AutoCopyPreferencesChanged;
     public static event Action? SettingsChanged;
 
-    /// <summary>
-    /// Compatibility entry point for the OCR-specific toggle. It changes only the OCR
-    /// exclusion and never enables the global auto-copy master implicitly.
-    /// </summary>
-    public static void SetOcrAutoCopyToClipboard(bool value)
+    public static void SetAutoCopy(Helpers.AutoCopyKind kind, bool enabled) =>
+        MutateResultDelivery(settings => Helpers.ResultDelivery.SetCopyEnabled(settings, kind, enabled),
+            "settings.auto-copy.save");
+
+    public static void SetOcrShowResultWindow(bool show) =>
+        MutateResultDelivery(settings => Helpers.ResultDelivery.SetShowWindow(settings, Helpers.AutoCopyKind.Ocr, show),
+            "settings.ocr-show-window.save");
+
+    public static void SetScanShowResultWindow(bool show) =>
+        MutateResultDelivery(settings => Helpers.ResultDelivery.SetShowWindow(settings, Helpers.AutoCopyKind.Scan, show),
+            "settings.scan-show-window.save");
+
+    private static void MutateResultDelivery(Action<AppSettings> mutate, string errorCode)
     {
-        MutateAutoCopy(settings =>
-        {
-            Helpers.AutoCopyPreferences.SetExcluded(
-                settings,
-                Helpers.AutoCopyKind.Ocr,
-                excluded: !value);
-            KeepOcrResultVisible(settings);
-        }, "settings.ocr-auto-copy.static-save");
-
-        RaiseAutoCopyEventsFromCache();
-    }
-
-    public static void SetOcrShowResultWindow(bool show)
-    {
-        MutateAutoCopy(settings =>
-        {
-            var plan = Helpers.ResultDelivery.Normalize(
-                Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Ocr),
-                show);
-            settings.OcrShowResultWindow = plan.ShowWindow;
-        }, "settings.ocr-show-window.static-save");
-
-        RaiseAutoCopyEventsFromCache();
-    }
-
-    public static void SetScanShowResultWindow(bool show)
-    {
-        MutateAutoCopy(settings =>
-        {
-            var plan = Helpers.ResultDelivery.Normalize(
-                Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Scan),
-                show);
-            settings.ScanShowResultWindow = plan.ShowWindow;
-        }, "settings.scan-show-window.static-save");
-
-        RaiseAutoCopyEventsFromCache();
-    }
-
-    private static void KeepOcrResultVisible(AppSettings settings)
-    {
-        var plan = Helpers.ResultDelivery.Normalize(
-            Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Ocr),
-            settings.OcrShowResultWindow);
-        settings.OcrShowResultWindow = plan.ShowWindow;
-    }
-
-    public static void SetAutoCopyToClipboard(bool value)
-    {
-        MutateAutoCopy(settings =>
-        {
-            Helpers.AutoCopyPreferences.SetMaster(settings, value);
-            Helpers.AutoCopyPreferences.SyncAfterCaptureCopyBits(settings);
-        }, "settings.auto-copy.static-save");
-
-        RaiseAutoCopyEventsFromCache();
-    }
-
-    public static void SetAutoCopyExclude(Helpers.AutoCopyKind kind, bool excluded)
-    {
-        MutateAutoCopy(settings =>
-        {
-            Helpers.AutoCopyPreferences.SetExcluded(settings, kind, excluded);
-            if (kind == Helpers.AutoCopyKind.Image)
-                Helpers.AutoCopyPreferences.SyncAfterCaptureCopyBits(settings);
-        }, "settings.auto-copy-exclude.static-save");
-
-        RaiseAutoCopyEventsFromCache();
-    }
-
-    private static void MutateAutoCopy(Action<AppSettings> mutate, string errorCode)
-    {
-        lock (CacheGate)
-        {
-            if (s_cachedSettings != null)
-                mutate(s_cachedSettings);
-        }
-
         try
         {
-            var svc = new SettingsService();
-            svc.Load();
-            mutate(svc.Settings);
-            svc.Save();
+            using var service = new SettingsService();
+            service.Settings = LoadStatic() ?? service.Settings;
+            mutate(service.Settings);
+            service.Save();
+            PublishAutoCopyPreferences(service.Settings);
         }
         catch (Exception ex)
         {
@@ -129,54 +60,33 @@ public sealed class SettingsService : IDisposable
         }
     }
 
-    private static void RaiseAutoCopyEventsFromCache()
+    /// <summary>Publish independent clipboard/window preferences to open tools and Settings.</summary>
+    public static void PublishAutoCopyPreferences(AppSettings settings)
     {
-        AppSettings? snapshot;
-        lock (CacheGate)
-            snapshot = s_cachedSettings;
-
-        if (snapshot is null)
-            return;
-
-        AutoCopyToClipboardChanged?.Invoke(snapshot.AutoCopyToClipboard);
-        OcrAutoCopyToClipboardChanged?.Invoke(snapshot.OcrAutoCopyToClipboard);
-    }
-
-    /// <summary>
-    /// After the Settings window mutates auto-copy fields and saves, publish the
-    /// new state to the static cache and listeners (widget menus, OCR tools).
-    /// </summary>
-    public static void PublishAutoCopyState(AppSettings settings)
-    {
-        if (settings is null)
-            return;
-
-        Helpers.AutoCopyPreferences.SyncLegacyAliases(settings);
-
+        ArgumentNullException.ThrowIfNull(settings);
         lock (CacheGate)
         {
-            if (s_cachedSettings != null)
-            {
-                s_cachedSettings.AutoCopyToClipboard = settings.AutoCopyToClipboard;
-                s_cachedSettings.AutoCopyExcludeImages = settings.AutoCopyExcludeImages;
-                s_cachedSettings.AutoCopyExcludeOcr = settings.AutoCopyExcludeOcr;
-                s_cachedSettings.AutoCopyExcludeRecording = settings.AutoCopyExcludeRecording;
-                s_cachedSettings.AutoCopyExcludeGif = settings.AutoCopyExcludeGif;
-                s_cachedSettings.AutoCopyExcludeScan = settings.AutoCopyExcludeScan;
-                s_cachedSettings.OcrAutoCopyToClipboard = settings.OcrAutoCopyToClipboard;
-                s_cachedSettings.OcrShowResultWindow = settings.OcrShowResultWindow;
-                s_cachedSettings.ScanShowResultWindow = settings.ScanShowResultWindow;
-                s_cachedSettings.ResultDeliverySchemaVersion = settings.ResultDeliverySchemaVersion;
-                s_cachedSettings.AfterCapture = settings.AfterCapture;
-                s_cachedSettings.OpenEditorAfterCapture = settings.OpenEditorAfterCapture;
-                s_cachedSettings.OpenInSystemViewerAfterCapture = settings.OpenInSystemViewerAfterCapture;
-                s_cachedSettings.AutoCopySettingsSchemaVersion = settings.AutoCopySettingsSchemaVersion;
-            }
+            if (s_cachedSettings is not null)
+                CopyResultDeliveryPreferences(settings, s_cachedSettings);
         }
-
-        AutoCopyToClipboardChanged?.Invoke(settings.AutoCopyToClipboard);
-        OcrAutoCopyToClipboardChanged?.Invoke(settings.OcrAutoCopyToClipboard);
+        AutoCopyPreferencesChanged?.Invoke();
         SettingsChanged?.Invoke();
+    }
+
+    private static void CopyResultDeliveryPreferences(AppSettings source, AppSettings target)
+    {
+        target.ImageAutoCopyToClipboard = source.ImageAutoCopyToClipboard;
+        target.OcrAutoCopyToClipboard = source.OcrAutoCopyToClipboard;
+        target.ScanAutoCopyToClipboard = source.ScanAutoCopyToClipboard;
+        target.VideoAutoCopyToClipboard = source.VideoAutoCopyToClipboard;
+        target.GifAutoCopyToClipboard = source.GifAutoCopyToClipboard;
+        target.ColorDetailAutoCopy = source.ColorDetailAutoCopy;
+        target.OcrShowResultWindow = source.OcrShowResultWindow;
+        target.ScanShowResultWindow = source.ScanShowResultWindow;
+        target.ShowColorDetailWindow = source.ShowColorDetailWindow;
+        target.AfterCapture = source.AfterCapture;
+        target.OpenEditorAfterCapture = source.OpenEditorAfterCapture;
+        target.OpenInSystemViewerAfterCapture = source.OpenInSystemViewerAfterCapture;
     }
 
     public static void SetEditorExportFormat(int format)
@@ -416,20 +326,7 @@ public sealed class SettingsService : IDisposable
         var current = LoadStatic(_settingsPath);
         if (current is null)
             return;
-        Settings.AutoCopyToClipboard = current.AutoCopyToClipboard;
-        Settings.AutoCopyExcludeImages = current.AutoCopyExcludeImages;
-        Settings.AutoCopyExcludeOcr = current.AutoCopyExcludeOcr;
-        Settings.AutoCopyExcludeRecording = current.AutoCopyExcludeRecording;
-        Settings.AutoCopyExcludeGif = current.AutoCopyExcludeGif;
-        Settings.AutoCopyExcludeScan = current.AutoCopyExcludeScan;
-        Settings.OcrAutoCopyToClipboard = current.OcrAutoCopyToClipboard;
-        Settings.OcrShowResultWindow = current.OcrShowResultWindow;
-        Settings.ScanShowResultWindow = current.ScanShowResultWindow;
-        Settings.AfterCapture = current.AfterCapture;
-        Settings.OpenEditorAfterCapture = current.OpenEditorAfterCapture;
-        Settings.OpenInSystemViewerAfterCapture = current.OpenInSystemViewerAfterCapture;
-        Settings.AutoCopySettingsSchemaVersion = current.AutoCopySettingsSchemaVersion;
-        Settings.ResultDeliverySchemaVersion = current.ResultDeliverySchemaVersion;
+        CopyResultDeliveryPreferences(current, Settings);
     }
 
     /// <summary>Quick static load for read-only access (e.g. tooltips). Returns null on error.</summary>
@@ -693,8 +590,6 @@ public sealed class SettingsService : IDisposable
 
         NormalizeUnsafeModifierlessHotkeys(settings);
         NormalizeToastButtonLayout(settings.ToastButtons);
-        Helpers.AutoCopyPreferences.MigrateIfNeeded(settings);
-        Helpers.ResultDelivery.MigrateIfNeeded(settings);
         Helpers.AfterCapturePreferences.MigrateSystemViewerFlagIfNeeded(settings);
         Helpers.RecordingOutcomeModel.MigrateSaveMediaIfNeeded(settings);
 

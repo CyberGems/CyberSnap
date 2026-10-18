@@ -63,7 +63,7 @@ public static class AfterCapturePreferences
 
     public static void ApplyToSettings(AfterCaptureViewPreference preference, AppSettings settings)
     {
-        ApplyDestinationAndLegacyCopy(preference.WindowIndex, preference.Copy, settings);
+        ApplyDestinationAndCopy(preference.WindowIndex, preference.Copy, settings);
         settings.OpenInSystemViewerAfterCapture = preference.OpenSystemViewer
             && preference.WindowIndex != 1; // never stack viewer with editor
         AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Image, preference.Copy);
@@ -75,7 +75,7 @@ public static class AfterCapturePreferences
     public static void ApplyDestinationToSettings(int windowIndex, AppSettings settings)
     {
         bool copy = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Image);
-        ApplyDestinationAndLegacyCopy(windowIndex, copy, settings);
+        ApplyDestinationAndCopy(windowIndex, copy, settings);
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public static class AfterCapturePreferences
     /// Does not mutate AutoCopy* or OpenInSystemViewerAfterCapture.
     /// Never writes the legacy OpenInSystemViewer enum value.
     /// </summary>
-    public static void ApplyDestinationAndLegacyCopy(int windowIndex, bool copy, AppSettings settings)
+    public static void ApplyDestinationAndCopy(int windowIndex, bool copy, AppSettings settings)
     {
         (AfterCaptureAction action, bool openEditor) = windowIndex switch
         {

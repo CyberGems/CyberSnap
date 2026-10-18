@@ -18,7 +18,7 @@ using ZXing;
 // Run on Windows: dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release
 // Uses real WPF windows and temporary settings, without starting tray/IPC/hotkeys,
 // calling translation providers, or changing the clipboard.
-internal static class Program
+internal static partial class Program
 {
     private static int _checks;
 
@@ -47,14 +47,14 @@ internal static class Program
         string settingsPath = Path.Combine(temp, "settings.json");
         using var settings = new SettingsService(settingsPath);
         settings.Settings.InterfaceLanguage = "en";
-        settings.Settings.AutoCopySettingsSchemaVersion = AutoCopyPreferences.SchemaVersion;
-        settings.Settings.ResultDeliverySchemaVersion = ResultDelivery.SchemaVersion;
         settings.Save();
         try
         {
+            CheckIndependentAutoCopy(temp);
             CheckOcr(settings, args.FirstOrDefault());
             CheckQr(settings, args.FirstOrDefault());
             CheckFooters(settings, settingsPath, args.FirstOrDefault());
+            CheckWidget(settings, args.FirstOrDefault());
             Console.WriteLine($"PASS: {_checks} result-tab integration checks.");
             return 0;
         }
@@ -298,15 +298,14 @@ internal static class Program
         external.Load();
         bool savedShowWindow = kind == AutoCopyKind.Ocr ? external.Settings.OcrShowResultWindow : external.Settings.ScanShowResultWindow;
         Assert(!savedShowWindow && AutoCopyPreferences.ShouldCopy(external.Settings, kind), "delivery choices persist to the settings file");
-        external.Settings.AutoCopyToClipboard = false;
-        external.Settings.AutoCopyExcludeImages = true;
-        external.Settings.OcrShowResultWindow = true;
-        external.Settings.ScanShowResultWindow = true;
+        ResultDelivery.SetCopyEnabled(external.Settings, kind, false);
+        external.Settings.ImageAutoCopyToClipboard = false;
+        var otherKinds = CopyFlags(external.Settings);
         external.Save();
-        SettingsService.PublishAutoCopyState(external.Settings);
+        SettingsService.PublishAutoCopyPreferences(external.Settings);
         Assert(auto.IsChecked == false && show.IsChecked == true, "footer refreshes preferences changed by a separate service");
         auto.IsChecked = true;
-        Assert(settings.Settings.AutoCopyToClipboard && settings.Settings.AutoCopyExcludeImages, "enabling auto-copy lifts the master without overwriting other exclusions");
+        AssertOnlyCopyChanged(otherKinds, settings.Settings, kind, true, "footer enables only its own auto-copy preference");
         external.FlushPendingWrites();
         settings.FlushPendingWrites();
     }

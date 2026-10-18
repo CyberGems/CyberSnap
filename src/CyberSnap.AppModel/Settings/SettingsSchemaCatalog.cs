@@ -37,9 +37,9 @@ public static class SettingsSchemaCatalog
                     "What happens when an image capture is confirmed.",
                     [
                         new SettingDefinition("after_capture", "When finished", SettingsValueKind.Choice, "Steps that run after an image capture is confirmed.", "AfterCapture"),
-                        new SettingDefinition("auto_copy", "Auto-copy results", SettingsValueKind.Toggle, "Master switch for copying results to the clipboard.", "AutoCopyToClipboard"),
-                        new SettingDefinition("auto_copy_exclude_images", "Don't auto-copy screenshots", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy image captures.", "AutoCopyExcludeImages"),
-                        new SettingDefinition("auto_copy_exclude_ocr", "Don't auto-copy OCR text", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy OCR text.", "AutoCopyExcludeOcr"),
+                        new SettingDefinition("image_auto_copy", "Auto-copy screenshots", SettingsValueKind.Toggle, "Copy each finished screenshot to the clipboard.", "ImageAutoCopyToClipboard"),
+                        new SettingDefinition("ocr_auto_copy", "Auto-copy OCR text", SettingsValueKind.Toggle, "Copy recognized text to the clipboard.", "OcrAutoCopyToClipboard"),
+                        new SettingDefinition("scan_auto_copy", "Auto-copy QR/barcode results", SettingsValueKind.Toggle, "Copy decoded QR and barcode content to the clipboard.", "ScanAutoCopyToClipboard"),
                     ]),
                 new SettingsSectionDefinition(
                     "standalone_ruler",
@@ -103,7 +103,7 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("recording_fps", "Video FPS", SettingsValueKind.Number, "Frames per second for MP4 recordings.", "RecordingFps"),
                         new SettingDefinition("video_show_cursor", "Show cursor in video", SettingsValueKind.Toggle, "Include the mouse pointer in MP4 recordings.", "VideoShowCursor"),
                         new SettingDefinition("open_video_trimmer", "Open trimmer after video", SettingsValueKind.Toggle, "Open the video trimmer when an MP4 recording finishes.", "OpenVideoTrimmerAfterCapture"),
-                        new SettingDefinition("auto_copy_exclude_recording", "Auto-copy video", SettingsValueKind.Toggle, "Copy the finished MP4 to the clipboard.", "AutoCopyExcludeRecording"),
+                        new SettingDefinition("video_auto_copy", "Auto-copy video", SettingsValueKind.Toggle, "Copy the finished MP4 to the clipboard.", "VideoAutoCopyToClipboard"),
                         new SettingDefinition("record_microphone", "Record microphone", SettingsValueKind.Toggle, "Capture microphone input during MP4 recordings.", "RecordMicrophone"),
                         new SettingDefinition("record_desktop_audio", "Record desktop audio", SettingsValueKind.Toggle, "Capture system audio during MP4 recordings.", "RecordDesktopAudio"),
                     ]),
@@ -115,7 +115,7 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("gif_fps", "GIF FPS", SettingsValueKind.Number, "Frames per second for GIF recordings (15 or 30).", "GifFps"),
                         new SettingDefinition("gif_show_cursor", "Show cursor in GIF", SettingsValueKind.Toggle, "Include the mouse pointer in GIF recordings.", "GifShowCursor"),
                         new SettingDefinition("open_gif_trimmer", "Open trimmer after GIF", SettingsValueKind.Toggle, "Open the trimmer when a GIF recording finishes.", "OpenGifTrimmerAfterCapture"),
-                        new SettingDefinition("auto_copy_exclude_gif", "Auto-copy GIF", SettingsValueKind.Toggle, "Copy the finished GIF to the clipboard.", "AutoCopyExcludeGif"),
+                        new SettingDefinition("gif_auto_copy", "Auto-copy GIF", SettingsValueKind.Toggle, "Copy the finished GIF to the clipboard.", "GifAutoCopyToClipboard"),
                     ]),
             ]),
         new(

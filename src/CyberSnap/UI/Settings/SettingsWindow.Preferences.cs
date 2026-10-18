@@ -1224,59 +1224,52 @@ public partial class SettingsWindow
         finally { _suppressGeneralPreferenceChange = false; }
     }
 
-    // ── Global auto-copy exclusions (master lives in after-capture outcome pills) ─
+    // Independent clipboard preferences by result type.
 
-    private void AutoCopyExcludeImagesCheck_Changed(object sender, RoutedEventArgs e)
+    private void AutoCopyImagesCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange || _suppressAutoCopyPreferenceChange) return;
 
-        var previous = _settingsService.Settings.AutoCopyExcludeImages;
-        var selected = AutoCopyExcludeImagesCheck.IsChecked == true;
+        var previous = _settingsService.Settings.ImageAutoCopyToClipboard;
+        var selected = AutoCopyImagesCheck.IsChecked == true;
         UpdateCaptureSavePreference(
-            "settings.auto-copy-exclude-images",
-            "Don't auto-copy screenshots",
+            "settings.auto-copy-images",
+            "Auto-copy screenshots",
             previous,
             selected,
             value =>
             {
-                AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Image, value);
-                AutoCopyPreferences.SyncAfterCaptureCopyBits(_settingsService.Settings);
+                AutoCopyPreferences.SetKindEnabled(_settingsService.Settings, AutoCopyKind.Image, value);
             },
-            value => AutoCopyExcludeImagesCheck.IsChecked = value,
+            value => AutoCopyImagesCheck.IsChecked = value,
             () =>
             {
                 RefreshAfterCaptureOutcomeEditor();
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+                SettingsService.PublishAutoCopyPreferences(_settingsService.Settings);
             });
     }
 
-    private void AutoCopyExcludeScanCheck_Changed(object sender, RoutedEventArgs e)
+    private void AutoCopyScanCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange || _suppressAutoCopyPreferenceChange) return;
 
-        var previous = _settingsService.Settings.AutoCopyExcludeScan;
-        var selected = AutoCopyExcludeScanCheck.IsChecked == true;
+        var previous = _settingsService.Settings.ScanAutoCopyToClipboard;
+        var selected = AutoCopyScanCheck.IsChecked == true;
         UpdateCaptureSavePreference(
-            "settings.auto-copy-exclude-scan",
-            "Don't auto-copy QR/barcode results",
+            "settings.auto-copy-scan",
+            "Auto-copy QR/barcode results",
             previous,
             selected,
             value =>
             {
-                AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Scan, value);
-                var plan = ResultDelivery.Normalize(
-                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Scan),
-                    _settingsService.Settings.ScanShowResultWindow);
-                _settingsService.Settings.ScanShowResultWindow = plan.ShowWindow;
+                ResultDelivery.SetCopyEnabled(_settingsService.Settings, AutoCopyKind.Scan, value);
             },
-            value => AutoCopyExcludeScanCheck.IsChecked = value,
+            value => AutoCopyScanCheck.IsChecked = value,
             () =>
             {
                 if (ScanShowResultWindowCheck != null)
                     ScanShowResultWindowCheck.IsChecked = _settingsService.Settings.ScanShowResultWindow;
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+                SettingsService.PublishAutoCopyPreferences(_settingsService.Settings);
             });
     }
 
@@ -1293,10 +1286,7 @@ public partial class SettingsWindow
             selected,
             value =>
             {
-                var plan = ResultDelivery.Normalize(
-                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Scan),
-                    value);
-                _settingsService.Settings.ScanShowResultWindow = plan.ShowWindow;
+                ResultDelivery.SetShowWindow(_settingsService.Settings, AutoCopyKind.Scan, value);
             },
             value => ScanShowResultWindowCheck.IsChecked = value,
             () =>
@@ -1307,7 +1297,7 @@ public partial class SettingsWindow
                     ScanShowResultWindowCheck.IsChecked = _settingsService.Settings.ScanShowResultWindow;
                     _suppressCaptureSavePreferenceChange = false;
                 }
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                SettingsService.PublishAutoCopyPreferences(_settingsService.Settings);
             });
     }
 
@@ -1319,38 +1309,17 @@ public partial class SettingsWindow
             return;
         }
 
-        // Re-read from disk cache when the change may have come from the widget / OCR menu.
-        try
-        {
-            var fresh = SettingsService.LoadStatic();
-            if (fresh != null)
-            {
-                _settingsService.Settings.AutoCopyToClipboard = fresh.AutoCopyToClipboard;
-                _settingsService.Settings.AutoCopyExcludeImages = fresh.AutoCopyExcludeImages;
-                _settingsService.Settings.AutoCopyExcludeOcr = fresh.AutoCopyExcludeOcr;
-                _settingsService.Settings.AutoCopyExcludeRecording = fresh.AutoCopyExcludeRecording;
-                _settingsService.Settings.AutoCopyExcludeGif = fresh.AutoCopyExcludeGif;
-                _settingsService.Settings.AutoCopyExcludeScan = fresh.AutoCopyExcludeScan;
-                _settingsService.Settings.OcrAutoCopyToClipboard = fresh.OcrAutoCopyToClipboard;
-                _settingsService.Settings.OcrShowResultWindow = fresh.OcrShowResultWindow;
-                _settingsService.Settings.ScanShowResultWindow = fresh.ScanShowResultWindow;
-                _settingsService.Settings.AfterCapture = fresh.AfterCapture;
-            }
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("settings.refresh-auto-copy", ex.Message, ex);
-        }
+        _settingsService.RefreshResultDeliveryPreferences();
 
         ApplyAutoCopyControlsFromSettings(_settingsService.Settings);
         RefreshAfterCaptureOutcomeEditor();
     }
 
-    private void OnAutoCopyToClipboardChanged(bool value)
+    private void OnAutoCopyPreferencesChanged()
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.BeginInvoke(new Action(() => OnAutoCopyToClipboardChanged(value)));
+            Dispatcher.BeginInvoke(new Action(() => OnAutoCopyPreferencesChanged()));
             return;
         }
 
@@ -1366,17 +1335,16 @@ public partial class SettingsWindow
         _suppressRecordingPreferenceChange = true;
         try
         {
-            if (AutoCopyExcludeImagesCheck != null)
-                AutoCopyExcludeImagesCheck.IsChecked = s.AutoCopyExcludeImages;
+            if (AutoCopyImagesCheck != null)
+                AutoCopyImagesCheck.IsChecked = s.ImageAutoCopyToClipboard;
             if (AutoCopyOcrCheck != null)
                 AutoCopyOcrCheck.IsChecked = AutoCopyPreferences.ShouldCopy(s, AutoCopyKind.Ocr);
             if (OcrShowResultWindowCheck != null)
                 OcrShowResultWindowCheck.IsChecked = ResultDelivery.ForOcr(s).ShowWindow;
-            if (AutoCopyExcludeScanCheck != null)
-                AutoCopyExcludeScanCheck.IsChecked = s.AutoCopyExcludeScan;
+            if (AutoCopyScanCheck != null)
+                AutoCopyScanCheck.IsChecked = s.ScanAutoCopyToClipboard;
             if (ScanShowResultWindowCheck != null)
                 ScanShowResultWindowCheck.IsChecked = ResultDelivery.ForScan(s).ShowWindow;
-            UpdateAutoCopyExcludeEnabledState();
             AfterCaptureOutcomeEditor?.LoadFromSettings(s);
             if (AfterCaptureOutcomeEditor != null)
                 AfterCapturePresetSelector?.Refresh(AfterCaptureOutcomeEditor.State);
@@ -1391,27 +1359,6 @@ public partial class SettingsWindow
             _suppressOcrPreferenceChange = false;
             _suppressRecordingPreferenceChange = false;
         }
-    }
-
-    private void UpdateAutoCopyExcludeEnabledState()
-    {
-        bool masterOn = _settingsService.Settings.AutoCopyToClipboard;
-        double opacity = masterOn ? 1.0 : 0.45;
-
-        void Apply(FrameworkElement? row, System.Windows.Controls.CheckBox? check)
-        {
-            if (row != null)
-            {
-                row.IsEnabled = masterOn;
-                row.Opacity = opacity;
-            }
-            if (check != null)
-                check.IsEnabled = masterOn;
-        }
-
-        Apply(AutoCopyExcludeImagesRow, AutoCopyExcludeImagesCheck);
-        Apply(AutoCopyOcrRow, AutoCopyOcrCheck);
-        Apply(AutoCopyExcludeScanRow, AutoCopyExcludeScanCheck);
     }
 
     private void WidgetCaptureCursorCheck_Changed(object sender, RoutedEventArgs e)

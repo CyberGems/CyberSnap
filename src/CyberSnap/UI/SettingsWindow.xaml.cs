@@ -126,8 +126,7 @@ public partial class SettingsWindow : Window
         if (GifOutcomeEditor != null)
             GifOutcomeEditor.OutcomeChanged += GifOutcomeEditor_OutcomeChanged;
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
-        SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
-        SettingsService.AutoCopyToClipboardChanged += OnAutoCopyToClipboardChanged;
+        SettingsService.AutoCopyPreferencesChanged += OnAutoCopyPreferencesChanged;
         Activated += (_, _) =>
         {
             ApplyThemeColors();
@@ -136,8 +135,7 @@ public partial class SettingsWindow : Window
         Closed += (_, _) =>
         {
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
-            SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopyToClipboardChanged;
-            SettingsService.AutoCopyToClipboardChanged -= OnAutoCopyToClipboardChanged;
+            SettingsService.AutoCopyPreferencesChanged -= OnAutoCopyPreferencesChanged;
             SaveWindowBounds();
         };
     }
@@ -426,7 +424,6 @@ public partial class SettingsWindow : Window
                 AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
                 // If rollback, restore settings snapshot already in _settingsService from setValue(previous).
                 SyncSavingSettingsAvailability();
-                // Auto-copy master can affect video/GIF clipboard pills.
                 RefreshRecordingOutcomeEditors();
                 RefreshCapturePreviewTimeoutVisibility();
                 RefreshEditorPreviewState();
@@ -436,8 +433,7 @@ public partial class SettingsWindow : Window
                 SyncSavingSettingsAvailability();
                 RefreshRecordingOutcomeEditors();
                 RefreshCapturePreviewTimeoutVisibility();
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+                SettingsService.PublishAutoCopyPreferences(_settingsService.Settings);
                 RefreshEditorPreviewState();
             });
     }
@@ -478,10 +474,8 @@ public partial class SettingsWindow : Window
             _ =>
             {
                 SyncSavingSettingsAvailability();
-                // Clipboard may turn the auto-copy master on — refresh image pills.
                 AfterCaptureOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+                SettingsService.PublishAutoCopyPreferences(_settingsService.Settings);
                 RefreshEditorPreviewState();
             });
     }

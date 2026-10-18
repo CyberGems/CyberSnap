@@ -912,17 +912,19 @@ public partial class SettingsWindow
             "pintrayicon"               => TrayPinRow,
             "setupwizard"               => SetupWizardRow,
             "aftercapture"              => AfterCaptureOutcomeEditor,
-            // General / Behavior after captures
-            "autocopytoclipboard"       => AfterCaptureOutcomeEditor,
-            "autocopy"                  => AfterCaptureOutcomeEditor,
-            "autocopyexcludeimages"     => AutoCopyExcludeImagesCheck,
-            "autocopyocr"               => AutoCopyOcrCheck,
+            // Clipboard preferences by result type.
+            "imageautocopytoclipboard"  => AutoCopyImagesCheck,
+            "imageautocopy"             => AutoCopyImagesCheck,
+            "ocrautocopytoclipboard"    => AutoCopyOcrCheck,
+            "ocrautocopy"               => AutoCopyOcrCheck,
             "ocrshowresultwindow"       => OcrShowResultWindowCheck,
             "scanshowresultwindow"      => ScanShowResultWindowCheck,
-            "autocopyexcludeocr"        => AutoCopyOcrCheck, // legacy search term
-            "autocopyexcludescan"       => AutoCopyExcludeScanCheck,
-            "autocopyexcluderecording"  => VideoOutcomeEditor,
-            "autocopyexcludegif"        => GifOutcomeEditor,
+            "scanautocopytoclipboard"   => AutoCopyScanCheck,
+            "scanautocopy"              => AutoCopyScanCheck,
+            "videoautocopytoclipboard"  => VideoOutcomeEditor,
+            "videoautocopy"             => VideoOutcomeEditor,
+            "gifautocopytoclipboard"    => GifOutcomeEditor,
+            "gifautocopy"               => GifOutcomeEditor,
             // General / Saving (SaveToFile is toggled via Capture after-capture pill)
             "savetofile"                => AfterCaptureOutcomeEditor,
             "savedirectory"             => SaveDirBox,

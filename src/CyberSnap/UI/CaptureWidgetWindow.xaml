@@ -343,28 +343,9 @@
                     <Grid Grid.Row="3" Margin="0,2,0,0">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="0,0,0,6" ToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish.">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Auto-copy" FontSize="11" Foreground="{DynamicResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
-                                       Margin="0,0,8,0" VerticalAlignment="Center"
-                                       ToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."
-                                       Services:LocalizationService.SourceText="Auto-copy"
-                                       Services:LocalizationService.SourceToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."/>
-                            <ToggleButton x:Name="AutoCopyToggle" Grid.Column="1" Style="{StaticResource WidgetToggleSwitch}"
-                                          Checked="AutoCopyToggle_Changed" Unchecked="AutoCopyToggle_Changed"
-                                          ToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."
-                                          Services:LocalizationService.SourceToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."
-                                          AutomationProperties.Name="Auto-copy"
-                                          AutomationProperties.HelpText="Copy captures, OCR text, and recordings to the clipboard when they finish."/>
-                        </Grid>
-
-                        <Grid Grid.Row="1" Margin="0,0,0,2"
+                        <Grid Grid.Row="0" Margin="0,0,0,2"
                               ToolTip="Include the mouse pointer in still captures"
                               Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures">
                             <Grid.ColumnDefinitions>

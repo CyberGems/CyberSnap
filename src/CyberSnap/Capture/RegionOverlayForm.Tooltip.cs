@@ -492,7 +492,7 @@ public sealed partial class RegionOverlayForm
         if (IsImageAutoCopyEnabled())
         {
             text += "\n"
-                + LocalizationService.Translate("Auto-copy is on — image captures already go to the clipboard")
+                + LocalizationService.Translate("Screenshot auto-copy is on: images already go to the clipboard")
                 + "\n"
                 + LocalizationService.Translate("Click to copy again");
         }

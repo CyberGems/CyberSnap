@@ -49,6 +49,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 
 ### 📷 Captura
 - **Widget de captura flotante**: widget siempre disponible en pantalla para capturar con un clic
+- **Autocopia independiente**: elige por separado qué enviar al portapapeles: capturas, OCR, QR/códigos de barras, MP4, GIF y colores. Los presets de imágenes solo afectan a las capturas. OCR, QR y el selector de color mantienen su ventana de resultados habilitada al desactivar la autocopia.
 - **Modos de captura flexibles**: área, ventana activa, pantalla completa y captura con desplazamiento (páginas largas cosidas en una sola imagen)
 - **Grabación de pantalla**: graba en MP4 o GIF con un recortador de vídeo completo (tira de fotogramas, forma de onda, corte preciso)
 - **Herramientas de precisión**: guías de cruz, lupa de captura y detección inteligente de ventanas

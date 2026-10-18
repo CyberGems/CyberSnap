@@ -67,8 +67,7 @@ public partial class OcrResultWindow : Window
         UpdateCharCount();
 
         RefreshDeliveryOptions();
-        SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopySettingChanged;
-        SettingsService.AutoCopyToClipboardChanged += OnOcrAutoCopySettingChanged;
+        SettingsService.AutoCopyPreferencesChanged += OnDeliveryPreferencesChanged;
 
         // Dominance swap: hovering the ghost Copy hands it the cyan voice while
         // the accent CTA falls back to plain text. The CTA side is restored with
@@ -551,46 +550,26 @@ public partial class OcrResultWindow : Window
     {
         if (_suppressDeliveryOptions) return;
 
-        // Independent kind toggle: enabling also lifts the master (SetKindEnabled),
-        // so this switch never lies with a snap-back. Disabling only excludes OCR.
         _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
-        AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Ocr, AutoCopyCheck.IsChecked == true);
-        var plan = ResultDelivery.Normalize(
-            AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr),
-            settings.OcrShowResultWindow);
-        settings.OcrShowResultWindow = plan.ShowWindow;
+        ResultDelivery.SetCopyEnabled(settings, AutoCopyKind.Ocr, AutoCopyCheck.IsChecked == true);
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("ocr-result.auto-copy", ex); }
-        SettingsService.PublishAutoCopyState(settings);
+        SettingsService.PublishAutoCopyPreferences(settings);
         RefreshDeliveryOptions();
     }
 
     internal bool IsShowResultWindow => _settingsService.Settings.OcrShowResultWindow;
 
-    /// <summary>
-    /// Title-bar More menu counterpart of the auto-copy toggle. Interlocked
-    /// pair like the color picker: hiding the window while auto-copy is off
-    /// enables auto-copy instead of bricking both deliveries (enabling a kind
-    /// also lifts the master). Returns the effective value so the menu
-    /// checkmark stays in sync. Both footer toggles refresh from published preferences.
-    /// </summary>
+    /// <summary>Change delivery for this tool and refresh its footer and title-bar menu.</summary>
     internal bool SetShowResultWindow(bool show)
     {
         _settingsService.RefreshResultDeliveryPreferences();
         var settings = _settingsService.Settings;
-        if (!show && !AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Ocr))
-        {
-            AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Ocr, true);
-            settings.OcrShowResultWindow = false;
-        }
-        else
-        {
-            settings.OcrShowResultWindow = show;
-        }
+        ResultDelivery.SetShowWindow(settings, AutoCopyKind.Ocr, show);
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("ocr-result.show-window", ex); }
-        SettingsService.PublishAutoCopyState(settings);
+        SettingsService.PublishAutoCopyPreferences(settings);
         RefreshDeliveryOptions();
         return settings.OcrShowResultWindow;
     }
@@ -611,7 +590,7 @@ public partial class OcrResultWindow : Window
         }
     }
 
-    private void OnOcrAutoCopySettingChanged(bool _)
+    private void OnDeliveryPreferencesChanged()
     {
         if (!Dispatcher.CheckAccess())
         {
@@ -624,8 +603,7 @@ public partial class OcrResultWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _lifecycle.TryBeginClose();
-        SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopySettingChanged;
-        SettingsService.AutoCopyToClipboardChanged -= OnOcrAutoCopySettingChanged;
+        SettingsService.AutoCopyPreferencesChanged -= OnDeliveryPreferencesChanged;
         StopTranslateTimer();
         if (_ocrTextScrollViewer != null)
             _ocrTextScrollViewer.ScrollChanged -= OcrTextScrollViewer_ScrollChanged;

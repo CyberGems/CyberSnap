@@ -34,7 +34,6 @@ public partial class SettingsWindow
             if (OcrShowResultWindowCheck != null)
                 OcrShowResultWindowCheck.IsChecked =
                     ResultDelivery.ForOcr(_settingsService.Settings).ShowWindow;
-            UpdateAutoCopyExcludeEnabledState();
             GoogleApiKeyBox.Password = _settingsService.Settings.GoogleTranslateApiKey ?? "";
         }
         finally
@@ -139,14 +138,7 @@ public partial class SettingsWindow
             selected,
             value =>
             {
-                AutoCopyPreferences.SetExcluded(
-                    _settingsService.Settings,
-                    AutoCopyKind.Ocr,
-                    excluded: !value);
-                var plan = ResultDelivery.Normalize(
-                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Ocr),
-                    _settingsService.Settings.OcrShowResultWindow);
-                _settingsService.Settings.OcrShowResultWindow = plan.ShowWindow;
+                ResultDelivery.SetCopyEnabled(_settingsService.Settings, AutoCopyKind.Ocr, value);
             },
             value => AutoCopyOcrCheck.IsChecked = value,
             SetOcrPreferenceStatus,
@@ -154,8 +146,7 @@ public partial class SettingsWindow
             {
                 if (OcrShowResultWindowCheck != null)
                     OcrShowResultWindowCheck.IsChecked = _settingsService.Settings.OcrShowResultWindow;
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+                SettingsService.PublishAutoCopyPreferences(_settingsService.Settings);
             });
     }
 
@@ -172,10 +163,7 @@ public partial class SettingsWindow
             selected,
             value =>
             {
-                var plan = ResultDelivery.Normalize(
-                    AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Ocr),
-                    value);
-                _settingsService.Settings.OcrShowResultWindow = plan.ShowWindow;
+                ResultDelivery.SetShowWindow(_settingsService.Settings, AutoCopyKind.Ocr, value);
             },
             value => OcrShowResultWindowCheck.IsChecked = value,
             SetOcrPreferenceStatus,
@@ -187,6 +175,7 @@ public partial class SettingsWindow
                     OcrShowResultWindowCheck.IsChecked = _settingsService.Settings.OcrShowResultWindow;
                     _suppressOcrPreferenceChange = false;
                 }
+                SettingsService.PublishAutoCopyPreferences(_settingsService.Settings);
             });
     }
 
@@ -499,15 +488,5 @@ public partial class SettingsWindow
         combo.IsDropDownOpen = true;
     }
 
-    private void OnOcrAutoCopyToClipboardChanged(bool value)
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.BeginInvoke(new Action(() => OnOcrAutoCopyToClipboardChanged(value)));
-            return;
-        }
 
-        // Legacy event: refresh full auto-copy UI (master + exclusions).
-        RefreshAutoCopyChecks();
-    }
 }
