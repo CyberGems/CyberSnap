@@ -17,7 +17,7 @@ internal static partial class Program
     {
         [AutoCopyKind.Image] = "Image capture", [AutoCopyKind.Scroll] = "Scrolling capture",
         [AutoCopyKind.Video] = "Video (MP4)", [AutoCopyKind.Gif] = "GIF", [AutoCopyKind.Ocr] = "OCR",
-        [AutoCopyKind.Color] = "Color picker", [AutoCopyKind.Scan] = "Scan QR / Barcode"
+        [AutoCopyKind.Color] = "Color picker", [AutoCopyKind.Scan] = "QR and Barcodes"
     };
 
     private static bool[] DeliveryWindowFlags(AppSettings settings) =>

@@ -330,8 +330,8 @@
                                     AutomationProperties.Name="Color picker">
                                 <Image x:Name="ColorPickerIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="Scan QR / Barcode"
-                                    AutomationProperties.Name="Scan QR or barcode">
+                            <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="QR and Barcodes"
+                                    AutomationProperties.Name="QR and Barcodes">
                                 <Image x:Name="QrScanIcon" Width="22" Height="22"/>
                             </Button>
                             <Button Style="{StaticResource WidgetActionButton}" Click="Ruler_Click" ToolTip="Ruler"

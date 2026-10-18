@@ -9,7 +9,17 @@ public partial class CaptureWidgetWindow
 {
     private Forms.ToolStripMenuItem BuildDeliverySubmenu(string label, AutoCopyKind kind)
     {
-        var menu = WindowsMenuRenderer.Submenu(LocalizationService.Translate(label), showImages: true);
+        string iconId = kind switch
+        {
+            AutoCopyKind.Scroll => "scrollCapture",
+            AutoCopyKind.Video => "record",
+            AutoCopyKind.Gif => "recordGif",
+            AutoCopyKind.Ocr => "ocr",
+            AutoCopyKind.Color => "picker",
+            AutoCopyKind.Scan => "scan",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
+        var menu = WindowsMenuRenderer.Submenu(LocalizationService.Translate(label), showImages: true, iconId: iconId);
         AddDeliveryOptions(menu, kind);
         WindowsMenuRenderer.NormalizeDropDownWidths(menu, minWidth: 240);
         return menu;

@@ -27,9 +27,9 @@ public static class WindowsMenuRenderer
 
     /// <summary>Build a submenu parent item whose drop-down uses the same themed style
     /// (dark rounded surface, accent hover bar) as the top-level menu.</summary>
-    public static ToolStripMenuItem Submenu(string text, bool showImages = false, bool active = false)
+    public static ToolStripMenuItem Submenu(string text, bool showImages = false, bool active = false, string? iconId = null)
     {
-        var item = Item(text, null, null, active: active);
+        var item = Item(text, null, iconId, active: active);
         if (item.DropDown is ToolStripDropDownMenu dd)
         {
             dd.ShowImageMargin = showImages;

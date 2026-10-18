@@ -16,9 +16,14 @@ internal static partial class Program
         using (var menu = (Forms.ContextMenuStrip)Call(widget, "BuildMoreMenu")!)
         {
             Assert(menu.Items.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
-                new[] { "Widget", "Image capture", "Scrolling capture", "Video (MP4)", "GIF", "OCR", "Color picker", "Scan QR / Barcode", "Annotations Editor...", "Configuration...", "Help" }.Select(Tr)),
+                new[] { "Widget", "Image capture", "Scrolling capture", "Video (MP4)", "GIF", "OCR", "Color picker", "QR and Barcodes", "Annotations Editor...", "Configuration...", "Help" }.Select(Tr)),
                 "widget More groups widget options first and image capture second in " + language, false);
-            var capture = (Forms.ToolStripMenuItem)menu.Items[1];
+            Assert(menu.Items[1] is Forms.ToolStripSeparator && menu.Items[9] is Forms.ToolStripSeparator,
+                "Widget, capture modes and application commands are separated", false);
+            Assert(menu.ShowImageMargin && menu.Items.OfType<Forms.ToolStripMenuItem>()
+                .All(item => item.Image is not null && item.ImageScaling == Forms.ToolStripItemImageScaling.None),
+                "every top-level widget More item has its own unscaled icon", false);
+            var capture = (Forms.ToolStripMenuItem)menu.Items[2];
             Assert(capture.DropDownItems.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
                 new[] { "Auto-copy", "Show preview after capture", "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
                 "image capture submenu contains delivery choices and all four localized capture options", false);

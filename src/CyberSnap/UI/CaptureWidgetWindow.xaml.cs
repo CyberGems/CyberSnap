@@ -1296,7 +1296,7 @@ public partial class CaptureWidgetWindow : Window
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
         // "Widget" submenu mirrors the right-click context menu options.
-        var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"), showImages: true);
+        var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"), showImages: true, iconId: "activeWindow");
         widgetMenu.DropDownItems.Add(BuildPositionSubmenu());
 
         var screenMenu = BuildScreenSubmenu();
@@ -1313,13 +1313,14 @@ public partial class CaptureWidgetWindow : Window
         widgetMenu.DropDownItems.Add(BuildDisableItem());
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
         menu.Items.Add(widgetMenu);
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add(BuildImageCaptureSubmenu());
         menu.Items.Add(BuildDeliverySubmenu("Scrolling capture", AutoCopyKind.Scroll));
         menu.Items.Add(BuildDeliverySubmenu("Video (MP4)", AutoCopyKind.Video));
         menu.Items.Add(BuildDeliverySubmenu("GIF", AutoCopyKind.Gif));
         menu.Items.Add(BuildDeliverySubmenu("OCR", AutoCopyKind.Ocr));
         menu.Items.Add(BuildDeliverySubmenu("Color picker", AutoCopyKind.Color));
-        menu.Items.Add(BuildDeliverySubmenu("Scan QR / Barcode", AutoCopyKind.Scan));
+        menu.Items.Add(BuildDeliverySubmenu("QR and Barcodes", AutoCopyKind.Scan));
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
@@ -1343,10 +1344,7 @@ public partial class CaptureWidgetWindow : Window
         menu.Items.Add(settingsItem);
 
         // ── Help submenu: wiki / homepage / updates / about ──
-        var helpSubmenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true);
-        helpSubmenu.Image = Helpers.FluentIcons.RenderBitmap("question",
-            System.Drawing.Color.FromArgb(215, Helpers.UiChrome.SurfaceTextSecondary.R, Helpers.UiChrome.SurfaceTextSecondary.G, Helpers.UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var helpSubmenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true, iconId: "question");
 
         var wikiItem = Helpers.WindowsMenuRenderer.Item(
             LocalizationService.Translate("Wiki: Capture..."), iconId: "question");
@@ -1390,7 +1388,7 @@ public partial class CaptureWidgetWindow : Window
 
     private System.Windows.Forms.ToolStripMenuItem BuildImageCaptureSubmenu()
     {
-        var captureMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Image capture"), showImages: true);
+        var captureMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Image capture"), showImages: true, iconId: "captureRect");
         AddDeliveryOptions(captureMenu, AutoCopyKind.Image);
         captureMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         // Cursor capture remains directly available on the panel for every mode.
