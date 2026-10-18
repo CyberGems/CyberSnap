@@ -9,7 +9,8 @@ public enum AutoCopyKind
     Video,
     Gif,
     Scan,
-    Color
+    Color,
+    Scroll
 }
 
 /// <summary>Independent clipboard preferences for each result type.</summary>
@@ -23,6 +24,7 @@ public static class AutoCopyPreferences
         AutoCopyKind.Gif => settings.GifAutoCopyToClipboard,
         AutoCopyKind.Scan => settings.ScanAutoCopyToClipboard,
         AutoCopyKind.Color => settings.ColorDetailAutoCopy,
+        AutoCopyKind.Scroll => settings.ScrollAutoCopyToClipboard,
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };
 
@@ -49,10 +51,16 @@ public static class AutoCopyPreferences
             case AutoCopyKind.Color:
                 settings.ColorDetailAutoCopy = enabled;
                 break;
+            case AutoCopyKind.Scroll:
+                settings.ScrollAutoCopyToClipboard = enabled;
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(kind));
         }
     }
+
+    public static AutoCopyKind ForImageCapture(CaptureKind kind) =>
+        kind == CaptureKind.ScrollCapture ? AutoCopyKind.Scroll : AutoCopyKind.Image;
 
     /// <summary>Keep the image destination's copy action aligned with its own preference.</summary>
     public static void SyncImageCopyPreference(AppSettings settings)

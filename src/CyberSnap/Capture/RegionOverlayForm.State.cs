@@ -2797,11 +2797,18 @@ public sealed partial class RegionOverlayForm
     private void ToggleConfirmPreview()
     {
         var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
-        bool newValue = !settings.ShowCapturePreview;
-        SettingsService.SaveShowCapturePreview(newValue);
+        var captureKind = ConfirmPreviewCaptureKind();
+        bool newValue = !IsConfirmPreviewEnabled(settings);
+        SettingsService.SaveShowCapturePreview(newValue, captureKind);
         _confirmChromeLayoutDirty = true;
         Invalidate();
     }
+
+    private CaptureKind ConfirmPreviewCaptureKind() => SelectedConfirmModeKind() == ConfirmChromeKind.ModeScroll
+        ? CaptureKind.ScrollCapture : CaptureKind.Screenshot;
+
+    private bool IsConfirmPreviewEnabled(AppSettings settings) =>
+        Helpers.AfterCaptureOutcomeModel.FromSettings(settings, ConfirmPreviewCaptureKind()).Preview;
 
     private bool TryHandleConfirmDestinationHotkey(Keys keyCode)
     {

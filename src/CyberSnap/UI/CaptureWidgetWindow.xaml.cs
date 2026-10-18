@@ -1290,6 +1290,7 @@ public partial class CaptureWidgetWindow : Window
     // More menu: widget options, image capture, editor, configuration and help.
     private System.Windows.Forms.ContextMenuStrip BuildMoreMenu()
     {
+        _settingsService.RefreshResultDeliveryPreferences();
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
         // "Widget" submenu mirrors the right-click context menu options.
@@ -1311,6 +1312,12 @@ public partial class CaptureWidgetWindow : Window
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
         menu.Items.Add(widgetMenu);
         menu.Items.Add(BuildImageCaptureSubmenu());
+        menu.Items.Add(BuildDeliverySubmenu("Scrolling capture", AutoCopyKind.Scroll));
+        menu.Items.Add(BuildDeliverySubmenu("Video (MP4)", AutoCopyKind.Video));
+        menu.Items.Add(BuildDeliverySubmenu("GIF", AutoCopyKind.Gif));
+        menu.Items.Add(BuildDeliverySubmenu("OCR", AutoCopyKind.Ocr));
+        menu.Items.Add(BuildDeliverySubmenu("Color picker", AutoCopyKind.Color));
+        menu.Items.Add(BuildDeliverySubmenu("Scan QR / Barcode", AutoCopyKind.Scan));
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
@@ -1382,6 +1389,8 @@ public partial class CaptureWidgetWindow : Window
     private System.Windows.Forms.ToolStripMenuItem BuildImageCaptureSubmenu()
     {
         var captureMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Image capture"), showImages: true);
+        AddDeliveryOptions(captureMenu, AutoCopyKind.Image);
+        captureMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         // Cursor capture remains directly available on the panel for every mode.
         captureMenu.DropDownItems.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
             () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
@@ -1404,7 +1413,7 @@ public partial class CaptureWidgetWindow : Window
 
     // A capture-setting toggle row: shows a checkmark when on (matching the editor's burger menu),
     // flips the bound setting on click and persists it.
-    private System.Windows.Forms.ToolStripMenuItem BuildCaptureToggle(string label, bool isChecked, Action toggle)
+    private System.Windows.Forms.ToolStripMenuItem BuildCaptureToggle(string label, bool isChecked, Action toggle, bool publishDelivery = false)
     {
         var item = Helpers.WindowsMenuRenderer.Item(label);
         if (isChecked)
@@ -1420,6 +1429,12 @@ public partial class CaptureWidgetWindow : Window
         {
             toggle();
             _settingsService.Save();
+            if (publishDelivery)
+            {
+                SettingsService.PublishAutoCopyPreferences(_settings);
+                foreach (var colorWindow in System.Windows.Application.Current.Windows.OfType<ColorDetailWindow>())
+                    colorWindow.RefreshDeliveryPreferences(_settings);
+            }
         };
         return item;
     }

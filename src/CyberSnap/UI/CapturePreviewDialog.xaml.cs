@@ -282,7 +282,7 @@ namespace CyberSnap.UI
             PopulateAfterCapturePills();
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
-            _lastOutcomeState = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            _lastOutcomeState = CurrentOutcome;
             _lastTimeoutSeconds = _settingsService.Settings.CapturePreviewTimeoutSeconds;
             // Auto-close countdown starts when the dialog becomes visible (see CenterOnOpenMonitor).
             // Starting here animates on a zero-width bar while Opacity=0 — first capture looked frozen.
@@ -595,7 +595,8 @@ namespace CyberSnap.UI
         {
             if (!IsLoaded) return;
 
-            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            _settingsService.RefreshResultDeliveryPreferences();
+            var state = CurrentOutcome;
             int timeoutSeconds = _settingsService.Settings.CapturePreviewTimeoutSeconds;
             if (state == _lastOutcomeState && timeoutSeconds == _lastTimeoutSeconds) return;
 
@@ -998,7 +999,7 @@ namespace CyberSnap.UI
         /// <summary>Applies SelectedAction for the primary button; returns the DialogResult to set.</summary>
         private bool ResolvePrimaryButtonCommit()
         {
-            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            var state = CurrentOutcome;
             if (ShouldCommitDeferredOutcomes(state))
             {
                 SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
@@ -1057,7 +1058,7 @@ namespace CyberSnap.UI
                 Padding = new Thickness(4)
             };
 
-            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            var state = CurrentOutcome;
             if (CanOpenSavedFileInFolder())
             {
                 var cPrimary = Theme.TextPrimary;
@@ -1089,7 +1090,7 @@ namespace CyberSnap.UI
 
         private bool CanOpenSavedFileInFolder()
         {
-            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            var state = CurrentOutcome;
             return state.EffectiveSave
                 && !string.IsNullOrWhiteSpace(_savedFilePath)
                 && File.Exists(_savedFilePath);
@@ -1345,7 +1346,7 @@ namespace CyberSnap.UI
             AfterCapturePillsPanel.Children.Clear();
             int simToken = _pillSimToken;
 
-            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            var state = CurrentOutcome;
             var settings = _settingsService.Settings;
 
             var rows = new List<(AfterCapturePillKind Pill, AfterCapturePillTiming Timing, string IconId)>();
@@ -2430,7 +2431,7 @@ namespace CyberSnap.UI
 
             StopPrimaryButtonSpin();
 
-            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            var state = CurrentOutcome;
             bool viewerOn = state.SystemViewer;
             bool editorOn = state.Destination == AfterCaptureDestination.Editor;
             bool continuesToSurface = viewerOn || editorOn;
@@ -2477,7 +2478,7 @@ namespace CyberSnap.UI
 
         private void UpdateOptionalActionsAvailability()
         {
-            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            var state = CurrentOutcome;
 
             // Hide duplicates of automatic actions instead of leaving disabled ghosts.
             bool saveAuto = AfterCaptureOutcomeModel.IsActive(state, AfterCapturePillKind.Save);

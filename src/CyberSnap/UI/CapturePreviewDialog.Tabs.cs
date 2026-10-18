@@ -69,6 +69,8 @@ namespace CyberSnap.UI
         }
 
         private bool HasMultipleSessions => _sessions.Count > 1;
+        private AfterCaptureOutcomeState CurrentOutcome =>
+            AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings, _active.CaptureKind);
 
         private PreviewSession CreateSession(
             Bitmap bitmap,
@@ -196,6 +198,7 @@ namespace CyberSnap.UI
 
         private void ApplySessionVisuals()
         {
+            RefreshLiveSettings();
             var source = _active.PreviewSource
                 ?? BitmapPerf.ToBitmapSource(_active.EffectiveBitmap);
             _active.PreviewSource = source;

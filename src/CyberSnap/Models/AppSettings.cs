@@ -216,6 +216,9 @@ public sealed class AppSettings
     /// </summary>
     public bool ShowCapturePreview { get; set; } = true;
 
+    /// <summary>Show the preview after a scrolling capture, independently of ordinary images.</summary>
+    public bool ShowScrollCapturePreview { get; set; } = true;
+
     /// <summary>
     /// When true, the Print Screen advisory banner in Settings → Hotkeys stays hidden
     /// (reopen it anytime with the ? button next to it).
@@ -259,6 +262,9 @@ public sealed class AppSettings
 
     /// <summary>Copy finished image captures automatically.</summary>
     public bool ImageAutoCopyToClipboard { get; set; } = true;
+
+    /// <summary>Copy finished scrolling captures automatically.</summary>
+    public bool ScrollAutoCopyToClipboard { get; set; } = true;
 
     /// <summary>Copy finished MP4 files automatically.</summary>
     public bool VideoAutoCopyToClipboard { get; set; }

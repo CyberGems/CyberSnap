@@ -84,7 +84,7 @@ public static class AfterCaptureOutcomeModel
         _ => 99
     };
 
-    public static AfterCaptureOutcomeState FromSettings(AppSettings settings)
+    public static AfterCaptureOutcomeState FromSettings(AppSettings settings, CaptureKind captureKind = CaptureKind.Screenshot)
     {
         var destOnly = AfterCapturePreferences.FromSettingsDestinationOnly(settings);
         var destination = destOnly.WindowIndex switch
@@ -103,24 +103,25 @@ public static class AfterCaptureOutcomeModel
             systemViewer = false;
 
         bool save = settings.SaveToFile;
-        bool clipboard = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Image);
-        bool preview = settings.ShowCapturePreview;
+        bool clipboard = AutoCopyPreferences.ShouldCopy(settings, AutoCopyPreferences.ForImageCapture(captureKind));
+        bool preview = captureKind == CaptureKind.ScrollCapture ? settings.ShowScrollCapturePreview : settings.ShowCapturePreview;
         bool share = settings.AutoShareAfterCapture;
 
         return Normalize(new AfterCaptureOutcomeState(save, destination, systemViewer, clipboard, preview, share));
     }
 
-    public static void ApplyToSettings(AfterCaptureOutcomeState state, AppSettings settings)
+    public static void ApplyToSettings(AfterCaptureOutcomeState state, AppSettings settings, CaptureKind captureKind = CaptureKind.Screenshot)
     {
         state = Normalize(state);
 
         settings.SaveToFile = state.EffectiveSave;
-        settings.ShowCapturePreview = state.Preview;
+        if (captureKind == CaptureKind.ScrollCapture) settings.ShowScrollCapturePreview = state.Preview;
+        else settings.ShowCapturePreview = state.Preview;
         settings.AutoShareAfterCapture = state.Share;
         settings.OpenInSystemViewerAfterCapture = state.SystemViewer
             && state.Destination != AfterCaptureDestination.Editor;
 
-        AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Image, state.Clipboard);
+        AutoCopyPreferences.SetKindEnabled(settings, AutoCopyPreferences.ForImageCapture(captureKind), state.Clipboard);
 
         int windowIndex = state.Destination switch
         {

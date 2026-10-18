@@ -163,6 +163,14 @@ internal sealed class ColorDetailWindow : Window
         _showWindowPref = plan.ShowWindow;
     }
 
+    internal void RefreshDeliveryPreferences(AppSettings settings)
+    {
+        ApplyDeliveryPrefs(settings.ColorDetailAutoCopy, settings.ShowColorDetailWindow);
+        _setAutoToggle?.Invoke(_autoCopy);
+        _setShowToggle?.Invoke(_showWindowPref);
+        ApplyCopyActionState();
+    }
+
     private void SavePrefs()
     {
         try

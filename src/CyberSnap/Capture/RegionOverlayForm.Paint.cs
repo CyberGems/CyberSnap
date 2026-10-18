@@ -1383,7 +1383,7 @@ public sealed partial class RegionOverlayForm
     private void DrawConfirmTogglePreview(Graphics g, Rectangle rect, bool hover, float pressAmt, float opacity)
     {
         var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
-        bool showPreview = settings.ShowCapturePreview;
+        bool showPreview = IsConfirmPreviewEnabled(settings);
 
         float hoverCorner = UiChrome.ScaleFloat(5f);
         var face = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);

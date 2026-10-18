@@ -76,6 +76,7 @@ public sealed class SettingsService : IDisposable
     private static void CopyResultDeliveryPreferences(AppSettings source, AppSettings target)
     {
         target.ImageAutoCopyToClipboard = source.ImageAutoCopyToClipboard;
+        target.ScrollAutoCopyToClipboard = source.ScrollAutoCopyToClipboard;
         target.OcrAutoCopyToClipboard = source.OcrAutoCopyToClipboard;
         target.ScanAutoCopyToClipboard = source.ScanAutoCopyToClipboard;
         target.VideoAutoCopyToClipboard = source.VideoAutoCopyToClipboard;
@@ -84,6 +85,10 @@ public sealed class SettingsService : IDisposable
         target.OcrShowResultWindow = source.OcrShowResultWindow;
         target.ScanShowResultWindow = source.ScanShowResultWindow;
         target.ShowColorDetailWindow = source.ShowColorDetailWindow;
+        target.ShowCapturePreview = source.ShowCapturePreview;
+        target.ShowScrollCapturePreview = source.ShowScrollCapturePreview;
+        target.OpenVideoTrimmerAfterCapture = source.OpenVideoTrimmerAfterCapture;
+        target.OpenGifTrimmerAfterCapture = source.OpenGifTrimmerAfterCapture;
         target.AfterCapture = source.AfterCapture;
         target.OpenEditorAfterCapture = source.OpenEditorAfterCapture;
         target.OpenInSystemViewerAfterCapture = source.OpenInSystemViewerAfterCapture;
@@ -162,27 +167,12 @@ public sealed class SettingsService : IDisposable
         }
     }
 
-    public static void SaveShowCapturePreview(bool value)
-    {
-        lock (CacheGate)
+    public static void SaveShowCapturePreview(bool value, CaptureKind captureKind = CaptureKind.Screenshot) =>
+        MutateResultDelivery(settings =>
         {
-            if (s_cachedSettings != null)
-                s_cachedSettings.ShowCapturePreview = value;
-        }
-
-        try
-        {
-            var svc = new SettingsService();
-            svc.Load();
-            svc.Settings.ShowCapturePreview = value;
-            svc.Save();
-            svc.FlushPendingWrites();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.show-capture-preview.static-save", ex);
-        }
-    }
+            var outcome = Helpers.AfterCaptureOutcomeModel.FromSettings(settings, captureKind) with { Preview = value };
+            Helpers.AfterCaptureOutcomeModel.ApplyToSettings(outcome, settings, captureKind);
+        }, "settings.show-capture-preview.static-save");
 
     public static void SaveQuickPanelCompact(bool value)
     {

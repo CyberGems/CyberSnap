@@ -132,7 +132,8 @@ public partial class App
             _settingsService!.Settings = latest;
 
         var settings = _settingsService!.Settings;
-        if (!settings.ShowCapturePreview)
+        var outcome = AfterCaptureOutcomeModel.FromSettings(settings, CaptureKind.ScrollCapture);
+        if (!outcome.Preview)
         {
             HandleCaptureResult(capture, captureKind: CaptureKind.ScrollCapture);
             MarkFirstTime(
@@ -147,7 +148,7 @@ public partial class App
         try
         {
             bool copiedEarly = false;
-            if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
+            if (outcome.Clipboard)
                 copiedEarly = TryCopyCaptureOutputToClipboard(capture, null);
 
             string? earlySavePath = TrySaveCaptureFileEarly(capture, settings);
@@ -250,7 +251,7 @@ public partial class App
                     bool explicitCopy = commitAction == RegionOverlayForm.ConfirmCommitAction.Copy;
                     bool shouldTryCopy = explicitCopy
                         || (!clipboardAlreadyCopied
-                            && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image));
+                            && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyPreferences.ForImageCapture(captureKind)));
                     bool copied;
                     if (shouldTryCopy)
                         copied = TryCopyCaptureOutputToClipboard(persisted.Output, persisted.FilePath);
@@ -275,7 +276,7 @@ public partial class App
                             && persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif);
 
                     // Respect the After Capture Notification pill setting
-                    var outcomeState = Helpers.AfterCaptureOutcomeModel.FromSettings(settings);
+                    var outcomeState = Helpers.AfterCaptureOutcomeModel.FromSettings(settings, captureKind);
                     bool wantNotification = outcomeState.Destination == Helpers.AfterCaptureDestination.Notification;
                     // Preview chips show in-dialog progress; the compact status toast still runs
                     // after confirm when Notification is on (including after Preview closes).
@@ -310,7 +311,8 @@ public partial class App
                                     openedEditor: false,
                                     openedViewer: true,
                                     filePath: persisted.FilePath,
-                                    preview: BitmapPerf.CloneToastThumb(persisted.Output));
+                                    preview: BitmapPerf.CloneToastThumb(persisted.Output),
+                                    captureKind: captureKind);
                             }
                             persisted.Output.Dispose();
                             ScheduleIdleMemoryTrim();
@@ -327,7 +329,8 @@ public partial class App
                                 openedEditor: true,
                                 openedViewer: false,
                                 filePath: persisted.FilePath,
-                                preview: BitmapPerf.CloneToastThumb(persisted.Output));
+                                preview: BitmapPerf.CloneToastThumb(persisted.Output),
+                                captureKind: captureKind);
                         }
                         persisted.Output.Dispose();
                     }
@@ -385,7 +388,8 @@ public partial class App
                                 savedToDisk,
                                 copied,
                                 copyWanted,
-                                openedViewer);
+                                openedViewer,
+                                captureKind);
                         }
                         else
                         {
@@ -403,7 +407,8 @@ public partial class App
                                     openedEditor: false,
                                     openedViewer: openedViewer,
                                     filePath: persisted.FilePath,
-                                    preview: toastThumb);
+                                    preview: toastThumb,
+                                    captureKind: captureKind);
                             }
                         }
                     }
@@ -433,7 +438,8 @@ public partial class App
         bool saved,
         bool copied,
         bool copyWanted,
-        bool openedViewer)
+        bool openedViewer,
+        CaptureKind captureKind)
     {
         ShareAttempt shareAttempt = default;
         Bitmap? toastThumb = showCompactToast ? BitmapPerf.CloneToastThumb(bitmap) : null;
@@ -458,7 +464,8 @@ public partial class App
                 openedEditor: false,
                 openedViewer: openedViewer,
                 filePath: filePath,
-                preview: toastThumb);
+                preview: toastThumb,
+                captureKind: captureKind);
         }
         else
         {
@@ -550,9 +557,10 @@ public partial class App
         bool openedEditor,
         bool openedViewer,
         string? filePath,
-        Bitmap? preview = null)
+        Bitmap? preview = null,
+        CaptureKind captureKind = CaptureKind.Screenshot)
     {
-        var state = Helpers.AfterCaptureOutcomeModel.FromSettings(_settingsService!.Settings);
+        var state = Helpers.AfterCaptureOutcomeModel.FromSettings(_settingsService!.Settings, captureKind);
         var rows = new List<(int Order, UI.ToastStatusLine Line)>();
 
         void TryAdd(Helpers.AfterCapturePillKind pill, UI.ToastStatusLine line)
@@ -580,8 +588,7 @@ public partial class App
 
         // ── Clipboard ─────────────────────────────────────────────────────────────────
         // Configured via auto-copy pill, OR user pressed the preview "Copy" button (one-shot).
-        bool autoCopyConfigured = Helpers.AutoCopyPreferences.ShouldCopy(
-            _settingsService!.Settings, Helpers.AutoCopyKind.Image);
+        bool autoCopyConfigured = state.Clipboard;
         bool clipboardConfigured = autoCopyConfigured || copyWanted;
         if (clipboardConfigured)
         {

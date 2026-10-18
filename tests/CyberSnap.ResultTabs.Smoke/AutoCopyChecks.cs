@@ -17,7 +17,7 @@ internal static partial class Program
     [
         settings.ImageAutoCopyToClipboard, settings.OcrAutoCopyToClipboard,
         settings.VideoAutoCopyToClipboard, settings.GifAutoCopyToClipboard,
-        settings.ScanAutoCopyToClipboard, settings.ColorDetailAutoCopy
+        settings.ScanAutoCopyToClipboard, settings.ColorDetailAutoCopy, settings.ScrollAutoCopyToClipboard
     ];
 
     private static AppSettings CopySettings(int mask) => new()
@@ -28,6 +28,7 @@ internal static partial class Program
         GifAutoCopyToClipboard = (mask & 8) != 0,
         ScanAutoCopyToClipboard = (mask & 16) != 0,
         ColorDetailAutoCopy = (mask & 32) != 0,
+        ScrollAutoCopyToClipboard = (mask & 64) != 0,
         OcrShowResultWindow = false,
         ScanShowResultWindow = false,
         ShowColorDetailWindow = false
@@ -47,10 +48,10 @@ internal static partial class Program
 
     private static void CheckIndependentAutoCopy(string temp)
     {
-        Assert(CopyFlags(new AppSettings()).SequenceEqual(new[] { true, false, false, false, false, true }),
-            "fresh settings have explicit defaults for all six result types");
+        Assert(CopyFlags(new AppSettings()).SequenceEqual(new[] { true, false, false, false, false, true, true }),
+            "fresh settings have explicit defaults for all seven result types");
 
-        for (int mask = 0; mask < 64; mask++)
+        for (int mask = 0; mask < (1 << CopyKinds.Length); mask++)
         {
             foreach (var kind in CopyKinds)
             foreach (bool enabled in new[] { false, true })
@@ -100,6 +101,14 @@ internal static partial class Program
                 AssertOnlyCopyChanged(before, settings, AutoCopyKind.Image, enabled, "image destination editor leaves other types unchanged");
                 Assert(AfterCapturePreferences.FromSettings(settings).Copy == enabled, "image destination reads its own copy flag", false);
 
+                settings = CopySettings(mask);
+                var scrollState = AfterCaptureOutcomeModel.FromSettings(settings, CaptureKind.ScrollCapture) with { Clipboard = enabled, Preview = !enabled };
+                AfterCaptureOutcomeModel.ApplyToSettings(scrollState, settings, CaptureKind.ScrollCapture);
+                AssertOnlyCopyChanged(before, settings, AutoCopyKind.Scroll, enabled, "scroll outcome changes only its own clipboard preference");
+                Assert(AfterCaptureOutcomeModel.FromSettings(settings, CaptureKind.ScrollCapture).Clipboard == enabled
+                    && settings.ShowScrollCapturePreview == !enabled && settings.ShowCapturePreview,
+                    "scroll outcome reads its own clipboard and preview preferences", false);
+
                 foreach (var media in Enum.GetValues<RecordingOutcomeKind>())
                 {
                     settings = CopySettings(mask);
@@ -122,16 +131,16 @@ internal static partial class Program
             using var reloaded = new SettingsService(path);
             reloaded.Load();
             Assert(CopyFlags(reloaded.Settings).SequenceEqual(CopyFlags(service.Settings)),
-                "all six independent preferences survive save and reload", false);
+                "all seven independent preferences survive save and reload", false);
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             var copyProperties = document.RootElement.EnumerateObject()
                 .Where(p => p.Name.Contains("AutoCopy", StringComparison.Ordinal))
                 .Select(p => p.Name).Order().ToArray();
             Assert(copyProperties.SequenceEqual(new[] { "ColorDetailAutoCopy", "GifAutoCopyToClipboard", "ImageAutoCopyToClipboard",
-                "OcrAutoCopyToClipboard", "ScanAutoCopyToClipboard", "VideoAutoCopyToClipboard" }.Order()),
-                "settings persist exactly the six direct clipboard preferences", false);
+                "OcrAutoCopyToClipboard", "ScanAutoCopyToClipboard", "ScrollAutoCopyToClipboard", "VideoAutoCopyToClipboard" }.Order()),
+                "settings persist exactly the seven direct clipboard preferences", false);
         }
-        Console.WriteLine("PASS: all 64 auto-copy combinations, delivery guards, image presets, recording formats, and persistence.");
+        Console.WriteLine("PASS: all 128 auto-copy combinations, delivery guards, image/scroll isolation, recording formats, and persistence.");
     }
 
     private static void CheckWidget(SettingsService settings, string? outputDirectory)

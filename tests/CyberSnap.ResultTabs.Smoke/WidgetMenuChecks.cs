@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using CyberSnap.Services;
 using CyberSnap.UI;
+using CyberSnap.Models;
 using Forms = System.Windows.Forms;
 
 internal static partial class Program
@@ -15,19 +16,21 @@ internal static partial class Program
         using (var menu = (Forms.ContextMenuStrip)Call(widget, "BuildMoreMenu")!)
         {
             Assert(menu.Items.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
-                new[] { "Widget", "Image capture", "Annotations Editor...", "Configuration...", "Help" }.Select(Tr)),
+                new[] { "Widget", "Image capture", "Scrolling capture", "Video (MP4)", "GIF", "OCR", "Color picker", "Scan QR / Barcode", "Annotations Editor...", "Configuration...", "Help" }.Select(Tr)),
                 "widget More groups widget options first and image capture second in " + language, false);
             var capture = (Forms.ToolStripMenuItem)menu.Items[1];
             Assert(capture.DropDownItems.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
-                new[] { "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
-                "image capture submenu contains all four localized capture options", false);
+                new[] { "Auto-copy", "Show preview after capture", "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
+                "image capture submenu contains delivery choices and all four localized capture options", false);
             var copyFlags = CopyFlags(settings.Settings);
             bool magnifier = settings.Settings.ShowCaptureMagnifier;
-            capture.DropDownItems[0].PerformClick();
+            capture.DropDownItems[3].PerformClick();
             Assert(settings.Settings.ShowCaptureMagnifier != magnifier && CopyFlags(settings.Settings).SequenceEqual(copyFlags),
                 "nested capture toggle changes its own preference without changing clipboard delivery", false);
-            capture.DropDownItems[0].PerformClick();
+            capture.DropDownItems[3].PerformClick();
         }
+        if (settings.Settings.WidgetDockEdge == CaptureDockSide.Top)
+            CheckWidgetDelivery(widget, settings, renderDirectory);
 
         var button = Element<Button>(widget, "WidgetMoreButton");
         Call(widget, "More_Click", button, new RoutedEventArgs());
