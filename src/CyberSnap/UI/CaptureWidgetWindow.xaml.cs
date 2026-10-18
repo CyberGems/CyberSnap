@@ -29,6 +29,9 @@ public partial class CaptureWidgetWindow : Window
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
     private bool _suppressCaptureCursorToggle; // reflecting ShowCursor into the toggle without re-saving/syncing
     private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
+    private System.Windows.Forms.ContextMenuStrip? _contextMenu;
+    private bool _moreMenuOpen;
+    private bool _suppressMoreMouseDown;
     private System.Windows.Media.Effects.Effect? _panelShadow; // soft shadow, applied only when expanded
     private System.Windows.Point _dragStartPoint;
     private double _dragStartOffset;
@@ -124,6 +127,9 @@ public partial class CaptureWidgetWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        var menu = _contextMenu;
+        menu?.Close();
+        menu?.Dispose();
         try { _topmostWatchdogTimer.Stop(); } catch { }
         CancelHideLaunch();
         CancelSessionRestore();
@@ -1281,30 +1287,10 @@ public partial class CaptureWidgetWindow : Window
         ShowThemedMenu(menu);
     }
 
-    // More menu: capture toggles, widget options, editor, configuration and help.
-    private void ShowMoreMenu()
+    // More menu: widget options, image capture, editor, configuration and help.
+    private System.Windows.Forms.ContextMenuStrip BuildMoreMenu()
     {
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
-
-        // Capture toggles (top level, checkmark style) — cursor lives on the main panel.
-        menu.Items.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
-            () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
-        menu.Items.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
-            () => _settings.ShowSelectionSize = !_settings.ShowSelectionSize));
-        menu.Items.Add(BuildCaptureToggle("Show crosshair guides", _settings.ShowCrosshairGuides,
-            () => _settings.ShowCrosshairGuides = !_settings.ShowCrosshairGuides));
-        // Window auto-detection is driven by the WindowDetection enum; the DetectWindows bool is
-        // vestigial (assigned but never read by the overlay). Flip the enum or this has no effect.
-        menu.Items.Add(BuildCaptureToggle("Detect windows",
-            _settings.WindowDetection != Models.WindowDetectionMode.Off,
-            () =>
-            {
-                bool turningOn = _settings.WindowDetection == Models.WindowDetectionMode.Off;
-                _settings.WindowDetection = turningOn ? Models.WindowDetectionMode.WindowOnly : Models.WindowDetectionMode.Off;
-                _settings.DetectWindows = turningOn;
-            }));
-
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
         // "Widget" submenu mirrors the right-click context menu options.
         var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"), showImages: true);
@@ -1324,6 +1310,7 @@ public partial class CaptureWidgetWindow : Window
         widgetMenu.DropDownItems.Add(BuildDisableItem());
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
         menu.Items.Add(widgetMenu);
+        menu.Items.Add(BuildImageCaptureSubmenu());
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
@@ -1389,7 +1376,30 @@ public partial class CaptureWidgetWindow : Window
 
         Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 240);
 
-        ShowThemedMenu(menu);
+        return menu;
+    }
+
+    private System.Windows.Forms.ToolStripMenuItem BuildImageCaptureSubmenu()
+    {
+        var captureMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Image capture"), showImages: true);
+        // Cursor capture remains directly available on the panel for every mode.
+        captureMenu.DropDownItems.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
+            () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
+        captureMenu.DropDownItems.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
+            () => _settings.ShowSelectionSize = !_settings.ShowSelectionSize));
+        captureMenu.DropDownItems.Add(BuildCaptureToggle("Show crosshair guides", _settings.ShowCrosshairGuides,
+            () => _settings.ShowCrosshairGuides = !_settings.ShowCrosshairGuides));
+        // The overlay reads WindowDetection, rather than the legacy DetectWindows bool.
+        captureMenu.DropDownItems.Add(BuildCaptureToggle("Detect windows",
+            _settings.WindowDetection != Models.WindowDetectionMode.Off,
+            () =>
+            {
+                bool turningOn = _settings.WindowDetection == Models.WindowDetectionMode.Off;
+                _settings.WindowDetection = turningOn ? Models.WindowDetectionMode.WindowOnly : Models.WindowDetectionMode.Off;
+                _settings.DetectWindows = turningOn;
+            }));
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(captureMenu, minWidth: 240);
+        return captureMenu;
     }
 
     // A capture-setting toggle row: shows a checkmark when on (matching the editor's burger menu),
@@ -1521,37 +1531,60 @@ public partial class CaptureWidgetWindow : Window
 
     // Shared menu presentation: keep the widget expanded while open, clamp to the working area,
     // flip submenus inward near a screen edge, and force foreground so click-away dismissal works.
-    private void ShowThemedMenu(System.Windows.Forms.ContextMenuStrip menu)
+    private void ShowThemedMenu(System.Windows.Forms.ContextMenuStrip menu, bool fromMoreButton = false)
     {
+        _contextMenu?.Close();
+        _contextMenu = menu;
         // Keep the widget expanded/visible while the menu is open: showing the menu moves the
         // cursor off the widget, which would otherwise start the collapse timer and leave the
         // menu floating over an empty spot.
         _contextMenuOpen = true;
+        SetMoreMenuOpen(fromMoreButton);
         _collapseTimer.Stop();
-        menu.Closed += (_, _) =>
+        menu.Closed += (_, e) =>
         {
-            _contextMenuOpen = false;
-            CheckMouseLeaveWidget(); // collapse now if the cursor ended up outside
+            if (fromMoreButton && e.CloseReason == System.Windows.Forms.ToolStripDropDownCloseReason.AppClicked
+                && IsPointerOverMoreButton())
+            {
+                // WinForms dismisses on mouse-down before WPF sees the same input.
+                // Consume that press instead of reopening the menu on mouse-up.
+                _suppressMoreMouseDown = true;
+                Dispatcher.BeginInvoke(() => _suppressMoreMouseDown = false, DispatcherPriority.Background);
+            }
+            if (ReferenceEquals(_contextMenu, menu))
+            {
+                _contextMenu = null;
+                _contextMenuOpen = false;
+                SetMoreMenuOpen(false);
+                if (IsVisible) CheckMouseLeaveWidget();
+            }
+            // Let ToolStrip finish processing the close before releasing its handles.
+            Dispatcher.BeginInvoke(menu.Dispose, DispatcherPriority.Background);
         };
 
         // Clamp the menu to the working area of the monitor under the cursor, so opening it near
         // a screen edge flips it inward instead of spilling onto the adjacent monitor.
         var cursor = System.Windows.Forms.Cursor.Position;
-        var wa = System.Windows.Forms.Screen.FromPoint(cursor).WorkingArea;
+        var anchor = fromMoreButton
+            ? WidgetMoreButton.PointToScreen(new System.Windows.Point(0, WidgetMoreButton.ActualHeight))
+            : new System.Windows.Point(cursor.X, cursor.Y);
+        var anchorPoint = new System.Drawing.Point((int)Math.Round(anchor.X), (int)Math.Round(anchor.Y));
+        var wa = System.Windows.Forms.Screen.FromPoint(anchorPoint).WorkingArea;
         var sz = menu.PreferredSize;
-        int x = Math.Max(wa.Left, Math.Min(cursor.X, wa.Right - sz.Width));
-        int y = Math.Max(wa.Top, Math.Min(cursor.Y, wa.Bottom - sz.Height));
+        int x = Math.Max(wa.Left, Math.Min(anchorPoint.X, wa.Right - sz.Width));
+        int y = anchorPoint.Y + (fromMoreButton ? 2 : 0);
+        if (fromMoreButton && y + sz.Height > wa.Bottom)
+            y = (int)Math.Round(WidgetMoreButton.PointToScreen(new System.Windows.Point()).Y) - sz.Height - 2;
+        y = Math.Max(wa.Top, Math.Min(y, wa.Bottom - sz.Height));
 
         // If the menu sits near the right edge of this monitor, open submenus to the LEFT so they
         // don't spill onto the adjacent monitor (WinForms would otherwise flow right into it).
-        const int submenuWidth = 180;
-        var subDirection = (x + sz.Width + submenuWidth > wa.Right)
-            ? System.Windows.Forms.ToolStripDropDownDirection.Left
-            : System.Windows.Forms.ToolStripDropDownDirection.Right;
         foreach (System.Windows.Forms.ToolStripItem it in menu.Items)
         {
             if (it is System.Windows.Forms.ToolStripMenuItem mi && mi.HasDropDownItems)
-                mi.DropDownDirection = subDirection;
+                mi.DropDownDirection = x + sz.Width + mi.DropDown.PreferredSize.Width > wa.Right
+                    ? System.Windows.Forms.ToolStripDropDownDirection.Left
+                    : System.Windows.Forms.ToolStripDropDownDirection.Right;
         }
 
         menu.Show(new System.Drawing.Point(x, y));
@@ -1561,6 +1594,23 @@ public partial class CaptureWidgetWindow : Window
         var menuHandle = menu.Handle;
         if (menuHandle != IntPtr.Zero)
             Native.User32.SetForegroundWindow(menuHandle);
+    }
+
+    private void SetMoreMenuOpen(bool open)
+    {
+        _moreMenuOpen = open;
+        if (open)
+            WidgetMoreButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "WidgetButtonHoverBg");
+        else
+            WidgetMoreButton.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
+    }
+
+    private bool IsPointerOverMoreButton()
+    {
+        if (!WidgetMoreButton.IsVisible) return false;
+        var cursor = System.Windows.Forms.Cursor.Position;
+        var local = WidgetMoreButton.PointFromScreen(new System.Windows.Point(cursor.X, cursor.Y));
+        return new Rect(WidgetMoreButton.RenderSize).Contains(local);
     }
 
     // Capture Actions
@@ -1649,7 +1699,19 @@ public partial class CaptureWidgetWindow : Window
 
     private void More_Click(object sender, RoutedEventArgs e)
     {
-        ShowMoreMenu();
+        if (_moreMenuOpen)
+        {
+            _contextMenu?.Close();
+            return;
+        }
+        ShowThemedMenu(BuildMoreMenu(), fromMoreButton: true);
+    }
+
+    private void More_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!_suppressMoreMouseDown) return;
+        _suppressMoreMouseDown = false;
+        e.Handled = true;
     }
 
     private void TriggerAppCapture(Models.CaptureMode mode, RecordingFormat? recordingFormat = null)

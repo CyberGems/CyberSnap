@@ -1,0 +1,79 @@
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using CyberSnap.Services;
+using CyberSnap.UI;
+using Forms = System.Windows.Forms;
+
+internal static partial class Program
+{
+    private static void CheckWidgetMenu(CaptureWidgetWindow widget, SettingsService settings, string? renderDirectory)
+    {
+        string language = settings.Settings.InterfaceLanguage;
+        string Tr(string text) => LocalizationService.Translate(language, text);
+        using (var menu = (Forms.ContextMenuStrip)Call(widget, "BuildMoreMenu")!)
+        {
+            Assert(menu.Items.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
+                new[] { "Widget", "Image capture", "Annotations Editor...", "Configuration...", "Help" }.Select(Tr)),
+                "widget More groups widget options first and image capture second in " + language, false);
+            var capture = (Forms.ToolStripMenuItem)menu.Items[1];
+            Assert(capture.DropDownItems.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
+                new[] { "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
+                "image capture submenu contains all four localized capture options", false);
+            var copyFlags = CopyFlags(settings.Settings);
+            bool magnifier = settings.Settings.ShowCaptureMagnifier;
+            capture.DropDownItems[0].PerformClick();
+            Assert(settings.Settings.ShowCaptureMagnifier != magnifier && CopyFlags(settings.Settings).SequenceEqual(copyFlags),
+                "nested capture toggle changes its own preference without changing clipboard delivery", false);
+            capture.DropDownItems[0].PerformClick();
+        }
+
+        var button = Element<Button>(widget, "WidgetMoreButton");
+        Call(widget, "More_Click", button, new RoutedEventArgs());
+        Pump();
+        var openMenu = GetField<Forms.ContextMenuStrip>(widget, "_contextMenu");
+        var buttonOrigin = button.PointToScreen(new Point());
+        var buttonEnd = button.PointToScreen(new Point(button.ActualWidth, button.ActualHeight));
+        var buttonBounds = new System.Drawing.RectangleF((float)buttonOrigin.X, (float)buttonOrigin.Y,
+            (float)(buttonEnd.X - buttonOrigin.X), (float)(buttonEnd.Y - buttonOrigin.Y));
+        Assert(openMenu.Visible && GetField<bool>(widget, "_moreMenuOpen") && GetField<bool>(widget, "_contextMenuOpen"),
+            "More opens exactly one tracked menu", false);
+        Assert(button.Background == (Brush)widget.FindResource("WidgetButtonHoverBg"),
+            "More keeps its highlighted background while the menu is open", false);
+        Assert(!openMenu.Bounds.IntersectsWith(System.Drawing.Rectangle.Ceiling(buttonBounds))
+            && Forms.Screen.FromRectangle(openMenu.Bounds).WorkingArea.Contains(openMenu.Bounds),
+            "More menu stays within its monitor and leaves its button available for another click", false);
+        Assert(!GetField<System.Windows.Threading.DispatcherTimer>(widget, "_collapseTimer").IsEnabled,
+            "widget cannot auto-collapse while its menu is open", false);
+        if (renderDirectory is not null)
+        {
+            Render(widget, renderDirectory, $"widget-more-open-{language}-{settings.Settings.WidgetDockEdge}.png");
+            using var bitmap = new System.Drawing.Bitmap(openMenu.Width, openMenu.Height);
+            openMenu.DrawToBitmap(bitmap, new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height));
+            bitmap.Save(Path.Combine(renderDirectory, $"widget-more-menu-{language}-{settings.Settings.WidgetDockEdge}.png"));
+        }
+        Call(widget, "More_Click", button, new RoutedEventArgs());
+        Pump();
+        Assert(!GetField<bool>(widget, "_moreMenuOpen") && !GetField<bool>(widget, "_contextMenuOpen") && openMenu.IsDisposed,
+            "second More activation closes and releases the menu", false);
+        Assert(button.ReadLocalValue(Control.BackgroundProperty) == DependencyProperty.UnsetValue,
+            "closing More clears its persistent highlight", false);
+
+        Call(widget, "More_Click", button, new RoutedEventArgs());
+        var reopened = GetField<Forms.ContextMenuStrip>(widget, "_contextMenu");
+        reopened.Close(Forms.ToolStripDropDownCloseReason.Keyboard);
+        Pump();
+        Assert(!GetField<bool>(widget, "_moreMenuOpen") && reopened.IsDisposed,
+            "keyboard dismissal clears More and allows reopening", false);
+        Call(widget, "More_Click", button, new RoutedEventArgs());
+        var finalMenu = GetField<Forms.ContextMenuStrip>(widget, "_contextMenu");
+        Call(widget, "ShowWidgetContextMenu");
+        Pump();
+        Assert(finalMenu.IsDisposed && GetField<bool>(widget, "_contextMenuOpen") && !GetField<bool>(widget, "_moreMenuOpen"),
+            "the widget context menu replaces More without retaining its highlight", false);
+        GetField<Forms.ContextMenuStrip>(widget, "_contextMenu").Close(Forms.ToolStripDropDownCloseReason.AppClicked);
+        Pump();
+        Assert(!GetField<bool>(widget, "_contextMenuOpen"), "outside-click dismissal releases the context menu state", false);
+    }
+}

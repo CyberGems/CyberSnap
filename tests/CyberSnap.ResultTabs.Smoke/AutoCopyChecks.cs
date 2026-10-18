@@ -172,6 +172,7 @@ internal static partial class Program
                 Assert(toggleBounds.Bottom <= panel.ActualHeight && toggleBounds.Right <= panel.ActualWidth,
                     "cursor toggle fits the reduced widget panel", false);
                 Assert(CopyFlags(settings.Settings).SequenceEqual(before), "opening the widget preserves all copy preferences", false);
+                if (scale == 1.1) CheckWidgetMenu(widget, settings, outputDirectory);
                 if (scale == 1.0)
                     Render(widget, outputDirectory, "widget-independent-" + language + ".png");
                 widget.CollapseImmediately();

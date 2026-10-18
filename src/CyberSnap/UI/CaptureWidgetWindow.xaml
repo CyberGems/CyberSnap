@@ -185,7 +185,7 @@
 
                 <Grid x:Name="ControlsGrid" Margin="12,8,12,8">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + Config -->
+                        <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + More -->
                         <RowDefinition Height="Auto"/> <!-- Capture Button -->
                         <RowDefinition Height="Auto"/> <!-- Quick Actions -->
                         <RowDefinition Height="Auto"/> <!-- Settings / Toggles -->
@@ -249,6 +249,7 @@
                             </StackPanel>
                         </Button>
                         <Button x:Name="WidgetMoreButton" Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="More_Click" ToolTip="More"
+                                PreviewMouseLeftButtonDown="More_PreviewMouseLeftButtonDown"
                                 Services:LocalizationService.SourceToolTip="More"
                                 AutomationProperties.Name="More">
                             <Image x:Name="MoreIcon" Width="18" Height="18"/>
