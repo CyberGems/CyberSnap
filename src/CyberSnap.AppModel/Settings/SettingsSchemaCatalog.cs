@@ -64,6 +64,10 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("magnifier", "Show capture magnifier", SettingsValueKind.Toggle, "Display a zoomed preview near the cursor.", "ShowCaptureMagnifier"),
                         new SettingDefinition("detect_windows", "Detect windows", SettingsValueKind.Toggle, "Offer window-aware selection and detection behavior.", "DetectWindows"),
                         new SettingDefinition("dock_side", "Toolbar Position", SettingsValueKind.Choice, "Choose a position for the capture toolbar.", "CaptureDockSide"),
+                        new SettingDefinition("scroll_auto_copy", "Auto-copy scrolling captures", SettingsValueKind.Toggle, "Copy each finished scrolling capture to the clipboard.", "ScrollAutoCopyToClipboard"),
+                        new SettingDefinition("scroll_preview", "Show preview after scrolling capture", SettingsValueKind.Toggle, "Open the scrolling capture preview independently of screenshots.", "ShowScrollCapturePreview"),
+                        new SettingDefinition("color_auto_copy", "Auto-copy picked colors", SettingsValueKind.Toggle, "Copy the picked color in its favorite format.", "ColorDetailAutoCopy"),
+                        new SettingDefinition("color_window", "Show the color result window", SettingsValueKind.Toggle, "Open the result window after picking a color.", "ShowColorDetailWindow"),
                     ]),
                 new SettingsSectionDefinition(
                     "image_output",

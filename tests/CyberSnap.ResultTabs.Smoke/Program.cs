@@ -51,6 +51,12 @@ internal static partial class Program
         settings.Save();
         try
         {
+            if (args.Contains("--delivery-only"))
+            {
+                CheckDeliverySynchronization(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} delivery synchronization checks.");
+                return 0;
+            }
             if (args.Contains("--widget-only"))
             {
                 CheckWidget(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -64,6 +70,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckDeliverySynchronization(temp, args.FirstOrDefault());
             CheckOcr(settings, args.FirstOrDefault());
             CheckQr(settings, args.FirstOrDefault());
             CheckFooters(settings, settingsPath, args.FirstOrDefault());

@@ -1789,6 +1789,86 @@
                                           Checked="AutoCopyImagesCheck_Changed" Unchecked="AutoCopyImagesCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="AutoCopyScrollRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8C8;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto-copy scrolling captures" Style="{StaticResource SettingTitle}" TextWrapping="Wrap"
+                                               Services:LocalizationService.SourceText="Auto-copy scrolling captures"/>
+                                    <TextBlock Text="Copy each finished scrolling capture to the clipboard." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Copy each finished scrolling capture to the clipboard."/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoCopyScrollCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Auto-copy scrolling captures"
+                                          Checked="DeliveryPreferenceCheck_Changed" Unchecked="DeliveryPreferenceCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="ShowScrollCapturePreviewRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show preview after scrolling capture" Style="{StaticResource SettingTitle}" TextWrapping="Wrap"
+                                               Services:LocalizationService.SourceText="Show preview after scrolling capture"/>
+                                    <TextBlock Text="Open the scrolling capture preview independently of screenshots." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Open the scrolling capture preview independently of screenshots."/>
+                                </StackPanel>
+                                <CheckBox x:Name="ShowScrollCapturePreviewCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show preview after scrolling capture"
+                                          Checked="DeliveryPreferenceCheck_Changed" Unchecked="DeliveryPreferenceCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="AutoCopyColorRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE790;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto-copy picked colors" Style="{StaticResource SettingTitle}" TextWrapping="Wrap"
+                                               Services:LocalizationService.SourceText="Auto-copy picked colors"/>
+                                    <TextBlock Text="Copy the picked color in its favorite format." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Copy the picked color in its favorite format."/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoCopyColorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Auto-copy picked colors"
+                                          Checked="DeliveryPreferenceCheck_Changed" Unchecked="DeliveryPreferenceCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="ShowColorDetailWindowRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show the color result window" Style="{StaticResource SettingTitle}" TextWrapping="Wrap"
+                                               Services:LocalizationService.SourceText="Show the color result window"/>
+                                    <TextBlock Text="Open the result window after picking a color." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Open the result window after picking a color."/>
+                                </StackPanel>
+                                <CheckBox x:Name="ShowColorDetailWindowCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show the color result window"
+                                          Checked="DeliveryPreferenceCheck_Changed" Unchecked="DeliveryPreferenceCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid x:Name="AutoCopyScanRow" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>

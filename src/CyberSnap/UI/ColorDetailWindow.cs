@@ -30,6 +30,7 @@ namespace CyberSnap.UI;
 /// </summary>
 internal sealed class ColorDetailWindow : Window
 {
+    private readonly SettingsService? _settingsService;
     private byte _r;
     private byte _g;
     private byte _b;
@@ -65,7 +66,13 @@ internal sealed class ColorDetailWindow : Window
     public event Action? RepickRequested;
 
     public ColorDetailWindow(byte r, byte g, byte b, string? alreadyCopiedText = null)
+        : this(r, g, b, alreadyCopiedText, (Application.Current as App)?.SettingsService)
     {
+    }
+
+    internal ColorDetailWindow(byte r, byte g, byte b, string? alreadyCopiedText, SettingsService? settingsService)
+    {
+        _settingsService = settingsService;
         _r = r;
         _g = g;
         _b = b;
@@ -102,6 +109,8 @@ internal sealed class ColorDetailWindow : Window
         PreviewMouseMove += OnHeaderDragMove;
         PreviewMouseLeftButtonUp += OnHeaderDragEnd;
         Loaded += (_, _) => CyberSnapWindowChrome.EnsureForeground(this, _copyCloseBtn);
+        SettingsService.AutoCopyPreferencesChanged += OnDeliveryPreferencesChanged;
+        Closed += (_, _) => SettingsService.AutoCopyPreferencesChanged -= OnDeliveryPreferencesChanged;
     }
 
     private void SnapshotLiveState()
@@ -139,9 +148,10 @@ internal sealed class ColorDetailWindow : Window
     {
         try
         {
-            if (Application.Current is App app)
+            if (_settingsService is not null)
             {
-                var s = app.SettingsService.Settings;
+                _settingsService.RefreshResultDeliveryPreferences();
+                var s = _settingsService.Settings;
                 ApplyDeliveryPrefs(s.ColorDetailAutoCopy, s.ShowColorDetailWindow);
                 _format = s.ColorDetailCopyFormat;
                 _includeHash = s.ColorDetailIncludeHash;
@@ -171,13 +181,32 @@ internal sealed class ColorDetailWindow : Window
         ApplyCopyActionState();
     }
 
+    private void OnDeliveryPreferencesChanged()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(OnDeliveryPreferencesChanged);
+            return;
+        }
+        if (_settingsService is null) return;
+        _settingsService.RefreshResultDeliveryPreferences();
+        RefreshDeliveryPreferences(_settingsService.Settings);
+    }
+
     private void SavePrefs()
     {
         try
         {
             ApplyDeliveryPrefs(_autoCopy, _showWindowPref);
-            if (Application.Current is App app)
-                app.PersistColorDetailPrefs(_showWindowPref, _autoCopy, _format, _includeHash);
+            if (_settingsService is null) return;
+            _settingsService.RefreshResultDeliveryPreferences();
+            var settings = _settingsService.Settings;
+            settings.ColorDetailAutoCopy = _autoCopy;
+            settings.ShowColorDetailWindow = _showWindowPref;
+            settings.ColorDetailCopyFormat = _format;
+            settings.ColorDetailIncludeHash = _includeHash;
+            _settingsService.Save();
+            SettingsService.PublishAutoCopyPreferences(settings);
         }
         catch (Exception ex) { AppDiagnostics.LogError("color-detail.prefs", ex); }
     }
@@ -707,6 +736,7 @@ internal sealed class ColorDetailWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = WpfHAlign.Right,
         };
+        System.Windows.Automation.AutomationProperties.SetName(toggle, text);
         toggle.Checked += (_, _) => { if (!suppress) onChange(true); };
         toggle.Unchecked += (_, _) => { if (!suppress) onChange(false); };
         registerSet?.Invoke(value =>

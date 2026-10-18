@@ -65,8 +65,9 @@ public partial class CaptureWidgetWindow
             }));
     }
 
-    private Forms.ToolStripMenuItem BuildDeliveryToggle(string label, Func<AppSettings, bool> get, Action<AppSettings, bool> set) =>
-        BuildCaptureToggle(label, get(_settings), () =>
+    private Forms.ToolStripMenuItem BuildDeliveryToggle(string label, Func<AppSettings, bool> get, Action<AppSettings, bool> set)
+    {
+        var item = BuildCaptureToggle(label, get(_settings), () =>
         {
             // Other result windows may own a separate SettingsService. Read their
             // latest delivery choices before changing just this mode.
@@ -74,4 +75,36 @@ public partial class CaptureWidgetWindow
             var settings = _settings;
             set(settings, !get(settings));
         }, publishDelivery: true);
+        item.Tag = get;
+        return item;
+    }
+
+    private void OnDeliveryPreferencesChanged()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(OnDeliveryPreferencesChanged);
+            return;
+        }
+        _settingsService.RefreshResultDeliveryPreferences();
+        if (_contextMenu is not { IsDisposed: false } menu) return;
+        RefreshItems(menu.Items);
+
+        void RefreshItems(Forms.ToolStripItemCollection items)
+        {
+            foreach (var item in items.OfType<Forms.ToolStripMenuItem>())
+            {
+                if (item.Tag is Func<AppSettings, bool> get && get(_settings) != (item.Image is not null))
+                {
+                    var oldImage = item.Image;
+                    item.Image = get(_settings) ? FluentIcons.RenderBitmap("check",
+                        System.Drawing.Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R,
+                            UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 20, true) : null;
+                    item.ImageScaling = Forms.ToolStripItemImageScaling.None;
+                    oldImage?.Dispose();
+                }
+                RefreshItems(item.DropDownItems);
+            }
+        }
+    }
 }

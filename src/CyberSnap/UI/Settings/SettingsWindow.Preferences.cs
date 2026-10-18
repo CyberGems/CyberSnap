@@ -1239,7 +1239,8 @@ public partial class SettingsWindow
             selected,
             value =>
             {
-                AutoCopyPreferences.SetKindEnabled(_settingsService.Settings, AutoCopyKind.Image, value);
+                var outcome = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings) with { Clipboard = value };
+                AfterCaptureOutcomeModel.ApplyToSettings(outcome, _settingsService.Settings);
             },
             value => AutoCopyImagesCheck.IsChecked = value,
             () =>
@@ -1328,6 +1329,8 @@ public partial class SettingsWindow
 
     private void ApplyAutoCopyControlsFromSettings(AppSettings s)
     {
+        var previousSuppression = (_suppressAutoCopyPreferenceChange, _suppressGeneralPreferenceChange,
+            _suppressCaptureSavePreferenceChange, _suppressOcrPreferenceChange, _suppressRecordingPreferenceChange);
         _suppressAutoCopyPreferenceChange = true;
         _suppressGeneralPreferenceChange = true;
         _suppressCaptureSavePreferenceChange = true;
@@ -1337,6 +1340,14 @@ public partial class SettingsWindow
         {
             if (AutoCopyImagesCheck != null)
                 AutoCopyImagesCheck.IsChecked = s.ImageAutoCopyToClipboard;
+            if (AutoCopyScrollCheck != null)
+                AutoCopyScrollCheck.IsChecked = s.ScrollAutoCopyToClipboard;
+            if (ShowScrollCapturePreviewCheck != null)
+                ShowScrollCapturePreviewCheck.IsChecked = AfterCaptureOutcomeModel.FromSettings(s, CaptureKind.ScrollCapture).Preview;
+            if (AutoCopyColorCheck != null)
+                AutoCopyColorCheck.IsChecked = s.ColorDetailAutoCopy;
+            if (ShowColorDetailWindowCheck != null)
+                ShowColorDetailWindowCheck.IsChecked = ResultDelivery.ForColor(s).ShowWindow;
             if (AutoCopyOcrCheck != null)
                 AutoCopyOcrCheck.IsChecked = AutoCopyPreferences.ShouldCopy(s, AutoCopyKind.Ocr);
             if (OcrShowResultWindowCheck != null)
@@ -1353,11 +1364,8 @@ public partial class SettingsWindow
         }
         finally
         {
-            _suppressAutoCopyPreferenceChange = false;
-            _suppressGeneralPreferenceChange = false;
-            _suppressCaptureSavePreferenceChange = false;
-            _suppressOcrPreferenceChange = false;
-            _suppressRecordingPreferenceChange = false;
+            (_suppressAutoCopyPreferenceChange, _suppressGeneralPreferenceChange,
+                _suppressCaptureSavePreferenceChange, _suppressOcrPreferenceChange, _suppressRecordingPreferenceChange) = previousSuppression;
         }
     }
 

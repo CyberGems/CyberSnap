@@ -115,6 +115,7 @@ public partial class CaptureWidgetWindow : Window
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
         Closed += OnClosed;
+        SettingsService.AutoCopyPreferencesChanged += OnDeliveryPreferencesChanged;
 
         Topmost = _settings.WidgetAlwaysOnTop;
 
@@ -127,6 +128,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        SettingsService.AutoCopyPreferencesChanged -= OnDeliveryPreferencesChanged;
         var menu = _contextMenu;
         menu?.Close();
         menu?.Dispose();
@@ -1287,7 +1289,7 @@ public partial class CaptureWidgetWindow : Window
         ShowThemedMenu(menu);
     }
 
-    // More menu: widget options, image capture, editor, configuration and help.
+    // More menu: widget options, delivery by mode, editor, configuration and help.
     private System.Windows.Forms.ContextMenuStrip BuildMoreMenu()
     {
         _settingsService.RefreshResultDeliveryPreferences();
@@ -1432,8 +1434,6 @@ public partial class CaptureWidgetWindow : Window
             if (publishDelivery)
             {
                 SettingsService.PublishAutoCopyPreferences(_settings);
-                foreach (var colorWindow in System.Windows.Application.Current.Windows.OfType<ColorDetailWindow>())
-                    colorWindow.RefreshDeliveryPreferences(_settings);
             }
         };
         return item;
@@ -1548,7 +1548,12 @@ public partial class CaptureWidgetWindow : Window
     // flip submenus inward near a screen edge, and force foreground so click-away dismissal works.
     private void ShowThemedMenu(System.Windows.Forms.ContextMenuStrip menu, bool fromMoreButton = false)
     {
-        _contextMenu?.Close();
+        var previousMenu = _contextMenu;
+        previousMenu?.Close();
+        // Close has finished processing here. Release the previous native popup
+        // before opening its replacement, so its deferred disposal cannot disrupt
+        // the new menu's focus or WinForms' active-menu tracking.
+        previousMenu?.Dispose();
         _contextMenu = menu;
         // Keep the widget expanded/visible while the menu is open: showing the menu moves the
         // cursor off the widget, which would otherwise start the collapse timer and leave the

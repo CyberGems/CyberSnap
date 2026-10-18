@@ -72,9 +72,15 @@ internal static partial class Program
         Call(widget, "More_Click", button, new RoutedEventArgs());
         var finalMenu = GetField<Forms.ContextMenuStrip>(widget, "_contextMenu");
         Call(widget, "ShowWidgetContextMenu");
+        var replacement = GetField<Forms.ContextMenuStrip>(widget, "_contextMenu");
+        string closeReason = "none";
+        replacement.Closed += (_, e) => closeReason = e.CloseReason.ToString();
+        Assert(finalMenu.IsDisposed && replacement.Visible,
+            "a replacement opens only after the old native menu is released", false);
         Pump();
         Assert(finalMenu.IsDisposed && GetField<bool>(widget, "_contextMenuOpen") && !GetField<bool>(widget, "_moreMenuOpen"),
-            "the widget context menu replaces More without retaining its highlight", false);
+            $"the widget context menu replaces More without retaining its highlight ({language}, {settings.Settings.WidgetDockEdge}: "
+                + $"oldDisposed={finalMenu.IsDisposed}, contextOpen={GetField<bool>(widget, "_contextMenuOpen")}, moreOpen={GetField<bool>(widget, "_moreMenuOpen")}, closed={closeReason})", false);
         GetField<Forms.ContextMenuStrip>(widget, "_contextMenu").Close(Forms.ToolStripDropDownCloseReason.AppClicked);
         Pump();
         Assert(!GetField<bool>(widget, "_contextMenuOpen"), "outside-click dismissal releases the context menu state", false);

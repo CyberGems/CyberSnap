@@ -89,6 +89,15 @@ public sealed class SettingsService : IDisposable
         target.ShowScrollCapturePreview = source.ShowScrollCapturePreview;
         target.OpenVideoTrimmerAfterCapture = source.OpenVideoTrimmerAfterCapture;
         target.OpenGifTrimmerAfterCapture = source.OpenGifTrimmerAfterCapture;
+        // The outcome editors normalize clipboard/window choices against these
+        // destinations. A stale save/share flag could suppress the last-output
+        // fallback or restore an older destination on the next edit.
+        target.SaveToFile = source.SaveToFile;
+        target.AutoShareAfterCapture = source.AutoShareAfterCapture;
+        target.SaveVideoToFile = source.SaveVideoToFile;
+        target.SaveGifToFile = source.SaveGifToFile;
+        target.ShowVideoRecordingNotification = source.ShowVideoRecordingNotification;
+        target.ShowGifRecordingNotification = source.ShowGifRecordingNotification;
         target.AfterCapture = source.AfterCapture;
         target.OpenEditorAfterCapture = source.OpenEditorAfterCapture;
         target.OpenInSystemViewerAfterCapture = source.OpenInSystemViewerAfterCapture;

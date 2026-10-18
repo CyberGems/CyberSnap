@@ -152,7 +152,8 @@ internal static partial class Program
         var ocr = OcrResultWindow.ShowResult("widget delivery OCR", detached);
         var qr = QrResultWindow.ShowResult("widget delivery QR", ZXing.BarcodeFormat.QR_CODE, detached);
         var colorType = typeof(CaptureWidgetWindow).Assembly.GetType("CyberSnap.UI.ColorDetailWindow")!;
-        var color = (Window)Activator.CreateInstance(colorType, new object?[] { (byte)30, (byte)90, (byte)140, null })!;
+        var color = (Window)Activator.CreateInstance(colorType, BindingFlags.Instance | BindingFlags.NonPublic,
+            null, new object?[] { (byte)30, (byte)90, (byte)140, null, detached }, null)!;
         Call(color, "RefreshDeliveryPreferences", settings);
         color.Show();
         try

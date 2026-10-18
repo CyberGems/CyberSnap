@@ -915,6 +915,10 @@ public partial class SettingsWindow
             // Clipboard preferences by result type.
             "imageautocopytoclipboard"  => AutoCopyImagesCheck,
             "imageautocopy"             => AutoCopyImagesCheck,
+            "scrollautocopytoclipboard" => AutoCopyScrollCheck,
+            "showscrollcapturepreview"  => ShowScrollCapturePreviewCheck,
+            "colordetailautocopy"       => AutoCopyColorCheck,
+            "showcolordetailwindow"     => ShowColorDetailWindowCheck,
             "ocrautocopytoclipboard"    => AutoCopyOcrCheck,
             "ocrautocopy"               => AutoCopyOcrCheck,
             "ocrshowresultwindow"       => OcrShowResultWindowCheck,
