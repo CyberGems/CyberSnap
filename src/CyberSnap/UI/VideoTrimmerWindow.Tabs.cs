@@ -189,7 +189,12 @@ public partial class VideoTrimmerWindow
             VolumeControl.IsExportMuted = _active.ExportMuted;
             if (_isGif) VolumeControl.SetGifMode();
             else if (!_hasAudioTrack) VolumeControl.SetNoAudioMode();
-            else { VolumeControl.HasAudioTrack = true; SyncMediaAudio(); }
+            else
+            {
+                VolumeControl.HasAudioTrack = true;
+                VolumeControl.UpdateTooltips();
+                SyncMediaAudio();
+            }
             _loopEnabled = _active.Loop;
             _preciseCut = _active.Precise;
             _detailedTimeDisplay = _active.DetailedTime;

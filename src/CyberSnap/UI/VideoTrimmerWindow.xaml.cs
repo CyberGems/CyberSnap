@@ -348,6 +348,9 @@ namespace CyberSnap.UI
         /// </summary>
         private void TeardownPreviewForReload()
         {
+            // Preserve the captured session while its player is unavailable.
+            // Modal close prompts can run during the export replacement delay.
+            _previewReady = false;
             CompositionTarget.Rendering -= OnRendering;
             ReleaseDecodedMedia();
             try { MediaPlayer.Close(); } catch { }

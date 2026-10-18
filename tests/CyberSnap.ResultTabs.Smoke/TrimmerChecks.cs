@@ -149,6 +149,8 @@ internal static partial class Program
                 "MP4 restores its trim range");
             Assert(Math.Abs((double)Call(window, "GetCurrentTimelineSeconds")! - 0.7) < 0.03 && !(bool)Call(window, "IsPlaying")!, "MP4 restores its playhead and pause state");
             Assert(volume.Volume == 0.25 && volume.IsExportMuted && !GetField<bool>(window, "_loopEnabled") && GetField<bool>(window, "_preciseCut"), "MP4 restores its audio, loop and precise-cut choices");
+            Assert(Equals(volume.ToolTip, LocalizationService.Translate("en", "Drag to adjust volume. The speaker button mutes; muted audio is excluded from exports.")),
+                "returning from a GIF restores the MP4 audio tooltip");
             Assert(GetField<double>(window, "_currentZoom") == 4 && Element<ToggleButton>(window, "SetStartBtn").IsChecked == true,
                 "MP4 restores zoom and marker state");
             Assert(Math.Abs(viewport.HorizontalOffset - panX) < 1 && Math.Abs(viewport.VerticalOffset - panY) < 1
@@ -250,12 +252,15 @@ internal static partial class Program
             File.Copy(blue, lateDestination);
             SetField(window, "_startTimeSeconds", 0.1);
             SetField(window, "_endTimeSeconds", 0.4);
+            Call(window, "SeekToSeconds", 0.3);
             Call(window, "EvaluateCropState");
             var destinationArrival = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(10) };
             destinationArrival.Tick += (_, _) =>
             {
                 if (Field(window, "_mp4Sequence") is not null || !GetField<bool>(window, "_isExporting")) return;
                 destinationArrival.Stop();
+                RespondToConfirmations(false);
+                window.Close();
                 VideoTrimmerWindow.ShowFile(lateDestination, settings);
             };
             destinationArrival.Start();
@@ -267,6 +272,8 @@ internal static partial class Program
             AwaitTrimmer(window);
             Assert(GetField<string>(window, "_mediaFilePath") == saved && GetField<double>(window, "_startTimeSeconds") == 0.1,
                 "an aborted destination conflict restores the originating session and its pending trim");
+            Assert(Math.Abs((double)Call(window, "GetCurrentTimelineSeconds")! - 0.3) < 0.03,
+                "rejecting close during player release preserves the source playhead when export aborts");
 
             foreach (string tag in new[] { "first", "second" })
             {
@@ -375,5 +382,6 @@ internal static partial class Program
             AwaitCondition(() => ownedFixtures.All(path => !File.Exists(path)), "Owned recordings were not cleaned after closing");
             foreach (string path in ownedFixtures) if (File.Exists(path)) File.Delete(path);
         }
+        CheckTrimmerIsolation(settings, temp);
     }
 }

@@ -40,7 +40,9 @@ public partial class VideoTrimmerWindow
 
     private async void TrimBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (_isExporting || !_previewReady || !IsSegmentValid()) return;
+        if (_isExporting || !_previewReady) return;
+        CommitPendingTimeInputs();
+        if (!IsSegmentValid()) return;
         string lang = _settingsService.Settings.InterfaceLanguage;
         _documentPromptOpen = true;
         bool confirmed;
@@ -54,7 +56,9 @@ public partial class VideoTrimmerWindow
 
     private async void SaveAsNewBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (_isExporting || !_previewReady || !IsSegmentValid()) return;
+        if (_isExporting || !_previewReady) return;
+        CommitPendingTimeInputs();
+        if (!IsSegmentValid()) return;
         string ext = Path.GetExtension(_mediaFilePath);
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
@@ -77,7 +81,11 @@ public partial class VideoTrimmerWindow
     // every await after FFmpeg exits. A newly arriving file can only enqueue a tab.
     private async Task<bool> ExportToFileAsync(string destination)
     {
-        if (_isExporting || !_previewReady || !IsSegmentValid()) return false;
+        if (_isExporting || !_previewReady) return false;
+        // A context-menu command can leave a time editor focused. Validate the
+        // committed range so the job always matches the user's latest marks.
+        CommitPendingTimeInputs();
+        if (!IsSegmentValid()) return false;
         destination = Path.GetFullPath(destination);
         var source = _active;
         bool Conflicts() => _sessions.Any(s => !ReferenceEquals(s, source)
@@ -87,7 +95,6 @@ public partial class VideoTrimmerWindow
             ShowBanner(LocalizationService.Translate("This file is open in another tab. Choose a different destination."));
             return false;
         }
-        CommitPendingTimeInputs();
         CaptureSession();
         string staging = Path.Combine(Path.GetDirectoryName(destination)!, $"cybersnap-trim-{Guid.NewGuid():N}{Path.GetExtension(destination)}");
         var job = CaptureExportJob(staging, _startTimeSeconds, _endTimeSeconds);
