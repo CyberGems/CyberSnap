@@ -51,6 +51,12 @@ internal static partial class Program
         settings.Save();
         try
         {
+            if (args.Contains("--widget-only"))
+            {
+                CheckWidget(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} widget checks.");
+                return 0;
+            }
             if (args.Contains("--trimmer-only"))
             {
                 CheckTrimmer(settings, temp, args.FirstOrDefault(a => !a.StartsWith("--")));

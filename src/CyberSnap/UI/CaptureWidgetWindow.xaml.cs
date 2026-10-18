@@ -48,7 +48,7 @@ public partial class CaptureWidgetWindow : Window
 
     // Layout constants
     private const double PanelWidth = 196;
-    private const double PanelHeight = 246; // capture actions and cursor toggle
+    private const double PanelHeight = 248; // keep both panel dimensions aligned at common fractional display DPIs
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
@@ -298,7 +298,9 @@ public partial class CaptureWidgetWindow : Window
         ScreenRecordIcon.Source = Helpers.FluentIcons.RenderWpf("record", normalIconColor, 22); // record dot for MP4
         GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
         RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, 22); // Ruler tool icon
-        SettingsIcon.Source = Helpers.FluentIcons.RenderWpf("gear", normalIconColor, 16);
+        MoreIcon.Source = Helpers.FluentIcons.RenderWpf("more", normalIconColor, 18);
+        System.Windows.Automation.AutomationProperties.SetName(WidgetMoreButton,
+            LocalizationService.Translate(_settings.InterfaceLanguage, "More"));
 
         _widgetLogoColor = ThemedLogo.Square(12);
         _widgetLogoMuted = ThemedLogo.SquareGrayscale(12);
@@ -637,10 +639,15 @@ public partial class CaptureWidgetWindow : Window
         // no halo (ShadowHalo), so that edge sits flush against the screen and the peek stays
         // interactive right at the screen-edge pixel.
         halo = ShadowHalo(_settings.WidgetDockEdge);
-        width = bounds.Width + halo.Left + halo.Right;
-        height = bounds.Height + halo.Top + halo.Bottom;
-        left = bounds.Left - halo.Left;
-        top = bounds.Top - halo.Top;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double requestedWidth = bounds.Width + halo.Left + halo.Right;
+        double requestedHeight = bounds.Height + halo.Top + halo.Bottom;
+        // Native window sizes use whole pixels. Reserve the full outer pixel so
+        // fractional UI scales cannot round the client area inside the panel border.
+        width = Math.Ceiling(requestedWidth * dpi.DpiScaleX) / dpi.DpiScaleX;
+        height = Math.Ceiling(requestedHeight * dpi.DpiScaleY) / dpi.DpiScaleY;
+        left = bounds.Left - halo.Left - (_settings.WidgetDockEdge == CaptureDockSide.Right ? width - requestedWidth : 0);
+        top = bounds.Top - halo.Top - (_settings.WidgetDockEdge == CaptureDockSide.Bottom ? height - requestedHeight : 0);
         return true;
     }
 
@@ -1274,9 +1281,8 @@ public partial class CaptureWidgetWindow : Window
         ShowThemedMenu(menu);
     }
 
-    // Config button menu: capture toggles at the top, a "Widget" submenu mirroring the right-click
-    // options, and a shortcut into the full widget settings in the Config window.
-    private void ShowConfigMenu()
+    // More menu: capture toggles, widget options, editor, configuration and help.
+    private void ShowMoreMenu()
     {
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
@@ -1641,11 +1647,9 @@ public partial class CaptureWidgetWindow : Window
         WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetTextMuted");
     }
 
-    private void Settings_Click(object sender, RoutedEventArgs e)
+    private void More_Click(object sender, RoutedEventArgs e)
     {
-        // The Config button now opens a quick menu (capture toggles + Widget options + a shortcut
-        // into the full settings) instead of jumping straight to the Config window.
-        ShowConfigMenu();
+        ShowMoreMenu();
     }
 
     private void TriggerAppCapture(Models.CaptureMode mode, RecordingFormat? recordingFormat = null)

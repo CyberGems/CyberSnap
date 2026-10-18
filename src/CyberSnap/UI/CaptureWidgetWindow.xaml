@@ -248,9 +248,10 @@
                                 </Ellipse>
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Configuration"
-                                AutomationProperties.Name="Configuration">
-                            <Image x:Name="SettingsIcon" Width="16" Height="16"/>
+                        <Button x:Name="WidgetMoreButton" Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="More_Click" ToolTip="More"
+                                Services:LocalizationService.SourceToolTip="More"
+                                AutomationProperties.Name="More">
+                            <Image x:Name="MoreIcon" Width="18" Height="18"/>
                         </Button>
                     </Grid>
 

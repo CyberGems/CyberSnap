@@ -138,10 +138,12 @@ internal static partial class Program
     {
         settings.Settings.DisableAnimations = true;
         foreach (string language in new[] { "en", "es" })
-        foreach (double scale in new[] { 1.0, 1.4 })
+        foreach (double scale in new[] { 1.0, 1.1, 1.2, 1.3, 1.4 })
+        foreach (var edge in Enum.GetValues<CaptureDockSide>())
         {
             settings.Settings.InterfaceLanguage = language;
             settings.Settings.UiScale = scale;
+            settings.Settings.WidgetDockEdge = edge;
             UiScale.Set(scale);
             settings.Save();
             var before = CopyFlags(settings.Settings);
@@ -159,6 +161,11 @@ internal static partial class Program
                 widget.UpdateLayout();
                 var panel = Element<Border>(widget, "MainPanelBorder");
                 var toggle = Element<ToggleButton>(widget, "CaptureCursorToggle");
+                var panelClip = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutClip(panel);
+                if (scale == 1.1)
+                    Render(widget, outputDirectory, $"widget-border-{language}-{edge}-default.png");
+                Assert(panelClip is null || panelClip.Bounds.Contains(new Rect(panel.RenderSize)),
+                    $"widget border is not clipped at {edge}, scale {scale}: panel={panel.RenderSize}, clip={panelClip?.Bounds}", false);
                 Assert(VisualDescendants(panel).OfType<ToggleButton>().SequenceEqual(new[] { toggle }),
                     "widget exposes only its cursor toggle", false);
                 var toggleBounds = toggle.TransformToAncestor(panel).TransformBounds(new Rect(toggle.RenderSize));
@@ -173,7 +180,7 @@ internal static partial class Program
             }
             finally { widget.Close(); }
         }
-        Console.WriteLine("PASS: reduced widget, remaining cursor toggle, expansion/collapse, EN/ES, and UI scales 1.0/1.4.");
+        Console.WriteLine("PASS: widget border, cursor toggle, expansion/collapse, EN/ES, five UI scales and all four dock edges.");
     }
 
     private static IEnumerable<DependencyObject> VisualDescendants(DependencyObject root)
