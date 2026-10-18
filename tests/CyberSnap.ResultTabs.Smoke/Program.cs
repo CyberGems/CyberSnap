@@ -26,6 +26,7 @@ internal static partial class Program
     private static int Main(string[] args)
     {
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
         // from physical input on the shared desktop; all test edits are explicit.
         InputManager.Current.PreProcessInput += (_, e) =>
@@ -50,11 +51,18 @@ internal static partial class Program
         settings.Save();
         try
         {
+            if (args.Contains("--trimmer-only"))
+            {
+                CheckTrimmer(settings, temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} Trimmer integration checks.");
+                return 0;
+            }
             CheckIndependentAutoCopy(temp);
             CheckOcr(settings, args.FirstOrDefault());
             CheckQr(settings, args.FirstOrDefault());
             CheckFooters(settings, settingsPath, args.FirstOrDefault());
             CheckWidget(settings, args.FirstOrDefault());
+            CheckTrimmer(settings, temp, args.FirstOrDefault());
             Console.WriteLine($"PASS: {_checks} result-tab integration checks.");
             return 0;
         }

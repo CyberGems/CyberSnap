@@ -2616,5 +2616,12 @@
   "Copy recognized text to the clipboard. Showing the result window is a separate choice.": "Copia el texto reconocido al portapapeles. Mostrar la ventana de resultados es una opción aparte.",
   "Screenshot auto-copy is on: images already go to the clipboard": "La autocopia de capturas está activa: las imágenes ya van al portapapeles",
   "Auto-copy video": "Auto-copiar video",
-  "Auto-copy GIF": "Auto-copiar GIF"
+  "Auto-copy GIF": "Auto-copiar GIF",
+  "Close all tabs?": "¿Cerrar todas las pestañas?",
+  "This window contains {0} files. Close all tabs?": "Esta ventana contiene {0} archivos. ¿Cerrar todas las pestañas?",
+  "Cancel export?": "¿Cancelar la exportación?",
+  "An export is in progress. Cancel it and close the Trimmer?": "Hay una exportación en curso. ¿Cancelarla y cerrar el Recortador?",
+  "Cancel export and close": "Cancelar exportación y cerrar",
+  "This file is open in another tab. Choose a different destination.": "Este archivo está abierto en otra pestaña. Elige otro destino.",
+  "The trim changes and this temporary recording will be discarded.": "Se descartarán los cambios de recorte y esta grabación temporal."
 }

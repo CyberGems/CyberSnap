@@ -2355,5 +2355,12 @@
   "Copy recognized text to the clipboard. Showing the result window is a separate choice.": "Copy recognized text to the clipboard. Showing the result window is a separate choice.",
   "Screenshot auto-copy is on: images already go to the clipboard": "Screenshot auto-copy is on: images already go to the clipboard",
   "Auto-copy video": "Auto-copy video",
-  "Auto-copy GIF": "Auto-copy GIF"
+  "Auto-copy GIF": "Auto-copy GIF",
+  "Close all tabs?": "Close all tabs?",
+  "This window contains {0} files. Close all tabs?": "This window contains {0} files. Close all tabs?",
+  "Cancel export?": "Cancel export?",
+  "An export is in progress. Cancel it and close the Trimmer?": "An export is in progress. Cancel it and close the Trimmer?",
+  "Cancel export and close": "Cancel export and close",
+  "This file is open in another tab. Choose a different destination.": "This file is open in another tab. Choose a different destination.",
+  "The trim changes and this temporary recording will be discarded.": "The trim changes and this temporary recording will be discarded."
 }

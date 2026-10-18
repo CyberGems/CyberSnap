@@ -1138,14 +1138,7 @@ public partial class App
         {
             try
             {
-                var trimmer = new VideoTrimmerWindow(path, _settingsService!, firstFrame);
-                if (ephemeral)
-                {
-                    // Drop the temp recording when the trimmer closes (Save As New keeps the export).
-                    trimmer.Closed += (_, _) => Helpers.CaptureSavePath.TryDeleteTempRecording(path);
-                }
-                trimmer.Show();
-                trimmer.Activate();
+                VideoTrimmerWindow.ShowFile(path, _settingsService!, firstFrame, ephemeral);
             }
             catch (Exception ex)
             {

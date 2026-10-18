@@ -265,8 +265,7 @@ public partial class HistoryWindow
                 suppressOpenAction = true;
                 try
                 {
-                    var trimmer = new VideoTrimmerWindow(vm.Entry.FilePath, _settingsService);
-                    trimmer.Show();
+                    VideoTrimmerWindow.ShowFile(vm.Entry.FilePath, _settingsService);
                 }
                 catch (Exception ex)
                 {
@@ -452,8 +451,7 @@ public partial class HistoryWindow
                         {
                             try
                             {
-                                var trimmer = new VideoTrimmerWindow(vm.Entry.FilePath, _settingsService);
-                                trimmer.Show();
+                                VideoTrimmerWindow.ShowFile(vm.Entry.FilePath, _settingsService);
                             }
                             catch (Exception ex)
                             {

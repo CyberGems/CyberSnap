@@ -1135,8 +1135,7 @@ public partial class ToastWindow : Window
         {
             if (IsVideoOrGifPath(_savedFilePath))
             {
-                var trimmer = new VideoTrimmerWindow(_savedFilePath!, ((App)Application.Current).SettingsService);
-                trimmer.Show();
+                VideoTrimmerWindow.ShowFile(_savedFilePath!, ((App)Application.Current).SettingsService);
             }
             else if (_savedFilePath is not null && _savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             {

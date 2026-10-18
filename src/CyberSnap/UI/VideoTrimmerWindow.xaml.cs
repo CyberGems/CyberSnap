@@ -75,7 +75,7 @@ namespace CyberSnap.UI
         private int _filmstripCount;
         private DispatcherTimer? _filmstripResizeTimer;
 
-        public VideoTrimmerWindow(string filePath, SettingsService settingsService, Bitmap? posterFrame = null)
+        public VideoTrimmerWindow(string filePath, SettingsService settingsService, Bitmap? posterFrame = null, bool ephemeral = false)
         {
             _mediaFilePath = Path.GetFullPath(filePath);
             _settingsService = settingsService;
@@ -125,7 +125,9 @@ namespace CyberSnap.UI
             _fps = _isGif ? settingsService.Settings.GifFps : settingsService.Settings.RecordingFps;
             if (_fps <= 0) _fps = 30.0;
 
+            _restoringSession = true;
             InitializeVolumeControl();
+            _restoringSession = false;
             CacheTrimButtonWidth();
             SetTrimButtonVisible(false, animate: false);
 
@@ -150,32 +152,7 @@ namespace CyberSnap.UI
             RootScale.ScaleY = 0.97;
             Loaded += (_, _) => PlayOpenAnimation();
 
-            if (_isGif)
-            {
-                GifPreviewImage.Visibility = Visibility.Collapsed;
-                MediaPlayer.Visibility = Visibility.Collapsed;
-                ShowProgressOverlay(LocalizationService.Translate(
-                    settingsService.Settings.InterfaceLanguage,
-                    "Loading GIF..."));
-                Loaded += (_, _) => LoadGifPreview();
-            }
-            else
-            {
-                GifPreviewImage.Visibility = Visibility.Collapsed;
-                MediaPlayer.Visibility = Visibility.Collapsed;
-                if (posterFrame != null)
-                {
-                    GifPreviewImage.Source = BitmapPerf.ToBitmapSource(posterFrame);
-                    GifPreviewImage.Visibility = Visibility.Visible;
-                    posterFrame.Dispose();
-                    NotifyPreviewFrameReady();
-                }
-
-                ShowProgressOverlay(LocalizationService.Translate(
-                    settingsService.Settings.InterfaceLanguage,
-                    "Loading video..."));
-                Loaded += (_, _) => LoadMp4Preview();
-            }
+            InitializeTabs(filePath, posterFrame, ephemeral);
         }
         
         public void ApplyTheme()
@@ -217,6 +194,7 @@ namespace CyberSnap.UI
 
             TrimmerTitleBar.RefreshIcons();
             InitZoomIcons();
+            if (_active is not null) RefreshTabs();
         }
 
         private void TitleBar_DragWindow(object sender, MouseButtonEventArgs e)
@@ -380,6 +358,8 @@ namespace CyberSnap.UI
             CancelPreviewLoad();
             DisposeGifSequence();
             DisposeMp4Sequence();
+            GifPreviewImage.Source = null;
+            _filmstripResizeTimer?.Stop();
             Filmstrip.Children.Clear();
             Waveform.Peaks = new float[WaveformBuckets];
             UpdateWaveformSelection();
@@ -425,6 +405,7 @@ namespace CyberSnap.UI
 
         private async Task LoadMp4PreviewAsync()
         {
+            var session = _active;
             int loadVersion = Interlocked.Increment(ref _mp4LoadVersion);
             string path = _mediaFilePath;
             string lang = _settingsService.Settings.InterfaceLanguage;
@@ -451,7 +432,7 @@ namespace CyberSnap.UI
                 loadError = ex;
             }
 
-            if (loadVersion != _mp4LoadVersion)
+            if (_sessionsFinalized || !ReferenceEquals(session, _active) || loadVersion != _mp4LoadVersion)
             {
                 sequence?.Dispose();
                 return;
@@ -518,13 +499,12 @@ namespace CyberSnap.UI
             StartWaveformLoad(loadVersion);
             HideProgressOverlay();
 
-            if (_hasAudioTrack)
-                SyncMp4Audio(0, play: true);
+            RestoreLoadedSession();
         }
 
         private void LoadMp4Preview()
         {
-            _ = LoadMp4PreviewAsync();
+            TrackPreviewLoad(LoadMp4PreviewAsync());
         }
 
         private void SyncMp4Audio(double seconds, bool play)
@@ -542,6 +522,7 @@ namespace CyberSnap.UI
 
         private async Task LoadGifPreviewAsync()
         {
+            var session = _active;
             int loadVersion = Interlocked.Increment(ref _gifLoadVersion);
             string path = _mediaFilePath;
             int defaultDelayMs = Math.Max(1, (int)Math.Round(1000.0 / _fps));
@@ -571,7 +552,7 @@ namespace CyberSnap.UI
                 loadError = ex;
             }
 
-            if (loadVersion != _gifLoadVersion)
+            if (_sessionsFinalized || !ReferenceEquals(session, _active) || loadVersion != _gifLoadVersion)
             {
                 sequence?.Dispose();
                 return;
@@ -634,11 +615,12 @@ namespace CyberSnap.UI
             UpdatePlayPauseToolTip();
             BuildFilmstrip();
             HideProgressOverlay();
+            RestoreLoadedSession();
         }
 
         private void LoadGifPreview()
         {
-            _ = LoadGifPreviewAsync();
+            TrackPreviewLoad(LoadGifPreviewAsync());
         }
 
         private void UpdatePreviewFrameDisplay(double seconds, bool force = false)
@@ -983,6 +965,7 @@ namespace CyberSnap.UI
 
         private void ScheduleAudioPersist()
         {
+            if (_restoringSession) return;
             _audioPersistPending = true;
             _audioPersistTimer.Stop();
             _audioPersistTimer.Start();
@@ -999,7 +982,7 @@ namespace CyberSnap.UI
             SyncMediaAudio();
             ScheduleAudioPersist();
 
-            if (!this.IsLoaded)
+            if (!this.IsLoaded || _restoringSession)
                 return;
 
             string lang = _settingsService.Settings.InterfaceLanguage;
@@ -1456,6 +1439,8 @@ namespace CyberSnap.UI
 
         private async Task BuildFilmstripAsync(int version)
         {
+            var session = _active;
+            bool isGif = _isGif;
             const double thumbHeight = FilmstripThumbHeight;
 
             // First frame settles the aspect so the strip can be divided into
@@ -1474,7 +1459,7 @@ namespace CyberSnap.UI
 
             for (int i = 0; i < thumbCount; i++)
             {
-                if ((_isGif ? _gifLoadVersion : _mp4LoadVersion) != version)
+                if (_sessionsFinalized || !ReferenceEquals(session, _active) || (isGif ? _gifLoadVersion : _mp4LoadVersion) != version)
                     return;
 
                 double t = thumbCount > 1
@@ -1512,7 +1497,7 @@ namespace CyberSnap.UI
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
             }
 
-            if ((_isGif ? _gifLoadVersion : _mp4LoadVersion) != version)
+            if (_sessionsFinalized || !ReferenceEquals(session, _active) || (isGif ? _gifLoadVersion : _mp4LoadVersion) != version)
                 return;
 
             Filmstrip.Children.Clear();
@@ -1629,18 +1614,19 @@ namespace CyberSnap.UI
                 _settingsService.Settings.InterfaceLanguage,
                 "Audio waveform — click to seek");
             CancellationToken ct = _previewLoadCts?.Token ?? CancellationToken.None;
-            _ = LoadWaveformAsync(version, ct);
+            TrackPreviewLoad(LoadWaveformAsync(version, ct));
         }
 
         private async Task LoadWaveformAsync(int version, CancellationToken ct)
         {
-            float[]? peaks = await AudioWaveform.GetPeaksAsync(_mediaFilePath, WaveformBuckets, ct);
-            if (version != _mp4LoadVersion)
+            var session = _active;
+            float[]? peaks = await AudioWaveform.GetPeaksAsync(session.FilePath, WaveformBuckets, ct);
+            if (_sessionsFinalized || !ReferenceEquals(session, _active) || version != _mp4LoadVersion)
                 return;
 
             await Dispatcher.InvokeAsync(() =>
             {
-                if (version != _mp4LoadVersion)
+                if (_sessionsFinalized || !ReferenceEquals(session, _active) || version != _mp4LoadVersion)
                     return;
 
                 // Blank flat line on failure: the host stays reserved either way.
@@ -1809,11 +1795,12 @@ namespace CyberSnap.UI
 
         private void EvaluateCropState()
         {
-            bool isModified = IsCropModified();
-            bool canTrim = isModified && IsSegmentValid();
+            bool isModified = _previewReady ? IsCropModified() : _active?.Modified == true;
+            bool canTrim = _previewReady && isModified && IsSegmentValid();
             SetTrimButtonVisible(canTrim);
             ResetBtn.IsEnabled = isModified;
             UpdateTitleState(isModified);
+            if (_active is not null) RefreshTabs();
         }
 
         private void UpdateTitleState(bool isModified)
@@ -2204,26 +2191,21 @@ namespace CyberSnap.UI
             Activate();
             Focus();
             
-            // Set source and call Pause() to kick-start the Media Foundation
-            // pipeline.  With LoadedBehavior="Manual", Pause() is required to
-            // trigger async media loading — without it, MediaOpened never fires.
-            if (_isGif)
-            {
-                if (_gifSequence != null)
-                    return;
-
-                LoadGifPreview();
-                return;
-            }
-
-            if (_mp4Sequence != null)
-                return;
-
-            LoadMp4Preview();
         }
         
         private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            if (HandleTabHotkey(e)) return;
+            if (_isExporting || !_previewReady)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    if (_isExporting) Close();
+                    else CloseSessionAt(_sessions.IndexOf(_active));
+                }
+                e.Handled = true;
+                return;
+            }
             // Don't process shortcuts when a time input TextBox has focus
             if (e.OriginalSource is System.Windows.Controls.TextBox)
                 return;
@@ -2249,7 +2231,7 @@ namespace CyberSnap.UI
             switch (e.Key)
             {
                 case Key.Escape:
-                    Close();
+                    CloseSessionAt(_sessions.IndexOf(_active));
                     break;
                 case Key.Space:
                 case Key.K:
@@ -2320,116 +2302,6 @@ namespace CyberSnap.UI
             }
         }
         
-        /// <returns>True when it is safe to abandon the current file (nothing to lose or user confirmed).</returns>
-        private bool ConfirmDiscardChanges()
-        {
-            if (!IsCropModified())
-                return true;
-
-            string lang = _settingsService.Settings.InterfaceLanguage;
-            string template = LocalizationService.Translate(lang, "The changes made will be lost.\nThe original file '{0}' will be kept.");
-            string msg = string.Format(template, Path.GetFileName(_mediaFilePath));
-
-            return ThemedConfirmDialog.Confirm(
-                this,
-                LocalizationService.Translate(lang, "Discard changes?"),
-                msg,
-                LocalizationService.Translate(lang, "Discard"),
-                LocalizationService.Translate(lang, "Keep editing"),
-                danger: false);
-        }
-
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            // Stop any ongoing export so ffmpeg doesn't outlive the window.
-            _exportCts?.Cancel();
-
-            // Prompt if there are unsaved changes
-            if (!ConfirmDiscardChanges())
-            {
-                e.Cancel = true;
-                return;
-            }
-
-            TeardownPreviewForReload();
-            CancelZoomHideTimer();
-            _audioPersistTimer.Stop();
-            if (_audioPersistPending && Application.Current is App app)
-                app.PersistVideoTrimmerAudio(VolumeControl.Volume, VolumeControl.IsExportMuted);
-        }
-        
-        private async void TrimBtn_Click(object sender, RoutedEventArgs e)
-        {
-            if (_isExporting)
-                return;
-
-            string lang = _settingsService.Settings.InterfaceLanguage;
-            string template = LocalizationService.Translate(lang, "Are you sure you want to overwrite the original file '{0}'?\nThis action cannot be undone.");
-            string msg = string.Format(template, Path.GetFileName(_mediaFilePath));
-
-            if (!ThemedConfirmDialog.Confirm(
-                this, 
-                LocalizationService.Translate(lang, "Confirm Overwrite"), 
-                msg,
-                LocalizationService.Translate(lang, "Yes"),
-                LocalizationService.Translate(lang, "No"),
-                danger: false))
-            {
-                return;
-            }
-
-            string ext = Path.GetExtension(_mediaFilePath);
-            string tempOut = Path.Combine(Path.GetDirectoryName(_mediaFilePath) ?? string.Empty, 
-                                          $"trim_temp_{Guid.NewGuid()}{ext}");
-            
-            bool success = await RunFfmpegTrimAsync(_mediaFilePath, tempOut, _startTimeSeconds, _endTimeSeconds);
-            if (!success)
-            {
-                TryDeleteFile(tempOut);
-                return;
-            }
-
-            if (!IsSegmentValid())
-            {
-                ShowBanner(LocalizationService.Translate(lang, "Segment too short"));
-                return;
-            }
-
-            try
-            {
-                TeardownPreviewForReload();
-
-                // Give player time to release lock without blocking the UI thread.
-                await Task.Delay(200);
-
-                // Atomic overwrite: no window where the original is missing.
-                File.Replace(tempOut, _mediaFilePath, null);
-
-                // Reload original path
-                LoadMediaFile(_mediaFilePath);
-
-                if (Application.Current is App trimApp)
-                    trimApp.RefreshHistoryWindowIfOpen();
-
-                ToastWindow.Show(
-                    LocalizationService.Translate(lang, "Video trimmed"),
-                    LocalizationService.Translate(lang, "Original file overwritten successfully."),
-                    _mediaFilePath
-                );
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogError("trim.overwrite", ex);
-                TryDeleteFile(tempOut);
-                string errMsg = LocalizationService.Translate(lang, "Failed to overwrite original file: ");
-                ThemedConfirmDialog.Alert(this, LocalizationService.Translate(lang, "Error"), $"{errMsg}{ex.Message}", error: true);
-            }
-            finally
-            {
-                ReattachPreviewRendering();
-            }
-        }
-
         private static void TryDeleteFile(string path)
         {
             try
@@ -2443,109 +2315,17 @@ namespace CyberSnap.UI
             }
         }
         
-        private async void SaveAsNewBtn_Click(object sender, RoutedEventArgs e)
-        {
-            if (_isExporting)
-                return;
-
-            string dir = Path.GetDirectoryName(_mediaFilePath) ?? string.Empty;
-            string nameWithoutExt = Path.GetFileNameWithoutExtension(_mediaFilePath);
-            string ext = Path.GetExtension(_mediaFilePath);
-
-            var sfd = new Microsoft.Win32.SaveFileDialog
-            {
-                InitialDirectory = dir,
-                FileName = $"{nameWithoutExt}_edited{ext}",
-                DefaultExt = ext
-            };
-
-            string filterName = string.Equals(ext, ".gif", StringComparison.OrdinalIgnoreCase) ? "GIF Files" : "Video Files";
-            sfd.Filter = $"{filterName} (*{ext})|*{ext}|All Files (*.*)|*.*";
-
-            if (sfd.ShowDialog(this) != true)
-                return;
-
-            string newPath = sfd.FileName;
-
-            // Guard: exporting onto the source file would corrupt it (ffmpeg reads
-            // and writes the same path). Route through the safe overwrite flow instead.
-            if (string.Equals(Path.GetFullPath(newPath), Path.GetFullPath(_mediaFilePath), StringComparison.OrdinalIgnoreCase))
-            {
-                TrimBtn_Click(sender, e);
-                return;
-            }
-            
-            bool destExisted = File.Exists(newPath);
-            bool success = await RunFfmpegTrimAsync(_mediaFilePath, newPath, _startTimeSeconds, _endTimeSeconds);
-            if (!success)
-            {
-                // Don't leave a partial file behind when we created the destination.
-                if (!destExisted)
-                    TryDeleteFile(newPath);
-                return;
-            }
-
-            string lang = _settingsService.Settings.InterfaceLanguage;
-            ToastWindow.Show(
-                LocalizationService.Translate(lang, "Video saved"),
-                LocalizationService.Translate(lang, "Trimmed copy saved successfully."),
-                newPath
-            );
-
-            if (Application.Current is App saveApp)
-                saveApp.RefreshHistoryWindowIfOpen();
-
-            // Auto-load the new copy in the editor
-            try
-            {
-                TeardownPreviewForReload();
-
-                // Give player time to release lock without blocking the UI thread.
-                await Task.Delay(200);
-
-                LoadMediaFile(newPath);
-            }
-            finally
-            {
-                ReattachPreviewRendering();
-            }
-        }
-
         private void LoadMediaFile(string newPath)
         {
-            newPath = Path.GetFullPath(newPath);
-
-            // Invalidate any in-flight loads and release the current media first.
-            // Keep the Rendering loop attached: only the decoded frames are swapped.
-            ReleaseDecodedMedia();
-            try { MediaPlayer.Close(); } catch { }
-
-            _mediaFilePath = newPath;
-            _isGif = string.Equals(Path.GetExtension(newPath), ".gif", StringComparison.OrdinalIgnoreCase);
-            _fps = _isGif ? _settingsService.Settings.GifFps : _settingsService.Settings.RecordingFps;
-            if (_fps <= 0) _fps = 30.0;
-
-            if (_isGif)
-            {
-                VolumeControl.SetGifMode();
-                LoadGifPreview();
-                return;
-            }
-
-            GifPreviewImage.Visibility = Visibility.Collapsed;
-
-            _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
-            if (!_hasAudioTrack)
-            {
-                VolumeControl.SetNoAudioMode();
-            }
-            else
-            {
-                VolumeControl.HasAudioTrack = true;
-                SyncMediaAudio();
-            }
-
-            LoadMp4Preview();
+            _active.FilePath = Path.GetFullPath(newPath);
+            _active.Initialized = false;
+            _active.Start = _active.End = _active.Position = 0;
+            _active.Playing = true;
+            _active.Zoom = 1;
+            _active.Fit = _active.DidInitialContain = false;
+            _active.PanX = _active.PanY = 0;
+            LoadActiveSession();
+            RefreshTabs();
         }
 
         private void Window_DragOver(object sender, System.Windows.DragEventArgs e)
@@ -2556,17 +2336,16 @@ namespace CyberSnap.UI
 
         private void Window_Drop(object sender, System.Windows.DragEventArgs e)
         {
-            string? path = GetSupportedDropPath(e);
-            if (path == null || _isExporting)
-                return;
+            if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] paths) return;
+            AddDroppedFiles(paths);
+            e.Handled = true;
+        }
 
-            if (string.Equals(Path.GetFullPath(path), _mediaFilePath, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            if (!ConfirmDiscardChanges())
-                return;
-
-            LoadMediaFile(path);
+        private void AddDroppedFiles(string[] paths)
+        {
+            foreach (string path in paths)
+                if (File.Exists(path) && (path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))) AddFile(path);
         }
 
         private static string? GetSupportedDropPath(System.Windows.DragEventArgs e)
@@ -2593,9 +2372,10 @@ namespace CyberSnap.UI
             return null;
         }
         
-        private async System.Threading.Tasks.Task<bool> RunFfmpegTrimAsync(string input, string output, double start, double end)
+        private async System.Threading.Tasks.Task<bool> RunFfmpegTrimAsync(TrimmerExportJob job, CancellationToken ct)
         {
-            string lang = _settingsService.Settings.InterfaceLanguage;
+            string input = job.SourcePath, output = job.OutputPath, lang = job.Language;
+            double start = job.Start, end = job.End;
             string? ffmpeg = VideoRecorder.FindFfmpeg();
             if (ffmpeg == null)
             {
@@ -2620,24 +2400,20 @@ namespace CyberSnap.UI
                 return false;
             }
 
-            ShowExportProgress();
-            _isExporting = true;
 
             bool isGif = string.Equals(Path.GetExtension(input), ".gif", StringComparison.OrdinalIgnoreCase);
+            _currentExport = job;
+            var progress = new Progress<double>(f => { if (_isExporting && ReferenceEquals(_currentExport, job)) UpdateExportProgress(f); });
 
-            using var cts = new CancellationTokenSource();
-            _exportCts = cts;
             try
             {
                 if (isGif)
-                    return await RunGifTrimAsync(ffmpeg, input, output, start, end, expectedSeconds, lang, cts.Token);
+                    return await RunGifTrimAsync(ffmpeg, input, output, start, end, expectedSeconds, lang, job.Precise, progress, ct);
 
-                double exportVolume = VolumeControl.Volume;
-                bool exportMuted = VolumeControl.IsExportMuted;
-                string args = BuildTrimArguments(input, output, start, end, _hasAudioTrack, exportVolume, exportMuted, _preciseCut);
-                var progress = new Progress<double>(UpdateExportProgress);
-                return await RunFfmpegPassAsync(ffmpeg, args, expectedSeconds, progress, lang, cts.Token);
+                string args = BuildTrimArguments(input, output, start, end, job.HasAudio, job.Volume, job.Muted, job.Precise);
+                return await RunFfmpegPassAsync(ffmpeg, args, expectedSeconds, progress, lang, ct);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return false; }
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("ffmpeg.trim-exception", ex);
@@ -2648,13 +2424,6 @@ namespace CyberSnap.UI
                     MessageBoxImage.Error
                 );
                 return false;
-            }
-            finally
-            {
-                _isExporting = false;
-                if (_exportCts == cts)
-                    _exportCts = null;
-                HideProgressOverlay();
             }
         }
 
@@ -2670,10 +2439,12 @@ namespace CyberSnap.UI
             double end,
             double expectedSeconds,
             string lang,
+            bool precise,
+            IProgress<double> progress,
             CancellationToken ct)
         {
             var invariant = System.Globalization.CultureInfo.InvariantCulture;
-            string range = _preciseCut
+            string range = precise
                 ? $"-i \"{input}\" -ss {start.ToString("0.000", invariant)} -t {Math.Max(end - start, 0.05).ToString("0.000", invariant)}"
                 : $"-ss {start.ToString("0.000", invariant)} -to {end.ToString("0.000", invariant)} -i \"{input}\"";
 
@@ -2681,12 +2452,12 @@ namespace CyberSnap.UI
             try
             {
                 // Pass 1 (0-20%): analyze the segment colors. Decode-only, no output file pressure.
-                var pass1Progress = new Progress<double>(f => UpdateExportProgress(f * 0.2));
+                var pass1Progress = new Progress<double>(f => progress.Report(f * 0.2));
                 if (!await RunFfmpegPassAsync(ffmpeg, $"-y {range} -vf \"palettegen\" \"{palettePath}\"", expectedSeconds, pass1Progress, lang, ct))
                     return false;
 
                 // Pass 2 (20-100%): encode the GIF with the custom palette.
-                var pass2Progress = new Progress<double>(f => UpdateExportProgress(0.2 + f * 0.8));
+                var pass2Progress = new Progress<double>(f => progress.Report(0.2 + f * 0.8));
                 return await RunFfmpegPassAsync(ffmpeg, $"-y {range} -i \"{palettePath}\" -lavfi \"paletteuse\" -loop 0 \"{output}\"", expectedSeconds, pass2Progress, lang, ct);
             }
             finally
@@ -2868,6 +2639,7 @@ namespace CyberSnap.UI
             if (_isExporting)
                 return;
 
+            BeginExport();
             try
             {
                 // Fast path: untouched audio rides along in the original file.
@@ -2882,7 +2654,8 @@ namespace CyberSnap.UI
                 {
                     string tempPath = GetClipboardTempPath(Path.GetExtension(_mediaFilePath));
                     PruneStaleClipboardTempFiles();
-                    bool success = await RunFfmpegTrimAsync(_mediaFilePath, tempPath, 0, _videoDurationSeconds);
+                    var job = CaptureExportJob(tempPath, 0, _videoDurationSeconds);
+                    bool success = await RunFfmpegTrimAsync(job, _exportCts!.Token);
                     if (!success)
                     {
                         TryDeleteFile(tempPath);
@@ -2891,6 +2664,7 @@ namespace CyberSnap.UI
                     copyPath = tempPath;
                 }
 
+                if (_closeAfterExport || _exportCts!.IsCancellationRequested) return;
                 ClipboardService.CopyFileToClipboard(copyPath);
                 ShowBanner(LocalizationService.Translate(lang, "File copied to clipboard"));
             }
@@ -2899,6 +2673,7 @@ namespace CyberSnap.UI
                 AppDiagnostics.LogError("trimmer.copy-file", ex);
                 ShowBanner(LocalizationService.Translate(lang, "Clipboard copy failed"));
             }
+            finally { EndExport(); }
         }
 
         private static string GetClipboardTempPath(string extension)
@@ -2956,7 +2731,7 @@ namespace CyberSnap.UI
 
         private void MenuClose_Click(object sender, RoutedEventArgs e)
         {
-            Close();
+            CloseSessionAt(_sessions.IndexOf(_active));
         }
     }
 }
