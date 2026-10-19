@@ -61,6 +61,11 @@ public partial class CaptureWidgetWindow
             return;
         }
         preferences.ApplyTo(_settings);
+        if (_configuredMonitorIndex != preferences.MonitorIndex)
+        {
+            _observedForeground = IntPtr.Zero;
+            _pendingForegroundMonitor = null;
+        }
         RememberConfiguredMonitor(PopupWindowHelper.GetSortedScreens());
         SyncTopmostFromSettings();
         _hoverDelayTimer.Interval = TimeSpan.FromMilliseconds(preferences.HoverDelayMs);

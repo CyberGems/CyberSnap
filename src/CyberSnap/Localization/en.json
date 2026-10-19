@@ -1152,6 +1152,7 @@
   "Reset position": "Reset position",
   "Return the widget to its default centered position.": "Return the widget to its default centered position.",
   "Follow active monitor": "Follow active monitor",
+  "Follow the focused window, or choose a fixed monitor. Paused while using the widget.": "Follow the focused window, or choose a fixed monitor. Paused while using the widget.",
   "Only one monitor detected": "Only one monitor detected",
   "Disable Widget": "Disable Widget",
   "Widget disabled": "Widget disabled",

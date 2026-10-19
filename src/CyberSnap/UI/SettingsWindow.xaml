@@ -3329,12 +3329,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Widget monitor" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose which monitor the widget appears on." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Follow the focused window, or choose a fixed monitor. Paused while using the widget." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="WidgetMonitorCombo" Grid.Column="2" MinWidth="145"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="Widget monitor"
-                                          ToolTip="Choose which monitor the widget appears on."
                                           SelectionChanged="WidgetMonitorCombo_SelectionChanged"/>
                             </Grid>
                             <Border x:Name="WidgetResetPositionSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>

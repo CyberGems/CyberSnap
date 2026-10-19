@@ -37,6 +37,7 @@ internal static partial class Program
         try
         {
             widget.Show();
+            GetField<System.Windows.Threading.DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
             Pump();
             foreach (var screen in screens)
             {
@@ -111,12 +112,13 @@ internal static partial class Program
                 VerifySessionRestore(screen);
                 settings.Settings.WidgetMonitorIndex = -1;
             }
-            // Automatic mode restores to the real cursor monitor when capture/tool work ends.
-            var cursorScreen = Forms.Screen.FromPoint(Forms.Control.MousePosition);
-            VerifySessionRestore(cursorScreen);
+            // Expansion/capture restoration preserves the monitor. Foreground tracking
+            // is tested separately, with controlled focus changes and a stable clock.
+            var currentScreen = Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle);
+            VerifySessionRestore(currentScreen);
             Call(widget, "OnDisplaySettingsChanged", null!, EventArgs.Empty);
             Pump();
-            Assert(Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName == cursorScreen.DeviceName,
+            Assert(Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName == currentScreen.DeviceName,
                 "a live display-settings event repositions follow mode on an available monitor", false);
 
             // Same production resolver, supplied with a topology after one display vanished.
@@ -148,7 +150,7 @@ internal static partial class Program
                 var panel = Element<Border>(widget, "MainPanelBorder");
                 Point start = panel.PointToScreen(new Point());
                 Point end = panel.PointToScreen(new Point(panel.ActualWidth, panel.ActualHeight));
-                // A collapsed peek intentionally clips the full-size panel at the HWND.
+                // Compare the visible panel with the final native client bounds.
                 var visible = Rect.Intersect(new Rect(start, end), new Rect(widget.PointToScreen(new Point()),
                     widget.PointToScreen(new Point(widget.ActualWidth, widget.ActualHeight))));
                 start = visible.TopLeft;

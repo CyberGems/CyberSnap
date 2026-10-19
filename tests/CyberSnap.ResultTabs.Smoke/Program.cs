@@ -53,6 +53,19 @@ internal static partial class Program
         settings.Save();
         try
         {
+            if (args.Contains("--widget-active-only"))
+            {
+                CheckWidgetActiveMonitor(settings);
+                Console.WriteLine($"PASS: {_checks} widget foreground checks.");
+                return 0;
+            }
+            if (args.Contains("--widget-popup-only"))
+            {
+                CheckWidgetPopups(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                CheckWidgetActiveMonitor(settings);
+                Console.WriteLine($"PASS: {_checks} widget popup, peek and foreground checks.");
+                return 0;
+            }
             if (args.Contains("--widget-monitors-only"))
             {
                 CheckWidgetMonitors(settings);
@@ -85,6 +98,8 @@ internal static partial class Program
             }
             CheckIndependentAutoCopy(temp);
             CheckWidgetMonitors(settings);
+            CheckWidgetPopups(settings, args.FirstOrDefault());
+            CheckWidgetActiveMonitor(settings);
             CheckWidgetPreferences(temp, args.FirstOrDefault());
             CheckDeliverySynchronization(temp, args.FirstOrDefault());
             CheckOcr(settings, args.FirstOrDefault());

@@ -31,7 +31,7 @@ public partial class CaptureWidgetWindow
     }
 
     // Keep the selected physical monitor when Windows reorders the list. If that
-    // monitor disappears, return to following the cursor instead of choosing a stranger.
+    // monitor disappears, return to following the active window instead of choosing another device.
     private static int ResolveMonitorIndexAfterDisplayChange(int index, string? previousDevice, string[] available)
         => index < 0 ? -1 : previousDevice is not null
             ? Array.FindIndex(available, device => string.Equals(device, previousDevice, StringComparison.OrdinalIgnoreCase))
@@ -48,6 +48,7 @@ public partial class CaptureWidgetWindow
         {
             _dpiPlacementPending = false;
             if (!IsLoaded || !IsVisible) return;
+            _contextMenu?.Close();
             var target = PopupWindowHelper.GetSortedScreens().FirstOrDefault(screen =>
                 string.Equals(screen.DeviceName, _placementMonitorDevice, StringComparison.OrdinalIgnoreCase));
             if (target is not null) PositionWindowOnScreen(target);

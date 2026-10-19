@@ -10,6 +10,14 @@ public static class WindowsMenuRenderer
     public const int DefaultWidth = 340;
     public const int RowHeight = 38;
 
+    // Opt-in for popups with an explicit physical monitor target. Other menus
+    // retain their current sizing until their own presenters opt in.
+    internal static void SetPhysicalScale(ToolStripDropDown menu, double scale)
+    {
+        if (menu.Renderer is Renderer renderer) renderer.Scale = scale;
+        menu.Invalidate();
+    }
+
     public static ContextMenuStrip Create(bool showImages = true, int minWidth = DefaultWidth)
     {
         var menu = new ContextMenuStrip
@@ -222,6 +230,9 @@ public static class WindowsMenuRenderer
         private readonly Color _border;
         private readonly Color _accent;
         private readonly bool _showImages;
+        public double Scale { get; set; } = 1;
+        private int P(int value) => (int)Math.Round(value * Scale);
+        private float F(float value) => (float)(value * Scale);
 
         public Renderer(Color bg, Color fg, Color hover, Color active, Color muted, Color sep, Color border, Color accent, bool showImages)
             : base(new ColorTable(bg))
@@ -246,11 +257,11 @@ public static class WindowsMenuRenderer
         protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            float penWidth = 1.8f;
+            float penWidth = F(1.8f);
             using var pen = new Pen(_border, penWidth);
             float inset = penWidth / 2f;
             var rect = new RectangleF(inset, inset, e.ToolStrip.Width - penWidth, e.ToolStrip.Height - penWidth);
-            float radius = IsWin11 ? 8f : 12f;
+            float radius = F(IsWin11 ? 8f : 12f);
             using var path = RoundedRectF(rect, radius);
             e.Graphics.DrawPath(pen, path);
         }
@@ -281,19 +292,19 @@ public static class WindowsMenuRenderer
                 return;
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            var rect = new Rectangle(4, 2, e.Item.Width - 8, e.Item.Height - 4);
+            var rect = new Rectangle(P(4), P(2), e.Item.Width - P(8), e.Item.Height - P(4));
             using var brush = new SolidBrush(active ? _active : _hover);
-            using var path = RoundedRect(rect, 6);
+            using var path = RoundedRect(rect, P(6));
             e.Graphics.FillPath(brush, path);
 
             if (e.Item.Selected)
             {
-                int barWidth = 3;
-                int barHeight = e.Item.Height - 16;
-                int barX = 7;
+                int barWidth = P(3);
+                int barHeight = e.Item.Height - P(16);
+                int barX = P(7);
                 int barY = (e.Item.Height - barHeight) / 2;
                 using var accentBrush = new SolidBrush(_accent);
-                using var barPath = RoundedRect(new Rectangle(barX, barY, barWidth, barHeight), 1);
+                using var barPath = RoundedRect(new Rectangle(barX, barY, barWidth, barHeight), P(1));
                 e.Graphics.FillPath(accentBrush, barPath);
             }
         }
@@ -304,8 +315,8 @@ public static class WindowsMenuRenderer
                 return;
 
             int indent = e.Item.Padding.Left;
-            int size = Math.Min(24, Math.Min(e.Item.Height - 9, e.Image.Width));
-            int x = 10 + indent + (24 - size) / 2;
+            int size = Math.Min(P(24), Math.Min(e.Item.Height - P(9), P(e.Image.Width)));
+            int x = P(10) + indent + (P(24) - size) / 2;
             int y = e.Item.ContentRectangle.Y + (e.Item.Height - size) / 2;
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
             e.Graphics.DrawImage(e.Image, new Rectangle(x, y, size, size));
@@ -316,10 +327,10 @@ public static class WindowsMenuRenderer
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             var r = e.ImageRectangle;
             int indent = e.Item.Padding.Left;
-            int cx = 22 + indent;
+            int cx = P(22) + indent;
             int cy = r.Y + r.Height / 2;
 
-            using (var pen = new Pen(_accent, 2f)
+            using (var pen = new Pen(_accent, F(2f))
             {
                 StartCap = LineCap.Round,
                 EndCap = LineCap.Round,
@@ -328,9 +339,9 @@ public static class WindowsMenuRenderer
             {
                 e.Graphics.DrawLines(pen, new[]
                 {
-                    new Point(cx - 5, cy - 1),
-                    new Point(cx - 1, cy + 3),
-                    new Point(cx + 5, cy - 5)
+                    new Point(cx - P(5), cy - P(1)),
+                    new Point(cx - P(1), cy + P(3)),
+                    new Point(cx + P(5), cy - P(5))
                 });
             }
         }
@@ -347,15 +358,15 @@ public static class WindowsMenuRenderer
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             string shortcut = item.ShortcutKeyDisplayString ?? string.Empty;
             int indent = item.Padding.Left;
-            int left = (_showImages ? 43 : 14) + indent;
+            int left = P(_showImages ? 43 : 14) + indent;
             int shortcutWidth = string.IsNullOrEmpty(shortcut)
                 ? 0
-                : TextRenderer.MeasureText(e.Graphics, shortcut, item.Font).Width + 18;
+                : TextRenderer.MeasureText(e.Graphics, shortcut, item.Font).Width + P(18);
 
             var labelRect = new Rectangle(
                 left,
                 0,
-                Math.Max(24, item.Width - left - shortcutWidth - 12),
+                Math.Max(P(24), item.Width - left - shortcutWidth - P(12)),
                 item.Height);
             
             var textColor = item.Enabled
@@ -373,7 +384,7 @@ public static class WindowsMenuRenderer
             if (shortcut.Length == 0)
                 return;
 
-            var shortcutRect = new Rectangle(item.Width - shortcutWidth - 12, 0, shortcutWidth, item.Height);
+            var shortcutRect = new Rectangle(item.Width - shortcutWidth - P(12), 0, shortcutWidth, item.Height);
             TextRenderer.DrawText(
                 e.Graphics,
                 shortcut,
@@ -385,10 +396,10 @@ public static class WindowsMenuRenderer
 
         protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
         {
-            int left = _showImages ? 42 : 10;
+            int left = P(_showImages ? 42 : 10);
             int y = e.Item.Height / 2;
             using var pen = new Pen(_sep);
-            e.Graphics.DrawLine(pen, left, y, e.Item.Width - 10, y);
+            e.Graphics.DrawLine(pen, left, y, e.Item.Width - P(10), y);
         }
 
         protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
@@ -399,10 +410,10 @@ public static class WindowsMenuRenderer
             // in the menu foreground color instead.
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             var r = e.Item.ContentRectangle;
-            int cx = e.Item.Width - 16;
+            int cx = e.Item.Width - P(16);
             int cy = r.Y + r.Height / 2;
-            const int w = 4, h = 7;
-            using var pen = new Pen(e.Item.Enabled ? _fg : _muted, 1.6f)
+            int w = P(4), h = P(7);
+            using var pen = new Pen(e.Item.Enabled ? _fg : _muted, F(1.6f))
             {
                 StartCap = LineCap.Round,
                 EndCap = LineCap.Round,

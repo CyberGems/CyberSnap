@@ -111,6 +111,7 @@ public partial class CaptureWidgetWindow : Window
             if (_settings.WidgetAlwaysOnTop && IsVisible)
                 AssertWidgetTopmost();
         };
+        _activeMonitorTimer.Tick += FollowActiveMonitorTick;
 
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
@@ -135,6 +136,7 @@ public partial class CaptureWidgetWindow : Window
         menu?.Close();
         menu?.Dispose();
         try { _topmostWatchdogTimer.Stop(); } catch { }
+        _activeMonitorTimer.Stop();
         CancelHideLaunch();
         CancelSessionRestore();
         UnhookDisplayEvents();
@@ -346,6 +348,7 @@ public partial class CaptureWidgetWindow : Window
         PositionWindow();
         AssertWidgetTopmost();
         try { _topmostWatchdogTimer.Start(); } catch { }
+        _activeMonitorTimer.Start();
         // Template parts exist now: park both thumbs on their rest position
         // without playing the slide on startup.
         SnapToggleThumbs();
@@ -395,23 +398,12 @@ public partial class CaptureWidgetWindow : Window
     {
         var horizontal = edge == CaptureDockSide.Top || edge == CaptureDockSide.Bottom;
 
-        PeekGrip.Width = horizontal ? PanelWidth : PeekSize;
-        PeekGrip.Height = horizontal ? PeekSize : PanelHeight;
-        PeekGrip.HorizontalAlignment = edge switch
-        {
-            CaptureDockSide.Left => System.Windows.HorizontalAlignment.Right,
-            CaptureDockSide.Right => System.Windows.HorizontalAlignment.Left,
-            _ => System.Windows.HorizontalAlignment.Stretch,
-        };
-        PeekGrip.VerticalAlignment = edge switch
-        {
-            CaptureDockSide.Top => System.Windows.VerticalAlignment.Bottom,
-            CaptureDockSide.Bottom => System.Windows.VerticalAlignment.Top,
-            _ => System.Windows.VerticalAlignment.Stretch,
-        };
-        // No border of its own: the peek's outline is defined by the panel's clean 1px
-        // CornerRadius=8 border (same as the expanded widget). A second, partial accent
-        // border here only doubled the line and left the rounded corner unclosed.
+        // The collapsed panel now owns its full outline instead of clipping a
+        // full-height panel. Let the fill fit INSIDE that one-pixel border.
+        PeekGrip.Width = double.NaN;
+        PeekGrip.Height = double.NaN;
+        PeekGrip.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+        PeekGrip.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
         PeekGrip.BorderThickness = new Thickness(0);
         // Round the interior-facing edge to match the panel's inner radius (8 minus the
         // 1px border = 7), so the teal fill seats cleanly inside the corner.
@@ -591,7 +583,7 @@ public partial class CaptureWidgetWindow : Window
     };
 
     public void PositionWindow()
-        => PositionWindowAtCursor(System.Windows.Forms.Control.MousePosition);
+        => PositionWindowOnScreen(ResolvePlacementScreen(PopupWindowHelper.GetSortedScreens()));
 
     private void PositionWindowAtCursor(System.Drawing.Point cursor)
         => PositionWindowOnScreen(ResolveTargetScreen(PopupWindowHelper.GetSortedScreens(), _settings.WidgetMonitorIndex, cursor));
@@ -622,8 +614,7 @@ public partial class CaptureWidgetWindow : Window
         halo = default;
         if (!IsLoaded) return false;
 
-        targetScreen ??= ResolveTargetScreen(PopupWindowHelper.GetSortedScreens(), _settings.WidgetMonitorIndex,
-            System.Windows.Forms.Control.MousePosition);
+        targetScreen ??= ResolvePlacementScreen(PopupWindowHelper.GetSortedScreens());
         _placementMonitorDevice = targetScreen.DeviceName;
 
         // Move the HWND first, then map physical pixels through its rendering context.
@@ -792,33 +783,22 @@ public partial class CaptureWidgetWindow : Window
     private void UpdateMainPanelBorderAlignment()
     {
         var edge = _settings.WidgetDockEdge;
-        if (_isExpanded)
+        bool horizontal = edge is CaptureDockSide.Top or CaptureDockSide.Bottom;
+        MainPanelBorder.Width = _isExpanded || horizontal ? PanelWidth : PeekSize;
+        MainPanelBorder.Height = _isExpanded || !horizontal ? PanelHeight : PeekSize;
+        MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+        MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
+        TopDragStrip.Visibility = _isExpanded ? Visibility.Visible : Visibility.Collapsed;
+        BottomDragStrip.Visibility = _isExpanded ? Visibility.Visible : Visibility.Collapsed;
+        UpdateGripVisibility();
+        MainPanelBorder.CornerRadius = _isExpanded ? new CornerRadius(8) : edge switch
         {
-            MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-            MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
-        }
-        else
-        {
-            switch (edge)
-            {
-                case CaptureDockSide.Left:
-                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
-                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
-                    break;
-                case CaptureDockSide.Right:
-                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
-                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
-                    break;
-                case CaptureDockSide.Top:
-                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
-                    break;
-                case CaptureDockSide.Bottom:
-                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Top;
-                    break;
-            }
-        }
+            CaptureDockSide.Top => new CornerRadius(0, 0, 8, 8),
+            CaptureDockSide.Bottom => new CornerRadius(8, 8, 0, 0),
+            CaptureDockSide.Left => new CornerRadius(0, 8, 8, 0),
+            CaptureDockSide.Right => new CornerRadius(8, 0, 0, 8),
+            _ => new CornerRadius(8)
+        };
     }
 
     internal static Rect CalculateWidgetBounds(
@@ -1177,6 +1157,7 @@ public partial class CaptureWidgetWindow : Window
             {
                 _settingsService.Save();
                 SettingsService.PublishWidgetPreferences(_settings);
+                ResetActiveMonitorAfterDrag();
                 BeginPostDragGrace();
             }
             else if (!_isExpanded)
@@ -1203,6 +1184,7 @@ public partial class CaptureWidgetWindow : Window
             {
                 _settingsService.Save();
                 SettingsService.PublishWidgetPreferences(_settings);
+                ResetActiveMonitorAfterDrag();
                 BeginPostDragGrace();
             }
             CheckMouseLeaveWidget();
@@ -1542,32 +1524,7 @@ public partial class CaptureWidgetWindow : Window
             Dispatcher.BeginInvoke(menu.Dispose, DispatcherPriority.Background);
         };
 
-        // Clamp the menu to the working area of the monitor under the cursor, so opening it near
-        // a screen edge flips it inward instead of spilling onto the adjacent monitor.
-        var cursor = System.Windows.Forms.Cursor.Position;
-        var anchor = fromMoreButton
-            ? WidgetMoreButton.PointToScreen(new System.Windows.Point(0, WidgetMoreButton.ActualHeight))
-            : new System.Windows.Point(cursor.X, cursor.Y);
-        var anchorPoint = new System.Drawing.Point((int)Math.Round(anchor.X), (int)Math.Round(anchor.Y));
-        var wa = System.Windows.Forms.Screen.FromPoint(anchorPoint).WorkingArea;
-        var sz = menu.PreferredSize;
-        int x = Math.Max(wa.Left, Math.Min(anchorPoint.X, wa.Right - sz.Width));
-        int y = anchorPoint.Y + (fromMoreButton ? 2 : 0);
-        if (fromMoreButton && y + sz.Height > wa.Bottom)
-            y = (int)Math.Round(WidgetMoreButton.PointToScreen(new System.Windows.Point()).Y) - sz.Height - 2;
-        y = Math.Max(wa.Top, Math.Min(y, wa.Bottom - sz.Height));
-
-        // If the menu sits near the right edge of this monitor, open submenus to the LEFT so they
-        // don't spill onto the adjacent monitor (WinForms would otherwise flow right into it).
-        foreach (System.Windows.Forms.ToolStripItem it in menu.Items)
-        {
-            if (it is System.Windows.Forms.ToolStripMenuItem mi && mi.HasDropDownItems)
-                mi.DropDownDirection = x + sz.Width + mi.DropDown.PreferredSize.Width > wa.Right
-                    ? System.Windows.Forms.ToolStripDropDownDirection.Left
-                    : System.Windows.Forms.ToolStripDropDownDirection.Right;
-        }
-
-        menu.Show(new System.Drawing.Point(x, y));
+        ShowMenuOnWidgetMonitor(menu, fromMoreButton);
 
         // The widget is a NOACTIVATE window, so the menu opens without focus and wouldn't close
         // on an outside click. Force it foreground so click-away dismissal works.
