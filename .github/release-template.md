@@ -95,8 +95,17 @@ Los resultados de OCR y QR y las sesiones de recorte se agrupan en ventanas con 
 
 ### VirusTotal and SHA256
 
-- **Installer**: [View VirusTotal report](https://www.virustotal.com/gui/file/{{INSTALLER_HASH}}), SHA256: `{{INSTALLER_HASH}}`
-- **Portable archive**: [View VirusTotal report](https://www.virustotal.com/gui/file/{{PORTABLE_HASH}}), SHA256: `{{PORTABLE_HASH}}`
+**Installer**: [View VirusTotal report](https://www.virustotal.com/gui/file/{{INSTALLER_HASH}})
+
+```text
+{{INSTALLER_HASH}}
+```
+
+**Portable archive**: [View VirusTotal report](https://www.virustotal.com/gui/file/{{PORTABLE_HASH}})
+
+```text
+{{PORTABLE_HASH}}
+```
 
 ---
 
