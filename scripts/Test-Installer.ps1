@@ -37,7 +37,19 @@ Get-NetFirewallRule -Name 'RemoteDesktop-*' -ErrorAction SilentlyContinue | Disa
 New-NetFirewallRule -Name CyberSnapTestLoopbackRdp -DisplayName CyberSnapTestLoopbackRdp -Direction Inbound -Action Allow `
     -Protocol TCP -LocalPort 3389 -RemoteAddress 127.0.0.1,127.0.0.2 | Out-Null
 Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' fDenyTSConnections 0
+$terminalPolicy = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
+New-Item -Path $terminalPolicy -Force | Out-Null
+New-ItemProperty -Path $terminalPolicy -Name fDenyTSConnections -Value 0 -PropertyType DWord -Force | Out-Null
 Start-Service TermService
+$terminalSettings = Get-CimInstance -Namespace root/cimv2/TerminalServices -ClassName Win32_TerminalServiceSetting
+if ($terminalSettings.AllowTSConnections -ne 1) {
+    $enableResult = Invoke-CimMethod -InputObject $terminalSettings -MethodName SetAllowTSConnections -Arguments @{ AllowTSConnections = 1; ModifyFirewallException = 0 }
+    if ($enableResult.ReturnValue -ne 0) { throw "Could not enable the disposable RDP listener: $($enableResult.ReturnValue)" }
+}
+$socket = [Net.Sockets.TcpClient]::new()
+try {
+    if (-not $socket.ConnectAsync('127.0.0.2', 3389).Wait(10000) -or -not $socket.Connected) { throw 'The loopback RDP listener is unreachable.' }
+} finally { $socket.Dispose() }
 # Allow only this loopback target to receive the disposable account's saved RDP credentials.
 $delegation = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CredentialsDelegation'
 New-Item -Path $delegation -Force | Out-Null
@@ -99,17 +111,27 @@ try {
             "password 51:b:$([Convert]::ToHexString($protectedPassword))", 'administrative session:i:0',
             'authentication level:i:0', 'enablecredsspsupport:i:1', 'prompt for credentials:i:0',
             'desktopwidth:i:1280', 'desktopheight:i:900', 'redirectclipboard:i:0', 'redirectprinters:i:0', 'audiomode:i:2'
-        ) | Set-Content -LiteralPath $rdpPath
-        $rdp = Start-Process "$env:WINDIR\System32\mstsc.exe" -ArgumentList "`"$rdpPath`"" -PassThru
+        ) | Set-Content -LiteralPath $rdpPath -Encoding Unicode
+        $rdp = Start-Process "$env:WINDIR\System32\mstsc.exe" -ArgumentList "`"$rdpPath`" /v:127.0.0.2" -PassThru
+        $rdpStarted = Get-Date
         $resultFile = "$testRoot\$scenario\result.json"
         $deadline = [DateTime]::UtcNow.AddMinutes(7)
         while (-not (Test-Path -LiteralPath $resultFile)) {
             Start-Sleep -Seconds 15
             & quser.exe | Set-Content "$testRoot\$scenario\sessions.txt"
-            $rdpMessages = @([InstallerTestSession]::VisibleWindows(0)) + @([InstallerTestSession]::DialogMessages(0))
+            $rdpMessages = @([InstallerTestSession]::VisibleWindows($rdp.Id)) + @([InstallerTestSession]::DialogMessages($rdp.Id))
             $rdpMessages |
                 Tee-Object -FilePath "$testRoot\$scenario\rdp-windows.txt"
             Get-ScheduledTaskInfo -TaskName $taskName | ConvertTo-Json | Set-Content "$testRoot\$scenario\observer-task.json"
+            Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
+                Where-Object { $_.Message -match [regex]::Escape($user) } | Select-Object TimeCreated, Id, Message |
+                ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-logon-events.json"
+            Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-ClientActiveXCore/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
+                Select-Object TimeCreated, Id, Message | ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-client-events.json"
+            if (-not (Test-Path "$testRoot\$scenario\rdp-dialog.json")) {
+                $diagnostic = Start-Process $powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Read-RdpDialog.ps1`" -RdpProcessId $($rdp.Id) -OutputPath `"$testRoot\$scenario\rdp-dialog.json`"" -WindowStyle Hidden -PassThru
+                if (-not $diagnostic.WaitForExit(10000)) { $diagnostic.Kill() }
+            }
             if ($rdpMessages -match 'An authentication error|Your credentials did not work|cannot connect to another console session|Remote Desktop can.t connect') {
                 throw "The loopback RDP connection failed: $($rdpMessages -join ' ')"
             }
