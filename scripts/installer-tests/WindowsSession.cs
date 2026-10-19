@@ -82,7 +82,13 @@ public static class InstallerTestSession
         if (!CreateProcessWithLogonW(user, ".", password, 1, executable,
             new StringBuilder("\"" + executable + "\" " + arguments), 0x400, IntPtr.Zero, directory, ref startup, out result))
             throw new Win32Exception(Marshal.GetLastWin32Error());
-        try { return Process.GetProcessById(result.processId); }
+        try
+        {
+            var process = Process.GetProcessById(result.processId);
+            // Retain a process handle before it exits, including its eventual exit code.
+            var retainedHandle = process.Handle;
+            return process;
+        }
         finally { CloseHandle(result.thread); CloseHandle(result.process); }
     }
     public static bool IsElevated(Process process)

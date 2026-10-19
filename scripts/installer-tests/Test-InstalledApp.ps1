@@ -41,6 +41,17 @@ function Stop-TestApp {
         Start-Sleep -Seconds 2
     }
 }
+function Save-StartupDiagnostics([Diagnostics.Process]$App) {
+    Get-CimInstance Win32_Process -Filter "Name='CyberSnap.exe'" |
+        Select-Object ProcessId, ParentProcessId, ExecutablePath, CommandLine |
+        ConvertTo-Json | Set-Content "$output\app-processes.json"
+    Get-ChildItem Env: | Where-Object { $_.Name -match '^(USERPROFILE|APPDATA|LOCALAPPDATA|TEMP|TMP|DOTNET.*)$' } |
+        ConvertTo-Json | Set-Content "$output\profile-environment.json"
+    $App.Modules | Select-Object ModuleName, FileName | ConvertTo-Json | Set-Content "$output\app-modules.json"
+    $diagnostics = Start-Process "$testRoot\diagnostics\dotnet-stack.exe" -ArgumentList "report -p $($App.Id)" -PassThru -NoNewWindow `
+        -RedirectStandardOutput "$output\managed-stacks.txt" -RedirectStandardError "$output\managed-stacks-errors.txt"
+    if (-not $diagnostics.WaitForExit(30000)) { $diagnostics.Kill() }
+}
 try {
     Add-Type -Path "$testRoot\WindowsSession.cs"
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -93,6 +104,7 @@ try {
         $windows = @([InstallerTestSession]::VisibleWindows($app.Id))
     } while ($windows -notcontains 'CyberSnap Quick Panel' -and [DateTime]::UtcNow -lt $deadline)
     $windows | ConvertTo-Json | Set-Content "$output\windows.json"
+    if ($windows -notcontains 'CyberSnap Quick Panel') { Save-StartupDiagnostics $app }
     Assert-Test ($windows -contains 'CyberSnap Quick Panel') 'Installed app shows its Quick Panel after launching the startup command'
     Assert-Test (-not [InstallerTestSession]::IsElevated($app)) 'Installed app runs without elevation'
     Start-Sleep -Seconds 5
@@ -101,7 +113,7 @@ try {
     Assert-Test (($Scenario -eq 'enabled' -and $startupAfterLaunch -eq "`"$installedExe`"") -or
         ($Scenario -eq 'disabled' -and [string]::IsNullOrEmpty($startupAfterLaunch))) 'App preserves the installer startup selection'
     $uninstallEntries = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
-        Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq 'CyberSnap' })
+        Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -match '^CyberSnap(?: version .*)?$' })
     $uninstallEntries | Select-Object PSChildName, UninstallString | ConvertTo-Json | Set-Content "$output\uninstall-entries.json"
     Assert-Test ($uninstallEntries.Count -eq 1) 'Windows lists CyberSnap exactly once in installed applications'
     Stop-TestApp
@@ -139,7 +151,7 @@ finally {
                 Assert-Test ([string]::IsNullOrEmpty((Get-StartupCommand))) 'Uninstaller removes the startup entry'
                 Assert-Test (-not (Test-Path 'HKCU:\Software\Classes\CyberSnap.Project')) 'Uninstaller removes the project association'
                 $remaining = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
-                    Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq 'CyberSnap' })
+                    Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -match '^CyberSnap(?: version .*)?$' })
                 Assert-Test ($remaining.Count -eq 0) 'Uninstaller leaves no CyberSnap installed-app entry'
                 foreach ($directory in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('DesktopDirectory'))) {
                     foreach ($name in @('CyberSnap', 'CyberSnap Editor')) {

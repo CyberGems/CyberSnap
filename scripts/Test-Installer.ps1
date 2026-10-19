@@ -22,17 +22,28 @@ if (Test-Path -LiteralPath $testRoot) { throw "Test directory already exists: $t
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 Copy-Item -LiteralPath $installerPath -Destination "$testRoot\Setup.exe"
 Copy-Item -Path "$PSScriptRoot\installer-tests\*" -Destination $testRoot
+Copy-Item -LiteralPath "$PSScriptRoot\..\installer-diagnostics" -Destination "$testRoot\diagnostics" -Recurse
 Add-Type -Path "$testRoot\WindowsSession.cs"
-$policy = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+$policyPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+$originalPolicy = Get-ItemProperty $policyPath
+if ($originalPolicy.EnableLUA -ne 1) { throw 'This VM needs UAC enabled at boot. Do not infer UAC behavior from a VM with EnableLUA=0.' }
+# Enable real prompts in the disposable VM; EnableLUA is already active, so no reboot is needed.
+Set-ItemProperty $policyPath ConsentPromptBehaviorAdmin 5
+Set-ItemProperty $policyPath ConsentPromptBehaviorUser 1
+Set-ItemProperty $policyPath PromptOnSecureDesktop 1
+$policy = Get-ItemProperty $policyPath
 $environmentReport = [ordered]@{
     OperatingSystem = (Get-CimInstance Win32_OperatingSystem).Caption
     RunnerImage = $env:ImageVersion
     SourceCommit = $env:GITHUB_SHA
+    PayloadSourceCommit = if (Test-Path "$(Split-Path $installerPath)/payload-source-commit.txt") { (Get-Content "$(Split-Path $installerPath)/payload-source-commit.txt" -Raw).Trim() } else { $env:GITHUB_SHA }
     InstallerSHA256 = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
     EnableLUA = $policy.EnableLUA
     ConsentPromptBehaviorAdmin = $policy.ConsentPromptBehaviorAdmin
+    ConsentPromptBehaviorUser = $policy.ConsentPromptBehaviorUser
+    PromptOnSecureDesktop = $policy.PromptOnSecureDesktop
     StartupTest = 'Launch the exact HKCU Run command in the standard-user profile, without a Windows logoff/logon.'
-    UacTest = 'Assert non-elevated standard-user tokens and successful non-administrative install/uninstall. Hosted runner UAC policy is recorded separately.'
+    UacTest = 'UAC enabled with secure-desktop credential prompts. Assert asInvoker manifests, non-elevated standard-user tokens, no consent.exe, and non-administrative install/uninstall.'
 }
 $environmentReport | ConvertTo-Json | Set-Content "$outputPath\environment.json"
 $failures = @()
@@ -50,7 +61,11 @@ try {
         $process = [InstallerTestSession]::Start($user, $password, $powershell,
             "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Test-InstalledApp.ps1`" -Scenario $scenario", $testRoot)
         $password = $null
-        if (-not $process.WaitForExit(420000)) { $process.Kill(); throw "Timed out: $scenario" }
+        $deadline = [DateTime]::UtcNow.AddMinutes(7)
+        while (-not $process.WaitForExit(30000)) {
+            if (Test-Path "$testRoot\$scenario\worker.log") { Get-Content "$testRoot\$scenario\worker.log" -Tail 8 }
+            if ([DateTime]::UtcNow -ge $deadline) { $process.Kill(); throw "Timed out: $scenario" }
+        }
         $resultFile = "$testRoot\$scenario\result.json"
         if (Test-Path -LiteralPath $resultFile) {
             Get-Content -LiteralPath $resultFile | Write-Output

@@ -2,9 +2,15 @@ name: Verify Windows installer
 
 on:
   workflow_dispatch:
+    inputs:
+      installer_run_id:
+        description: 'Optional previous verification run: reuse its installer only if packaging sources are unchanged'
+        type: string
+        required: false
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   installer:
@@ -12,20 +18,52 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Download an existing test installer
+        if: inputs.installer_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: installer-verification-${{ inputs.installer_run_id }}
+          run-id: ${{ inputs.installer_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: reused-installer
+      - name: Validate reused installer sources
+        if: inputs.installer_run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_RUN: ${{ inputs.installer_run_id }}
+        run: |
+          $source = gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:SOURCE_RUN" --jq .head_sha
+          if ($LASTEXITCODE) { throw 'Could not resolve the installer source commit.' }
+          if (Test-Path reused-installer/payload-source-commit.txt) {
+            $source = (Get-Content reused-installer/payload-source-commit.txt -Raw).Trim()
+          }
+          $changes = git diff --name-only $source HEAD -- src CyberSnap.iss scripts/Build-Installer.ps1 scripts/Get-BundledFfmpeg.ps1 NuGet.Config global.json Directory.Build.props Directory.Build.targets
+          if ($LASTEXITCODE -or $changes) { throw "Installer sources changed; rebuild instead of reusing this package. $changes" }
+          New-Item -ItemType Directory installer-verification | Out-Null
+          Copy-Item reused-installer/CyberSnap-Setup-verification.exe installer-verification/
+          $source | Set-Content installer-verification/payload-source-commit.txt
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
       - name: Publish the release payload
+        if: inputs.installer_run_id == ''
         run: dotnet publish src/CyberSnap/CyberSnap.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o ./publish-win64
       - name: Verify runtime and bundle FFmpeg
+        if: inputs.installer_run_id == ''
         run: |
           ./scripts/Test-SelfContainedBundle.ps1 -Exe ./publish-win64/CyberSnap.exe
           ./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
       - name: Compile without installer warnings
+        if: inputs.installer_run_id == ''
         run: |
           [xml]$project = Get-Content src/CyberSnap/CyberSnap.csproj
           $version = @($project.Project.PropertyGroup.Version | Where-Object { $_ })[0]
           ./scripts/Build-Installer.ps1 -AppVersion $version -OutputDirectory ./installer-verification -OutputBaseFilename CyberSnap-Setup-verification
+          $env:GITHUB_SHA | Set-Content installer-verification/payload-source-commit.txt
+      - name: Install managed stack diagnostics
+        run: dotnet tool install dotnet-stack --tool-path ./installer-diagnostics
       - name: Install, launch startup command, and uninstall as standard users
         run: ./scripts/Test-Installer.ps1 -Installer ./installer-verification/CyberSnap-Setup-verification.exe -OutputDirectory ./installer-verification/results
       - name: Retain test evidence
