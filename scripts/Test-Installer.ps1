@@ -122,11 +122,12 @@ try {
             $rdpMessages = @([InstallerTestSession]::VisibleWindows($rdp.Id)) + @([InstallerTestSession]::DialogMessages($rdp.Id))
             $rdpMessages |
                 Tee-Object -FilePath "$testRoot\$scenario\rdp-windows.txt"
-            Get-ScheduledTaskInfo -TaskName $taskName | ConvertTo-Json | Set-Content "$testRoot\$scenario\observer-task.json"
+            Get-ScheduledTaskInfo -TaskName $taskName | Select-Object LastRunTime, LastTaskResult, NumberOfMissedRuns, TaskName |
+                ConvertTo-Json | Set-Content "$testRoot\$scenario\observer-task.json"
             Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
                 Where-Object { $_.Message -match [regex]::Escape($user) } | Select-Object TimeCreated, Id, Message |
                 ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-logon-events.json"
-            Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-ClientActiveXCore/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
+            Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-RDPClient/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
                 Select-Object TimeCreated, Id, Message | ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-client-events.json"
             if (-not (Test-Path "$testRoot\$scenario\rdp-dialog.json")) {
                 $diagnostic = Start-Process $powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Read-RdpDialog.ps1`" -RdpProcessId $($rdp.Id) -OutputPath `"$testRoot\$scenario\rdp-dialog.json`"" -WindowStyle Hidden -PassThru
