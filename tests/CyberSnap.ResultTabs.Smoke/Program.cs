@@ -53,6 +53,12 @@ internal static partial class Program
         settings.Save();
         try
         {
+            if (args.Contains("--widget-monitors-only"))
+            {
+                CheckWidgetMonitors(settings);
+                Console.WriteLine($"PASS: {_checks} widget monitor/DPI checks.");
+                return 0;
+            }
             if (args.Contains("--widget-preferences-only"))
             {
                 CheckWidgetPreferences(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -78,6 +84,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckWidgetMonitors(settings);
             CheckWidgetPreferences(temp, args.FirstOrDefault());
             CheckDeliverySynchronization(temp, args.FirstOrDefault());
             CheckOcr(settings, args.FirstOrDefault());

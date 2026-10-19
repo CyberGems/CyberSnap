@@ -100,6 +100,13 @@ internal static partial class Program
                 Step(expected with { PositionOffset = 0.78 }, () => FinishDrag(0.78, captureLost: true), "widget drag capture loss");
                 Step(expected with { MonitorIndex = -1 }, () =>
                 {
+                    widgetSettings.Settings.WidgetMonitorIndex = 0;
+                    SetField(widget, "_configuredMonitorIndex", 0);
+                    SetField(widget, "_configuredMonitorDevice", "removed-test-display");
+                    Call(widget, "ClampMonitorIndexToAvailableScreens");
+                }, "selected display disappeared while its index remained valid");
+                Step(expected with { MonitorIndex = -1 }, () =>
+                {
                     widgetSettings.Settings.WidgetMonitorIndex = int.MaxValue;
                     Call(widget, "ClampMonitorIndexToAvailableScreens");
                 }, "unavailable monitor fallback");
@@ -153,6 +160,10 @@ internal static partial class Program
                         "the live widget applies topmost and the activation timer: " + context, false);
                     var halo = (Thickness)typeof(CaptureWidgetWindow).GetMethod("ShadowHalo", BindingFlags.Static | BindingFlags.NonPublic)!
                         .Invoke(null, [expected.DockEdge])!;
+                    var rootScale = Element<FrameworkElement>(widget, "RootGrid").LayoutTransform.Value;
+                    double correctionX = rootScale.M11 / UiScale.Current;
+                    double correctionY = rootScale.M22 / UiScale.Current;
+                    halo = new Thickness(halo.Left * correctionX, halo.Top * correctionY, halo.Right * correctionX, halo.Bottom * correctionY);
                     Assert(Element<FrameworkElement>(widget, "RootGrid").Margin == halo,
                         "the widget layout applies the selected dock edge: " + context, false);
                     if (expected.MonitorIndex >= 0)
@@ -163,14 +174,17 @@ internal static partial class Program
                             "the live widget moves to the selected physical monitor: " + context, false);
                     }
                     for (int index = 0; index < edgeLabels.Length; index++)
-                        Assert((position.DropDownItems[index].Tag is true) == (index == (int)expected.DockEdge),
+                        Assert((position.DropDownItems[index].Tag is true) == (index == (int)expected.DockEdge)
+                            && (position.DropDownItems[index].Image is not null) == (index == (int)expected.DockEdge),
                             "an existing widget menu reflects external edge changes: " + context, false);
                     for (int index = 0; index < delays.Length; index++)
-                        Assert((delay.DropDownItems[index].Tag is true) == (delays[index] == expected.HoverDelayMs),
+                        Assert((delay.DropDownItems[index].Tag is true) == (delays[index] == expected.HoverDelayMs)
+                            && (delay.DropDownItems[index].Image is not null) == (delays[index] == expected.HoverDelayMs),
                             "an existing widget menu reflects external delay changes: " + context, false);
                     if (screen is not null)
                         foreach (int monitor in Enumerable.Range(-1, screenCount + 1))
-                            Assert((screen.DropDownItems[monitor == -1 ? 0 : monitor + 2].Tag is true) == (monitor == expected.MonitorIndex),
+                            Assert((screen.DropDownItems[monitor == -1 ? 0 : monitor + 2].Tag is true) == (monitor == expected.MonitorIndex)
+                                && (screen.DropDownItems[monitor == -1 ? 0 : monitor + 2].Image is not null) == (monitor == expected.MonitorIndex),
                                 "an existing widget menu reflects external monitor changes: " + context, false);
                     Assert((topmost.Image is not null) == expected.AlwaysOnTop, "the existing menu's topmost checkmark updates: " + context, false);
                     foreach (var service in new[] { widgetSettings, configSettings })

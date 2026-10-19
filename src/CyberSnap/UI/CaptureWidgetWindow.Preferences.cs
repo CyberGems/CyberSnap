@@ -44,15 +44,12 @@ public partial class CaptureWidgetWindow
     private static void RefreshWidgetOption(Forms.ToolStripMenuItem item, bool selected, bool toggle)
     {
         if (!toggle) item.Tag = selected;
-        else
-        {
-            var oldImage = item.Image;
-            item.Image = selected ? FluentIcons.RenderBitmap("check",
-                System.Drawing.Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R,
-                    UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 20, true) : null;
-            item.ImageScaling = Forms.ToolStripItemImageScaling.None;
-            oldImage?.Dispose();
-        }
+        var oldImage = item.Image;
+        item.Image = selected ? FluentIcons.RenderBitmap("check",
+            System.Drawing.Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R,
+                UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 20, true) : null;
+        item.ImageScaling = Forms.ToolStripItemImageScaling.None;
+        oldImage?.Dispose();
         item.Invalidate();
     }
 
@@ -64,6 +61,7 @@ public partial class CaptureWidgetWindow
             return;
         }
         preferences.ApplyTo(_settings);
+        RememberConfiguredMonitor(PopupWindowHelper.GetSortedScreens());
         SyncTopmostFromSettings();
         _hoverDelayTimer.Interval = TimeSpan.FromMilliseconds(preferences.HoverDelayMs);
         if (IsLoaded) RefreshLayout();

@@ -80,6 +80,18 @@ internal static partial class Program
                 screenOption.HideDropDown();
             }
             widgetOptions.HideDropDown();
+            foreach (string key in new[] { "Position", "Activation delay" })
+            {
+                widgetOptions.ShowDropDown();
+                var option = widgetOptions.DropDownItems.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == Tr(key));
+                option.ShowDropDown();
+                Pump();
+                using var choiceBitmap = new System.Drawing.Bitmap(option.DropDown.Width, option.DropDown.Height);
+                option.DropDown.DrawToBitmap(choiceBitmap, new System.Drawing.Rectangle(0, 0, choiceBitmap.Width, choiceBitmap.Height));
+                choiceBitmap.Save(Path.Combine(renderDirectory, $"widget-{key.Replace(' ', '-')}-menu-{language}-{settings.Settings.WidgetDockEdge}.png"));
+                option.HideDropDown();
+                widgetOptions.HideDropDown();
+            }
         }
         Call(widget, "More_Click", button, new RoutedEventArgs());
         Pump();

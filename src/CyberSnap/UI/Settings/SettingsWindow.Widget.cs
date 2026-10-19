@@ -19,7 +19,7 @@ public partial class SettingsWindow
             WidgetAlwaysOnTopCheck.IsChecked = preferences.AlwaysOnTop;
             WidgetDockEdgeCombo.SelectedIndex = (int)preferences.DockEdge;
             SelectWidgetHoverDelay(preferences.HoverDelayMs);
-            SelectWidgetMonitor(preferences.MonitorIndex);
+            PopulateWidgetMonitors();
         }
         finally { _suppressGeneralPreferenceChange = previousSuppression; }
     }

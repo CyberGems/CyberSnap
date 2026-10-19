@@ -213,25 +213,33 @@ public partial class CaptureWidgetWindow : Window
         // SystemEvents may fire off the UI thread.
         _ = Dispatcher.BeginInvoke(() =>
         {
-            if (!IsLoaded) return;
+            if (!IsLoaded || !_displayEventsHooked) return;
+            _contextMenu?.Close();
+            int previousIndex = _settings.WidgetMonitorIndex;
             ClampMonitorIndexToAvailableScreens();
             // Snap layout after resolution / monitor topology changes so the widget
             // never stays parked on a vanished display.
             PositionWindow();
             AssertWidgetTopmost();
+            if (previousIndex == _settings.WidgetMonitorIndex)
+                SettingsService.PublishWidgetPreferences(_settings);
         });
     }
 
     private void ClampMonitorIndexToAvailableScreens()
     {
         var screens = PopupWindowHelper.GetSortedScreens();
-        if (_settings.WidgetMonitorIndex >= 0 && _settings.WidgetMonitorIndex >= screens.Length)
+        var previousDevice = _configuredMonitorIndex == _settings.WidgetMonitorIndex ? _configuredMonitorDevice : null;
+        int index = ResolveMonitorIndexAfterDisplayChange(_settings.WidgetMonitorIndex, previousDevice,
+            screens.Select(screen => screen.DeviceName).ToArray());
+        if (_settings.WidgetMonitorIndex != index)
         {
-            _settings.WidgetMonitorIndex = -1;
+            _settings.WidgetMonitorIndex = index;
             try { _settingsService.Save(); }
             catch (Exception ex) { AppDiagnostics.LogWarning("widget.clamp-monitor", ex.Message, ex); }
             SettingsService.PublishWidgetPreferences(_settings);
         }
+        RememberConfiguredMonitor(screens);
     }
 
     public void RefreshLocalization()
@@ -583,9 +591,15 @@ public partial class CaptureWidgetWindow : Window
     };
 
     public void PositionWindow()
+        => PositionWindowAtCursor(System.Windows.Forms.Control.MousePosition);
+
+    private void PositionWindowAtCursor(System.Drawing.Point cursor)
+        => PositionWindowOnScreen(ResolveTargetScreen(PopupWindowHelper.GetSortedScreens(), _settings.WidgetMonitorIndex, cursor));
+
+    private void PositionWindowOnScreen(Screen targetScreen)
     {
         if (!IsLoaded) return;
-        if (!TryGetWindowPlacement(_isExpanded, out var left, out var top, out var width, out var height, out var halo))
+        if (!TryGetWindowPlacement(_isExpanded, out var left, out var top, out var width, out var height, out var halo, targetScreen))
             return;
 
         ApplyWindowPlacement(left, top, width, height, halo, _isExpanded, animate: false);
@@ -601,22 +615,22 @@ public partial class CaptureWidgetWindow : Window
         out double top,
         out double width,
         out double height,
-        out Thickness halo)
+        out Thickness halo,
+        Screen? targetScreen = null)
     {
         left = top = width = height = 0;
         halo = default;
         if (!IsLoaded) return false;
 
-        var screens = PopupWindowHelper.GetSortedScreens();
-        var targetScreen = ResolveTargetScreen(screens, _settings.WidgetMonitorIndex);
+        targetScreen ??= ResolveTargetScreen(PopupWindowHelper.GetSortedScreens(), _settings.WidgetMonitorIndex,
+            System.Windows.Forms.Control.MousePosition);
+        _placementMonitorDevice = targetScreen.DeviceName;
 
-        // Move the window onto the target monitor first so WPF adopts that monitor's
-        // per-monitor DPI context. Once it has, PointFromScreen maps physical pixels to
-        // this window's DIPs self-consistently — no dividing by a foreign monitor's scale.
+        // Move the HWND first, then map physical pixels through its rendering context.
         // Only jump when the window is actually on a different monitor: PositionWindow runs
         // every frame while dragging, and an unconditional corner-jump leaves ghost trails
         // on this transparent topmost window.
-        var phys = targetScreen.WorkingArea;
+        var phys = GetPhysicalWorkingArea(targetScreen);
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         if (hwnd != IntPtr.Zero)
         {
@@ -638,19 +652,30 @@ public partial class CaptureWidgetWindow : Window
             bottomRight.X - topLeft.X,
             bottomRight.Y - topLeft.Y);
 
-        var bounds = CalculateWidgetBounds(
-            workingArea,
+        var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(phys.X + phys.Width / 2, phys.Y + phys.Height / 2));
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double correctionX = targetDpi.X / dpi.DpiScaleX;
+        double correctionY = targetDpi.Y / dpi.DpiScaleY;
+        // A programmatic monitor move can update the HWND's DPI before WPF updates
+        // its visual/render DPI. Compensate only for that difference. Once WPF adopts
+        // the new DPI, OnDpiChanged repositions us and these factors become 1 again.
+        RootGrid.LayoutTransform = new ScaleTransform(UiScale.Current * correctionX, UiScale.Current * correctionY);
+        var localBounds = CalculateWidgetBounds(
+            new Rect(0, 0, phys.Width / targetDpi.X, phys.Height / targetDpi.Y),
             _settings.WidgetDockEdge,
             _settings.WidgetDockPositionOffset,
             expanded,
             UiScale.Current);
+        var bounds = new Rect(workingArea.Left + localBounds.Left * correctionX,
+            workingArea.Top + localBounds.Top * correctionY,
+            localBounds.Width * correctionX, localBounds.Height * correctionY);
 
         // Grow the window by the shadow halo; the content is inset by the same amounts
         // (RootGrid.Margin), so the visible widget lands exactly on 'bounds'. The docked side has
         // no halo (ShadowHalo), so that edge sits flush against the screen and the peek stays
         // interactive right at the screen-edge pixel.
         halo = ShadowHalo(_settings.WidgetDockEdge);
-        var dpi = VisualTreeHelper.GetDpi(this);
+        halo = new Thickness(halo.Left * correctionX, halo.Top * correctionY, halo.Right * correctionX, halo.Bottom * correctionY);
         double requestedWidth = bounds.Width + halo.Left + halo.Right;
         double requestedHeight = bounds.Height + halo.Top + halo.Bottom;
         // Native window sizes use whole pixels. Reserve the full outer pixel so
@@ -863,14 +888,14 @@ public partial class CaptureWidgetWindow : Window
     }
 
 
-    private static Screen ResolveTargetScreen(Screen[] screens, int requestedIndex)
+    private static Screen ResolveTargetScreen(Screen[] screens, int requestedIndex, System.Drawing.Point cursor)
     {
         if (requestedIndex >= 0 && requestedIndex < screens.Length)
         {
             return screens[requestedIndex];
         }
 
-        var cursorScreen = Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
+        var cursorScreen = Screen.FromPoint(cursor);
         return screens.FirstOrDefault(screen =>
                 string.Equals(screen.DeviceName, cursorScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
             ?? screens.FirstOrDefault()
@@ -919,6 +944,10 @@ public partial class CaptureWidgetWindow : Window
     }
 
     private bool IsMouseOverWidgetWithPadding()
+        => Native.User32.GetCursorPos(out var point)
+            && IsPointOverWidgetWithPadding(new System.Drawing.Point(point.X, point.Y));
+
+    private bool IsPointOverWidgetWithPadding(System.Drawing.Point pt)
     {
         try
         {
@@ -926,13 +955,11 @@ public partial class CaptureWidgetWindow : Window
             if (hwnd == IntPtr.Zero) return false;
 
             if (!Native.User32.GetWindowRect(hwnd, out var rect)) return false;
-            if (!Native.User32.GetCursorPos(out var pt)) return false;
-
             // The window includes a transparent shadow halo; test against the visible content by
             // deflating the rect by the per-side halo (converted to physical pixels for this
             // monitor). The docked side has no halo, so it deflates by 0 there.
             var dpi = VisualTreeHelper.GetDpi(this);
-            var h = ShadowHalo(_settings.WidgetDockEdge);
+            var h = RootGrid.Margin;
             int haloL = (int)Math.Round(h.Left * dpi.DpiScaleX);
             int haloR = (int)Math.Round(h.Right * dpi.DpiScaleX);
             int haloT = (int)Math.Round(h.Top * dpi.DpiScaleY);
@@ -1036,63 +1063,17 @@ public partial class CaptureWidgetWindow : Window
         base.OnMouseMove(e);
         if (_isDragArmed && !_isDragging)
         {
-            var current = GetCursorPositionInDips();
-            if (Math.Abs(current.X - _dragStartPoint.X) >= SystemParameters.MinimumHorizontalDragDistance ||
-                Math.Abs(current.Y - _dragStartPoint.Y) >= SystemParameters.MinimumVerticalDragDistance)
+            var current = System.Windows.Forms.Control.MousePosition;
+            var dpi = _dragDpi;
+            if (Math.Abs(current.X - _dragStartPoint.X) / dpi.DpiScaleX >= SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(current.Y - _dragStartPoint.Y) / dpi.DpiScaleY >= SystemParameters.MinimumVerticalDragDistance)
             {
                 _isDragging = true;
             }
         }
 
         if (_isDragging)
-        {
-            var screens = PopupWindowHelper.GetSortedScreens();
-            var targetScreen = ResolveTargetScreen(screens, _settings.WidgetMonitorIndex);
-            var workingArea = PopupWindowHelper.ScreenWorkingAreaToDips(targetScreen);
-
-            var curPos = GetCursorPositionInDips();
-
-            // Snap to a different screen edge when the cursor is clearly nearer to it.
-            // Hysteresis in ResolvePreferredDockEdge prevents flicker near corners.
-            var preferredEdge = ResolvePreferredDockEdge(workingArea, curPos, _settings.WidgetDockEdge);
-            if (preferredEdge != _settings.WidgetDockEdge)
-            {
-                _settings.WidgetDockEdge = preferredEdge;
-                _settings.WidgetDockPositionOffset = OffsetAlongEdgeFromCursor(
-                    workingArea, preferredEdge, curPos);
-                _dragStartPoint = curPos;
-                _dragStartOffset = _settings.WidgetDockPositionOffset;
-                UpdatePeekGrip(preferredEdge);
-                UpdateGripVisibility();
-            }
-            else
-            {
-                // Slide along the current dock edge.
-                var halo = ShadowHalo(_settings.WidgetDockEdge);
-                var contentWidth = Width - halo.Left - halo.Right;
-                var contentHeight = Height - halo.Top - halo.Bottom;
-                if (_settings.WidgetDockEdge == CaptureDockSide.Top || _settings.WidgetDockEdge == CaptureDockSide.Bottom)
-                {
-                    var travel = workingArea.Width - contentWidth;
-                    if (travel > 0)
-                    {
-                        var delta = curPos.X - _dragStartPoint.X;
-                        _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
-                    }
-                }
-                else
-                {
-                    var travel = workingArea.Height - contentHeight;
-                    if (travel > 0)
-                    {
-                        var delta = curPos.Y - _dragStartPoint.Y;
-                        _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
-                    }
-                }
-            }
-
-            PositionWindow();
-        }
+            UpdateDragPosition(System.Windows.Forms.Control.MousePosition);
     }
 
     /// <summary>
@@ -1232,8 +1213,10 @@ public partial class CaptureWidgetWindow : Window
     {
         _hoverDelayTimer.Stop();
         _isDragArmed = true;
-        _dragStartPoint = GetCursorPositionInDips();
+        var cursor = System.Windows.Forms.Control.MousePosition;
+        _dragStartPoint = new System.Windows.Point(cursor.X, cursor.Y);
         _dragStartOffset = _settings.WidgetDockPositionOffset;
+        RememberDragMonitor(ResolveTargetScreen(PopupWindowHelper.GetSortedScreens(), _settings.WidgetMonitorIndex, cursor));
         CaptureMouse();
         Cursor = System.Windows.Input.Cursors.SizeAll;
         Mouse.OverrideCursor = System.Windows.Input.Cursors.SizeAll;
@@ -1249,13 +1232,6 @@ public partial class CaptureWidgetWindow : Window
         _hoverDelayTimer.Stop();
         _postDragGraceTimer.Stop();
         _postDragGraceTimer.Start();
-    }
-
-    private System.Windows.Point GetCursorPositionInDips()
-    {
-        var point = System.Windows.Forms.Control.MousePosition;
-        var localPoint = PointFromScreen(new System.Windows.Point(point.X, point.Y));
-        return new System.Windows.Point(Left + localPoint.X, Top + localPoint.Y);
     }
 
     // Context Menu options (right click handle)
@@ -1441,7 +1417,7 @@ public partial class CaptureWidgetWindow : Window
         if (screens.Length <= 1)
             return null;
 
-        var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"), iconId: "fullscreen");
+        var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"), showImages: true, iconId: "fullscreen");
         monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow active monitor", settings => settings.WidgetMonitorIndex == -1,
             settings => settings.WidgetMonitorIndex = -1));
         monitorMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
@@ -1470,7 +1446,7 @@ public partial class CaptureWidgetWindow : Window
 
     private System.Windows.Forms.ToolStripMenuItem BuildActivationDelaySubmenu()
     {
-        var delayMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Activation delay"), iconId: "clock");
+        var delayMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Activation delay"), showImages: true, iconId: "clock");
         var delays = new[] { 0, 100, 250, 500, 1000 };
         foreach (var d in delays)
         {
@@ -1776,15 +1752,7 @@ public partial class CaptureWidgetWindow : Window
         CancelHideLaunch();
         CancelSessionRestore();
 
-        _hoverDelayTimer.Stop();
-        _collapseTimer.Stop();
-
-        // Drop opacity first so the expand→peek snap is invisible, then store peek geometry
-        // before Hide(). Otherwise WPF/DWM can re-show a leftover expanded frame (the brief
-        // ~30% panel flash users saw when a standalone tool closed).
-        Opacity = 0;
-        CollapseImmediately();
-        Hide();
+        PrepareForSession();
 
         _hideLaunchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         _hideLaunchTimer.Tick += (_, _) =>
@@ -1811,6 +1779,19 @@ public partial class CaptureWidgetWindow : Window
                 FinishSessionRestore();
         };
         _hideLaunchTimer.Start();
+    }
+
+    private void PrepareForSession()
+    {
+        _hoverDelayTimer.Stop();
+        _collapseTimer.Stop();
+
+        // Drop opacity first so the expand→peek snap is invisible, then store peek geometry
+        // before Hide(). Otherwise WPF/DWM can re-show a leftover expanded frame (the brief
+        // ~30% panel flash users saw when a standalone tool closed).
+        Opacity = 0;
+        CollapseImmediately();
+        Hide();
     }
 
     private void CancelHideLaunch()
