@@ -116,6 +116,7 @@ public partial class CaptureWidgetWindow : Window
         SourceInitialized += OnSourceInitialized;
         Closed += OnClosed;
         SettingsService.AutoCopyPreferencesChanged += OnDeliveryPreferencesChanged;
+        SettingsService.WidgetPreferencesChanged += OnWidgetPreferencesChanged;
 
         Topmost = _settings.WidgetAlwaysOnTop;
 
@@ -129,6 +130,7 @@ public partial class CaptureWidgetWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         SettingsService.AutoCopyPreferencesChanged -= OnDeliveryPreferencesChanged;
+        SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;
         var menu = _contextMenu;
         menu?.Close();
         menu?.Dispose();
@@ -228,6 +230,7 @@ public partial class CaptureWidgetWindow : Window
             _settings.WidgetMonitorIndex = -1;
             try { _settingsService.Save(); }
             catch (Exception ex) { AppDiagnostics.LogWarning("widget.clamp-monitor", ex.Message, ex); }
+            SettingsService.PublishWidgetPreferences(_settings);
         }
     }
 
@@ -1192,6 +1195,7 @@ public partial class CaptureWidgetWindow : Window
             if (wasDragging)
             {
                 _settingsService.Save();
+                SettingsService.PublishWidgetPreferences(_settings);
                 BeginPostDragGrace();
             }
             else if (!_isExpanded)
@@ -1216,6 +1220,8 @@ public partial class CaptureWidgetWindow : Window
             ForceCursor = false;
             if (wasDragging)
             {
+                _settingsService.Save();
+                SettingsService.PublishWidgetPreferences(_settings);
                 BeginPostDragGrace();
             }
             CheckMouseLeaveWidget();
@@ -1261,6 +1267,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void ShowWidgetContextMenu()
     {
+        _settingsService.RefreshWidgetPreferences();
         // Built with WindowsMenuRenderer so it is pixel-identical to the tray icon menu
         // (dark rounded surface, accent hover bar) instead of the default WPF look.
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
@@ -1273,12 +1280,7 @@ public partial class CaptureWidgetWindow : Window
 
         menu.Items.Add(BuildActivationDelaySubmenu());
 
-        menu.Items.Add(BuildCaptureToggle("Always on top", _settings.WidgetAlwaysOnTop,
-            () => {
-                _settings.WidgetAlwaysOnTop = !_settings.WidgetAlwaysOnTop;
-                SyncTopmostFromSettings();
-                ((App)System.Windows.Application.Current).SyncSettingsAlwaysOnTopCheck();
-            }));
+        menu.Items.Add(BuildWidgetAlwaysOnTopItem());
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
@@ -1293,6 +1295,7 @@ public partial class CaptureWidgetWindow : Window
     private System.Windows.Forms.ContextMenuStrip BuildMoreMenu()
     {
         _settingsService.RefreshResultDeliveryPreferences();
+        _settingsService.RefreshWidgetPreferences();
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
         // "Widget" submenu mirrors the right-click context menu options.
@@ -1303,12 +1306,7 @@ public partial class CaptureWidgetWindow : Window
         if (screenMenu != null)
             widgetMenu.DropDownItems.Add(screenMenu);
         widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
-        widgetMenu.DropDownItems.Add(BuildCaptureToggle("Always on top", _settings.WidgetAlwaysOnTop,
-            () => {
-                _settings.WidgetAlwaysOnTop = !_settings.WidgetAlwaysOnTop;
-                SyncTopmostFromSettings();
-                ((App)System.Windows.Application.Current).SyncSettingsAlwaysOnTopCheck();
-            }));
+        widgetMenu.DropDownItems.Add(BuildWidgetAlwaysOnTopItem());
         widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         widgetMenu.DropDownItems.Add(BuildDisableItem());
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
@@ -1444,29 +1442,28 @@ public partial class CaptureWidgetWindow : Window
             return null;
 
         var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"), iconId: "fullscreen");
+        monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow active monitor", settings => settings.WidgetMonitorIndex == -1,
+            settings => settings.WidgetMonitorIndex = -1));
+        monitorMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         for (int i = 0; i < screens.Length; i++)
         {
             var idx = i;
             var s = screens[i];
-            var label = FormatMonitorLabel(i, s.Primary);
-            var item = Helpers.WindowsMenuRenderer.Item(label, active: _settings.WidgetMonitorIndex == idx);
-            item.Click += (s, ev) =>
-            {
-                _settings.WidgetMonitorIndex = idx;
-                _settingsService.Save();
-                PositionWindow();
-            };
+            var label = FormatMonitorLabel(i, s.Primary, _settings.InterfaceLanguage);
+            var item = BuildWidgetChoice(label, settings => settings.WidgetMonitorIndex == idx,
+                settings => settings.WidgetMonitorIndex = idx);
             monitorMenu.DropDownItems.Add(item);
         }
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(monitorMenu, minWidth: 200);
         return monitorMenu;
     }
 
-    internal static string FormatMonitorLabel(int zeroBasedIndex, bool isPrimary)
+    internal static string FormatMonitorLabel(int zeroBasedIndex, bool isPrimary, string? language = null)
     {
-        var role = LocalizationService.Translate(isPrimary ? "Primary" : "Secondary");
+        string Tr(string key) => language is null ? LocalizationService.Translate(key) : LocalizationService.Translate(language, key);
+        var role = Tr(isPrimary ? "Primary" : "Secondary");
         return string.Format(
-            LocalizationService.Translate("Monitor {0} ({1})"),
+            Tr("Monitor {0} ({1})"),
             zeroBasedIndex + 1,
             role);
     }
@@ -1478,12 +1475,8 @@ public partial class CaptureWidgetWindow : Window
         foreach (var d in delays)
         {
             var delayMs = d;
-            var item = Helpers.WindowsMenuRenderer.Item($"{d} ms", active: _settings.WidgetHoverDelayMs == delayMs);
-            item.Click += (s, ev) =>
-            {
-                _settings.WidgetHoverDelayMs = delayMs;
-                _settingsService.Save();
-            };
+            var item = BuildWidgetChoice($"{d} ms", settings => settings.WidgetHoverDelayMs == delayMs,
+                settings => settings.WidgetHoverDelayMs = delayMs);
             delayMenu.DropDownItems.Add(item);
         }
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(delayMenu, minWidth: 150);
@@ -1493,7 +1486,7 @@ public partial class CaptureWidgetWindow : Window
     private System.Windows.Forms.ToolStripMenuItem BuildDisableItem()
     {
         var disableItem = Helpers.WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Disable Widget"), iconId: "signOut", danger: true);
+            LocalizationService.Translate("Disable Widget"), iconId: "signOut", danger: true, dangerIconOnly: true);
         disableItem.Click += (s, ev) =>
         {
             _settings.ShowCaptureWidget = false;
@@ -1516,13 +1509,8 @@ public partial class CaptureWidgetWindow : Window
         for (int i = 0; i < edges.Length; i++)
         {
             var ed = edges[i];
-            var item = Helpers.WindowsMenuRenderer.Item(edgeLabels[i], active: _settings.WidgetDockEdge == ed);
-            item.Click += (s, ev) =>
-            {
-                _settings.WidgetDockEdge = ed;
-                _settingsService.Save();
-                RefreshLayout();
-            };
+            var item = BuildWidgetChoice(edgeLabels[i], settings => settings.WidgetDockEdge == ed,
+                settings => settings.WidgetDockEdge = ed);
             positionMenu.DropDownItems.Add(item);
         }
 
@@ -1532,9 +1520,7 @@ public partial class CaptureWidgetWindow : Window
         var resetItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Reset position"), iconId: "redo");
         resetItem.Click += (s, ev) =>
         {
-            _settings.WidgetDockPositionOffset = 0.5;
-            _settingsService.Save();
-            PositionWindow();
+            SaveWidgetPreferences(settings => settings.WidgetDockPositionOffset = 0.5);
         };
         positionMenu.DropDownItems.Add(resetItem);
 

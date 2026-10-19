@@ -68,6 +68,17 @@ internal static partial class Program
             using var submenuBitmap = new System.Drawing.Bitmap(widgetOptions.DropDown.Width, widgetOptions.DropDown.Height);
             widgetOptions.DropDown.DrawToBitmap(submenuBitmap, new System.Drawing.Rectangle(0, 0, submenuBitmap.Width, submenuBitmap.Height));
             submenuBitmap.Save(Path.Combine(renderDirectory, $"widget-options-menu-{language}-{settings.Settings.WidgetDockEdge}.png"));
+            var screenOption = widgetOptions.DropDownItems.OfType<Forms.ToolStripMenuItem>()
+                .SingleOrDefault(item => item.Text == Tr("Screen"));
+            if (screenOption is not null)
+            {
+                screenOption.ShowDropDown();
+                Pump();
+                using var screenBitmap = new System.Drawing.Bitmap(screenOption.DropDown.Width, screenOption.DropDown.Height);
+                screenOption.DropDown.DrawToBitmap(screenBitmap, new System.Drawing.Rectangle(0, 0, screenBitmap.Width, screenBitmap.Height));
+                screenBitmap.Save(Path.Combine(renderDirectory, $"widget-screen-menu-{language}-{settings.Settings.WidgetDockEdge}.png"));
+                screenOption.HideDropDown();
+            }
             widgetOptions.HideDropDown();
         }
         Call(widget, "More_Click", button, new RoutedEventArgs());

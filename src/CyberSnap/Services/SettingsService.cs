@@ -30,7 +30,20 @@ public sealed class SettingsService : IDisposable
     public event Action<string>? SaveFailed;
 
     public static event Action? AutoCopyPreferencesChanged;
+    public static event Action<Helpers.WidgetPreferences>? WidgetPreferencesChanged;
     public static event Action? SettingsChanged;
+
+    public static void PublishWidgetPreferences(AppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var preferences = Helpers.WidgetPreferences.FromSettings(settings);
+        lock (CacheGate)
+        {
+            if (s_cachedSettings is not null)
+                preferences.ApplyTo(s_cachedSettings);
+        }
+        WidgetPreferencesChanged?.Invoke(preferences);
+    }
 
     public static void SetAutoCopy(Helpers.AutoCopyKind kind, bool enabled) =>
         MutateResultDelivery(settings => Helpers.ResultDelivery.SetCopyEnabled(settings, kind, enabled),
@@ -326,6 +339,13 @@ public sealed class SettingsService : IDisposable
         if (current is null)
             return;
         CopyResultDeliveryPreferences(current, Settings);
+    }
+
+    internal void RefreshWidgetPreferences()
+    {
+        var current = LoadStatic(_settingsPath);
+        if (current is not null)
+            Helpers.WidgetPreferences.FromSettings(current).ApplyTo(Settings);
     }
 
     /// <summary>Quick static load for read-only access (e.g. tooltips). Returns null on error.</summary>

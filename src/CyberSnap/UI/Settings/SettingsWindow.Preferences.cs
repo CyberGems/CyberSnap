@@ -1210,7 +1210,7 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.WidgetAlwaysOnTop = value,
             value => WidgetAlwaysOnTopCheck.IsChecked = value,
-            value => ((App)Application.Current).SyncWidgetAlwaysOnTop(value));
+            value => SettingsService.PublishWidgetPreferences(_settingsService.Settings));
     }
 
     // Pulls the "Always on top" checkbox back into sync after the change originated on the widget's
@@ -1439,7 +1439,7 @@ public partial class SettingsWindow
             value => WidgetDockEdgeCombo.SelectedIndex = (int)value,
             value =>
             {
-                ((App)Application.Current).RefreshWidgetWindowLayout();
+                SettingsService.PublishWidgetPreferences(_settingsService.Settings);
             });
     }
 
@@ -1462,7 +1462,7 @@ public partial class SettingsWindow
             SelectWidgetHoverDelay,
             value =>
             {
-                ((App)Application.Current).RefreshWidgetWindowLayout();
+                SettingsService.PublishWidgetPreferences(_settingsService.Settings);
             });
     }
 
@@ -1490,7 +1490,7 @@ public partial class SettingsWindow
         {
             WidgetMonitorCombo.Items.Add(new ComboBoxItem
             {
-                Content = LocalizationService.Translate("Only one monitor detected"),
+                Content = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "Only one monitor detected"),
                 Tag = -1
             });
             WidgetMonitorCombo.SelectedIndex = 0;
@@ -1501,14 +1501,14 @@ public partial class SettingsWindow
         WidgetMonitorCombo.IsEnabled = true;
         WidgetMonitorCombo.Items.Add(new ComboBoxItem
         {
-            Content = LocalizationService.Translate("Follow active monitor"),
+            Content = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "Follow active monitor"),
             Tag = -1
         });
         for (int i = 0; i < screens.Length; i++)
         {
             WidgetMonitorCombo.Items.Add(new ComboBoxItem
             {
-                Content = CaptureWidgetWindow.FormatMonitorLabel(i, screens[i].Primary),
+                Content = CaptureWidgetWindow.FormatMonitorLabel(i, screens[i].Primary, _settingsService.Settings.InterfaceLanguage),
                 Tag = i
             });
         }
@@ -1544,7 +1544,7 @@ public partial class SettingsWindow
             SelectWidgetMonitor,
             value =>
             {
-                ((App)Application.Current).RefreshWidgetWindowLayout();
+                SettingsService.PublishWidgetPreferences(_settingsService.Settings);
             });
     }
 
@@ -1552,8 +1552,7 @@ public partial class SettingsWindow
     {
         _settingsService.Settings.WidgetDockPositionOffset = 0.5;
         _settingsService.Save();
-        if (Application.Current is App app)
-            app.RefreshWidgetWindowLayout();
+        SettingsService.PublishWidgetPreferences(_settingsService.Settings);
     }
 
     private void UpdateWidgetOptionsVisibility(bool visible)

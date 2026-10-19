@@ -43,6 +43,8 @@ internal static partial class Program
             new XAttribute(XNamespace.Xmlns + "ui", "clr-namespace:CyberSnap.UI;assembly=CyberSnap"),
             resources.Elements());
         app.Resources = (ResourceDictionary)XamlReader.Parse(dictionary.ToString());
+        if (args.Length == 3 && args[0] == "--widget-restart-check")
+            return CheckWidgetRestart(args[1], args[2]);
         string temp = Path.Combine(Path.GetTempPath(), "CyberSnap-ResultTabs-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         string settingsPath = Path.Combine(temp, "settings.json");
@@ -51,6 +53,12 @@ internal static partial class Program
         settings.Save();
         try
         {
+            if (args.Contains("--widget-preferences-only"))
+            {
+                CheckWidgetPreferences(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} widget preference synchronization checks.");
+                return 0;
+            }
             if (args.Contains("--delivery-only"))
             {
                 CheckDeliverySynchronization(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -70,6 +78,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckWidgetPreferences(temp, args.FirstOrDefault());
             CheckDeliverySynchronization(temp, args.FirstOrDefault());
             CheckOcr(settings, args.FirstOrDefault());
             CheckQr(settings, args.FirstOrDefault());

@@ -127,6 +127,7 @@ public partial class SettingsWindow : Window
             GifOutcomeEditor.OutcomeChanged += GifOutcomeEditor_OutcomeChanged;
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.AutoCopyPreferencesChanged += OnAutoCopyPreferencesChanged;
+        SettingsService.WidgetPreferencesChanged += OnWidgetPreferencesChanged;
         Activated += (_, _) =>
         {
             ApplyThemeColors();
@@ -136,6 +137,7 @@ public partial class SettingsWindow : Window
         {
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
             SettingsService.AutoCopyPreferencesChanged -= OnAutoCopyPreferencesChanged;
+            SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;
             SaveWindowBounds();
         };
     }
