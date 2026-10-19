@@ -14,6 +14,7 @@ permissions:
 jobs:
   build:
     name: Build & Publish Release
+    if: github.event_name != 'release'
     runs-on: windows-latest
 
     steps:
@@ -159,7 +160,6 @@ jobs:
 
   submit-winget:
     name: Submit to winget-pkgs
-    needs: build
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: windows-latest
     permissions:
