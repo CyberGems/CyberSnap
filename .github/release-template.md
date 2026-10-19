@@ -35,6 +35,7 @@ OCR, QR, and trimming sessions now share tabbed windows, with independent clipbo
   - Migrated to .NET 10 LTS and updated SQLite components. Both packages include the .NET runtime and FFmpeg.
   - The installer now uses `%LocalAppData%\Programs\CyberSnap` without requesting administrator privileges. Shortcuts, associations, and startup registration apply to the current user.
   - The installer startup choice is honored on first launch; later changes remain effective. Uninstalling removes startup entries and shortcuts, and installed-app registration no longer creates duplicates.
+  - Installer file properties carry the release's numeric version; packaging verifies it and rejects compiler warnings.
   - **Upgrading from an all-users installation in Program Files? Uninstall that copy before using this installer.** The new installer does not migrate a machine-wide installation in place. This change does not require administrator privileges for subsequent per-user installs or uninstalls.
 
 - ✅ **Verification**:
@@ -70,6 +71,7 @@ Los resultados de OCR y QR y las sesiones de recorte se agrupan en ventanas con 
   - Migración a .NET 10 LTS y actualización de SQLite. Ambos paquetes incluyen el runtime de .NET y FFmpeg.
   - El instalador usa `%LocalAppData%\Programs\CyberSnap` sin solicitar permisos de administrador. Los accesos directos, las asociaciones y el inicio automático se aplican al usuario actual.
   - Se respeta la opción de inicio automático del instalador en el primer arranque y los cambios posteriores siguen funcionando. La desinstalación elimina las entradas de inicio y los accesos directos, y ya no se duplica la entrada en Aplicaciones instaladas.
+  - Las propiedades del instalador incluyen la versión numérica correcta; el empaquetado la verifica y rechaza los avisos del compilador.
   - **Si tienes una instalación para todos los usuarios en Program Files, desinstálala antes de usar este instalador.** El nuevo instalador no migra esa instalación directamente. Las siguientes instalaciones y desinstalaciones por usuario no requieren permisos de administrador.
 
 - ✅ **Verificación**:

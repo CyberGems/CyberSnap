@@ -4,6 +4,7 @@
 AppId={{D8C8A6A5-9231-4A5C-9A52-7F7B7B7B7B7B}
 AppName=CyberSnap
 AppVersion={#AppVersion}
+VersionInfoVersion={#AppVersion}
 AppPublisher=CyberGems
 DefaultDirName={localappdata}\Programs\CyberSnap
 DisableProgramGroupPage=yes
