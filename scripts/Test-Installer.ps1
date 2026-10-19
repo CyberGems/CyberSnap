@@ -130,14 +130,14 @@ try {
                 ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-logon-events.json"
             Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-RDPClient/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
                 Select-Object TimeCreated, Id, Message | ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-client-events.json"
-            if (-not (Test-Path "$testRoot\$scenario\rdp-dialog.json")) {
+            if (-not ($sessions -match [regex]::Escape($user))) {
                 $diagnostic = Start-Process $powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Read-RdpDialog.ps1`" -RdpProcessId $($rdp.Id) -OutputPath `"$testRoot\$scenario\rdp-dialog.json`"" -WindowStyle Hidden -PassThru -RedirectStandardError "$testRoot\$scenario\rdp-dialog-errors.txt"
                 if (-not $diagnostic.WaitForExit(10000)) { $diagnostic.Kill() }
             }
             $authenticationFailures = foreach ($event in @(Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4625; StartTime = $rdpStarted } -ErrorAction SilentlyContinue)) {
                 [xml]$eventXml = $event.ToXml()
                 $fields = @{}
-                foreach ($field in $eventXml.Event.EventData.Data) { $fields[$field.Name] = $field.'#text' }
+                foreach ($field in $eventXml.Event.EventData.Data) { $fields[$field.Name] = $field.InnerText }
                 if ($fields['TargetUserName'] -eq $user) {
                     [ordered]@{ Status = $fields['Status']; SubStatus = $fields['SubStatus']; LogonType = $fields['LogonType']; FailureReason = $fields['FailureReason'] }
                 }
