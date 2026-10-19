@@ -208,6 +208,8 @@ dotnet publish src/CyberSnap/CyberSnap.csproj `
 
 Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later by running `scripts/Build-Installer.ps1` with `-AppVersion`. The script rejects compiler warnings and is also used by CI. `CyberSnap.iss` packs whatever is in `publish-win64`, including `ffmpeg.exe`.
 
+Run [Verify Windows installer](https://github.com/CyberGems/CyberSnap/actions/workflows/verify-installer.yml) manually to check installation, startup at a real Windows logon, and uninstallation in a disposable Windows VM. The checks use standard accounts with UAC credential prompts enabled and retain the installer and diagnostic logs for seven days as Actions artifacts, without creating a release. The optional `installer_run_id` reuses an earlier test installer only when packaging sources are unchanged. `scripts/Test-Installer.ps1` is intended exclusively for those hosted VMs and rejects normal local execution.
+
 ---
 
 ## ⌨️ Keyboard Shortcuts
