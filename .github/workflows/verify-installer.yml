@@ -1,0 +1,37 @@
+name: Verify Windows installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish the release payload
+        run: dotnet publish src/CyberSnap/CyberSnap.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o ./publish-win64
+      - name: Verify runtime and bundle FFmpeg
+        run: |
+          ./scripts/Test-SelfContainedBundle.ps1 -Exe ./publish-win64/CyberSnap.exe
+          ./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
+      - name: Compile without installer warnings
+        run: |
+          [xml]$project = Get-Content src/CyberSnap/CyberSnap.csproj
+          $version = @($project.Project.PropertyGroup.Version | Where-Object { $_ })[0]
+          ./scripts/Build-Installer.ps1 -AppVersion $version -OutputDirectory ./installer-verification -OutputBaseFilename CyberSnap-Setup-verification
+      - name: Install, launch startup command, and uninstall as standard users
+        run: ./scripts/Test-Installer.ps1 -Installer ./installer-verification/CyberSnap-Setup-verification.exe -OutputDirectory ./installer-verification/results
+      - name: Retain test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-verification-${{ github.run_id }}
+          path: installer-verification/
+          retention-days: 7
