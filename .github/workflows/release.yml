@@ -64,7 +64,7 @@ jobs:
       - name: Compile Inno Setup Installer
         shell: powershell
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion="${{ github.ref_name }}" CyberSnap.iss
+          ./scripts/Build-Installer.ps1 -AppVersion "${{ github.ref_name }}"
 
       - name: Prepare Release Notes & Scan with VirusTotal
         id: virustotal

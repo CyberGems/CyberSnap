@@ -5,7 +5,7 @@ AppId={{D8C8A6A5-9231-4A5C-9A52-7F7B7B7B7B7B}
 AppName=CyberSnap
 AppVersion={#AppVersion}
 AppPublisher=CyberGems
-DefaultDirName={autopf}\CyberSnap
+DefaultDirName={localappdata}\Programs\CyberSnap
 DisableProgramGroupPage=yes
 OutputDir=.
 OutputBaseFilename=CyberSnap-Setup-{#AppVersion}
@@ -13,8 +13,10 @@ SetupIconFile=.\src\CyberSnap\CyberSnap.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-PrivilegesRequired=admin
-ArchitecturesInstallIn64BitMode=x64
+; Keep files, shortcuts, associations, and startup registration in the same user's profile.
+PrivilegesRequired=lowest
+ArchitecturesAllowed=x64os
+ArchitecturesInstallIn64BitMode=x64os
 ChangesAssociations=yes
 
 [Languages]

@@ -2,7 +2,7 @@
 PackageIdentifier: CyberGems.CyberSnap
 PackageVersion: {{VERSION}}
 InstallerType: inno
-Scope: machine
+Scope: user
 InstallModes:
 - interactive
 - silent

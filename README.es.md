@@ -104,6 +104,8 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 
 Descarga el [instalador de Inno Setup](https://github.com/CyberGems/CyberSnap/releases/latest) y sigue el asistente. El instalador registra las asociaciones de archivos `.csnp`, crea accesos directos y ofrece iniciar con Windows.
 
+El instalador compilado desde este código instala para el usuario actual en `%LocalAppData%\Programs\CyberSnap` sin solicitar permisos de administrador. Los accesos directos, las asociaciones de archivos y el inicio automático se aplican a ese usuario. Si antes instalaste CyberSnap para todos los usuarios en Program Files, desinstala esa copia antes de cambiar al instalador por usuario; este no actualiza la instalación de equipo en su ubicación anterior.
+
 El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) funcionan por sí solos:
 
 - **.NET Desktop Runtime** está dentro de `CyberSnap.exe`. Instalar .NET por separado solo es necesario cuando compilas CyberSnap desde el código fuente.
@@ -200,7 +202,7 @@ dotnet publish src/CyberSnap/CyberSnap.csproj `
 ./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
 ```
 
-Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) desde `CyberSnap.iss`. El script empaqueta lo que haya en `publish-win64`, incluido `ffmpeg.exe`.
+Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 o posterior ejecutando `scripts/Build-Installer.ps1` con `-AppVersion`. El script rechaza los avisos del compilador y también se usa en CI. `CyberSnap.iss` empaqueta lo que haya en `publish-win64`, incluido `ffmpeg.exe`.
 ---
 
 ## ⌨️ Atajos de teclado

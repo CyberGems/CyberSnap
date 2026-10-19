@@ -105,6 +105,8 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/releases/latest) and follow the wizard. The installer registers `.csnp` file associations, creates shortcuts, and offers to start with Windows.
 
+The installer built from this source installs for the current user in `%LocalAppData%\Programs\CyberSnap` without requesting administrator privileges. Shortcuts, file associations, and startup registration apply to that user. If you previously installed CyberSnap for all users in Program Files, uninstall that copy before switching to the per-user installer; it does not upgrade the machine-wide installation in place.
+
 The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) are enough on their own:
 
 - **.NET Desktop Runtime** is inside `CyberSnap.exe`. Installing .NET separately is only required when you build CyberSnap from source.
@@ -204,7 +206,7 @@ dotnet publish src/CyberSnap/CyberSnap.csproj `
 ./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
 ```
 
-Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) from `CyberSnap.iss`. The script packs whatever is in `publish-win64`, including `ffmpeg.exe`.
+Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later by running `scripts/Build-Installer.ps1` with `-AppVersion`. The script rejects compiler warnings and is also used by CI. `CyberSnap.iss` packs whatever is in `publish-win64`, including `ffmpeg.exe`.
 
 ---
 
