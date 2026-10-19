@@ -64,8 +64,15 @@ jobs:
           $env:GITHUB_SHA | Set-Content installer-verification/payload-source-commit.txt
       - name: Install managed stack diagnostics
         run: dotnet tool install dotnet-stack --tool-path ./installer-diagnostics
-      - name: Install, launch startup command, and uninstall as standard users
+      - name: Install, test Windows logon startup, and uninstall as standard users
         run: ./scripts/Test-Installer.ps1 -Installer ./installer-verification/CyberSnap-Setup-verification.exe -OutputDirectory ./installer-verification/results
+      - name: Retain diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-verification-logs-${{ github.run_id }}
+          path: installer-verification/results/
+          retention-days: 7
       - name: Retain test evidence
         if: always()
         uses: actions/upload-artifact@v4

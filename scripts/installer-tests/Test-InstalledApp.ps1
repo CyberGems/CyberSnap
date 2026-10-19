@@ -1,15 +1,25 @@
-param([ValidateSet('enabled', 'disabled')][string]$Scenario)
+param(
+    [ValidateSet('enabled', 'disabled')][string]$Scenario,
+    [ValidateSet('Install', 'Logon')][string]$Phase = 'Install'
+)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $testRoot = $PSScriptRoot
 $output = Join-Path $testRoot $Scenario
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-Start-Transcript -Path "$output\worker.log" | Out-Null
+Start-Transcript -Path "$output\worker.log" -Append | Out-Null
 $failures = [Collections.Generic.List[string]]::new()
 $checks = [Collections.Generic.List[string]]::new()
 $processes = [Collections.Generic.List[object]]::new()
 $installedExe = $null
 $settingsDirectory = $null
+$awaitLogon = $false
+if ($Phase -eq 'Logon') {
+    $state = Get-Content "$output\installed-state.json" -Raw | ConvertFrom-Json
+    foreach ($check in $state.Checks) { $checks.Add($check) }
+    foreach ($failure in $state.Failures) { $failures.Add($failure) }
+    foreach ($process in $state.Processes) { $processes.Add($process) }
+}
 function Assert-Test([bool]$Condition, [string]$Message) {
     if ($Condition) { $checks.Add($Message); Write-Output "PASS: $Message" }
     else { $failures.Add($Message); Write-Output "FAIL: $Message" }
@@ -63,6 +73,7 @@ try {
     $installDir = Join-Path $local 'Programs\CyberSnap'
     $installedExe = Join-Path $installDir 'CyberSnap.exe'
     $settingsDirectory = Join-Path $roaming 'CyberSnap'
+    if ($Phase -eq 'Install') {
     Assert-Test (-not (Test-Path -LiteralPath $settingsDirectory)) 'App profile is initially empty'
     # Only bypass onboarding and update notifications. Deliberately leave StartWithWindows unset.
     New-Item -ItemType Directory -Path $settingsDirectory | Out-Null
@@ -93,8 +104,39 @@ try {
     }
     # Inno currently starts the app even in silent mode. End it before exercising Run.
     Stop-TestApp
-    $launchPath = if ($Scenario -eq 'enabled' -and $startupCommand -match '^"([^"]+)"$') { $Matches[1] } else { $installedExe }
-    $app = Start-Process -FilePath $launchPath -PassThru
+    if ($failures.Count) { throw 'Installation checks failed before the logon test.' }
+    $runOnce = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows\CurrentVersion\RunOnce')
+    try {
+        $runOnce.SetValue('CyberSnapInstallerVerification',
+            "`"$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe`" -NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Test-InstalledApp.ps1`" -Scenario $Scenario -Phase Logon")
+    } finally { $runOnce.Dispose() }
+    [ordered]@{ Checks = @($checks); Failures = @($failures); Processes = @($processes); SessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId } |
+        ConvertTo-Json -Depth 6 | Set-Content "$output\installed-state.json" -Encoding UTF8
+    $awaitLogon = $true
+    return
+    }
+
+    $sessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId
+    Assert-Test ($sessionId -ne $state.SessionId) 'Verification runs in a new Windows logon session'
+    $startupCommand = Get-StartupCommand
+    $app = $null
+    if ($Scenario -eq 'enabled') {
+        $deadline = [DateTime]::UtcNow.AddSeconds(90)
+        do {
+            Start-Sleep -Milliseconds 500
+            $app = Get-Process CyberSnap -ErrorAction SilentlyContinue |
+                Where-Object { $_.SessionId -eq $sessionId -and $_.Path -eq $installedExe } | Select-Object -First 1
+        } while (-not $app -and [DateTime]::UtcNow -lt $deadline)
+        if (-not $app) { throw 'Windows did not start CyberSnap automatically after logon.' }
+        Assert-Test ($app.Id -ne $PID) 'Windows starts CyberSnap automatically, without a test launch command'
+        Get-CimInstance Win32_Process -Filter "ProcessId=$($app.Id)" |
+            Select-Object ProcessId, ParentProcessId, SessionId, CommandLine | ConvertTo-Json | Set-Content "$output\autorun-process.json"
+    } else {
+        Start-Sleep -Seconds 30
+        $automaticApps = @(Get-Process CyberSnap -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $sessionId })
+        Assert-Test ($automaticApps.Count -eq 0) 'Windows does not start CyberSnap when the startup task is unselected'
+        $app = Start-Process -FilePath $installedExe -PassThru
+    }
     $deadline = [DateTime]::UtcNow.AddSeconds(45)
     $windows = @()
     do {
@@ -139,6 +181,7 @@ try {
 }
 catch { $failures.Add($_.ToString()); Write-Output $_.ToString() }
 finally {
+    if (-not $awaitLogon) {
     try {
         Stop-TestApp
         if ($installedExe) {
@@ -165,8 +208,9 @@ finally {
     if ($settingsDirectory -and (Test-Path -LiteralPath "$settingsDirectory\logs")) {
         Copy-Item -LiteralPath "$settingsDirectory\logs" -Destination "$output\app-logs" -Recurse
     }
-    [ordered]@{ Scenario = $Scenario; Passed = ($failures.Count -eq 0); Checks = @($checks); Failures = @($failures); Processes = @($processes) } |
+    [ordered]@{ Scenario = $Scenario; Phase = $Phase; SessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId; Passed = ($failures.Count -eq 0); Checks = @($checks); Failures = @($failures); Processes = @($processes) } |
         ConvertTo-Json -Depth 6 | Set-Content "$output\result.json" -Encoding UTF8
+    }
     Stop-Transcript | Out-Null
 }
 if ($failures.Count) { exit 1 }
