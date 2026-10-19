@@ -62,14 +62,20 @@ internal static partial class Program
                 var clip = LayoutInformation.GetLayoutClip(panel);
                 Assert(clip is null || clip.Bounds.Contains(new Rect(panel.RenderSize)), "the peek outline fits its layout clip", false);
                 var fill = Element<Border>(widget, "PeekGrip");
-                Assert(Math.Abs(fill.ActualWidth - (panel.ActualWidth - 2)) < 1
-                    && Math.Abs(fill.ActualHeight - (panel.ActualHeight - 2)) < 1,
+                var thickness = panel.BorderThickness;
+                double dockedBorder = edge switch { CaptureDockSide.Top => thickness.Top, CaptureDockSide.Bottom => thickness.Bottom,
+                    CaptureDockSide.Left => thickness.Left, _ => thickness.Right };
+                Assert(dockedBorder == 0 && thickness.Left + thickness.Top + thickness.Right + thickness.Bottom == 3,
+                    "the peek has three outlined sides and an open edge against the screen", false);
+                Assert(Math.Abs(fill.ActualWidth - (panel.ActualWidth - thickness.Left - thickness.Right)) < 1
+                    && Math.Abs(fill.ActualHeight - (panel.ActualHeight - thickness.Top - thickness.Bottom)) < 1,
                     "the peek fill fits inside the outline without hidden drag strips stretching it", false);
                 if (output is not null && offset == 0.5)
                     RenderNativeWidget(widget, output, $"peek-{monitor}-{edge}-{language}.png");
 
                 Call(widget, "ExpandWidget");
                 AwaitCondition(() => !widget.HasAnimatedProperties, "Widget expansion did not settle");
+                Assert(panel.BorderThickness == new Thickness(1), "expanding restores the complete panel border", false);
                 // Isolate geometry measurements from unrelated applications taking
                 // foreground on the shared desktop. Production modal dismissal is
                 // checked separately below and by CheckWidgetMenu, with AutoClose on.
@@ -230,7 +236,7 @@ internal static partial class Program
                 Call(widget, "ObserveForegroundMonitor", new IntPtr(111), target, 1400L);
                 Assert(Here() == target.DeviceName, "stable foreground focus moves the widget after the delay", false);
                 long time = 2000;
-                foreach (string flag in new[] { "_mouseInWindow", "_isExpanded", "_contextMenuOpen", "_isDragArmed", "_isDragging", "_awaitingSessionRestore", "_suppressHoverExpand" })
+                foreach (string flag in new[] { "_mouseInWindow", "_isExpanded", "_contextMenuOpen", "_isDragArmed", "_isDragging", "_awaitingSessionRestore", "_sessionRestoreInProgress", "_suppressHoverExpand" })
                 {
                     var next = Here() == before.DeviceName ? target : before;
                     string current = Here();
@@ -240,6 +246,8 @@ internal static partial class Program
                     Assert(Here() == current, "foreground tracking pauses during " + flag, false);
                     SetField(widget, flag, false);
                     Call(widget, "ObserveForegroundMonitor", new IntPtr(time), next, time + 600);
+                    Assert(Here() == current, "interaction resumes with a fresh stability delay after " + flag, false);
+                    Call(widget, "ObserveForegroundMonitor", new IntPtr(time), next, time + 1000);
                     Assert(Here() == next.DeviceName, "foreground tracking resumes after " + flag, false);
                     time += 1000;
                 }
@@ -248,6 +256,8 @@ internal static partial class Program
                 Call(widget, "ObserveForegroundMonitor", new IntPtr(999), target, time + 2000);
                 Call(widget, "ObserveForegroundMonitor", new IntPtr(999), target, time + 2500);
                 Assert(Here() == before.DeviceName, "a fixed monitor is never overridden by foreground tracking", false);
+                settings.Settings.WidgetMonitorIndex = -1;
+                CheckWidgetForegroundTransitions(widget, focus, settings, screens);
             }
             Console.WriteLine("PASS: real foreground focus on both monitors, stable-delay filtering, no cursor/layout jumps, paused interaction and fixed-monitor isolation.");
             string Here() => Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName;

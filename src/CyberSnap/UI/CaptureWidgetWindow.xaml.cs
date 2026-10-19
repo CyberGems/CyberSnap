@@ -137,6 +137,7 @@ public partial class CaptureWidgetWindow : Window
         menu?.Dispose();
         try { _topmostWatchdogTimer.Stop(); } catch { }
         _activeMonitorTimer.Stop();
+        StopMonitorPointerObserver();
         CancelHideLaunch();
         CancelSessionRestore();
         UnhookDisplayEvents();
@@ -788,6 +789,14 @@ public partial class CaptureWidgetWindow : Window
         MainPanelBorder.Height = _isExpanded || !horizontal ? PanelHeight : PeekSize;
         MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
         MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
+        MainPanelBorder.BorderThickness = _isExpanded ? new Thickness(1) : edge switch
+        {
+            CaptureDockSide.Top => new Thickness(1, 0, 1, 1),
+            CaptureDockSide.Bottom => new Thickness(1, 1, 1, 0),
+            CaptureDockSide.Left => new Thickness(0, 1, 1, 1),
+            CaptureDockSide.Right => new Thickness(1, 1, 0, 1),
+            _ => new Thickness(1)
+        };
         TopDragStrip.Visibility = _isExpanded ? Visibility.Visible : Visibility.Collapsed;
         BottomDragStrip.Visibility = _isExpanded ? Visibility.Visible : Visibility.Collapsed;
         UpdateGripVisibility();
