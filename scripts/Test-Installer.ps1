@@ -38,6 +38,14 @@ New-NetFirewallRule -Name CyberSnapTestLoopbackRdp -DisplayName CyberSnapTestLoo
     -Protocol TCP -LocalPort 3389 -RemoteAddress 127.0.0.1,127.0.0.2 | Out-Null
 Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' fDenyTSConnections 0
 Start-Service TermService
+# Allow only this loopback target to receive the disposable account's saved RDP credentials.
+$delegation = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CredentialsDelegation'
+New-Item -Path $delegation -Force | Out-Null
+foreach ($kind in @('AllowSavedCredentials', 'AllowSavedCredentialsWhenNTLMOnly')) {
+    New-ItemProperty -Path $delegation -Name $kind -Value 1 -PropertyType DWord -Force | Out-Null
+    New-Item -Path "$delegation\$kind" -Force | Out-Null
+    New-ItemProperty -Path "$delegation\$kind" -Name '1' -Value 'TERMSRV/127.0.0.2' -PropertyType String -Force | Out-Null
+}
 $environmentReport = [ordered]@{
     OperatingSystem = (Get-CimInstance Win32_OperatingSystem).Caption
     RunnerImage = $env:ImageVersion
@@ -82,10 +90,13 @@ try {
         Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal | Out-Null
         & cmdkey.exe /generic:TERMSRV/127.0.0.2 "/user:$env:COMPUTERNAME\$user" "/pass:$password" | Out-Null
         if ($LASTEXITCODE) { throw 'Could not prepare credentials for the loopback test session.' }
+        $protectedPassword = [Security.Cryptography.ProtectedData]::Protect(
+            [Text.Encoding]::Unicode.GetBytes($password), $null, [Security.Cryptography.DataProtectionScope]::CurrentUser)
         $password = $null
         $rdpPath = "$testRoot\$scenario.rdp"
         @(
             'full address:s:127.0.0.2', "username:s:$env:COMPUTERNAME\$user",
+            "password 51:b:$([Convert]::ToHexString($protectedPassword))", 'administrative session:i:0',
             'authentication level:i:0', 'enablecredsspsupport:i:1', 'prompt for credentials:i:0',
             'desktopwidth:i:1280', 'desktopheight:i:900', 'redirectclipboard:i:0', 'redirectprinters:i:0', 'audiomode:i:2'
         ) | Set-Content -LiteralPath $rdpPath
@@ -95,7 +106,7 @@ try {
         while (-not (Test-Path -LiteralPath $resultFile)) {
             Start-Sleep -Seconds 15
             & quser.exe | Set-Content "$testRoot\$scenario\sessions.txt"
-            $rdpMessages = @([InstallerTestSession]::VisibleWindows($rdp.Id)) + @([InstallerTestSession]::DialogMessages($rdp.Id))
+            $rdpMessages = @([InstallerTestSession]::VisibleWindows(0)) + @([InstallerTestSession]::DialogMessages(0))
             $rdpMessages |
                 Tee-Object -FilePath "$testRoot\$scenario\rdp-windows.txt"
             Get-ScheduledTaskInfo -TaskName $taskName | ConvertTo-Json | Set-Content "$testRoot\$scenario\observer-task.json"
@@ -125,5 +136,7 @@ try {
     if ($failures.Count) { throw ($failures -join "`n") }
 }
 finally {
-    Copy-Item -Path "$testRoot\enabled", "$testRoot\disabled" -Destination $outputPath -Recurse -ErrorAction Continue
+    foreach ($scenario in @('enabled', 'disabled')) {
+        if (Test-Path "$testRoot\$scenario") { Copy-Item -LiteralPath "$testRoot\$scenario" -Destination $outputPath -Recurse }
+    }
 }

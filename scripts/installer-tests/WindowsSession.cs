@@ -129,7 +129,7 @@ public static class InstallerTestSession
         EnumWindows((window, parameter) => {
             uint owner;
             GetWindowThreadProcessId(window, out owner);
-            if (owner == processId && IsWindowVisible(window))
+            if ((processId == 0 || owner == processId) && IsWindowVisible(window))
             {
                 var title = new StringBuilder(512);
                 GetWindowText(window, title, title.Capacity);
@@ -145,7 +145,7 @@ public static class InstallerTestSession
         EnumWindows((window, parameter) => {
             uint owner;
             GetWindowThreadProcessId(window, out owner);
-            if (owner == processId && IsWindowVisible(window))
+            if ((processId == 0 || owner == processId) && IsWindowVisible(window))
                 EnumChildWindows(window, (child, ignored) => {
                     var type = new StringBuilder(128);
                     GetClassName(child, type, type.Capacity);
