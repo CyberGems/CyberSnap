@@ -105,11 +105,6 @@ try {
     # Inno currently starts the app even in silent mode. End it before exercising Run.
     Stop-TestApp
     if ($failures.Count) { throw 'Installation checks failed before the logon test.' }
-    $runOnce = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows\CurrentVersion\RunOnce')
-    try {
-        $runOnce.SetValue('CyberSnapInstallerVerification',
-            "`"$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe`" -NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Test-InstalledApp.ps1`" -Scenario $Scenario -Phase Logon")
-    } finally { $runOnce.Dispose() }
     [ordered]@{ Checks = @($checks); Failures = @($failures); Processes = @($processes); SessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId } |
         ConvertTo-Json -Depth 6 | Set-Content "$output\installed-state.json" -Encoding UTF8
     $awaitLogon = $true
@@ -155,7 +150,7 @@ try {
     Assert-Test (($Scenario -eq 'enabled' -and $startupAfterLaunch -eq "`"$installedExe`"") -or
         ($Scenario -eq 'disabled' -and [string]::IsNullOrEmpty($startupAfterLaunch))) 'App preserves the installer startup selection'
     $uninstallEntries = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
-        Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -match '^CyberSnap(?: version .*)?$' })
+        Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -match '^CyberSnap(?:\s|$)' })
     $uninstallEntries | Select-Object PSChildName, UninstallString | ConvertTo-Json | Set-Content "$output\uninstall-entries.json"
     Assert-Test ($uninstallEntries.Count -eq 1) 'Windows lists CyberSnap exactly once in installed applications'
     Stop-TestApp
@@ -194,7 +189,7 @@ finally {
                 Assert-Test ([string]::IsNullOrEmpty((Get-StartupCommand))) 'Uninstaller removes the startup entry'
                 Assert-Test (-not (Test-Path 'HKCU:\Software\Classes\CyberSnap.Project')) 'Uninstaller removes the project association'
                 $remaining = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
-                    Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -match '^CyberSnap(?: version .*)?$' })
+                    Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -match '^CyberSnap(?:\s|$)' })
                 Assert-Test ($remaining.Count -eq 0) 'Uninstaller leaves no CyberSnap installed-app entry'
                 foreach ($directory in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('DesktopDirectory'))) {
                     foreach ($name in @('CyberSnap', 'CyberSnap Editor')) {

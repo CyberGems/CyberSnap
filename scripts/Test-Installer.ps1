@@ -74,6 +74,12 @@ try {
         }
         if ($process.ExitCode -ne 0) { throw "Installation worker failed: $scenario ($($process.ExitCode))" }
         if (-not (Test-Path "$testRoot\$scenario\installed-state.json")) { throw 'The installer worker did not prepare the Windows logon test.' }
+        $taskName = "CyberSnapInstallerVerification-$user"
+        $taskUser = "$env:COMPUTERNAME\$user"
+        $action = New-ScheduledTaskAction -Execute $powershell -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Test-InstalledApp.ps1`" -Scenario $scenario -Phase Logon"
+        $trigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
+        $principal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType Interactive -RunLevel Limited
+        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal | Out-Null
         & cmdkey.exe /generic:TERMSRV/127.0.0.2 "/user:$env:COMPUTERNAME\$user" "/pass:$password" | Out-Null
         if ($LASTEXITCODE) { throw 'Could not prepare credentials for the loopback test session.' }
         $password = $null
@@ -88,6 +94,14 @@ try {
         $deadline = [DateTime]::UtcNow.AddMinutes(7)
         while (-not (Test-Path -LiteralPath $resultFile)) {
             Start-Sleep -Seconds 15
+            & quser.exe | Set-Content "$testRoot\$scenario\sessions.txt"
+            $rdpMessages = @([InstallerTestSession]::VisibleWindows($rdp.Id)) + @([InstallerTestSession]::DialogMessages($rdp.Id))
+            $rdpMessages |
+                Tee-Object -FilePath "$testRoot\$scenario\rdp-windows.txt"
+            Get-ScheduledTaskInfo -TaskName $taskName | ConvertTo-Json | Set-Content "$testRoot\$scenario\observer-task.json"
+            if ($rdpMessages -match 'An authentication error|Your credentials did not work|cannot connect to another console session|Remote Desktop can.t connect') {
+                throw "The loopback RDP connection failed: $($rdpMessages -join ' ')"
+            }
             if (Test-Path "$testRoot\$scenario\worker.log") { Get-Content "$testRoot\$scenario\worker.log" -Tail 8 }
             if ([DateTime]::UtcNow -ge $deadline) {
                 & quser.exe | Set-Content "$testRoot\$scenario\sessions.txt"
@@ -99,12 +113,14 @@ try {
             Get-Content -LiteralPath $resultFile | Write-Output
             $result = Get-Content -LiteralPath $resultFile -Raw | ConvertFrom-Json
             if (-not $result.Passed) { $failures += "$scenario test failed: $($result.Failures -join '; ')" }
+            & quser.exe | Set-Content "$testRoot\$scenario\sessions.txt"
             if ($result.SessionId -ne [Diagnostics.Process]::GetCurrentProcess().SessionId) {
                 & logoff.exe $result.SessionId
             }
         } else { $failures += "$scenario produced no result (exit $($process.ExitCode))." }
         if (-not $rdp.HasExited) { $rdp.Kill() }
         & cmdkey.exe /delete:TERMSRV/127.0.0.2 | Out-Null
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     }
     if ($failures.Count) { throw ($failures -join "`n") }
 }

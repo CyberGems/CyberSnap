@@ -47,10 +47,13 @@ public static class InstallerTestSession
     private static extern bool GetTokenInformation(IntPtr token, int infoClass, out int info, int size, out int needed);
     private delegate bool EnumWindowCallback(IntPtr window, IntPtr parameter);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowCallback callback, IntPtr parameter);
+    [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, EnumWindowCallback callback, IntPtr parameter);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetWindowText(IntPtr window, StringBuilder text, int size);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr window, StringBuilder text, int size);
 
     // Only grant the disposable account access to the disposable runner's desktop.
     public static void GrantDesktop(string sid)
@@ -135,5 +138,28 @@ public static class InstallerTestSession
             return true;
         }, IntPtr.Zero);
         return titles.ToArray();
+    }
+    public static string[] DialogMessages(int processId)
+    {
+        var messages = new List<string>();
+        EnumWindows((window, parameter) => {
+            uint owner;
+            GetWindowThreadProcessId(window, out owner);
+            if (owner == processId && IsWindowVisible(window))
+                EnumChildWindows(window, (child, ignored) => {
+                    var type = new StringBuilder(128);
+                    GetClassName(child, type, type.Capacity);
+                    // Never read credential edit controls.
+                    if (type.ToString() == "Static" || type.ToString() == "Button")
+                    {
+                        var text = new StringBuilder(2048);
+                        GetWindowText(child, text, text.Capacity);
+                        if (text.Length > 0) messages.Add(text.ToString());
+                    }
+                    return true;
+                }, IntPtr.Zero);
+            return true;
+        }, IntPtr.Zero);
+        return messages.ToArray();
     }
 }
