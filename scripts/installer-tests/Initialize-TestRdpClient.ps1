@@ -5,6 +5,11 @@ if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hoste
 }
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+Add-Type -Path "$PSScriptRoot\WindowsSession.cs"
+$client = Get-CimInstance Win32_Process -Filter "ProcessId=$RdpProcessId"
+if ($client.Name -ne 'mstsc.exe' -or $client.CommandLine -notmatch '(?:^|\s)/v:127\.0\.0\.2(?:\s|$)') {
+    throw 'Only the loopback RDP client launched by this test may be initialized.'
+}
 $condition = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty, $RdpProcessId)
 $windows = [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Children, $condition)
 $messages = foreach ($window in $windows) {
@@ -19,18 +24,11 @@ $messages = foreach ($window in $windows) {
             $toggle = [Windows.Automation.TogglePattern]$acknowledgements[0].GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
             if ($toggle.Current.ToggleState -eq [Windows.Automation.ToggleState]::Off) { $toggle.Toggle() }
             Start-Sleep -Milliseconds 200
-            foreach ($button in $controls) {
-                if ($button.Current.ControlType -eq [Windows.Automation.ControlType]::Button -and $button.Current.Name -eq 'OK' -and $button.Current.IsEnabled) {
-                    ([Windows.Automation.InvokePattern]$button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)).Invoke()
-                }
-            }
+            [InstallerTestSession]::ClickDialogButton($RdpProcessId, 'OK') | Out-Null
         }
-    } elseif ($text -match '127\.0\.0\.2') {
-        foreach ($button in $controls) {
-            if ($button.Current.ControlType -eq [Windows.Automation.ControlType]::Button -and $button.Current.Name -eq 'Connect' -and $button.Current.IsEnabled) {
-                ([Windows.Automation.InvokePattern]$button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)).Invoke()
-            }
-        }
+    } elseif ($text -match '127\.0\.0\.2|Caution: Unknown remote connection') {
+        # Leave all resource-sharing checkboxes off.
+        [InstallerTestSession]::ClickDialogButton($RdpProcessId, 'Connect') | Out-Null
     }
     foreach ($control in $controls) {
         try { $current = $control.Current } catch [Windows.Automation.ElementNotAvailableException] { continue }

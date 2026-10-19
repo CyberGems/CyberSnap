@@ -54,6 +54,9 @@ public static class InstallerTestSession
     private static extern int GetWindowText(IntPtr window, StringBuilder text, int size);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetClassName(IntPtr window, StringBuilder text, int size);
+    [DllImport("user32.dll")] private static extern bool IsWindowEnabled(IntPtr window);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessage(IntPtr window, uint message, IntPtr wparam, IntPtr lparam);
 
     // Only grant the disposable account access to the disposable runner's desktop.
     public static void GrantDesktop(string sid)
@@ -161,5 +164,31 @@ public static class InstallerTestSession
             return true;
         }, IntPtr.Zero);
         return messages.ToArray();
+    }
+    public static bool ClickDialogButton(int processId, string label)
+    {
+        bool clicked = false;
+        EnumWindows((window, parameter) => {
+            uint owner;
+            GetWindowThreadProcessId(window, out owner);
+            if (owner == processId && IsWindowVisible(window))
+                EnumChildWindows(window, (child, ignored) => {
+                    var type = new StringBuilder(128);
+                    GetClassName(child, type, type.Capacity);
+                    var text = new StringBuilder(256);
+                    GetWindowText(child, text, text.Capacity);
+                    if (type.ToString() == "Button" && IsWindowEnabled(child) &&
+                        string.Equals(text.ToString().Replace("&", ""), label, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!PostMessage(child, 0xF5, IntPtr.Zero, IntPtr.Zero))
+                            throw new Win32Exception(Marshal.GetLastWin32Error());
+                        clicked = true;
+                        return false;
+                    }
+                    return true;
+                }, IntPtr.Zero);
+            return !clicked;
+        }, IntPtr.Zero);
+        return clicked;
     }
 }

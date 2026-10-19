@@ -110,7 +110,8 @@ try {
             'full address:s:127.0.0.2', "username:s:$env:COMPUTERNAME\$user",
             "password 51:b:$([Convert]::ToHexString($protectedPassword))", 'administrative session:i:0',
             'authentication level:i:0', 'enablecredsspsupport:i:1', 'prompt for credentials:i:0',
-            'desktopwidth:i:1280', 'desktopheight:i:900', 'redirectclipboard:i:0', 'redirectprinters:i:0', 'audiomode:i:2'
+            'desktopwidth:i:1280', 'desktopheight:i:900', 'redirectclipboard:i:0', 'redirectprinters:i:0', 'audiomode:i:2',
+            'redirectsmartcards:i:0', 'redirectcomports:i:0', 'redirectwebauthn:i:0', 'drivestoredirect:s:', 'usbdevicestoredirect:s:', 'camerastoredirect:s:'
         ) | Set-Content -LiteralPath $rdpPath -Encoding Unicode
         $rdp = Start-Process "$env:WINDIR\System32\mstsc.exe" -ArgumentList "`"$rdpPath`" /v:127.0.0.2" -PassThru
         $rdpStarted = Get-Date
@@ -131,7 +132,7 @@ try {
             Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-RDPClient/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
                 Select-Object TimeCreated, Id, Message | ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-client-events.json"
             if (-not ($sessions -match [regex]::Escape($user))) {
-                $diagnostic = Start-Process $powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Read-RdpDialog.ps1`" -RdpProcessId $($rdp.Id) -OutputPath `"$testRoot\$scenario\rdp-dialog.json`"" -WindowStyle Hidden -PassThru -RedirectStandardError "$testRoot\$scenario\rdp-dialog-errors.txt"
+                $diagnostic = Start-Process $powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Initialize-TestRdpClient.ps1`" -RdpProcessId $($rdp.Id) -OutputPath `"$testRoot\$scenario\rdp-dialog.json`"" -WindowStyle Hidden -PassThru -RedirectStandardError "$testRoot\$scenario\rdp-dialog-errors.txt"
                 if (-not $diagnostic.WaitForExit(10000)) { $diagnostic.Kill() }
             }
             $authenticationFailures = foreach ($event in @(Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4625; StartTime = $rdpStarted } -ErrorAction SilentlyContinue)) {
