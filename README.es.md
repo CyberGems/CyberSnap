@@ -24,7 +24,7 @@
 
 ## ¿Qué es CyberSnap?
 
-CyberSnap es una **suite de captura y anotación de pantalla** todo en uno para Windows, creada para llevar una captura desde el primer clic hasta el resultado final sin interrumpir tu flujo de trabajo. Captura áreas, ventanas, pantallas completas o contenido con desplazamiento; graba MP4 o GIF; anota con herramientas vectoriales; extrae y traduce texto con OCR; y muestrea colores de pantalla. Una galería local con búsqueda, recorte de vídeo integrado y múltiples destinos de subida hacen que las capturas pasadas sean fáciles de encontrar, refinar y compartir. Construido con **.NET 9** y **WPF**.
+CyberSnap es una **suite de captura y anotación de pantalla** todo en uno para Windows, creada para llevar una captura desde el primer clic hasta el resultado final sin interrumpir tu flujo de trabajo. Captura áreas, ventanas, pantallas completas o contenido con desplazamiento; graba MP4 o GIF; anota con herramientas vectoriales; extrae y traduce texto con OCR; y muestrea colores de pantalla. Una galería local con búsqueda, recorte de vídeo integrado y múltiples destinos de subida hacen que las capturas pasadas sean fáciles de encontrar, refinar y compartir. Construido con **.NET 10** y **WPF**.
 
 *Gratuito y de código abierto (GPLv3): sin anuncios, sin rastreo y sin recogida de datos. Solo disfrútalo.*
 
@@ -106,10 +106,10 @@ Descarga el [instalador de Inno Setup](https://github.com/CyberGems/CyberSnap/re
 
 El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) funcionan por sí solos:
 
-- **.NET 9 Desktop Runtime** está dentro de `CyberSnap.exe`. Instalar .NET por separado solo es necesario cuando compilas CyberSnap desde el código fuente.
+- **.NET Desktop Runtime** está dentro de `CyberSnap.exe`. Instalar .NET por separado solo es necesario cuando compilas CyberSnap desde el código fuente.
 - **FFmpeg** es el archivo `ffmpeg.exe` situado junto a `CyberSnap.exe`. Lo usan la grabación MP4, la codificación GIF, el recortador de vídeo y las formas de onda de audio. No necesitas instalar FFmpeg tú mismo, ni añadirlo al `PATH`.
 
-Si Windows muestra **«You must install .NET Desktop Runtime to run this application»** para `CyberSnap.exe`, esa copia se compiló sin el runtime incluido. `dotnet build` produce ese tipo de ejecutable, y también un publish que omite `--self-contained true`. En un PC que ya tiene el .NET 9 Desktop Runtime, ambas copias arrancan, así que el runtime faltante solo se muestra en una máquina limpia. La build de release se comprueba para confirmar el runtime incrustado antes de empaquetarse. Los detalles del archivo FFmpeg, su licencia y cómo reemplazarlo están en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+Si Windows muestra **«You must install .NET Desktop Runtime to run this application»** para `CyberSnap.exe`, esa copia se compiló sin el runtime incluido. `dotnet build` produce ese tipo de ejecutable, y también un publish que omite `--self-contained true`. En un PC que ya tiene el .NET 10 Desktop Runtime, ambas copias arrancan, así que el runtime faltante solo se muestra en una máquina limpia. La build de release se comprueba para confirmar el runtime incrustado antes de empaquetarse. Los detalles del archivo FFmpeg, su licencia y cómo reemplazarlo están en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ### 🛡️ Windows SmartScreen
 
@@ -140,7 +140,7 @@ Puedes verificar el archivo de forma independiente: compara el SHA con el releas
 ## 🛠️ Stack tecnológico y arquitectura
 
 - **Plataforma:** Windows 10 (compilación 19041) o posterior: x64, x86, ARM64
-- **Framework:** .NET 9 + WPF (alto DPI PerMonitorV2). El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) ya incluyen el .NET 9 Desktop Runtime.
+- **Framework:** .NET 10 + WPF (alto DPI PerMonitorV2). El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) incluyen el .NET Desktop Runtime necesario.
 - **Grabación:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, con libx264), incluido junto a la app. Ver [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Base de datos:** SQLite (historial local e índice de búsqueda)
 - **Captura:** DirectX mediante Vortice.Direct2D1 / Vortice.Direct3D11
@@ -183,10 +183,10 @@ Solo necesario si quieres modificar CyberSnap o compilarlo tú mismo; los usuari
 
 #### Requisitos previos
 
-.NET 9 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2022 o la CLI `dotnet`
+.NET 10 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2026 o la CLI `dotnet`
 
 ```powershell
-# Compilar (Debug). Este exe necesita el .NET 9 Desktop Runtime en la máquina donde se ejecuta.
+# Compilar (Debug). Este exe necesita el .NET 10 Desktop Runtime en la máquina donde se ejecuta.
 dotnet build src/CyberSnap/CyberSnap.csproj
 
 # Publicar autocontenido para x64. Esto es lo que puede ejecutar un PC limpio.

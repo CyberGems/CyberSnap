@@ -24,7 +24,7 @@
 
 ## What is CyberSnap?
 
-CyberSnap is an all-in-one **screen capture and annotation suite** for Windows, built to take a capture from first click to finished result without interrupting your workflow. Capture areas, windows, full screens, or scrolling content; record MP4 or GIF; annotate with vector tools; extract and translate text with OCR; and sample on-screen colors. A searchable local gallery, built-in video trimming, and multiple upload destinations make past captures easy to find, refine, and share. Built with **.NET 9** and **WPF**.
+CyberSnap is an all-in-one **screen capture and annotation suite** for Windows, built to take a capture from first click to finished result without interrupting your workflow. Capture areas, windows, full screens, or scrolling content; record MP4 or GIF; annotate with vector tools; extract and translate text with OCR; and sample on-screen colors. A searchable local gallery, built-in video trimming, and multiple upload destinations make past captures easy to find, refine, and share. Built with **.NET 10** and **WPF**.
 
 *Free and open source (GPLv3): no ads, no tracking, and no data collection. Just enjoy it.*
 
@@ -107,10 +107,10 @@ Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/relea
 
 The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) are enough on their own:
 
-- **.NET 9 Desktop Runtime** is inside `CyberSnap.exe`. Installing .NET separately is only required when you build CyberSnap from source.
+- **.NET Desktop Runtime** is inside `CyberSnap.exe`. Installing .NET separately is only required when you build CyberSnap from source.
 - **FFmpeg** is the `ffmpeg.exe` placed next to `CyberSnap.exe`. MP4 recording, GIF encoding, the video trimmer, and audio waveforms use it. You do not install FFmpeg yourself, and you do not add it to `PATH`.
 
-If Windows shows **"You must install .NET Desktop Runtime to run this application"** for `CyberSnap.exe`, that copy was built without the runtime inside it. `dotnet build` produces that kind of exe, and so does a publish that omits `--self-contained true`. On a PC that already has the .NET 9 Desktop Runtime, both copies start, so the missing runtime only shows up on a clean machine. The release build is checked for an embedded runtime before it is packed. Details of the FFmpeg file, its license, and how to replace it are in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+If Windows shows **"You must install .NET Desktop Runtime to run this application"** for `CyberSnap.exe`, that copy was built without the runtime inside it. `dotnet build` produces that kind of exe, and so does a publish that omits `--self-contained true`. On a PC that already has the .NET 10 Desktop Runtime, both copies start, so the missing runtime only shows up on a clean machine. The release build is checked for an embedded runtime before it is packed. Details of the FFmpeg file, its license, and how to replace it are in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ### 🛡️ Windows SmartScreen
 
@@ -142,7 +142,7 @@ You can verify the file independently: compare the SHA with the GitHub release, 
 ## 🛠️ Tech Stack & Architecture
 
 - **Platform:** Windows 10 (build 19041) or later: x64, x86, ARM64
-- **Framework:** .NET 9 + WPF (PerMonitorV2 high DPI). The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) already include the .NET 9 Desktop Runtime.
+- **Framework:** .NET 10 + WPF (PerMonitorV2 high DPI). The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) include the required .NET Desktop Runtime.
 - **Recording:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, with libx264), shipped beside the app. See [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Database:** SQLite (local history and search index)
 - **Capture:** DirectX via Vortice.Direct2D1 / Vortice.Direct3D11
@@ -185,12 +185,12 @@ Only needed if you want to work on CyberSnap or build it yourself; regular users
 
 #### Prerequisites
 
-.NET 9 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2022 or `dotnet` CLI
+.NET 10 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2026 or `dotnet` CLI
 
 
 
 ```powershell
-# Build (Debug). This exe needs the .NET 9 Desktop Runtime on the machine where it runs.
+# Build (Debug). This exe needs the .NET 10 Desktop Runtime on the machine where it runs.
 dotnet build src/CyberSnap/CyberSnap.csproj
 
 # Publish self-contained for x64. This is what a clean PC can run.

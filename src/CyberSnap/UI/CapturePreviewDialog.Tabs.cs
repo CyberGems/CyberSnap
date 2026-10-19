@@ -10,7 +10,6 @@ using System.Windows.Threading;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
-using MenuItem = System.Windows.Controls.MenuItem;
 
 namespace CyberSnap.UI
 {

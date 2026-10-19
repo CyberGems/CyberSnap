@@ -636,16 +636,17 @@ public partial class CaptureWidgetWindow : Window
             }
         }
 
-        var topLeft = PointFromScreen(new System.Windows.Point(phys.Left, phys.Top));
-        var bottomRight = PointFromScreen(new System.Windows.Point(phys.Right, phys.Bottom));
+        var dpi = VisualTreeHelper.GetDpi(this);
+        // Window.Left/Top use desktop coordinates in the window's render DIPs.
+        // A relative PointFromScreen conversion can observe the native move before
+        // WPF updates Left/Top on .NET 10, shifting placement on mixed-DPI monitors.
         var workingArea = new Rect(
-            Left + topLeft.X,
-            Top + topLeft.Y,
-            bottomRight.X - topLeft.X,
-            bottomRight.Y - topLeft.Y);
+            phys.Left / dpi.DpiScaleX,
+            phys.Top / dpi.DpiScaleY,
+            phys.Width / dpi.DpiScaleX,
+            phys.Height / dpi.DpiScaleY);
 
         var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(phys.X + phys.Width / 2, phys.Y + phys.Height / 2));
-        var dpi = VisualTreeHelper.GetDpi(this);
         double correctionX = targetDpi.X / dpi.DpiScaleX;
         double correctionY = targetDpi.Y / dpi.DpiScaleY;
         // A programmatic monitor move can update the HWND's DPI before WPF updates

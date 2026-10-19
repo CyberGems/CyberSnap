@@ -157,6 +157,7 @@ internal static partial class Program
                 end = visible.BottomRight;
                 string context = $"{screen.DeviceName} {edge} expanded={expanded} ui={uiScale} dpi={scaleX}/{scaleY}, panel={start}..{end}, work={work}";
                 context += $", WPF={VisualTreeHelper.GetDpi(widget).DpiScaleX}, nativeDpi={GetDpiForWindow(new WindowInteropHelper(widget).Handle)}, awareness={GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(new WindowInteropHelper(widget).Handle))}";
+                context += $", offset={settings.Settings.WidgetDockPositionOffset}, window={widget.Left},{widget.Top}/{widget.ActualWidth},{widget.ActualHeight}, margin={Element<FrameworkElement>(widget, "RootGrid").Margin}, transform={Element<FrameworkElement>(widget, "RootGrid").LayoutTransform.Value}";
                 const double tolerance = 2;
                 Assert(start.X >= work.Left - tolerance && start.Y >= work.Top - tolerance
                     && end.X <= work.Right + tolerance && end.Y <= work.Bottom + tolerance,

@@ -379,8 +379,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
             AppDiagnostics.LogWarning("editor.window-icon", $"Failed to load editor icon: {ex.Message}", ex);
             try
             {
-                var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                Icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+                if (Environment.ProcessPath is { } exePath)
+                    Icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
             }
             catch
             {

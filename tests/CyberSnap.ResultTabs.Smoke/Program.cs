@@ -53,6 +53,7 @@ internal static partial class Program
         settings.Save();
         try
         {
+            CheckSqliteRuntime();
             if (args.Contains("--widget-active-only"))
             {
                 CheckWidgetActiveMonitor(settings);
