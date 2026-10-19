@@ -1443,7 +1443,7 @@ public partial class CaptureWidgetWindow : Window
         if (screens.Length <= 1)
             return null;
 
-        var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"));
+        var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"), iconId: "fullscreen");
         for (int i = 0; i < screens.Length; i++)
         {
             var idx = i;
@@ -1473,7 +1473,7 @@ public partial class CaptureWidgetWindow : Window
 
     private System.Windows.Forms.ToolStripMenuItem BuildActivationDelaySubmenu()
     {
-        var delayMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Activation delay"));
+        var delayMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Activation delay"), iconId: "clock");
         var delays = new[] { 0, 100, 250, 500, 1000 };
         foreach (var d in delays)
         {
@@ -1508,7 +1508,7 @@ public partial class CaptureWidgetWindow : Window
 
     private System.Windows.Forms.ToolStripMenuItem BuildPositionSubmenu()
     {
-        var positionMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Position"));
+        var positionMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Position"), showImages: true, iconId: "position");
 
         // Dock edge items: Top, Bottom, Left, Right
         var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
@@ -1529,7 +1529,7 @@ public partial class CaptureWidgetWindow : Window
         positionMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
 
         // Reset position item
-        var resetItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Reset position"));
+        var resetItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Reset position"), iconId: "redo");
         resetItem.Click += (s, ev) =>
         {
             _settings.WidgetDockPositionOffset = 0.5;

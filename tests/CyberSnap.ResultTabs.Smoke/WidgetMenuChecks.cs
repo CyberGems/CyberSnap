@@ -20,9 +20,11 @@ internal static partial class Program
                 "widget More groups widget options first and image capture second in " + language, false);
             Assert(menu.Items[1] is Forms.ToolStripSeparator && menu.Items[9] is Forms.ToolStripSeparator,
                 "Widget, capture modes and application commands are separated", false);
+            var widgetOptions = (Forms.ToolStripMenuItem)menu.Items[0];
             Assert(menu.ShowImageMargin && menu.Items.OfType<Forms.ToolStripMenuItem>()
+                .Concat(widgetOptions.DropDownItems.OfType<Forms.ToolStripMenuItem>().Where(item => item.HasDropDownItems))
                 .All(item => item.Image is not null && item.ImageScaling == Forms.ToolStripItemImageScaling.None),
-                "every top-level widget More item has its own unscaled icon", false);
+                "every widget More entry and Widget submenu has its own unscaled icon", false);
             var capture = (Forms.ToolStripMenuItem)menu.Items[2];
             Assert(capture.DropDownItems.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
                 new[] { "Auto-copy", "Show preview after capture", "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
@@ -60,6 +62,13 @@ internal static partial class Program
             using var bitmap = new System.Drawing.Bitmap(openMenu.Width, openMenu.Height);
             openMenu.DrawToBitmap(bitmap, new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height));
             bitmap.Save(Path.Combine(renderDirectory, $"widget-more-menu-{language}-{settings.Settings.WidgetDockEdge}.png"));
+            var widgetOptions = (Forms.ToolStripMenuItem)openMenu.Items[0];
+            widgetOptions.ShowDropDown();
+            Pump();
+            using var submenuBitmap = new System.Drawing.Bitmap(widgetOptions.DropDown.Width, widgetOptions.DropDown.Height);
+            widgetOptions.DropDown.DrawToBitmap(submenuBitmap, new System.Drawing.Rectangle(0, 0, submenuBitmap.Width, submenuBitmap.Height));
+            submenuBitmap.Save(Path.Combine(renderDirectory, $"widget-options-menu-{language}-{settings.Settings.WidgetDockEdge}.png"));
+            widgetOptions.HideDropDown();
         }
         Call(widget, "More_Click", button, new RoutedEventArgs());
         Pump();
