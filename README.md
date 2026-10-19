@@ -16,7 +16,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL--3.0-1F2428.svg?style=flat-square&color=334155" alt="License" />&nbsp;
   <img src="https://img.shields.io/badge/Platform-Windows_10%2F11-1F2428.svg?style=flat-square&color=334155" alt="Platform" />&nbsp;
-  <img src="https://img.shields.io/badge/.NET-9-1F2428.svg?style=flat-square&logo=dotnet&logoColor=white&color=334155" alt=".NET" />&nbsp;
+  <img src="https://img.shields.io/badge/.NET-10-1F2428.svg?style=flat-square&logo=dotnet&logoColor=white&color=334155" alt=".NET" />&nbsp;
   <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/Wiki-Documentation-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=334155" alt="Wiki" /></a>
 </p>
 
@@ -64,6 +64,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ### 🔤 OCR & Translation
 - **Multilingual OCR**: Extract text from images with Tesseract
+- **Tabbed Results**: Keep successive OCR and QR/barcode results grouped in their respective windows
 - **Language Auto-Detection**: Based on Windows display language
 - **Integrated Translation**: Translate OCR-extracted text with configurable source/target languages
 - **Local Search**: Full-text search across all OCR content in your capture history
@@ -105,7 +106,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/releases/latest) and follow the wizard. The installer registers `.csnp` file associations, creates shortcuts, and offers to start with Windows.
 
-The installer built from this source installs for the current user in `%LocalAppData%\Programs\CyberSnap` without requesting administrator privileges. Shortcuts, file associations, and startup registration apply to that user. If you previously installed CyberSnap for all users in Program Files, uninstall that copy before switching to the per-user installer; it does not upgrade the machine-wide installation in place.
+Starting with version 1.20.1, CyberSnap installs for the current user in `%LocalAppData%\Programs\CyberSnap` without requesting administrator privileges. Shortcuts, file associations, and startup registration apply to that user. If you previously installed CyberSnap for all users in Program Files, uninstall that copy before switching to the per-user installer; it does not upgrade the machine-wide installation in place.
 
 The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) are enough on their own:
 
@@ -143,7 +144,7 @@ You can verify the file independently: compare the SHA with the GitHub release, 
 
 ## 🛠️ Tech Stack & Architecture
 
-- **Platform:** Windows 10 (build 19041) or later: x64, x86, ARM64
+- **Platform:** Windows 10 (build 19041) or later. Published installer and portable packages are x64.
 - **Framework:** .NET 10 + WPF (PerMonitorV2 high DPI). The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) include the required .NET Desktop Runtime.
 - **Recording:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, with libx264), shipped beside the app. See [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Database:** SQLite (local history and search index)
@@ -206,7 +207,7 @@ dotnet publish src/CyberSnap/CyberSnap.csproj `
 ./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
 ```
 
-Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later by running `scripts/Build-Installer.ps1` with `-AppVersion`. The script rejects compiler warnings and is also used by CI. `CyberSnap.iss` packs whatever is in `publish-win64`, including `ffmpeg.exe`.
+Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later by running `scripts/Build-Installer.ps1` with `-AppVersion` (a numeric version or a `v`-prefixed tag). The script rejects compiler warnings, verifies the installer's numeric file version, and is also used by CI. `CyberSnap.iss` packs whatever is in `publish-win64`, including `ffmpeg.exe`.
 
 Run [Verify Windows installer](https://github.com/CyberGems/CyberSnap/actions/workflows/verify-installer.yml) manually to check installation, startup at a real Windows logon, and uninstallation in a disposable Windows VM. The checks use standard accounts with UAC credential prompts enabled and retain the installer and diagnostic logs for seven days as Actions artifacts, without creating a release. The optional `installer_run_id` reuses an earlier test installer only when packaging sources are unchanged. `scripts/Test-Installer.ps1` is intended exclusively for those hosted VMs and rejects normal local execution.
 

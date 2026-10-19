@@ -16,7 +16,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Licencia-GPL--3.0-1F2428.svg?style=flat-square&color=334155" alt="Licencia" />&nbsp;
   <img src="https://img.shields.io/badge/Plataforma-Windows_10%2F11-1F2428.svg?style=flat-square&color=334155" alt="Plataforma" />&nbsp;
-  <img src="https://img.shields.io/badge/.NET-9-1F2428.svg?style=flat-square&logo=dotnet&logoColor=white&color=334155" alt=".NET" />&nbsp;
+  <img src="https://img.shields.io/badge/.NET-10-1F2428.svg?style=flat-square&logo=dotnet&logoColor=white&color=334155" alt=".NET" />&nbsp;
   <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/Wiki-Documentaci%C3%B3n-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=334155" alt="Wiki" /></a>
 </p>
 
@@ -49,7 +49,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 
 ### 📷 Captura
 - **Widget de captura flotante**: widget siempre disponible en pantalla para capturar con un clic
-- **Autocopia independiente**: elige por separado qué enviar al portapapeles: capturas, OCR, QR/códigos de barras, MP4, GIF y colores. Los presets de imágenes solo afectan a las capturas. OCR, QR y el selector de color mantienen su ventana de resultados habilitada al desactivar la autocopia.
+- **Autocopia independiente**: elige por separado qué enviar al portapapeles para capturas normales, capturas con desplazamiento, OCR, QR/códigos de barras, MP4, GIF y colores. Las capturas normales y con desplazamiento tienen preferencias de vista previa independientes. Los presets de imágenes conservan las preferencias de portapapeles y vista previa de las capturas con desplazamiento. OCR, QR y el selector de color mantienen su ventana de resultados habilitada al desactivar la autocopia.
 - **Modos de captura flexibles**: área, ventana activa, pantalla completa y captura con desplazamiento (páginas largas cosidas en una sola imagen)
 - **Grabación de pantalla**: graba en MP4 o GIF con un recortador con pestañas: recorte y reproducción independientes, tira de fotogramas, forma de onda y corte preciso
 - **Herramientas de precisión**: guías de cruz, lupa de captura y detección inteligente de ventanas
@@ -64,6 +64,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 
 ### 🔤 OCR y traducción
 - **OCR multilingüe**: extrae texto de imágenes con Tesseract
+- **Resultados con pestañas**: agrupa los resultados sucesivos de OCR y QR/códigos de barras en sus respectivas ventanas
 - **Detección automática de idioma**: basada en el idioma de visualización de Windows
 - **Traducción integrada**: traduce el texto extraído con OCR con idiomas de origen/destino configurables
 - **Búsqueda local**: búsqueda de texto completo en todo el contenido de OCR de tu historial de capturas
@@ -104,7 +105,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 
 Descarga el [instalador de Inno Setup](https://github.com/CyberGems/CyberSnap/releases/latest) y sigue el asistente. El instalador registra las asociaciones de archivos `.csnp`, crea accesos directos y ofrece iniciar con Windows.
 
-El instalador compilado desde este código instala para el usuario actual en `%LocalAppData%\Programs\CyberSnap` sin solicitar permisos de administrador. Los accesos directos, las asociaciones de archivos y el inicio automático se aplican a ese usuario. Si antes instalaste CyberSnap para todos los usuarios en Program Files, desinstala esa copia antes de cambiar al instalador por usuario; este no actualiza la instalación de equipo en su ubicación anterior.
+Desde la versión 1.20.1, CyberSnap se instala para el usuario actual en `%LocalAppData%\Programs\CyberSnap` sin solicitar permisos de administrador. Los accesos directos, las asociaciones de archivos y el inicio automático se aplican a ese usuario. Si antes instalaste CyberSnap para todos los usuarios en Program Files, desinstala esa copia antes de cambiar al instalador por usuario; este no actualiza la instalación de equipo en su ubicación anterior.
 
 El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) funcionan por sí solos:
 
@@ -141,7 +142,7 @@ Puedes verificar el archivo de forma independiente: compara el SHA con el releas
 
 ## 🛠️ Stack tecnológico y arquitectura
 
-- **Plataforma:** Windows 10 (compilación 19041) o posterior: x64, x86, ARM64
+- **Plataforma:** Windows 10 (compilación 19041) o posterior. El instalador y el paquete portable publicados son x64.
 - **Framework:** .NET 10 + WPF (alto DPI PerMonitorV2). El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) incluyen el .NET Desktop Runtime necesario.
 - **Grabación:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, con libx264), incluido junto a la app. Ver [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Base de datos:** SQLite (historial local e índice de búsqueda)
@@ -202,7 +203,7 @@ dotnet publish src/CyberSnap/CyberSnap.csproj `
 ./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
 ```
 
-Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 o posterior ejecutando `scripts/Build-Installer.ps1` con `-AppVersion`. El script rechaza los avisos del compilador y también se usa en CI. `CyberSnap.iss` empaqueta lo que haya en `publish-win64`, incluido `ffmpeg.exe`.
+Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 o posterior ejecutando `scripts/Build-Installer.ps1` con `-AppVersion` (una versión numérica o una etiqueta con prefijo `v`). El script rechaza los avisos del compilador, verifica la versión numérica del archivo instalador y también se usa en CI. `CyberSnap.iss` empaqueta lo que haya en `publish-win64`, incluido `ffmpeg.exe`.
 
 Ejecuta manualmente [Verify Windows installer](https://github.com/CyberGems/CyberSnap/actions/workflows/verify-installer.yml) para comprobar la instalación, el inicio automático al abrir una sesión real de Windows y la desinstalación en una VM desechable. Las comprobaciones usan cuentas estándar con las solicitudes de credenciales de UAC activadas y conservan el instalador y los registros durante siete días como artefactos de Actions, sin crear una release. El parámetro opcional `installer_run_id` reutiliza un instalador de prueba anterior únicamente si no han cambiado las fuentes del empaquetado. `scripts/Test-Installer.ps1` está pensado exclusivamente para esas VM alojadas y rechaza su ejecución local normal.
 ---
