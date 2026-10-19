@@ -118,7 +118,8 @@ try {
         $deadline = [DateTime]::UtcNow.AddMinutes(7)
         while (-not (Test-Path -LiteralPath $resultFile)) {
             Start-Sleep -Seconds 15
-            & quser.exe | Set-Content "$testRoot\$scenario\sessions.txt"
+            $sessions = & quser.exe
+            $sessions | Set-Content "$testRoot\$scenario\sessions.txt"
             $rdpMessages = @([InstallerTestSession]::VisibleWindows($rdp.Id)) + @([InstallerTestSession]::DialogMessages($rdp.Id))
             $rdpMessages |
                 Tee-Object -FilePath "$testRoot\$scenario\rdp-windows.txt"
@@ -130,8 +131,21 @@ try {
             Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-TerminalServices-RDPClient/Operational'; StartTime = $rdpStarted } -ErrorAction SilentlyContinue |
                 Select-Object TimeCreated, Id, Message | ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-client-events.json"
             if (-not (Test-Path "$testRoot\$scenario\rdp-dialog.json")) {
-                $diagnostic = Start-Process $powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Read-RdpDialog.ps1`" -RdpProcessId $($rdp.Id) -OutputPath `"$testRoot\$scenario\rdp-dialog.json`"" -WindowStyle Hidden -PassThru
+                $diagnostic = Start-Process $powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$testRoot\Read-RdpDialog.ps1`" -RdpProcessId $($rdp.Id) -OutputPath `"$testRoot\$scenario\rdp-dialog.json`"" -WindowStyle Hidden -PassThru -RedirectStandardError "$testRoot\$scenario\rdp-dialog-errors.txt"
                 if (-not $diagnostic.WaitForExit(10000)) { $diagnostic.Kill() }
+            }
+            $authenticationFailures = foreach ($event in @(Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4625; StartTime = $rdpStarted } -ErrorAction SilentlyContinue)) {
+                [xml]$eventXml = $event.ToXml()
+                $fields = @{}
+                foreach ($field in $eventXml.Event.EventData.Data) { $fields[$field.Name] = $field.'#text' }
+                if ($fields['TargetUserName'] -eq $user) {
+                    [ordered]@{ Status = $fields['Status']; SubStatus = $fields['SubStatus']; LogonType = $fields['LogonType']; FailureReason = $fields['FailureReason'] }
+                }
+            }
+            @($authenticationFailures) | ConvertTo-Json | Set-Content "$testRoot\$scenario\rdp-authentication-failures.json"
+            if ([DateTime]::UtcNow -ge $rdpStarted.ToUniversalTime().AddSeconds(90) -and -not ($sessions -match [regex]::Escape($user))) {
+                if (Test-Path "$testRoot\$scenario\rdp-dialog.json") { Get-Content "$testRoot\$scenario\rdp-dialog.json" }
+                throw 'RDP did not authenticate the disposable user within 90 seconds.'
             }
             if ($rdpMessages -match 'An authentication error|Your credentials did not work|cannot connect to another console session|Remote Desktop can.t connect') {
                 throw "The loopback RDP connection failed: $($rdpMessages -join ' ')"
