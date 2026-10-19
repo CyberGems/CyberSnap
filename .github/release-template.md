@@ -8,7 +8,7 @@
 
 <!-- Maintainer: Rewrite the marked paragraph for every release. Use 25-45 words, lead with user-facing changes, and do not repeat the app name or version. -->
 <!-- changelog-summary:start -->
-Overflowing tab strips gain animated chevron scrolling, the standalone tool windows adopt suite-standard title bars with More menus and toggles, the color picker and QR scanner get accent styling, editor dialogs gain ghost buttons and an N shortcut, and the installer drops the group page.
+OCR, QR, and trimming sessions now share tabbed windows, with independent clipboard and result preferences for each capture mode. The widget handles mixed-DPI monitors more reliably. Updated .NET 10 packages include a per-user installer that preserves startup choices without administrator prompts.
 <!-- changelog-summary:end -->
 
 > **New to CyberSnap?** A fast, privacy-focused Windows toolkit for screenshots, annotation, OCR, QR scanning, screen recording, and sharing.
@@ -17,54 +17,64 @@ Overflowing tab strips gain animated chevron scrolling, the standalone tool wind
 
 ### ✨ Key Features & Highlights
 
-- 🗂️ **Tab strips that scale**:
-  - Chevron scroll buttons appear when tabs overflow, with smooth animated scrolling that keeps the active tab anchored.
-  - Bigger tabs, a neutral close disc, a full-width accent underline on the active tab, and a lighter close X on hover.
-  - Truncated editor tab titles now render correctly.
+- 🗂️ **Tabbed results and trimming**:
+  - OCR and QR/barcode results stay together in tabbed windows.
+  - MP4 and GIF trimming sessions retain independent playback, selection, and export state when switching tabs.
+  - Result windows open more reliably in the foreground; capture destination changes update the confirmation dock consistently.
 
-- 🪟 **Standalone tools, aligned**:
-  - Color Picker and QR Scanner windows follow the suite's title-bar conventions: accent badges, ghost buttons, and in-window toggles.
-  - The standard More menu carries tool-specific branches, including repick and a shortcut to the Standalone Tools wiki page.
-  - Suite-standard taskbar titles now include the color picker.
+- 🎛️ **Independent delivery preferences**:
+  - Configure clipboard delivery separately for images, scrolling captures, OCR, QR/barcodes, MP4, GIF, and colors.
+  - Ordinary and scrolling captures have separate preview preferences; MP4 and GIF have separate Trimmer preferences.
+  - The widget's grouped More menu and open tools stay synchronized with Settings. OCR, QR, and color tools keep a result window available when auto-copy is disabled.
 
-- 🧩 **Dialogs and preview polish**:
-  - Editor modals use accent ghost buttons and roomier actions; the save prompt answers **N** for Don't save via a key badge.
-  - Preview actions get ghost CTA hover, accent hover text, and roomier buttons, plus a faster pill simulation.
-  - About window refreshes with accent buttons and a cleaner layout.
+- 🖥️ **More reliable capture widget**:
+  - Improved placement, popup positioning, monitor following, and active-window tracking across displays with different DPI scales.
+  - Corrected clipped borders and hidden edge indicators, with consistent menu checkmarks and synchronized widget preferences.
 
-- 🌍 **Strings and distribution**:
-  - New and updated English/Spanish strings for preview actions, delivery toggles, window titles, and tooltips.
-  - The installer skips the program group page and installs shortcuts into the shared Programs folder.
+- 📦 **.NET 10 and per-user installation**:
+  - Migrated to .NET 10 LTS and updated SQLite components. Both packages include the .NET runtime and FFmpeg.
+  - The installer now uses `%LocalAppData%\Programs\CyberSnap` without requesting administrator privileges. Shortcuts, associations, and startup registration apply to the current user.
+  - The installer startup choice is honored on first launch; later changes remain effective. Uninstalling removes startup entries and shortcuts, and installed-app registration no longer creates duplicates.
+  - **Upgrading from an all-users installation in Program Files? Uninstall that copy before using this installer.** The new installer does not migrate a machine-wide installation in place. This change does not require administrator privileges for subsequent per-user installs or uninstalls.
+
+- ✅ **Verification**:
+  - Runtime, SQLite full-text search, delivery, tabs, monitor/DPI, and real MP4/GIF export smoke checks passed.
+  - A disposable Windows VM passed 88 installation, actual sign-in startup, and uninstall checks using standard accounts in English and Spanish, with UAC enabled and no elevation prompts.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
-Las tiras de pestañas con desbordamiento ganan desplazamiento animado por flechas, las ventanas de herramientas adoptan barras de título estándar con menús Más e interruptores, el selector de color y el escáner QR reciben estilo de acento, los diálogos del editor ganan botones fantasma y un atajo N, y el instalador omite la página de grupo.
+Los resultados de OCR y QR y las sesiones de recorte se agrupan en ventanas con pestañas, con preferencias independientes de portapapeles y resultados para cada modo. El widget mejora su comportamiento entre monitores con distintas escalas DPI. Los paquetes actualizados a .NET 10 incluyen un instalador por usuario que respeta la elección de inicio automático sin pedir permisos de administrador.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 🗂️ **Tiras de pestañas que escalan**:
-  - Aparecen flechas de desplazamiento cuando las pestañas desbordan, con desplazamiento animado que mantiene anclada la pestaña activa.
-  - Pestañas más grandes, disco de cierre neutro, subrayado de acento a todo el ancho en la pestaña activa y una X de cierre más clara al pasar el cursor.
-  - Los títulos truncados de las pestañas del editor ahora se muestran correctamente.
+- 🗂️ **Resultados y recorte con pestañas**:
+  - Los resultados de OCR y QR/códigos de barras se agrupan en ventanas con pestañas.
+  - Las sesiones de recorte MP4 y GIF conservan su estado de reproducción, selección y exportación al cambiar de pestaña.
+  - Los resultados aparecen en primer plano con mayor fiabilidad y los cambios de destino actualizan correctamente la barra de confirmación de captura.
 
-- 🪟 **Herramientas independientes, alineadas**:
-  - Las ventanas Selector de Color y Escáner QR siguen las convenciones de la barra de título: insignias de acento, botones fantasma e interruptores en la ventana.
-  - El menú Más estándar incluye ramas propias de cada herramienta, como volver a elegir y un acceso a la página de Herramientas Independientes de la wiki.
-  - Los títulos de la barra de tareas ahora incluyen el selector de color.
+- 🎛️ **Preferencias de entrega independientes**:
+  - Configura el portapapeles por separado para imágenes, capturas con desplazamiento, OCR, QR/códigos de barras, MP4, GIF y colores.
+  - Las capturas normales y con desplazamiento tienen preferencias de vista previa independientes; MP4 y GIF tienen preferencias de Recortador separadas.
+  - El menú Más del widget y las herramientas abiertas se sincronizan con Configuración. OCR, QR y color mantienen disponible su ventana de resultados cuando la copia automática está desactivada.
 
-- 🧩 **Pulido de diálogos y vista previa**:
-  - Los modales del editor usan botones fantasma de acento y acciones más amplias; el aviso de guardado responde **N** a No guardar mediante una insignia de tecla.
-  - Las acciones de la vista previa ganan hover fantasma en el CTA, texto de acento al pasar el cursor y botones más amplios, además de una simulación de pastilla más rápida.
-  - La ventana Acerca de se renueva con botones de acento y un diseño más limpio.
+- 🖥️ **Widget de captura más fiable**:
+  - Mejoras de posición, menús emergentes, seguimiento de monitores y detección de ventana activa entre pantallas con distintas escalas DPI.
+  - Correcciones de bordes recortados e indicadores ocultos en los extremos, marcas de selección coherentes y preferencias sincronizadas.
 
-- 🌍 **Cadenas y distribución**:
-  - Nuevas cadenas y actualizadas en inglés y español para acciones de vista previa, interruptores de entrega, títulos de ventana y tooltips.
-  - El instalador omite la página de grupo de programas e instala los accesos en la carpeta Programas compartida.
+- 📦 **.NET 10 e instalación por usuario**:
+  - Migración a .NET 10 LTS y actualización de SQLite. Ambos paquetes incluyen el runtime de .NET y FFmpeg.
+  - El instalador usa `%LocalAppData%\Programs\CyberSnap` sin solicitar permisos de administrador. Los accesos directos, las asociaciones y el inicio automático se aplican al usuario actual.
+  - Se respeta la opción de inicio automático del instalador en el primer arranque y los cambios posteriores siguen funcionando. La desinstalación elimina las entradas de inicio y los accesos directos, y ya no se duplica la entrada en Aplicaciones instaladas.
+  - **Si tienes una instalación para todos los usuarios en Program Files, desinstálala antes de usar este instalador.** El nuevo instalador no migra esa instalación directamente. Las siguientes instalaciones y desinstalaciones por usuario no requieren permisos de administrador.
+
+- ✅ **Verificación**:
+  - Superadas las comprobaciones de runtime, búsqueda de texto de SQLite, entrega, pestañas, monitores/DPI y exportación real de MP4/GIF.
+  - Una máquina virtual desechable de Windows superó 88 comprobaciones de instalación, inicio automático al iniciar sesión y desinstalación con cuentas estándar en inglés y español, con UAC activado y sin pedir elevación.
 
 </details>
 
