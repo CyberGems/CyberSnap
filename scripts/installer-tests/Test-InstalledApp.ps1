@@ -19,11 +19,20 @@ function Get-StartupCommand {
     try { if ($key) { $key.GetValue('CyberSnap') } } finally { if ($key) { $key.Dispose() } }
 }
 function Invoke-InstallerProcess([string]$Path, [string]$Arguments) {
+    $manifest = [InstallerTestSession]::Manifest($Path)
+    $manifest | Set-Content "$output\$([IO.Path]::GetFileName($Path)).manifest.xml"
+    Assert-Test ($manifest -match 'requestedExecutionLevel\s+level="asInvoker"') "Executable manifest requests asInvoker: $([IO.Path]::GetFileName($Path))"
     $process = Start-Process -FilePath $Path -ArgumentList $Arguments -PassThru
     $elevated = [InstallerTestSession]::IsElevated($process)
     $processes.Add([ordered]@{ Path = $Path; PID = $process.Id; Elevated = $elevated })
     Assert-Test (-not $elevated) "Process uses a non-elevated token: $([IO.Path]::GetFileName($Path))"
-    if (-not $process.WaitForExit(120000)) { $process.Kill(); throw "Process timed out: $Path" }
+    $deadline = [DateTime]::UtcNow.AddSeconds(120)
+    $consentSeen = $false
+    while (-not $process.WaitForExit(200)) {
+        if (Get-Process consent -ErrorAction SilentlyContinue) { $consentSeen = $true }
+        if ([DateTime]::UtcNow -ge $deadline) { $process.Kill(); throw "Process timed out: $Path" }
+    }
+    Assert-Test (-not $consentSeen) "No consent.exe process appeared: $([IO.Path]::GetFileName($Path))"
     Assert-Test ($process.ExitCode -eq 0) "Process exits successfully: $([IO.Path]::GetFileName($Path)) ($($process.ExitCode))"
 }
 function Stop-TestApp {
@@ -82,7 +91,7 @@ try {
         $app.Refresh()
         if ($app.HasExited) { throw "Installed application exited early ($($app.ExitCode))." }
         $windows = @([InstallerTestSession]::VisibleWindows($app.Id))
-    } while ($windows.Count -eq 0 -and [DateTime]::UtcNow -lt $deadline)
+    } while ($windows -notcontains 'CyberSnap Quick Panel' -and [DateTime]::UtcNow -lt $deadline)
     $windows | ConvertTo-Json | Set-Content "$output\windows.json"
     Assert-Test ($windows -contains 'CyberSnap Quick Panel') 'Installed app shows its Quick Panel after launching the startup command'
     Assert-Test (-not [InstallerTestSession]::IsElevated($app)) 'Installed app runs without elevation'
@@ -95,6 +104,26 @@ try {
         Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq 'CyberSnap' })
     $uninstallEntries | Select-Object PSChildName, UninstallString | ConvertTo-Json | Set-Content "$output\uninstall-entries.json"
     Assert-Test ($uninstallEntries.Count -eq 1) 'Windows lists CyberSnap exactly once in installed applications'
+    Stop-TestApp
+    $settingsFile = "$settingsDirectory\settings.json"
+    $settings = Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
+    Assert-Test ($settings.StartWithWindows -eq ($Scenario -eq 'enabled')) 'Installer startup choice is saved in application settings'
+    $pendingKey = Get-ItemProperty 'HKCU:\Software\CyberGems\CyberSnap\Installer' -ErrorAction SilentlyContinue
+    Assert-Test (-not ($pendingKey -and $pendingKey.PSObject.Properties['StartWithWindows'])) 'Installer preference is consumed after it is saved'
+    # Simulate a later preference saved by Settings, then verify the normal app startup applies it.
+    $settings.StartWithWindows = $Scenario -ne 'enabled'
+    $settings | ConvertTo-Json -Depth 40 | Set-Content -LiteralPath $settingsFile -Encoding UTF8
+    $app = Start-Process -FilePath $installedExe -PassThru
+    $deadline = [DateTime]::UtcNow.AddSeconds(45)
+    do {
+        Start-Sleep -Milliseconds 500
+        if ($app.HasExited) { throw 'Application exited while checking a changed startup preference.' }
+        $windows = @([InstallerTestSession]::VisibleWindows($app.Id))
+    } while ($windows -notcontains 'CyberSnap Quick Panel' -and [DateTime]::UtcNow -lt $deadline)
+    Assert-Test ($windows -contains 'CyberSnap Quick Panel') 'App restarts after changing its startup preference'
+    $changedCommand = Get-StartupCommand
+    Assert-Test (($Scenario -eq 'disabled' -and $changedCommand -eq "`"$installedExe`"") -or
+        ($Scenario -eq 'enabled' -and [string]::IsNullOrEmpty($changedCommand))) 'Later user preference overrides the previous installer choice'
 }
 catch { $failures.Add($_.ToString()); Write-Output $_.ToString() }
 finally {
@@ -106,6 +135,7 @@ finally {
                 Invoke-InstallerProcess $uninstaller "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$output\uninstall.log`""
                 Start-Sleep -Seconds 3
                 Assert-Test (-not (Test-Path -LiteralPath $installedExe)) 'Uninstaller removes the installed executable'
+                Assert-Test (-not (Test-Path -LiteralPath (Split-Path -Parent $installedExe))) 'Uninstaller removes the installation directory'
                 Assert-Test ([string]::IsNullOrEmpty((Get-StartupCommand))) 'Uninstaller removes the startup entry'
                 Assert-Test (-not (Test-Path 'HKCU:\Software\Classes\CyberSnap.Project')) 'Uninstaller removes the project association'
                 $remaining = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |

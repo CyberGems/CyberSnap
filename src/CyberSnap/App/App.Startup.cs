@@ -12,6 +12,20 @@ public partial class App
         if (e.Args.Any(a => a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase) || a.Equals("/uninstall", StringComparison.OrdinalIgnoreCase)))
         {
             base.OnStartup(e);
+            try
+            {
+                if (UninstallService.TryLaunchInnoSetupUninstaller())
+                {
+                    Shutdown();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("startup.uninstall.inno-setup", ex);
+                Shutdown();
+                return;
+            }
             try { UninstallService.RemoveInstalledAppEntry(); } catch (Exception ex) { AppDiagnostics.LogError("startup.uninstall.remove-installed-entry", ex); }
             try { UninstallService.RemoveStartMenuShortcut(); } catch (Exception ex) { AppDiagnostics.LogError("startup.uninstall.remove-start-menu", ex); }
             try { UninstallService.RemoveStartupEntry(); } catch (Exception ex) { AppDiagnostics.LogError("startup.uninstall.remove-startup-entry", ex); }
@@ -59,6 +73,7 @@ public partial class App
 
         _settingsService = new SettingsService();
         _settingsService.Load();
+        try { UninstallService.ApplyInstallerStartupPreference(_settingsService); } catch (Exception ex) { AppDiagnostics.LogError("startup.installer-startup-preference", ex); }
         SettingsService.AutoCopyPreferencesChanged += () =>
         {
             _settingsService?.RefreshResultDeliveryPreferences();

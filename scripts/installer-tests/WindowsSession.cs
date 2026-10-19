@@ -33,6 +33,14 @@ public static class InstallerTestSession
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetUserObjectSecurity(IntPtr handle, ref int info, byte[] descriptor);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibraryEx(string file, IntPtr reserved, uint flags);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr FindResource(IntPtr module, IntPtr name, IntPtr type);
+    [DllImport("kernel32.dll")] private static extern uint SizeofResource(IntPtr module, IntPtr resource);
+    [DllImport("kernel32.dll")] private static extern IntPtr LoadResource(IntPtr module, IntPtr resource);
+    [DllImport("kernel32.dll")] private static extern IntPtr LockResource(IntPtr resource);
+    [DllImport("kernel32.dll")] private static extern bool FreeLibrary(IntPtr module);
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
     [DllImport("advapi32.dll", SetLastError = true)]
@@ -90,6 +98,21 @@ public static class InstallerTestSession
             return elevated != 0;
         }
         finally { CloseHandle(token); }
+    }
+    public static string Manifest(string path)
+    {
+        // LOAD_LIBRARY_AS_DATAFILE: inspect resources without running installer code.
+        var module = LoadLibraryEx(path, IntPtr.Zero, 2);
+        if (module == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+        try
+        {
+            var resource = FindResource(module, new IntPtr(1), new IntPtr(24));
+            if (resource == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            var bytes = new byte[SizeofResource(module, resource)];
+            Marshal.Copy(LockResource(LoadResource(module, resource)), bytes, 0, bytes.Length);
+            return Encoding.UTF8.GetString(bytes).TrimEnd('\0');
+        }
+        finally { FreeLibrary(module); }
     }
     public static string[] VisibleWindows(int processId)
     {

@@ -86,6 +86,18 @@ public static class UninstallService
         if (LooksLikeBuildOutputPath(exe))
             return;
 
+        if (InstallService.IsInnoSetupInstallation())
+        {
+            // Inno owns the installed-app entry and its uninstaller. Retire only
+            // an old self-registration that points at this same installation.
+            string? previousLocation;
+            using (var previous = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\CyberSnap"))
+                previousLocation = previous?.GetValue("InstallLocation") as string;
+            if (string.Equals(previousLocation?.TrimEnd('\\', '/'), GetInstallDirectory().TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase))
+                RemoveInstalledAppEntry();
+            return;
+        }
+
         var installDir = GetInstallDirectory();
         var v = Assembly.GetEntryAssembly()?.GetName().Version;
         var version = v is null ? "1.0.0" : $"{v.Major}.{v.Minor}.{Math.Max(v.Build, 0)}";
@@ -122,6 +134,43 @@ public static class UninstallService
         }
 
         key.DeleteSubKeyTree("CyberSnap", throwOnMissingSubKey: false);
+    }
+
+    public static bool TryLaunchInnoSetupUninstaller()
+    {
+        if (!InstallService.IsInnoSetupInstallation())
+            return false;
+        using var key = Registry.CurrentUser.OpenSubKey(InstallService.InnoSetupUninstallKeyPath);
+        var uninstaller = (key?.GetValue("UninstallString") as string)?.Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(uninstaller) || !File.Exists(uninstaller))
+            throw new FileNotFoundException("The registered Inno Setup uninstaller was not found.", uninstaller);
+        using var process = Process.Start(new ProcessStartInfo(uninstaller) { UseShellExecute = true });
+        if (process is null)
+            throw new InvalidOperationException("Windows did not start the registered Inno Setup uninstaller.");
+        return true;
+    }
+
+    public static void ApplyInstallerStartupPreference(SettingsService settings)
+    {
+        if (!InstallService.IsInnoSetupInstallation())
+            return;
+        using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\CyberGems\CyberSnap\Installer", writable: true);
+        if (key?.GetValue("StartWithWindows") is not int preference || preference is < 0 or > 1)
+            return;
+
+        bool saved = true;
+        void OnSaveFailed(string _) => saved = false;
+        settings.SaveFailed += OnSaveFailed;
+        try
+        {
+            settings.Settings.StartWithWindows = preference == 1;
+            settings.Save();
+            settings.FlushPendingWrites();
+            // Retain the pending choice if persistence failed, so a later launch retries.
+            if (saved)
+                key.DeleteValue("StartWithWindows", throwOnMissingValue: false);
+        }
+        finally { settings.SaveFailed -= OnSaveFailed; }
     }
 
     public static string GetInstallDirectory()

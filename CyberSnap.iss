@@ -54,7 +54,10 @@ Name: "{autodesktop}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Paramet
 
 [Registry]
 ; Same slot the app writes. A Startup-folder shortcut as well made Windows list CyberSnap twice.
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "CyberSnap"; ValueData: """{app}\CyberSnap.exe"""; Tasks: startup; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "CyberSnap"; Flags: deletevalue uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "CyberSnap"; ValueData: """{app}\CyberSnap.exe"""; Tasks: startup
+; Hand the explicit installer choice to the app once, including an unchecked task.
+Root: HKCU; Subkey: "Software\CyberGems\CyberSnap\Installer"; ValueType: dword; ValueName: "StartWithWindows"; ValueData: "{code:GetStartupPreference}"; Flags: uninsdeletevalue uninsdeletekeyifempty
 Root: HKA; Subkey: "Software\Classes\.csnp"; ValueType: string; ValueName: ""; ValueData: "CyberSnap.Project"; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\.csnp\OpenWithProgids"; ValueType: string; ValueName: "CyberSnap.Project"; ValueData: ""; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\CyberSnap.Project"; ValueType: string; ValueName: ""; ValueData: "CyberSnap Project"; Flags: uninsdeletekey
@@ -63,3 +66,12 @@ Root: HKA; Subkey: "Software\Classes\CyberSnap.Project\shell\open\command"; Valu
 
 [Run]
 Filename: "{app}\CyberSnap.exe"; Description: "{cm:LaunchProgram,CyberSnap}"; Flags: nowait postinstall
+
+[Code]
+function GetStartupPreference(Param: String): String;
+begin
+  if WizardIsTaskSelected('startup') then
+    Result := '1'
+  else
+    Result := '0';
+end;

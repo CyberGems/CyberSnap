@@ -7,6 +7,8 @@ namespace CyberSnap.Services;
 
 public static class InstallService
 {
+    internal const string InnoSetupUninstallKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{D8C8A6A5-9231-4A5C-9A52-7F7B7B7B7B7B}_is1";
+
     public static string DefaultInstallPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "CyberSnap");
 
@@ -23,14 +25,27 @@ public static class InstallService
     {
         try
         {
-            using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\CyberSnap");
-            var installLoc = key?.GetValue("InstallLocation") as string;
-            return string.IsNullOrWhiteSpace(installLoc) ? null : installLoc;
+            foreach (var path in new[] { InnoSetupUninstallKeyPath, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\CyberSnap" })
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(path);
+                var installLoc = key?.GetValue("InstallLocation") as string;
+                if (!string.IsNullOrWhiteSpace(installLoc))
+                    return installLoc;
+            }
+            return null;
         }
         catch
         {
             return null;
         }
+    }
+
+    internal static bool IsInnoSetupInstallation()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(InnoSetupUninstallKeyPath);
+        var location = key?.GetValue("InstallLocation") as string;
+        return !string.IsNullOrWhiteSpace(location) && string.Equals(
+            location.TrimEnd('\\', '/'), GetAppDirectory().TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool IsInstalledLocation(string targetDir)
