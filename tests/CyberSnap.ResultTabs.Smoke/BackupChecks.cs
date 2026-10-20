@@ -253,6 +253,34 @@ internal static partial class Program
                     var uiService = (AutomaticBackupService)Field(window, "_backupService");
                     BackupAwait((Task)Call(window, "RunAutomaticBackupOperationAsync",
                         new Func<Task>(() => uiService.CreateBackupAsync()))!);
+                    var page = Element<ScrollViewer>(window, "BackupDataPanel");
+                    page.ScrollToTop();
+                    Pump();
+                    var backupList = Element<ItemsControl>(window, "AutomaticBackupsList");
+                    backupList.UpdateLayout();
+                    var row = (UIElement)backupList.ItemContainerGenerator.ContainerFromIndex(0);
+                    double beforeWheel = page.VerticalOffset;
+                    row.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, -120)
+                    {
+                        RoutedEvent = System.Windows.Input.Mouse.MouseWheelEvent
+                    });
+                    Pump();
+                    Assert(page.VerticalOffset > beforeWheel,
+                        "the page keeps scrolling when the mouse wheel is over an available backup in " + language);
+                    var title = (TextBlock)backupList.ItemTemplate.FindName("BackupDisplayNameText", (ContentPresenter)row);
+                    Assert(title.Text.Length < 70 && !title.Text.Contains(".json") && !title.Text.Contains("CyberSnap-"),
+                        "backup names show a readable date instead of a technical file identifier in " + language);
+                    page.ScrollToTop();
+                    Pump();
+                    double beforePathWheel = page.VerticalOffset;
+                    Element<TextBox>(window, "AutomaticBackupDirectoryText").RaiseEvent(
+                        new System.Windows.Input.MouseWheelEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, -120)
+                        { RoutedEvent = System.Windows.Input.Mouse.PreviewMouseWheelEvent });
+                    Pump();
+                    Assert(page.VerticalOffset > beforePathWheel,
+                        "the read-only backup path forwards wheel scrolling to the page in " + language);
+                    page.ScrollToTop();
+                    Pump();
                     if (renderDirectory is not null)
                     {
                         Render(window, renderDirectory, "backups-" + language + ".png");
@@ -264,6 +292,9 @@ internal static partial class Program
                             && BackupVisualButtons(container).Any(button => Equals(button.Content, LocalizationService.Translate("Delete"))),
                             "dynamic restore/delete actions are localized in " + language);
                         Render(window, renderDirectory, "backup-list-" + language + ".png");
+                        page.ScrollToBottom();
+                        Pump();
+                        Render(window, renderDirectory, "manual-backup-" + language + ".png");
                     }
                 }
                 finally { window.Close(); Pump(); }

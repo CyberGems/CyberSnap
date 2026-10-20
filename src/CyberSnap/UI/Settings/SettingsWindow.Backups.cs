@@ -19,7 +19,8 @@ public partial class SettingsWindow
 
     private sealed record BackupRow(BackupFileInfo File, string Description)
     {
-        public string FileName => File.FileName;
+        public string DisplayName => string.Format(BackupText(File.IsRecovery ? "Recovery copy from {0}" : "Backup from {0}"),
+            File.CreatedUtc.ToLocalTime().ToString("G"));
         public bool CanRestore => File.IsValid;
         public string RestoreLabel => BackupText("Restore");
         public string DeleteLabel => BackupText("Delete");
@@ -108,8 +109,7 @@ public partial class SettingsWindow
                 return;
             }
             AutomaticBackupsList.ItemsSource = files.Select(file => new BackupRow(file,
-                $"{file.CreatedUtc.ToLocalTime():g} · {file.SizeBytes / 1024.0:N1} KB"
-                + (file.IsRecovery ? " · " + BackupText("Recovery copy") : "")
+                $"{file.SizeBytes / 1024.0:N1} KB"
                 + (!file.IsValid ? " · " + BackupText("Damaged or unsupported backup") : ""))).ToArray();
             NoAutomaticBackupsText.Visibility = files.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             var last = files.Where(file => file.IsValid && !file.IsRecovery).Select(file => (DateTimeOffset?)file.CreatedUtc).Max();
@@ -191,6 +191,17 @@ public partial class SettingsWindow
         => await RunAutomaticBackupOperationAsync(async () => { await _backupService.CreateBackupAsync(); });
 
     private async void RefreshBackups_Click(object sender, RoutedEventArgs e) => await RefreshAutomaticBackupsAsync();
+
+    private void BackupDirectory_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        // The read-only TextBox has an internal ScrollViewer. Keep wheel scrolling
+        // on the settings page while preserving text selection/copy for the path.
+        e.Handled = true;
+        BackupDataPanel.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+        {
+            RoutedEvent = System.Windows.Input.Mouse.MouseWheelEvent
+        });
+    }
 
     private void ChooseBackupFolder_Click(object sender, RoutedEventArgs e)
     {

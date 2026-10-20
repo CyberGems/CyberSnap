@@ -1,4 +1,7 @@
 {
+  "Backup from {0}": "Backup from {0}",
+  "Recovery copy from {0}": "Recovery copy from {0}",
+  "Manual backup": "Manual backup",
   "Backup restored": "Backup restored",
   "Settings and achievements were restored. Restart CyberSnap to apply all changes.": "Settings and achievements were restored. Restart CyberSnap to apply all changes.",
   "Backups could not be listed.": "Backups could not be listed.",

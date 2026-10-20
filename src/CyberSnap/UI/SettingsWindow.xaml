@@ -5399,21 +5399,27 @@
             <ScrollViewer x:Name="BackupDataPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Automatic backups" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Automatic backups"/>
-                    <Border Style="{StaticResource Card}">
+                    <Border x:Name="AutomaticBackupsCard" Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <StackPanel Margin="0,0,12,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE777;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="0,0,12,0">
                                     <TextBlock Text="Enable automatic backups" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Enable automatic backups"/>
                                     <TextBlock Text="Back up settings and achievements. Captures and recordings are not included." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Back up settings and achievements. Captures and recordings are not included."/>
                                 </StackPanel>
-                                <CheckBox x:Name="AutomaticBackupEnabledCheck" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Enable automatic backups"
+                                <CheckBox x:Name="AutomaticBackupEnabledCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Enable automatic backups"
                                           Checked="AutomaticBackupOptions_Changed" Unchecked="AutomaticBackupOptions_Changed"/>
                             </Grid>
-                            <TextBlock Text="Runs while CyberSnap is open. Missed backups run the next time you open it." Style="{StaticResource SettingsHelperText}" TextWrapping="Wrap" Margin="0,6,0,12" Services:LocalizationService.SourceText="Runs while CyberSnap is open. Missed backups run the next time you open it."/>
-                            <Grid x:Name="AutomaticBackupScheduleControls" Margin="0,4,0,12">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <StackPanel>
+                            <TextBlock Text="Runs while CyberSnap is open. Missed backups run the next time you open it." Style="{StaticResource SettingsHelperText}" TextWrapping="Wrap" Margin="38,6,0,12" Services:LocalizationService.SourceText="Runs while CyberSnap is open. Missed backups run the next time you open it."/>
+                            <Grid x:Name="AutomaticBackupScheduleControls" Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE787;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
                                     <TextBlock Text="Backup frequency" Style="{StaticResource SettingTitle}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Backup frequency"/>
                                     <ComboBox x:Name="AutomaticBackupFrequencyCombo" AutomationProperties.Name="Backup frequency" SelectionChanged="AutomaticBackupOptions_Changed">
                                         <ComboBoxItem Content="On startup" Services:LocalizationService.SourceContent="On startup"/>
@@ -5422,84 +5428,79 @@
                                         <ComboBoxItem Content="Monthly" Services:LocalizationService.SourceContent="Monthly"/>
                                     </ComboBox>
                                 </StackPanel>
-                                <StackPanel Grid.Column="2">
+                                <Border Grid.Column="3" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE8F1;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="4">
                                     <TextBlock Text="Backups to keep" Style="{StaticResource SettingTitle}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Backups to keep"/>
                                     <ComboBox x:Name="AutomaticBackupRetentionCombo" AutomationProperties.Name="Backups to keep" SelectionChanged="AutomaticBackupOptions_Changed"/>
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="Old copies are removed only after a new backup is verified. The latest recovery copy is kept separately." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Old copies are removed only after a new backup is verified. The latest recovery copy is kept separately."/>
+                            <TextBlock Text="Old copies are removed only after a new backup is verified. The latest recovery copy is kept separately." Margin="38,8,0,0" Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Old copies are removed only after a new backup is verified. The latest recovery copy is kept separately."/>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
-                            <TextBlock Text="Backup folder" Style="{StaticResource SettingTitle}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Backup folder"/>
-                            <TextBox x:Name="AutomaticBackupDirectoryText" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.Name="Backup folder"/>
-                            <WrapPanel x:Name="AutomaticBackupFolderControls" Margin="0,8,0,12">
-                                <Button x:Name="ChooseBackupFolderBtn" Content="Choose folder" Margin="0,0,8,4" Click="ChooseBackupFolder_Click" Services:LocalizationService.SourceContent="Choose folder"/>
-                                <Button Content="Open Folder" Margin="0,0,8,4" Click="OpenBackupFolder_Click" Services:LocalizationService.SourceContent="Open Folder"/>
-                                <Button x:Name="ResetBackupFolderBtn" Content="Use default folder" Margin="0,0,0,4" Click="ResetBackupFolder_Click" Services:LocalizationService.SourceContent="Use default folder"/>
-                            </WrapPanel>
-                            <TextBlock Text="API keys and passwords are excluded. Restoring keeps your current credentials and backup preferences." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="API keys and passwords are excluded. Restoring keeps your current credentials and backup preferences."/>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
-                            <TextBlock x:Name="AutomaticBackupStatusText" TextWrapping="Wrap" Style="{StaticResource SettingsHelperText}" AutomationProperties.LiveSetting="Polite"/>
-                            <TextBlock x:Name="AutomaticBackupErrorText" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextPrimaryBrush}" Visibility="Collapsed" Margin="0,6,0,4" AutomationProperties.LiveSetting="Assertive"/>
-                            <WrapPanel Margin="0,10,0,0">
-                                <Button x:Name="CreateBackupNowBtn" Content="Back up now" Click="CreateBackupNow_Click" Services:LocalizationService.SourceContent="Back up now" Margin="0,0,8,0"/>
-                                <Button x:Name="RefreshBackupsBtn" Content="Refresh" Click="RefreshBackups_Click" Services:LocalizationService.SourceContent="Refresh"/>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock Text="Available backups" Style="{StaticResource SectionLabel}" Margin="0,16,0,8" Services:LocalizationService.SourceText="Available backups"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <TextBlock x:Name="NoAutomaticBackupsText" Text="No backups found in this folder." Style="{StaticResource SettingsHelperText}" Services:LocalizationService.SourceText="No backups found in this folder."/>
-                            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl x:Name="AutomaticBackupsList">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,6,0,8">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                                <StackPanel Margin="0,0,10,0">
-                                                    <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" Style="{StaticResource SettingTitle}"/>
-                                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Style="{StaticResource SettingDescription}"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Button Content="{Binding RestoreLabel}" IsEnabled="{Binding CanRestore}" Click="RestoreAutomaticBackup_Click" Margin="0,0,8,0"/>
-                                                    <Button Content="{Binding DeleteLabel}" Click="DeleteAutomaticBackup_Click"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock Text="Data &amp; Storage" Style="{StaticResource SectionLabel}"
-                               Services:LocalizationService.SourceText="Data &amp; Storage"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <!-- Open data folder -->
                             <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE838;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="Open data folder" Style="{StaticResource SettingTitle}"
-                                               Services:LocalizationService.SourceText="Open data folder"/>
-                                    <TextBlock Text="Open the folder that stores your settings, achievements, and cache." Style="{StaticResource SettingDescription}"
-                                               Services:LocalizationService.SourceText="Open the folder that stores your settings, achievements, and cache."/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Backup folder" Style="{StaticResource SettingTitle}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Backup folder"/>
+                                    <TextBox x:Name="AutomaticBackupDirectoryText" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.Name="Backup folder" PreviewMouseWheel="BackupDirectory_PreviewMouseWheel"/>
+                                    <WrapPanel x:Name="AutomaticBackupFolderControls" Margin="0,8,0,8">
+                                        <Button x:Name="ChooseBackupFolderBtn" Content="Choose folder" Margin="0,0,8,4" Click="ChooseBackupFolder_Click" Services:LocalizationService.SourceContent="Choose folder"/>
+                                        <Button Content="Open Folder" Margin="0,0,8,4" Click="OpenBackupFolder_Click" Services:LocalizationService.SourceContent="Open Folder"/>
+                                        <Button x:Name="ResetBackupFolderBtn" Content="Use default folder" Margin="0,0,0,4" Click="ResetBackupFolder_Click" Services:LocalizationService.SourceContent="Use default folder"/>
+                                    </WrapPanel>
+                                    <TextBlock Text="API keys and passwords are excluded. Restoring keeps your current credentials and backup preferences." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="API keys and passwords are excluded. Restoring keeps your current credentials and backup preferences."/>
                                 </StackPanel>
-                                <Button x:Name="OpenDataFolderBtn" Grid.Column="2" Content="Open Folder" MinWidth="90"
-                                        VerticalAlignment="Center" Cursor="Hand"
-                                        ToolTip="Opens the folder containing settings, achievements, and cache in File Explorer."
-                                        AutomationProperties.Name="Open data folder"
-                                        Services:LocalizationService.SourceContent="Open Folder"
-                                        Services:LocalizationService.SourceToolTip="Opens the folder containing settings, achievements, and cache in File Explorer."
-                                        Click="OpenDataFolderBtn_Click"/>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                    <TextBlock x:Name="AutomaticBackupStatusText" TextWrapping="Wrap" Style="{StaticResource SettingsHelperText}" AutomationProperties.LiveSetting="Polite"/>
+                                    <TextBlock x:Name="AutomaticBackupErrorText" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextPrimaryBrush}" Visibility="Collapsed" Margin="0,6,0,4" AutomationProperties.LiveSetting="Assertive"/>
+                                </StackPanel>
+                                <Button x:Name="CreateBackupNowBtn" Grid.Column="2" Content="Back up now" Click="CreateBackupNow_Click" Services:LocalizationService.SourceContent="Back up now"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8A5;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="Available backups" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Available backups"/>
+                                <Button x:Name="RefreshBackupsBtn" Grid.Column="2" Content="Refresh" Click="RefreshBackups_Click" Services:LocalizationService.SourceContent="Refresh"/>
+                            </Grid>
+                            <TextBlock x:Name="NoAutomaticBackupsText" Text="No backups found in this folder." Style="{StaticResource SettingsHelperText}" Margin="38,4,0,0" Services:LocalizationService.SourceText="No backups found in this folder."/>
+                            <ItemsControl x:Name="AutomaticBackupsList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,8,0,0" MinHeight="42">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource SettingIconFrame}">
+                                                <TextBlock Text="&#xE7C3;" Style="{StaticResource SettingIconGlyph}"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                <TextBlock x:Name="BackupDisplayNameText" Text="{Binding DisplayName}" TextWrapping="Wrap" Style="{StaticResource SettingTitle}"/>
+                                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Style="{StaticResource SettingDescription}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="{Binding RestoreLabel}" IsEnabled="{Binding CanRestore}" Click="RestoreAutomaticBackup_Click" Margin="0,0,8,0"/>
+                                                <Button Content="{Binding DeleteLabel}" Click="DeleteAutomaticBackup_Click"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="ManualBackupTitle" Text="Manual backup" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Manual backup"/>
+                    <Border x:Name="ManualBackupCard" Style="{StaticResource Card}">
+                        <StackPanel>
                             <!-- Export settings -->
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
@@ -5548,6 +5549,36 @@
                                         Services:LocalizationService.SourceContent="Import"
                                         Services:LocalizationService.SourceToolTip="Restores all settings and achievements from an exported JSON file. Current settings will be replaced."
                                         Click="ImportSettingsButton_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="Data &amp; Storage" Style="{StaticResource SectionLabel}"
+                               Services:LocalizationService.SourceText="Data &amp; Storage"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <!-- Open data folder -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE838;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="Open data folder" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Open data folder"/>
+                                    <TextBlock Text="Open the folder that stores your settings, achievements, and cache." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Open the folder that stores your settings, achievements, and cache."/>
+                                </StackPanel>
+                                <Button x:Name="OpenDataFolderBtn" Grid.Column="2" Content="Open Folder" MinWidth="90"
+                                        VerticalAlignment="Center" Cursor="Hand"
+                                        ToolTip="Opens the folder containing settings, achievements, and cache in File Explorer."
+                                        AutomationProperties.Name="Open data folder"
+                                        Services:LocalizationService.SourceContent="Open Folder"
+                                        Services:LocalizationService.SourceToolTip="Opens the folder containing settings, achievements, and cache in File Explorer."
+                                        Click="OpenDataFolderBtn_Click"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <!-- Reset Settings -->
