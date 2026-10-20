@@ -54,6 +54,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--backups-only"))
+            {
+                CheckAutomaticBackups(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} automatic backup checks.");
+                return 0;
+            }
             if (args.Contains("--tray-menu-only"))
             {
                 CheckTrayMenuMonitors();
@@ -104,6 +110,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckAutomaticBackups(temp, args.FirstOrDefault());
             CheckTrayMenuMonitors();
             CheckWidgetMonitors(settings);
             CheckWidgetPopups(settings, args.FirstOrDefault());

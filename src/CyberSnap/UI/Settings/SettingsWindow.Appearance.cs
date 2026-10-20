@@ -357,6 +357,7 @@ public partial class SettingsWindow
             LoadToastButtonLayoutDesigner();
 
             RefreshSettingsFooterVersion();
+            LoadAutomaticBackupSettings();
 
             TryLoadSettingsSection("settings.populate-tool-toggles", PopulateToolToggles);
             TryLoadSettingsSection("settings.update-capture-format-controls", UpdateCaptureFormatControls);

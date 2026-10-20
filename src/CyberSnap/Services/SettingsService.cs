@@ -379,6 +379,16 @@ public sealed class SettingsService : IDisposable
     {
         try
         {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object
+                || (document.RootElement.TryGetProperty("Format", out var format)
+                    && format.ValueKind == JsonValueKind.String && format.GetString() == AutomaticBackupService.Format))
+            {
+                // An automatic backup is an envelope, not raw settings. Treating it
+                // as AppSettings would silently import defaults and discard the payload.
+                settings = new AppSettings();
+                return false;
+            }
             settings = DeserializeSettings(json);
             return true;
         }
@@ -586,6 +596,40 @@ public sealed class SettingsService : IDisposable
         return JsonSerializer.Serialize(redacted, JsonOptions);
     }
 
+    internal string StorageDirectory => _settingsDir;
+
+    // Save() publishes an immutable clone immediately, before its debounced disk write.
+    // Backups therefore include the latest saved changes without reading mutable UI collections.
+    internal AppSettings GetSnapshot() => TryGetCachedSettings(_settingsPath, out var snapshot)
+        ? snapshot! : CloneSettings(Settings);
+
+    internal void ReplaceDurably(AppSettings replacement)
+        => PersistReplacementDurably(replacement, backupOptionsOnly: false);
+
+    internal void SaveAutomaticBackupOptionsDurably(AutomaticBackupSettings options)
+    {
+        var replacement = GetSnapshot();
+        replacement.AutomaticBackup = options.Normalize();
+        PersistReplacementDurably(replacement, backupOptionsOnly: true);
+    }
+
+    private void PersistReplacementDurably(AppSettings replacement, bool backupOptionsOnly)
+    {
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var copy = CloneSettings(replacement);
+            var json = JsonSerializer.Serialize(SensitiveSettingsProtection.ProtectForStorage(copy, JsonOptions), JsonOptions);
+            AtomicBackupFile.Write(_settingsPath, System.Text.Encoding.UTF8.GetBytes(json), overwrite: true);
+            if (backupOptionsOnly) Settings.AutomaticBackup = copy.AutomaticBackup;
+            else Settings = copy;
+            _settingsDirty = false;
+            _flushTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            CacheSettings(_settingsPath, copy);
+        }
+        SettingsChanged?.Invoke();
+    }
+
     private static AppSettings DeserializeSettings(string json)
     {
         var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
@@ -601,6 +645,7 @@ public sealed class SettingsService : IDisposable
         settings.ImageSearchSources &= ImageSearchSourceOptions.All;
         settings.UiScale = CyberSnap.UI.UiScale.Normalize(settings.UiScale);
         settings.InterfaceLanguage = LocalizationService.NormalizeLanguageSetting(settings.InterfaceLanguage);
+        settings.AutomaticBackup = (settings.AutomaticBackup ?? new()).Normalize();
         NormalizeEnums(settings);
         settings.OcrDefaultTranslateFrom = TranslationService.ResolveSourceLanguage(settings.OcrDefaultTranslateFrom);
         settings.OcrDefaultTranslateTo = NormalizeTranslationTargetSetting(settings.OcrDefaultTranslateTo);

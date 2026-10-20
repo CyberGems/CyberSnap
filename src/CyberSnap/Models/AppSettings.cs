@@ -172,6 +172,8 @@ public enum CaptureKind
 
 public sealed class AppSettings
 {
+    public AutomaticBackupSettings AutomaticBackup { get; set; } = new();
+
     public sealed class ToastButtonLayoutSettings
     {
         // When true the user has opted into manual editing of each button's placement; the

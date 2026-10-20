@@ -224,5 +224,20 @@ public static class SettingsSchemaCatalog
             "Local runtime-backed media workflows.",
             [
             ]),
+        new(
+            "backup",
+            "Backup & Data",
+            "Automatic backups of settings and achievements.",
+            [
+                new SettingsSectionDefinition("automatic_backups", "Automatic backups", "Schedule, retain, and restore settings backups.",
+                [
+                    new SettingDefinition("automatic_backup_enabled", "Enable automatic backups", SettingsValueKind.Toggle, "Back up settings and achievements.", "AutomaticBackup.Enabled"),
+                    new SettingDefinition("automatic_backup_frequency", "Backup frequency", SettingsValueKind.Choice, "On startup, daily, weekly, or monthly.", "AutomaticBackup.Frequency"),
+                    new SettingDefinition("automatic_backup_retention", "Backups to keep", SettingsValueKind.Choice, "Keep between 1 and 50 backups.", "AutomaticBackup.MaxBackups"),
+                    new SettingDefinition("automatic_backup_directory", "Backup folder", SettingsValueKind.Folder, "Choose where backup copies are stored.", "AutomaticBackup.CustomDirectory"),
+                    new SettingDefinition("automatic_backup_create", "Back up now", SettingsValueKind.Action, "Create and verify a backup now."),
+                    new SettingDefinition("automatic_backup_restore", "Restore backup", SettingsValueKind.Action, "Restore settings and achievements after creating a recovery copy."),
+                ]),
+            ]),
     ];
 }

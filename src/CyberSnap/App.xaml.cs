@@ -18,6 +18,7 @@ public partial class App : Application
     private static Mutex? _mutex;
     private HotkeyService? _hotkeyService;
     private SettingsService? _settingsService;
+    private AutomaticBackupService? _backupService;
     private HistoryService? _historyService;
     private ImageSearchIndexService? _imageSearchIndexService;
     private readonly object _historyGate = new();
@@ -49,6 +50,7 @@ public partial class App : Application
     private int _historyWindowOpening;
 
     internal SettingsService SettingsService => _settingsService ??= new SettingsService();
+    internal AutomaticBackupService BackupService => _backupService ??= new AutomaticBackupService(SettingsService);
 
     /// <summary>Currently open capture-preview dialog, or null when no preview is showing.
     /// Read-only for widgets / handlers that need to know whether their clicks should be

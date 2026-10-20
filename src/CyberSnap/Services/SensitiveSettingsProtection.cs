@@ -27,6 +27,20 @@ internal static class SensitiveSettingsProtection
     public static void Unprotect(AppSettings settings)
         => Transform(settings, Unprotect);
 
+    internal static void KeepCurrentSecrets(AppSettings target, AppSettings current)
+    {
+        target.GoogleTranslateApiKey = current.GoogleTranslateApiKey;
+        target.UploadImgurClientId = current.UploadImgurClientId;
+        target.UploadImgBBApiKey = current.UploadImgBBApiKey;
+        target.UploadCyberGemsApiKey = current.UploadCyberGemsApiKey;
+        target.UploadWebhookBearerToken = current.UploadWebhookBearerToken;
+        target.UploadCustomPassword = current.UploadCustomPassword;
+        target.UploadSftpPrivateKeyPassphrase = current.UploadSftpPrivateKeyPassphrase;
+        target.UploadS3AccessKey = current.UploadS3AccessKey;
+        target.UploadS3SecretKey = current.UploadS3SecretKey;
+        target.UploadS3SessionToken = current.UploadS3SessionToken;
+    }
+
     internal static string Redact(string value)
         => "";
 

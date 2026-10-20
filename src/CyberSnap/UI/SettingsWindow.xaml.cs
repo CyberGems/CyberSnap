@@ -69,6 +69,8 @@ public partial class SettingsWindow : Window
         // bypass this instance; reload here so a later Save() cannot clobber those
         // flags with stale values (same merge-with-latest pattern as App.Capture saves).
         _settingsService.Load();
+        _backupService = (Application.Current as App)?.BackupService ?? new AutomaticBackupService(_settingsService);
+        _ownsBackupService = Application.Current is not App;
         var latestPanelState = SettingsService.LoadStatic();
         if (latestPanelState != null)
         {
@@ -90,6 +92,7 @@ public partial class SettingsWindow : Window
         ApplyThemeColors();
         LoadFileNameTokenButtons();
         LoadSettings();
+        InitializeAutomaticBackups();
         InitializeSearch();
         UpdateWindowTitle();
         Loaded += (_, _) => ApplyMicaBackdrop();
@@ -135,6 +138,8 @@ public partial class SettingsWindow : Window
         };
         Closed += (_, _) =>
         {
+            _backupService.Changed -= AutomaticBackups_Changed;
+            if (_ownsBackupService) _backupService.Dispose();
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
             SettingsService.AutoCopyPreferencesChanged -= OnAutoCopyPreferencesChanged;
             SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;

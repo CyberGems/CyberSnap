@@ -130,6 +130,7 @@ public partial class App
         ScheduleAutoUpdateCheck();
         EnsureWidgetWindowCreated();
         ScheduleTrayPinTip();
+        BackupService.Start();
 
         if (openSettingsAfterWizard || openSettingsOnStartup)
             ShowSettings();

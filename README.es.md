@@ -92,6 +92,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 - **Inicio automático**: se inicia al iniciar sesión en Windows
 - **Actualización automática**: actualizador integrado con avisos emergentes, vista previa del changelog y omisión por versión
 - **Asistente de configuración**: asistente de configuración en el primer uso
+- **Copias de seguridad automáticas**: Configuración → Respaldo y Datos protege la configuración y los logros al iniciar, diariamente (predeterminado), semanalmente o mensualmente. Permite elegir carpeta, conservar entre 1 y 50 copias verificadas (3 de forma predeterminada), crear, restaurar o eliminar copias. Los respaldos pendientes se crean al abrir CyberSnap. Antes de restaurar se crea una copia de recuperación y se conservan las credenciales y preferencias de respaldo actuales. No incluye capturas ni grabaciones; se excluyen las claves API y contraseñas.
 
 ### 🎨 Personalización
 - **28 idiomas**: localización completa de la interfaz (incluidos inglés y español)

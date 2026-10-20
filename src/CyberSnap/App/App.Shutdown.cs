@@ -8,6 +8,7 @@ public partial class App
     protected override void OnExit(ExitEventArgs e)
     {
         _idleTrimTimer?.Stop();
+        _backupService?.Dispose();
         try { SingleInstanceIpcServer.Stop(); } catch { }
         try { BackgroundRuntimeJobService.CancelAllRunningJobs(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.cancel-runtime-jobs", ex); }
         _hotkeyService?.Dispose();
