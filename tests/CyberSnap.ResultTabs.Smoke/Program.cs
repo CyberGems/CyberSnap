@@ -54,6 +54,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--tray-menu-only"))
+            {
+                CheckTrayMenuMonitors();
+                Console.WriteLine($"PASS: {_checks} tray menu placement checks.");
+                return 0;
+            }
             if (args.Contains("--widget-active-only"))
             {
                 CheckWidgetActiveMonitor(settings);
@@ -98,6 +104,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckTrayMenuMonitors();
             CheckWidgetMonitors(settings);
             CheckWidgetPopups(settings, args.FirstOrDefault());
             CheckWidgetActiveMonitor(settings);

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -60,113 +61,105 @@ public partial class TrayContextMenuWindow : Window
     {
         try
         {
-            // Physical cursor captured at tray click (Win32 virtual-screen pixels).
-            var physicalCursor = _clickPoint;
-            var screen = System.Windows.Forms.Screen.FromPoint(physicalCursor);
-            var physWork = screen.WorkingArea;
-            var physBounds = screen.Bounds;
-
-            // Move onto the click monitor first so WPF adopts that monitor's per-monitor DPI.
-            // Without this, Left/Top and PointFromScreen use the wrong scale on mixed-DPI setups
-            // (e.g. 150% primary + 125% secondary) and the menu lands far away or off-screen.
-            try
-            {
-                var hwnd = new WindowInteropHelper(this).EnsureHandle();
-                if (hwnd != IntPtr.Zero)
-                {
-                    Native.User32.SetWindowPos(
-                        hwnd,
-                        IntPtr.Zero,
-                        physWork.X,
-                        physWork.Y,
-                        0,
-                        0,
-                        Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogWarning("traymenu.setwindowpos", ex.Message, ex);
-            }
-
-            // Map physical rects/points into this window's DIP space (same approach as Toast/Widget).
-            Rect PhysicalToWindowDips(System.Drawing.Rectangle r)
-            {
-                var tl = PointFromScreen(new System.Windows.Point(r.Left, r.Top));
-                var br = PointFromScreen(new System.Windows.Point(r.Right, r.Bottom));
-                return new Rect(
-                    Left + tl.X,
-                    Top + tl.Y,
-                    Math.Max(0, br.X - tl.X),
-                    Math.Max(0, br.Y - tl.Y));
-            }
-
-            var workArea = PhysicalToWindowDips(physWork);
-            var screenArea = PhysicalToWindowDips(physBounds);
-
-            var cursorLocal = PointFromScreen(new System.Windows.Point(physicalCursor.X, physicalCursor.Y));
-            double cursorX = Left + cursorLocal.X;
-            double cursorY = Top + cursorLocal.Y;
-
-            UpdateLayout();
-            double windowWidth = ActualWidth > 0 ? ActualWidth : Width;
-            double windowHeight = ActualHeight > 0 ? ActualHeight : 360;
-
-            const double gap = 8;
-            const double eps = 2; // ignore sub-pixel work-area vs bounds differences
-            double left;
-            double top;
-
-            // Detect taskbar dock side from work area vs full bounds on the click monitor.
-            bool taskbarLeft = workArea.Left > screenArea.Left + eps;
-            bool taskbarRight = workArea.Right < screenArea.Right - eps;
-            bool taskbarTop = workArea.Top > screenArea.Top + eps;
-
-            if (taskbarLeft)
-            {
-                left = workArea.Left + gap;
-                top = cursorY - (windowHeight / 2);
-            }
-            else if (taskbarRight)
-            {
-                left = workArea.Right - windowWidth - gap;
-                top = cursorY - (windowHeight / 2);
-            }
-            else if (taskbarTop)
-            {
-                left = cursorX - (windowWidth / 2);
-                top = workArea.Top + gap;
-            }
-            else
-            {
-                // Bottom taskbar (default) or auto-hide
-                left = cursorX - (windowWidth / 2);
-                top = workArea.Bottom - windowHeight - gap;
-            }
-
-            // Clamp so the ENTIRE window stays inside the work area.
-            // Previous bug set left/top to (edge - gap) without subtracting size, which shoved
-            // most of the menu off-screen (and made it "disappear" on the secondary monitor).
-            double minLeft = workArea.Left + gap;
-            double maxLeft = workArea.Right - windowWidth - gap;
-            double minTop = workArea.Top + gap;
-            double maxTop = workArea.Bottom - windowHeight - gap;
-
-            if (maxLeft < minLeft) left = workArea.Left + (workArea.Width - windowWidth) / 2;
-            else left = Math.Clamp(left, minLeft, maxLeft);
-
-            if (maxTop < minTop) top = workArea.Top + (workArea.Height - windowHeight) / 2;
-            else top = Math.Clamp(top, minTop, maxTop);
-
-            Left = left;
-            Top = top;
-
+            PositionAtClick();
+            QueuePlacementAfterDpiChange();
             Activate();
             Focus();
         }
         catch (Exception ex)
         {
             AppDiagnostics.LogError("traymenu.loaded", ex);
+        }
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        if (IsLoaded)
+            QueuePlacementAfterDpiChange();
+    }
+
+    private void QueuePlacementAfterDpiChange()
+    {
+        // A native monitor move can precede WPF's DPI/layout update on .NET 10.
+        // Measure again once that update has applied the final physical window size.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (_isClosing || !IsLoaded)
+                return;
+            try { PositionAtClick(); }
+            catch (Exception ex) { AppDiagnostics.LogError("traymenu.dpi-placement", ex); }
+        }));
+    }
+
+    private Native.User32.MONITORINFO GetClickMonitorInfo()
+    {
+        var monitor = Native.User32.MonitorFromPoint(
+            new Native.User32.POINT(_clickPoint.X, _clickPoint.Y), Native.User32.MONITOR_DEFAULTTONEAREST);
+        var info = new Native.User32.MONITORINFO { cbSize = Marshal.SizeOf<Native.User32.MONITORINFO>() };
+        if (!Native.User32.GetMonitorInfo(monitor, ref info))
+            throw new InvalidOperationException("Unable to read the tray menu monitor bounds.");
+        return info;
+    }
+
+    private void PositionAtClick()
+    {
+        var info = GetClickMonitorInfo();
+        var work = info.rcWork.ToRectangle();
+        var hwnd = new WindowInteropHelper(this).EnsureHandle();
+        var targetMonitor = Native.User32.MonitorFromPoint(
+            new Native.User32.POINT(_clickPoint.X, _clickPoint.Y), Native.User32.MONITOR_DEFAULTTONEAREST);
+        if (Native.User32.MonitorFromWindow(hwnd, Native.User32.MONITOR_DEFAULTTONEAREST) != targetMonitor)
+            MoveTo(work.Location);
+
+        UpdateLayout();
+        if (!Native.User32.GetWindowRect(hwnd, out var rect))
+            throw new InvalidOperationException("Unable to measure the tray menu window.");
+
+        // Keep the work area, cursor, measured size and final position in physical pixels.
+        // PointFromScreen + Left/Top can mix a fresh HWND origin with stale WPF properties.
+        var dpi = VisualTreeHelper.GetDpi(this);
+        MoveTo(CalculatePlacement(info.rcMonitor.ToRectangle(), work, _clickPoint,
+            new System.Drawing.Size(rect.Width, rect.Height), dpi));
+
+        void MoveTo(System.Drawing.Point position)
+        {
+            if (!Native.User32.SetWindowPos(hwnd, IntPtr.Zero, position.X, position.Y, 0, 0,
+                Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER))
+                throw new InvalidOperationException("Unable to position the tray menu window.");
+        }
+    }
+
+    internal static System.Drawing.Point CalculatePlacement(
+        System.Drawing.Rectangle bounds, System.Drawing.Rectangle work, System.Drawing.Point cursor,
+        System.Drawing.Size size, DpiScale dpi)
+    {
+        int gapX = (int)Math.Round(8 * dpi.DpiScaleX);
+        int gapY = (int)Math.Round(8 * dpi.DpiScaleY);
+        int left = cursor.X - size.Width / 2;
+        int top = cursor.Y - size.Height / 2;
+
+        // Infer the dock side from this monitor, rather than the primary taskbar.
+        const int tolerance = 2;
+        if (work.Left > bounds.Left + tolerance)
+            left = work.Left + gapX;
+        else if (work.Right < bounds.Right - tolerance)
+            left = work.Right - size.Width - gapX;
+        else if (work.Top > bounds.Top + tolerance)
+            top = work.Top + gapY;
+        else
+            top = work.Bottom - size.Height - gapY;
+
+        return new System.Drawing.Point(
+            Clamp(left, work.Left, work.Right, size.Width, gapX),
+            Clamp(top, work.Top, work.Bottom, size.Height, gapY));
+
+        static int Clamp(int position, int start, int end, int length, int gap)
+        {
+            // Reduce the margin when the panel fits but the normal gap does not.
+            int margin = Math.Max(0, Math.Min(gap, (end - start - length) / 2));
+            return length > end - start ? start + (end - start - length) / 2
+                : Math.Clamp(position, start + margin, end - length - margin);
         }
     }
 
@@ -678,7 +671,7 @@ public partial class TrayContextMenuWindow : Window
                 return false;
             if (!Native.User32.GetWindowRect(hwnd, out var rect))
                 return false;
-            var work = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea; // physical px
+            var work = GetClickMonitorInfo().rcWork.ToRectangle();
             return rect.Right > work.Right || rect.Left < work.Left
                 || rect.Bottom > work.Bottom || rect.Top < work.Top;
         }
@@ -699,7 +692,7 @@ public partial class TrayContextMenuWindow : Window
                 return;
             if (!Native.User32.GetWindowRect(hwnd, out var rect))
                 return;
-            var work = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea; // physical px
+            var work = GetClickMonitorInfo().rcWork.ToRectangle();
 
             int dx = 0, dy = 0;
             if (rect.Right > work.Right) dx = work.Right - rect.Right;
