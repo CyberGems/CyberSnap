@@ -618,11 +618,29 @@ public partial class CaptureWidgetWindow : Window
         targetScreen ??= ResolvePlacementScreen(PopupWindowHelper.GetSortedScreens());
         _placementMonitorDevice = targetScreen.DeviceName;
 
-        // Move the HWND first, then map physical pixels through its rendering context.
-        // Only jump when the window is actually on a different monitor: PositionWindow runs
-        // every frame while dragging, and an unconditional corner-jump leaves ghost trails
-        // on this transparent topmost window.
         var phys = GetPhysicalWorkingArea(targetScreen);
+        var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(phys.X + phys.Width / 2, phys.Y + phys.Height / 2));
+        var localBounds = CalculateWidgetBounds(
+            new Rect(0, 0, phys.Width / targetDpi.X, phys.Height / targetDpi.Y),
+            _settings.WidgetDockEdge,
+            _settings.WidgetDockPositionOffset,
+            expanded,
+            UiScale.Current);
+        var targetHalo = ShadowHalo(_settings.WidgetDockEdge);
+        // Include the shadow halo and reserve whole pixels so the outer panel border
+        // is not clipped at fractional UI/display scales. Keep right/bottom docks flush.
+        double requestedWidth = (localBounds.Width + targetHalo.Left + targetHalo.Right) * targetDpi.X;
+        double requestedHeight = (localBounds.Height + targetHalo.Top + targetHalo.Bottom) * targetDpi.Y;
+        double physicalWidth = Math.Ceiling(requestedWidth);
+        double physicalHeight = Math.Ceiling(requestedHeight);
+        double physicalLeft = phys.Left + (localBounds.Left - targetHalo.Left) * targetDpi.X
+            - (_settings.WidgetDockEdge == CaptureDockSide.Right ? physicalWidth - requestedWidth : 0);
+        double physicalTop = phys.Top + (localBounds.Top - targetHalo.Top) * targetDpi.Y
+            - (_settings.WidgetDockEdge == CaptureDockSide.Bottom ? physicalHeight - requestedHeight : 0);
+
+        // Adopt the destination DPI at the final position and size. Moving first to
+        // the monitor's origin flashes the transparent widget in its top-left corner.
+        // Same-monitor drag/hover updates keep the existing animation path below.
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         if (hwnd != IntPtr.Zero)
         {
@@ -631,8 +649,13 @@ public partial class CaptureWidgetWindow : Window
                 new Native.User32.POINT(phys.X, phys.Y), Native.User32.MONITOR_DEFAULTTONEAREST);
             if (windowMonitor != targetMonitor)
             {
-                Native.User32.SetWindowPos(hwnd, IntPtr.Zero, phys.X, phys.Y, 0, 0,
-                    Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER);
+                if (!Native.User32.SetWindowPos(hwnd, IntPtr.Zero,
+                    (int)Math.Round(physicalLeft), (int)Math.Round(physicalTop), (int)physicalWidth, (int)physicalHeight,
+                    Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER))
+                {
+                    AppDiagnostics.LogWarning("widget.monitor-placement", "Unable to move the widget to its target monitor.");
+                    return false;
+                }
             }
         }
 
@@ -640,43 +663,20 @@ public partial class CaptureWidgetWindow : Window
         // Window.Left/Top use desktop coordinates in the window's render DIPs.
         // A relative PointFromScreen conversion can observe the native move before
         // WPF updates Left/Top on .NET 10, shifting placement on mixed-DPI monitors.
-        var workingArea = new Rect(
-            phys.Left / dpi.DpiScaleX,
-            phys.Top / dpi.DpiScaleY,
-            phys.Width / dpi.DpiScaleX,
-            phys.Height / dpi.DpiScaleY);
-
-        var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(phys.X + phys.Width / 2, phys.Y + phys.Height / 2));
         double correctionX = targetDpi.X / dpi.DpiScaleX;
         double correctionY = targetDpi.Y / dpi.DpiScaleY;
         // A programmatic monitor move can update the HWND's DPI before WPF updates
         // its visual/render DPI. Compensate only for that difference. Once WPF adopts
         // the new DPI, OnDpiChanged repositions us and these factors become 1 again.
         RootGrid.LayoutTransform = new ScaleTransform(UiScale.Current * correctionX, UiScale.Current * correctionY);
-        var localBounds = CalculateWidgetBounds(
-            new Rect(0, 0, phys.Width / targetDpi.X, phys.Height / targetDpi.Y),
-            _settings.WidgetDockEdge,
-            _settings.WidgetDockPositionOffset,
-            expanded,
-            UiScale.Current);
-        var bounds = new Rect(workingArea.Left + localBounds.Left * correctionX,
-            workingArea.Top + localBounds.Top * correctionY,
-            localBounds.Width * correctionX, localBounds.Height * correctionY);
-
-        // Grow the window by the shadow halo; the content is inset by the same amounts
-        // (RootGrid.Margin), so the visible widget lands exactly on 'bounds'. The docked side has
-        // no halo (ShadowHalo), so that edge sits flush against the screen and the peek stays
-        // interactive right at the screen-edge pixel.
-        halo = ShadowHalo(_settings.WidgetDockEdge);
-        halo = new Thickness(halo.Left * correctionX, halo.Top * correctionY, halo.Right * correctionX, halo.Bottom * correctionY);
-        double requestedWidth = bounds.Width + halo.Left + halo.Right;
-        double requestedHeight = bounds.Height + halo.Top + halo.Bottom;
-        // Native window sizes use whole pixels. Reserve the full outer pixel so
-        // fractional UI scales cannot round the client area inside the panel border.
-        width = Math.Ceiling(requestedWidth * dpi.DpiScaleX) / dpi.DpiScaleX;
-        height = Math.Ceiling(requestedHeight * dpi.DpiScaleY) / dpi.DpiScaleY;
-        left = bounds.Left - halo.Left - (_settings.WidgetDockEdge == CaptureDockSide.Right ? width - requestedWidth : 0);
-        top = bounds.Top - halo.Top - (_settings.WidgetDockEdge == CaptureDockSide.Bottom ? height - requestedHeight : 0);
+        // Inset the content by the same shadow halo used for the physical window bounds.
+        // The docked side has no halo, keeping the peek interactive at the screen edge.
+        halo = new Thickness(targetHalo.Left * correctionX, targetHalo.Top * correctionY,
+            targetHalo.Right * correctionX, targetHalo.Bottom * correctionY);
+        width = physicalWidth / dpi.DpiScaleX;
+        height = physicalHeight / dpi.DpiScaleY;
+        left = physicalLeft / dpi.DpiScaleX;
+        top = physicalTop / dpi.DpiScaleY;
         return true;
     }
 

@@ -39,6 +39,7 @@ internal static partial class Program
             widget.Show();
             GetField<System.Windows.Threading.DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
             Pump();
+            CheckWidgetMonitorMovePositions(widget, settings, screens);
             foreach (var screen in screens)
             {
                 var work = WidgetStatic<System.Drawing.Rectangle>("GetPhysicalWorkingArea", screen);
