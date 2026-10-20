@@ -5399,7 +5399,7 @@
             <ScrollViewer x:Name="BackupDataPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Automatic backups" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Automatic backups"/>
-                    <Border x:Name="AutomaticBackupsCard" Style="{StaticResource Card}">
+                    <Border x:Name="AutomaticBackupsCard" Style="{StaticResource Card}" Grid.IsSharedSizeScope="True">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -5456,7 +5456,7 @@
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
                             <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto" SharedSizeGroup="BackupLastAction"/></Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
                                     <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
@@ -5468,9 +5468,9 @@
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
                             <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto" SharedSizeGroup="BackupLastAction"/></Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8A5;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE8F1;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <TextBlock Grid.Column="1" Text="Available backups" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Available backups"/>
                                 <Button x:Name="RefreshBackupsBtn" Grid.Column="2" Content="Refresh" Click="RefreshBackups_Click" Services:LocalizationService.SourceContent="Refresh"/>
@@ -5480,18 +5480,21 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,8,0,0" MinHeight="42">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="BackupRestoreAction"/>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="BackupLastAction"/>
+                                            </Grid.ColumnDefinitions>
                                             <Border Style="{StaticResource SettingIconFrame}">
                                                 <TextBlock Text="&#xE7C3;" Style="{StaticResource SettingIconGlyph}"/>
                                             </Border>
                                             <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
                                                 <TextBlock x:Name="BackupDisplayNameText" Text="{Binding DisplayName}" TextWrapping="Wrap" Style="{StaticResource SettingTitle}"/>
-                                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Style="{StaticResource SettingDescription}"/>
+                                                <TextBlock x:Name="BackupDescriptionText" Text="{Binding Description}" TextWrapping="Wrap" Style="{StaticResource SettingDescription}"/>
                                             </StackPanel>
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Content="{Binding RestoreLabel}" IsEnabled="{Binding CanRestore}" Click="RestoreAutomaticBackup_Click" Margin="0,0,8,0"/>
-                                                <Button Content="{Binding DeleteLabel}" Click="DeleteAutomaticBackup_Click"/>
-                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="{Binding RestoreLabel}" IsEnabled="{Binding CanRestore}" Click="RestoreAutomaticBackup_Click" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="3" Content="{Binding DeleteLabel}" Click="DeleteAutomaticBackup_Click" VerticalAlignment="Center"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

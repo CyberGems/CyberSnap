@@ -17,10 +17,12 @@ public partial class SettingsWindow
     private bool _backupRefreshRequested;
     private string? _backupUiError;
 
-    private sealed record BackupRow(BackupFileInfo File, string Description)
+    private sealed record BackupRow(BackupFileInfo File)
     {
-        public string DisplayName => string.Format(BackupText(File.IsRecovery ? "Recovery copy from {0}" : "Backup from {0}"),
-            File.CreatedUtc.ToLocalTime().ToString("G"));
+        public string DisplayName => File.FileName;
+        public string Description => string.Format(BackupText(File.IsRecovery ? "Recovery copy from {0}" : "Backup from {0}"),
+            File.CreatedUtc.ToLocalTime().ToString("G")) + $" · {File.SizeBytes / 1024.0:N1} KB"
+            + (!File.IsValid ? " · " + BackupText("Damaged or unsupported backup") : "");
         public bool CanRestore => File.IsValid;
         public string RestoreLabel => BackupText("Restore");
         public string DeleteLabel => BackupText("Delete");
@@ -108,9 +110,7 @@ public partial class SettingsWindow
                 _backupRefreshRequested = true;
                 return;
             }
-            AutomaticBackupsList.ItemsSource = files.Select(file => new BackupRow(file,
-                $"{file.SizeBytes / 1024.0:N1} KB"
-                + (!file.IsValid ? " · " + BackupText("Damaged or unsupported backup") : ""))).ToArray();
+            AutomaticBackupsList.ItemsSource = files.Select(file => new BackupRow(file)).ToArray();
             NoAutomaticBackupsText.Visibility = files.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             var last = files.Where(file => file.IsValid && !file.IsRecovery).Select(file => (DateTimeOffset?)file.CreatedUtc).Max();
             var options = _settingsService.Settings.AutomaticBackup.Normalize();

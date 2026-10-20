@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -17,7 +18,9 @@ public sealed class AutomaticBackupService : IDisposable
     private const int SchemaVersion = 1;
     private const int MaximumFileBytes = 16 * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    private static readonly Regex OwnedName = new(@"^CyberSnap-(backup|recovery)-\d{8}T\d{9}Z-[a-f0-9]{32}\.json$", RegexOptions.CultureInvariant);
+    private static readonly Regex OwnedName = new(
+        @"^CyberSnap-(backup|recovery)-(?:[0-9]{4}(?:-[0-9]{2}){2}_[0-9]{2}(?:-[0-9]{2}){2}(?:_[0-9]+)?|[0-9]{8}T[0-9]{9}Z-[a-f0-9]{32})\.json$",
+        RegexOptions.CultureInvariant);
     private readonly SettingsService _settings;
     private readonly TimeProvider _clock;
     private readonly SynchronizationContext? _settingsContext;
@@ -192,11 +195,21 @@ public sealed class AutomaticBackupService : IDisposable
         envelope.Sha256 = Checksum(envelope);
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions);
         if (bytes.Length > MaximumFileBytes) throw new InvalidDataException("The backup exceeds the supported size limit.");
-        string file = $"CyberSnap-{(recovery ? "recovery" : "backup")}-{now:yyyyMMdd'T'HHmmssfff'Z'}-{Guid.NewGuid():N}.json";
-        string path = Path.Combine(directory, file);
-        AtomicBackupFile.Write(path, bytes);
-        ReadVerified(path);
-        return new BackupFileInfo(path, now, bytes.Length, recovery, true);
+        string timestamp = TimeZoneInfo.ConvertTime(now, _clock.LocalTimeZone).ToString("yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture);
+        string name = $"CyberSnap-{(recovery ? "recovery" : "backup")}-{timestamp}";
+        for (int sequence = 1; ; sequence = checked(sequence + 1))
+        {
+            cancellation.ThrowIfCancellationRequested();
+            string suffix = sequence == 1 ? "" : "_" + sequence.ToString(CultureInfo.InvariantCulture);
+            string path = Path.Combine(directory, name + suffix + ".json");
+            if (File.Exists(path)) continue;
+            try { AtomicBackupFile.Write(path, bytes); }
+            // Another writer can claim the name after File.Exists. Retry only
+            // file-already-exists errors; other I/O failures must still surface.
+            catch (IOException ex) when ((ex.HResult & 0xFFFF) is 80 or 183) { continue; }
+            ReadVerified(path);
+            return new BackupFileInfo(path, now, bytes.Length, recovery, true);
+        }
     }
 
     private static List<BackupFileInfo> ListCore(string directory)

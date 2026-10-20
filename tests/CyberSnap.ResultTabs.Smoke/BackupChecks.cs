@@ -8,10 +8,11 @@ using CyberSnap.UI;
 
 internal static partial class Program
 {
-    private sealed class BackupClock(DateTimeOffset utc) : TimeProvider
+    private sealed class BackupClock(DateTimeOffset utc, TimeZoneInfo? zone = null) : TimeProvider
     {
         public DateTimeOffset Utc { get; set; } = utc;
         public override DateTimeOffset GetUtcNow() => Utc;
+        public override TimeZoneInfo LocalTimeZone => zone ?? base.LocalTimeZone;
     }
 
     private static void BackupAwait(Task task)
@@ -37,7 +38,8 @@ internal static partial class Program
         string root = Path.Combine(temp, "automatic-backups");
         Directory.CreateDirectory(root);
         using var settings = new SettingsService(Path.Combine(root, "settings.json"), TimeSpan.FromHours(1));
-        var clock = new BackupClock(new DateTimeOffset(2026, 1, 31, 12, 0, 0, TimeSpan.Zero));
+        var clock = new BackupClock(new DateTimeOffset(2026, 1, 31, 12, 0, 0, TimeSpan.Zero),
+            TimeZoneInfo.CreateCustomTimeZone("Backup test", TimeSpan.FromHours(-6), "Backup test", "Backup test"));
         using var service = new AutomaticBackupService(settings, clock);
         settings.Settings.ScreenshotCount = 42;
         settings.Settings.CurrentStreak = 5;
@@ -46,6 +48,8 @@ internal static partial class Program
         settings.Settings.UploadCustomPassword = "backup-test-password";
         settings.Save();
         var first = BackupAwait(service.CreateBackupAsync());
+        Assert(first.FileName == "CyberSnap-backup-2026-01-31_06-00-00.json",
+            "backup filenames use a readable local date and time without a unique identifier");
         using (var document = JsonDocument.Parse(File.ReadAllText(first.FilePath)))
         {
             var payload = document.RootElement.GetProperty("Settings");
@@ -57,6 +61,11 @@ internal static partial class Program
                 && !File.ReadAllText(first.FilePath).Contains("backup-test-secret"), "backup files exclude credentials");
             Assert(document.RootElement.GetProperty("Sha256").GetString()!.Length == 64, "backups carry an integrity checksum");
         }
+        byte[] original = File.ReadAllBytes(first.FilePath);
+        var second = BackupAwait(service.CreateBackupAsync());
+        Assert(second.FileName == "CyberSnap-backup-2026-01-31_06-00-00_2.json"
+            && File.ReadAllBytes(first.FilePath).SequenceEqual(original),
+            "same-second backups use a short suffix and never overwrite an existing copy");
         Assert(!Directory.GetFiles(service.BackupDirectory, "*.tmp").Any(), "successful writes publish no temporary files");
         Assert(!SettingsService.TryDeserialize(File.ReadAllText(first.FilePath), out _),
             "automatic backup envelopes cannot accidentally import as default settings");
@@ -121,6 +130,10 @@ internal static partial class Program
         Assert(File.Exists(damaged), "rotation preserves damaged copies for inspection");
 
         var restorePoint = BackupAwait(service.ListBackupsAsync()).Single(file => file.IsValid && !file.IsRecovery);
+        string legacyPath = Path.Combine(service.BackupDirectory, $"CyberSnap-backup-20260131T120000000Z-{Guid.NewGuid():N}.json");
+        File.Move(restorePoint.FilePath, legacyPath);
+        restorePoint = BackupAwait(service.ListBackupsAsync()).Single(file => file.FilePath == legacyPath);
+        Assert(restorePoint.IsValid, "backups with the previous filename format remain discoverable and valid");
         settings.Settings.ScreenshotCount = 99;
         settings.Settings.GoogleTranslateApiKey = "current-test-key";
         settings.Settings.AutomaticBackup.MaxBackups = 5;
@@ -131,6 +144,9 @@ internal static partial class Program
         Assert(settings.Settings.GoogleTranslateApiKey == "current-test-key" && settings.Settings.AutomaticBackup.MaxBackups == 5,
             "restore preserves current credentials and backup preferences");
         var recovery = BackupAwait(service.ListBackupsAsync()).Single(file => file.IsRecovery && file.IsValid);
+        Assert(recovery.FileName == "CyberSnap-recovery-" + clock.GetLocalNow().ToString("yyyy-MM-dd_HH-mm-ss",
+            System.Globalization.CultureInfo.InvariantCulture) + ".json",
+            "recovery copies use the same readable local filename format");
         using (var saved = JsonDocument.Parse(File.ReadAllText(recovery.FilePath)))
             Assert(saved.RootElement.GetProperty("Settings").GetProperty("ScreenshotCount").GetInt32() == 99,
                 "a verified pre-restore recovery copy contains the previous achievements");
@@ -148,6 +164,8 @@ internal static partial class Program
         string outside = Path.Combine(root, Path.GetFileName(restorePoint.FilePath));
         File.Copy(restorePoint.FilePath, outside);
         ExpectBackupFailure(() => BackupAwait(service.RestoreBackupAsync(outside)), "restoring from outside the managed folder is rejected");
+        BackupAwait(service.DeleteBackupAsync(restorePoint.FilePath));
+        Assert(!File.Exists(legacyPath), "backups with the previous filename format can still be deleted");
 
         settings.Settings.AutomaticBackup.MaxBackups = 50;
         settings.Save();
@@ -155,6 +173,17 @@ internal static partial class Program
         BackupAwait(Task.WhenAll(concurrent));
         Assert(concurrent.Select(task => task.Result.FilePath).Distinct().Count() == 8
             && concurrent.All(task => File.Exists(task.Result.FilePath)), "simultaneous requests produce distinct complete backups");
+        using (var peer = new AutomaticBackupService(settings, clock))
+        {
+            var competing = Enumerable.Range(0, 8).Select(i => (i % 2 == 0 ? service : peer).CreateBackupAsync()).ToArray();
+            BackupAwait(Task.WhenAll(competing));
+            var published = BackupAwait(service.ListBackupsAsync());
+            Assert(competing.Select(task => task.Result.FilePath).Distinct().Count() == 8
+                && competing.All(task => published.Any(file => file.FilePath == task.Result.FilePath && file.IsValid)),
+                "independent backup writers resolve name collisions without overwriting complete files");
+            Assert(!Directory.GetFiles(service.BackupDirectory, "*.tmp").Any(),
+                "name collision retries leave no temporary files behind");
+        }
         BackupAwait(service.DeleteBackupAsync(concurrent[0].Result.FilePath));
         Assert(!File.Exists(concurrent[0].Result.FilePath), "deleting a selected managed backup removes only that file");
         settings.Settings.AutomaticBackup.Enabled = true;
@@ -268,8 +297,18 @@ internal static partial class Program
                     Assert(page.VerticalOffset > beforeWheel,
                         "the page keeps scrolling when the mouse wheel is over an available backup in " + language);
                     var title = (TextBlock)backupList.ItemTemplate.FindName("BackupDisplayNameText", (ContentPresenter)row);
-                    Assert(title.Text.Length < 70 && !title.Text.Contains(".json") && !title.Text.Contains("CyberSnap-"),
-                        "backup names show a readable date instead of a technical file identifier in " + language);
+                    var listed = BackupAwait(uiService.ListBackupsAsync());
+                    Assert(title.Text == listed[0].FileName,
+                        "the list displays the actual backup filename in " + language);
+                    var description = (TextBlock)backupList.ItemTemplate.FindName("BackupDescriptionText", (ContentPresenter)row);
+                    Assert(description.Text.Contains(string.Format(LocalizationService.Translate("Backup from {0}"),
+                        listed[0].CreatedUtc.ToLocalTime().ToString("G"))) && description.Text.Contains("KB"),
+                        "backup dates and sizes remain visible and localized in " + language);
+                    var delete = BackupVisualButtons(row).Single(button => Equals(button.Content, LocalizationService.Translate("Delete")));
+                    var refresh = Element<Button>(window, "RefreshBackupsBtn");
+                    Assert(Math.Abs(delete.ActualWidth - refresh.ActualWidth) < 1
+                        && Math.Abs(delete.TranslatePoint(new Point(), window).X - refresh.TranslatePoint(new Point(), window).X) < 1,
+                        "backup actions share aligned columns with the list header in " + language);
                     page.ScrollToTop();
                     Pump();
                     double beforePathWheel = page.VerticalOffset;
