@@ -3,7 +3,6 @@
 import argparse
 import math
 from pathlib import Path
-import random
 import shutil
 import struct
 import subprocess
@@ -12,47 +11,29 @@ import wave
 
 
 SAMPLE_RATE = 44_100
-DURATION = 0.265
-PEAK = 0.24  # Match the other built-in UI cues, approximately -12.4 dBFS.
+DURATION = 0.290
+PEAK = 0.135  # Approximately -17.4 dBFS, quieter than the other built-in cues.
+
+
+def soft_note(time, frequency, level, decay):
+    if not 0.0 < time < 0.250:
+        return 0.0
+    # Rounded attack and a long taper avoid a sharp strike or an abrupt cutoff.
+    attack = math.sin(min(1.0, time / 0.018) * math.pi / 2) ** 2
+    release = math.cos(max(0.0, (time - 0.180) / 0.070) * math.pi / 2) ** 2
+    phase = 2 * math.pi * frequency * time
+    body = math.sin(phase) + 0.08 * math.exp(-time / 0.035) * math.sin(2 * phase)
+    return level * attack * math.exp(-time / decay) * release * body
 
 
 def synthesize():
-    """A short, airy card slide followed by a soft, dry settling tap."""
-    rng = random.Random(0x43534E50)
+    """A warm, felt-like touch: two overlapping mellow notes with no noise layer."""
     samples = []
-    x1 = x2 = y1 = y2 = 0.0
-    tap_phase = 0.0
     for index in range(round(SAMPLE_RATE * DURATION)):
         time = index / SAMPLE_RATE
-        sample = 0.0
-
-        # A broad, upward-moving band of air, distinct from the other pitched blips.
-        progress = (time - 0.008) / 0.187
-        if 0.0 <= progress < 1.0:
-            center = 950 + 2_650 * progress ** 0.8
-            omega = 2 * math.pi * center / SAMPLE_RATE
-            alpha = math.sin(omega) / (2 * 0.7)
-            b0 = alpha / (1 + alpha)
-            a1 = -2 * math.cos(omega) / (1 + alpha)
-            a2 = (1 - alpha) / (1 + alpha)
-            noise = rng.uniform(-1, 1)
-            filtered = b0 * noise - b0 * x2 - a1 * y1 - a2 * y2
-            x2, x1 = x1, noise
-            y2, y1 = y1, filtered
-            envelope = math.sin(math.pi * progress) ** 1.5 * math.exp(-2.2 * progress)
-            sample += filtered * envelope
-
-        # An inharmonic, heavily damped tap closes the gesture without a ringing note.
-        tap_time = time - 0.157
-        if 0 <= tap_time < 0.055:
-            tap_phase += 2 * math.pi * (460 * math.exp(-tap_time * 18)) / SAMPLE_RATE
-            attack = 1 - math.exp(-tap_time / 0.0015)
-            decay = math.exp(-tap_time / 0.009)
-            release = min(1.0, (0.055 - tap_time) / 0.005)
-            body = math.sin(tap_phase) + 0.25 * math.sin(tap_phase * 2.37)
-            sample += 0.24 * attack * decay * release * body
-
-        samples.append(sample)
+        # F4 and a quieter C5 form one soft gesture rather than two alert beeps.
+        samples.append(soft_note(time - 0.008, 349.228, 1.0, 0.075)
+                       + soft_note(time - 0.022, 523.251, 0.28, 0.065))
 
     # Taper and remove DC before peak normalization to avoid abrupt waveform edges.
     offset = sum(samples) / len(samples)
