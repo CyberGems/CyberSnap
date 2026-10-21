@@ -3,15 +3,17 @@ param(
     [string]$ManifestDirectory,
 
     [Parameter(Mandatory = $true)]
-    [string]$GitHubToken,
-
-    [string]$WingetCreatePath = (Join-Path $env:TEMP 'wingetcreate.exe')
+    [string]$GitHubToken
 )
 
 $ErrorActionPreference = 'Stop'
 
-if (-not (Test-Path $WingetCreatePath)) {
-    Invoke-WebRequest 'https://aka.ms/wingetcreate/latest' -OutFile $WingetCreatePath
+$previousToken = $env:GH_TOKEN
+try {
+    $env:GH_TOKEN = $GitHubToken
+    & node (Join-Path $PSScriptRoot '../../.github/scripts/submit-winget.mjs') --manifest-directory $ManifestDirectory
+    if ($LASTEXITCODE -ne 0) { throw 'The winget submission failed.' }
 }
-
-& $WingetCreatePath submit --token $GitHubToken $ManifestDirectory
+finally {
+    $env:GH_TOKEN = $previousToken
+}

@@ -5,8 +5,6 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -14,7 +12,6 @@ permissions:
 jobs:
   build:
     name: Build & Publish Release
-    if: github.event_name != 'release'
     runs-on: windows-latest
 
     steps:
@@ -157,27 +154,3 @@ jobs:
           body_path: ./release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  submit-winget:
-    name: Submit to winget-pkgs
-    if: github.event_name == 'release' && github.event.action == 'published'
-    runs-on: windows-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Download winget manifests from release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          New-Item -ItemType Directory -Path winget-pkg -Force | Out-Null
-          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --pattern "CyberGems.CyberSnap*.yaml" --dir winget-pkg
-
-      - name: Submit to winget
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.WINGET_PAT }}
-        run: |
-          winget install --id Microsoft.WingetCreate -e --silent --accept-package-agreements --accept-source-agreements
-          wingetcreate submit winget-pkg --token $env:GH_TOKEN
