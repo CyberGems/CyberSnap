@@ -12,5 +12,6 @@
     <None Include="../../src/CyberSnap/App.xaml" Link="AppResources.xaml" CopyToOutputDirectory="PreserveNewest" />
     <Resource Include="../../src/CyberSnap/Assets/Icons/*.ico" Link="Assets/Icons/%(Filename)%(Extension)" />
     <Resource Include="../../src/CyberSnap/Assets/CyberSnap_square.png" Link="Assets/CyberSnap_square.png" />
+    <Resource Include="../../src/CyberSnap/Assets/Suite/*.png" Link="Assets/Suite/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

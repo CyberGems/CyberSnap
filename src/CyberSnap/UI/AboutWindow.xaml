@@ -260,7 +260,7 @@
                                   Title="About CyberSnap"
                                   CloseRequested="TitleBar_CloseRequested"/>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+        <ScrollViewer x:Name="AboutScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled" Padding="18,12,18,18">
             <StackPanel>
                 <!-- Hero: one card, logo and name beside the description -->
@@ -307,7 +307,7 @@
                 </Border>
 
                 <TextBlock x:Name="AboutUpdatesSectionLabel" Text="Updates &amp; Maintenance" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Updates &amp; Maintenance"/>
-                <Border Style="{StaticResource Card}">
+                <Border x:Name="AboutUpdatesCard" Style="{StaticResource Card}">
                     <StackPanel>
                         <Grid Style="{StaticResource SettingRow}">
                             <Grid.ColumnDefinitions>
@@ -331,58 +331,62 @@
 
                         <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
 
-                        <Grid Style="{StaticResource SettingRow}">
+                        <Grid x:Name="UpdateHeader" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
+                            <Border Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top">
                                 <TextBlock x:Name="AboutUpdateIcon" Text="&#xE896;" Style="{StaticResource SettingIconGlyph}"/>
                             </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock x:Name="AboutUpdateTitle" Text="Check for updates" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Check for updates"/>
-                                    <Border x:Name="UpdateBadge" Visibility="Collapsed" CornerRadius="3" Padding="5,2" Margin="8,0,0,0"
-                                            Background="{DynamicResource ThemeTabActiveBrush}">
-                                        <TextBlock x:Name="UpdateBadgeText" Text="New version" FontSize="10.5" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ThemeAccentBrush}"
-                                                   Services:LocalizationService.SourceText="New version"/>
-                                    </Border>
-                                </StackPanel>
-                                <TextBlock x:Name="AboutUpdateDesc" Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Check for the latest version and download updates directly."/>
+                            <StackPanel Grid.Column="1" Margin="0,3,12,0">
+                                <TextBlock x:Name="AboutUpdateTitle" Text="Check for updates" Style="{StaticResource SettingTitle}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" Services:LocalizationService.SourceText="Check for updates"/>
+                                <TextBlock x:Name="AboutUpdateDesc" Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}" AutomationProperties.LiveSetting="Polite" Services:LocalizationService.SourceText="Check for the latest version and download updates directly."/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
-                                <Button x:Name="UpdateBtn" Content="Check Now" MinWidth="108" MinHeight="32"
-                                        Services:LocalizationService.SourceContent="Check Now"
-                                        VerticalAlignment="Center" Margin="0,0,8,0" Click="UpdateCheckButton_Click" Cursor="Hand"
-                                        ToolTip="Check for the latest version"
-                                        Services:LocalizationService.SourceToolTip="Check for the latest version"
-                                        AutomationProperties.Name="Check for Updates"/>
-                                <Button x:Name="ViewReleaseBtn" Content="View Release" MinWidth="96"
-                                        Services:LocalizationService.SourceContent="View Release"
-                                        VerticalAlignment="Center" Margin="0,0,8,0" Click="ViewReleaseBtn_Click" Cursor="Hand"
-                                        ToolTip="View releases and changelogs"
-                                        Services:LocalizationService.SourceToolTip="View releases and changelogs"
-                                        AutomationProperties.Name="View Release"
-                                        Visibility="Collapsed"/>
-                                <Button x:Name="SkipVersionBtn" Content="Skip this version" MinWidth="108"
-                                        Services:LocalizationService.SourceContent="Skip this version"
-                                        VerticalAlignment="Center" Click="SkipVersionBtn_Click" Cursor="Hand"
-                                        ToolTip="Skip this version"
-                                        Services:LocalizationService.SourceToolTip="Skip this version"
-                                        AutomationProperties.Name="Skip this version"
-                                        Visibility="Collapsed"/>
-                            </StackPanel>
+                            <Border x:Name="UpdateBadge" Grid.Column="2" Visibility="Collapsed" CornerRadius="4" Padding="8,4" VerticalAlignment="Top"
+                                    Background="{DynamicResource ThemeTabActiveBrush}">
+                                <TextBlock x:Name="UpdateBadgeText" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ThemeAccentBrush}"/>
+                            </Border>
                         </Grid>
 
-                        <StackPanel x:Name="UpdatePeekPanel" Visibility="Collapsed" Margin="38,2,0,4">
-                            <TextBlock x:Name="UpdatePeekTitle" Text="What's New" Style="{StaticResource SettingTitle}" FontSize="12" Margin="0,0,0,2" Services:LocalizationService.SourceText="What's New"/>
-                            <TextBlock x:Name="UpdatePeekText" Text="" Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <StackPanel x:Name="UpdatePeekPanel" Visibility="Collapsed" Margin="38,14,0,0">
+                            <TextBlock x:Name="UpdatePeekTitle" Text="What's New" Style="{StaticResource SettingTitle}" FontWeight="SemiBold" Margin="0,0,0,6" Services:LocalizationService.SourceText="What's New"/>
+                            <ItemsControl x:Name="UpdateHighlightsList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,5">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                            <TextBlock Text="•" Style="{StaticResource SettingTitle}" VerticalAlignment="Top"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding}" Style="{StaticResource SettingTitle}" TextWrapping="Wrap" Opacity="0.82"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
 
+                        <WrapPanel x:Name="UpdateActions" Margin="38,14,0,0">
+                            <Button x:Name="UpdateBtn" Content="Check Now" MinWidth="108" Height="32" MinHeight="32"
+                                    Services:LocalizationService.SourceContent="Check Now"
+                                    VerticalAlignment="Center" Margin="0,0,8,8" Click="UpdateCheckButton_Click" Cursor="Hand"
+                                    AutomationProperties.Name="Check for Updates"/>
+                            <Button x:Name="ViewReleaseBtn" Content="View Release" MinWidth="96" Height="32" MinHeight="32"
+                                    Services:LocalizationService.SourceContent="View Release"
+                                    VerticalAlignment="Center" Margin="0,0,8,8" Click="ViewReleaseBtn_Click" Cursor="Hand"
+                                    ToolTip="View releases and changelogs"
+                                    Services:LocalizationService.SourceToolTip="View releases and changelogs"
+                                    AutomationProperties.Name="View Release"
+                                    Visibility="Collapsed"/>
+                            <Button x:Name="SkipVersionBtn" Content="Skip this version" MinWidth="108" Height="32" MinHeight="32"
+                                    Services:LocalizationService.SourceContent="Skip this version"
+                                    VerticalAlignment="Center" Margin="0,0,8,8" Click="SkipVersionBtn_Click" Cursor="Hand"
+                                    AutomationProperties.Name="Skip this version"
+                                    Visibility="Collapsed"/>
+                        </WrapPanel>
+
                         <StackPanel x:Name="UpdateProgressPanel" Visibility="Collapsed" Margin="38,8,0,8">
-                            <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingsProgressText}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Downloading update..."/>
+                            <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingDescription}" Margin="0,0,0,6" AutomationProperties.LiveSetting="Polite" Services:LocalizationService.SourceText="Downloading update..."/>
                             <ProgressBar x:Name="UpdateProgressBar" Height="4" Minimum="0" Maximum="100" Value="0" Foreground="{DynamicResource ThemeAccentBrush}"/>
                         </StackPanel>
                     </StackPanel>

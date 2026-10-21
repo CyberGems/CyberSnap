@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -30,6 +32,7 @@ public partial class AboutWindow : Window
     private bool _suiteBuilt;
     private DropShadowEffect? _aboutLogoGlow;
     private UpdateCheckResult? _availableUpdate;
+    private bool _checkingForUpdates;
     private DispatcherTimer? _diagTipTimer;
 
     public AboutWindow(SettingsService settingsService)
@@ -90,8 +93,9 @@ public partial class AboutWindow : Window
 
     public async Task StartUpdateDownloadAsync(UpdateCheckResult result)
     {
+        ShowUpdateAvailable(result);
         UpdateProgressPanel.Visibility = Visibility.Visible;
-        UpdateBtn.IsEnabled = false;
+        SetUpdateActionsEnabled(false);
         SetFooterIconsEnabled(false);
 
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -127,7 +131,7 @@ public partial class AboutWindow : Window
             if (!install)
             {
                 UpdateProgressPanel.Visibility = Visibility.Collapsed;
-                UpdateBtn.IsEnabled = true;
+                SetUpdateActionsEnabled(true);
                 SetFooterIconsEnabled(true);
                 return;
             }
@@ -137,7 +141,7 @@ public partial class AboutWindow : Window
         catch (Exception ex)
         {
             UpdateProgressPanel.Visibility = Visibility.Collapsed;
-            UpdateBtn.IsEnabled = true;
+            SetUpdateActionsEnabled(true);
             SetFooterIconsEnabled(true);
 
             var errorChoice = ThemedConfirmDialog.Confirm(this,
@@ -182,6 +186,7 @@ public partial class AboutWindow : Window
             AboutUpdatesSectionLabel.Text = LocalizationService.Translate("Updates & Maintenance");
             AboutAutoUpdateTitle.Text = LocalizationService.Translate("Check for updates on startup");
             AboutAutoUpdateDesc.Text = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
+            System.Windows.Automation.AutomationProperties.SetName(AutoCheckUpdateCheck, AboutAutoUpdateTitle.Text);
             AutoCheckUpdateCheck.ToolTip = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
             AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
             RefreshUpdateSection();
@@ -331,20 +336,24 @@ public partial class AboutWindow : Window
     private void ShowUpdateAvailable(UpdateCheckResult result)
     {
         _availableUpdate = result;
-        AboutUpdateDesc.Text = result.StatusMessage;
+        AboutUpdateTitle.Text = LocalizationService.Translate("Update available");
+        AboutUpdateDesc.Visibility = Visibility.Collapsed;
+        UpdateBadgeText.Text = result.LatestVersionLabel;
         UpdateBtn.Content = LocalizationService.Translate("Update Now");
         UpdateBtn.ToolTip = LocalizationService.Translate("Download this version after you confirm. Installation waits for a second confirmation.");
         UpdateBtn.SetResourceReference(StyleProperty, "CyberSnapAccentButton");
-        UpdatePeekTitle.Text = string.Format(LocalizationService.Translate("What's New in {0}"), result.LatestVersionLabel);
-        var peek = UpdateService.PeekReleaseNotes(result.ReleaseNotes, 280);
-        UpdatePeekText.Text = string.IsNullOrWhiteSpace(peek) ? result.StatusMessage : peek;
+        UpdatePeekTitle.Text = LocalizationService.Translate("What's New");
+        var highlights = GetUpdateHighlights(result.ReleaseNotes).ToArray();
+        UpdateHighlightsList.ItemsSource = highlights;
         ViewReleaseBtn.Content = LocalizationService.Translate("View Release");
         ViewReleaseBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
         SkipVersionBtn.Content = LocalizationService.Translate("Skip this version");
-        SkipVersionBtn.ToolTip = LocalizationService.Translate("Skip this version");
+        System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
+        System.Windows.Automation.AutomationProperties.SetName(ViewReleaseBtn, ViewReleaseBtn.Content.ToString());
+        System.Windows.Automation.AutomationProperties.SetName(SkipVersionBtn, SkipVersionBtn.Content.ToString());
         UpdateBadge.Visibility = Visibility.Visible;
         AboutUpdateIcon.SetResourceReference(TextBlock.ForegroundProperty, "ThemeAccentBrush");
-        UpdatePeekPanel.Visibility = Visibility.Visible;
+        UpdatePeekPanel.Visibility = highlights.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         ViewReleaseBtn.Visibility = Visibility.Visible;
         SkipVersionBtn.Visibility = Visibility.Visible;
     }
@@ -352,11 +361,56 @@ public partial class AboutWindow : Window
     private void HideUpdateAvailable()
     {
         _availableUpdate = null;
+        AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
+        AboutUpdateDesc.Visibility = Visibility.Visible;
         UpdateBadge.Visibility = Visibility.Collapsed;
+        UpdateBadgeText.Text = "";
         AboutUpdateIcon.ClearValue(TextBlock.ForegroundProperty);
         UpdatePeekPanel.Visibility = Visibility.Collapsed;
+        UpdateHighlightsList.ItemsSource = null;
         ViewReleaseBtn.Visibility = Visibility.Collapsed;
         SkipVersionBtn.Visibility = Visibility.Collapsed;
+    }
+
+    private static IEnumerable<string> GetUpdateHighlights(string? releaseNotes)
+    {
+        // Keep the shared toast teaser unchanged. About has room for four complete
+        // highlights, with a hanging bullet and no decorative leading emoji.
+        var peek = UpdateService.PeekReleaseNotes(releaseNotes, int.MaxValue);
+        foreach (string line in peek.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string text = line.Trim();
+            if (text.StartsWith("• ", StringComparison.Ordinal)) text = text[2..].TrimStart();
+            int prefixLength = 0;
+            foreach (var rune in text.EnumerateRunes())
+            {
+                if (!Rune.IsWhiteSpace(rune) && Rune.GetUnicodeCategory(rune) is not
+                    (UnicodeCategory.OtherSymbol or UnicodeCategory.ModifierSymbol or UnicodeCategory.NonSpacingMark or UnicodeCategory.Format))
+                    break;
+                prefixLength += rune.Utf16SequenceLength;
+            }
+            text = text[prefixLength..].Trim();
+            if (text.Length > 0) yield return text;
+        }
+    }
+
+    private void SetUpdateActionsEnabled(bool enabled)
+    {
+        UpdateBtn.IsEnabled = enabled;
+        ViewReleaseBtn.IsEnabled = enabled;
+        SkipVersionBtn.IsEnabled = enabled;
+    }
+
+    private void ShowUpdateChecking()
+    {
+        HideUpdateAvailable();
+        AboutUpdateTitle.Text = LocalizationService.Translate("Checking for updates...");
+        AboutUpdateDesc.Visibility = Visibility.Collapsed;
+        UpdateBtn.ClearValue(StyleProperty);
+        UpdateBtn.Content = LocalizationService.Translate("Checking...");
+        UpdateBtn.ToolTip = null;
+        System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
+        SetUpdateActionsEnabled(false);
     }
 
     /// <summary>Refreshes the About update section from the latest background
@@ -380,8 +434,12 @@ public partial class AboutWindow : Window
     /// available (peek + actions), skipped, or default check prompt.</summary>
     private void RefreshUpdateSection()
     {
-        var app = Application.Current as App;
-        var result = app?.LatestUpdateResult;
+        if (_checkingForUpdates) { ShowUpdateChecking(); return; }
+        ApplyUpdateCheckResult((Application.Current as App)?.LatestUpdateResult);
+    }
+
+    private void ApplyUpdateCheckResult(UpdateCheckResult? result)
+    {
         if (result?.IsUpdateAvailable == true)
         {
             ShowUpdateAvailable(result);
@@ -392,11 +450,17 @@ public partial class AboutWindow : Window
         var skipped = _settingsService.Settings.SkippedUpdateVersion;
         if (!string.IsNullOrEmpty(skipped))
             AboutUpdateDesc.Text = string.Format(LocalizationService.Translate("Update {0} skipped"), skipped);
+        else if (result is not null)
+        {
+            AboutUpdateTitle.Text = LocalizationService.Translate(result.LatestVersion is null ? "Update check failed" : "CyberSnap is up to date");
+            AboutUpdateDesc.Text = result.StatusMessage;
+        }
         else
             AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
         UpdateBtn.Content = LocalizationService.Translate("Check Now");
-        UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
+        UpdateBtn.ToolTip = null;
         UpdateBtn.ClearValue(StyleProperty);
+        System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
     }
 
     private void ViewReleaseBtn_Click(object sender, RoutedEventArgs e)
@@ -421,25 +485,30 @@ public partial class AboutWindow : Window
     /// Manual checks always report; a newer release than the skipped one re-arms notifications.</summary>
     public async Task RunUpdateCheckAsync()
     {
-        var result = await UpdateService.CheckForUpdatesAsync();
-        if (Application.Current is App app)
+        if (_checkingForUpdates || UpdateProgressPanel.Visibility == Visibility.Visible) return;
+        _checkingForUpdates = true;
+        ShowUpdateChecking();
+        try
         {
-            app.LatestUpdateResult = result;
-            app.RefreshWidgetUpdateBadge();
-            if (!result.IsUpdateAvailable || !app.IsUpdateVersionSkipped(result.LatestVersionLabel))
-                app.ClearSkippedUpdateVersion();
+            var result = await UpdateService.CheckForUpdatesAsync();
+            if (Application.Current is App app)
+            {
+                app.LatestUpdateResult = result;
+                app.RefreshWidgetUpdateBadge();
+                if (!result.IsUpdateAvailable || !app.IsUpdateVersionSkipped(result.LatestVersionLabel))
+                    app.ClearSkippedUpdateVersion();
+            }
+            ApplyUpdateCheckResult(result);
+            if (!result.IsUpdateAvailable)
+                ThemedConfirmDialog.Alert(this,
+                    LocalizationService.Translate("Check for Updates"),
+                    result.StatusMessage,
+                    error: result.LatestVersion is null);
         }
-        if (result.IsUpdateAvailable)
+        finally
         {
-            ShowUpdateAvailable(result);
-        }
-        else
-        {
-            RefreshUpdateSection();
-            ThemedConfirmDialog.Alert(this,
-                LocalizationService.Translate("Check for Updates"),
-                result.StatusMessage,
-                error: false);
+            _checkingForUpdates = false;
+            SetUpdateActionsEnabled(true);
         }
     }
 

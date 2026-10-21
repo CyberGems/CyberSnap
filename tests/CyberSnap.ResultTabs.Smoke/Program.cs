@@ -54,6 +54,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--about-only"))
+            {
+                CheckAboutUpdates(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} About update layout checks.");
+                return 0;
+            }
             if (args.Contains("--backups-only"))
             {
                 CheckAutomaticBackups(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -111,6 +117,7 @@ internal static partial class Program
             }
             CheckIndependentAutoCopy(temp);
             CheckAutomaticBackups(temp, args.FirstOrDefault());
+            CheckAboutUpdates(settings, args.FirstOrDefault());
             CheckTrayMenuMonitors();
             CheckWidgetMonitors(settings);
             CheckWidgetPopups(settings, args.FirstOrDefault());
