@@ -280,7 +280,7 @@ public partial class TrayContextMenuWindow : Window
         QrIcon.Source = GetIcon("scan", fgColor, 20);
         ColorPickerIcon.Source = GetIcon("picker", fgColor, 20);
         RulerIcon.Source = GetIcon("ruler", fgColor, 20);
-        ZoomIcon.Source = GetIcon("zoomIn", fgColor, 20);
+        ZoomIcon.Source = GetIcon("zoom", fgColor, 20);
         // Bottom row: larger assets for accessibility while keeping compact tile height.
         AnnotationsIcon.Source = GetIcon("compose", fgColor, 20);
         GalleryIcon.Source = GetIcon("history", fgColor, 20);

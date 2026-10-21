@@ -53,7 +53,7 @@ public static class ToolIcons
         ["_standaloneColorPicker"] = "picker",
         ["_standaloneScan"] = "scan",
         ["_standaloneRuler"] = "ruler",
-        ["_standaloneZoom"] = "zoomIn",
+        ["_standaloneZoom"] = "zoom",
     };
 
     public static BitmapSource RenderToolIconWpf(string toolId, char glyph, Color color, int size, bool active = false)

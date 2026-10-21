@@ -491,9 +491,11 @@
                 <!-- Separator between capture tools and standalone utility tools -->
                 <Border x:Name="ToolsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
 
-                <UniformGrid x:Name="ToolsSection" Columns="2">
+                <Grid x:Name="ToolsSection">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <!-- OCR -->
-                    <Button x:Name="OcrBtn" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="4,8" Margin="4,2,2,2">
+                    <Button x:Name="OcrBtn" Grid.Row="0" Grid.Column="0" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="4,8" Margin="4,2,2,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="OcrIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -509,7 +511,7 @@
                     </Button>
 
                     <!-- QR & Barcodes -->
-                    <Button x:Name="QrBtn" Style="{StaticResource BottomButtonStyle}" Click="QrScan_Click" Padding="4,8" Margin="2,2,4,2">
+                    <Button x:Name="QrBtn" Grid.Row="0" Grid.Column="1" Style="{StaticResource BottomButtonStyle}" Click="QrScan_Click" Padding="4,8" Margin="2,2,4,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="QrIcon" Width="20" Height="20" Margin="0,2,0,0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -525,7 +527,7 @@
                     </Button>
 
                     <!-- Color Picker -->
-                    <Button x:Name="ColorPickerBtn" Style="{StaticResource BottomButtonStyle}" Click="ColorPicker_Click" Padding="4,8" Margin="4,2,2,2">
+                    <Button x:Name="ColorPickerBtn" Grid.Row="1" Grid.Column="0" Style="{StaticResource BottomButtonStyle}" Click="ColorPicker_Click" Padding="4,8" Margin="4,2,2,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="ColorPickerIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -541,7 +543,7 @@
                     </Button>
 
                     <!-- Ruler -->
-                    <Button x:Name="RulerBtn" Style="{StaticResource BottomButtonStyle}" Click="Ruler_Click" Padding="4,8" Margin="2,2,4,2">
+                    <Button x:Name="RulerBtn" Grid.Row="1" Grid.Column="1" Style="{StaticResource BottomButtonStyle}" Click="Ruler_Click" Padding="4,8" Margin="2,2,4,2">
                         <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28" HorizontalAlignment="Center">
                                 <Image x:Name="RulerIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -555,13 +557,13 @@
                                        MaxWidth="76"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="ZoomBtn" Style="{StaticResource BottomButtonStyle}" Click="Zoom_Click" Padding="4,8" Margin="4,2,2,2">
-                        <StackPanel Width="112" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="ZoomBtn" Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource BottomButtonStyle}" Click="Zoom_Click" Padding="4,8" Margin="4,2,4,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Grid Width="28"><Image x:Name="ZoomIcon" Width="20" Height="20" Stretch="Uniform"/></Grid>
                             <TextBlock x:Name="ZoomText" Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                </UniformGrid>
+                </Grid>
                 </StackPanel>
             </StackPanel>
 

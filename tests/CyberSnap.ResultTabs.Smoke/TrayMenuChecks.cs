@@ -36,7 +36,7 @@ internal static partial class Program
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hwnd, out TrayRect rect);
 
-    private static void CheckTrayMenuMonitors()
+    private static void CheckTrayMenuMonitors(string? renderDirectory = null)
     {
         CheckSimulatedTrayPlacement();
         string originalLanguage = LocalizationService.CurrentLanguageSetting;
@@ -73,12 +73,21 @@ internal static partial class Program
                         SetField(menu, "_showGallery", true);
                         Call(menu, "ApplySectionVisibility", false);
                         menu.Show();
-                        Assert(Element<System.Windows.Controls.Primitives.UniformGrid>(menu, "ToolsSection")
+                        Assert(Element<System.Windows.Controls.Grid>(menu, "ToolsSection")
                             .IsAncestorOf(Element<System.Windows.Controls.Button>(menu, "ZoomBtn")),
                             "Zoom belongs to the tray's standalone tools section", false);
                         AssertVisible();
                         Pump();
                         AssertVisible();
+                        var tools = Element<System.Windows.Controls.Grid>(menu, "ToolsSection");
+                        var zoom = Element<System.Windows.Controls.Button>(menu, "ZoomBtn");
+                        var zoomContent = (System.Windows.Controls.StackPanel)zoom.Content;
+                        var contentBounds = zoomContent.TransformToAncestor(zoom).TransformBounds(new Rect(zoomContent.RenderSize));
+                        Assert(zoom.ActualWidth >= tools.ActualWidth - 9
+                            && Math.Abs(contentBounds.Left + contentBounds.Width / 2 - zoom.ActualWidth / 2) < 1,
+                            "the last tool occupies a full-width row with its icon and label centered", false);
+                        if (renderDirectory is not null && language == "es" && !compact && anchor.X == bounds.Left)
+                            Render(menu, renderDirectory, "tray-zoom-" + (screen.Primary ? "primary" : "secondary") + ".png");
                         if (compact && anchor.X == bounds.Right - 1)
                         {
                             foreach (double scale in new[] { 1.25, 1.5 })

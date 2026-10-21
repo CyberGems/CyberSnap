@@ -611,10 +611,13 @@ public sealed partial class RegionOverlayForm
 
     internal void CancelFromShortcut() => Cancel();
 
+    private bool _resourcesDisposed;
+
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing && !_resourcesDisposed)
         {
+            _resourcesDisposed = true;
             if (_currentOverlay == this)
                 _currentOverlay = null;
             _escapeHook?.Dispose();

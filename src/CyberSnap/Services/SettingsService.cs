@@ -634,7 +634,17 @@ public sealed class SettingsService : IDisposable
 
     private static AppSettings DeserializeSettings(string json)
     {
-        var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+        using var document = JsonDocument.Parse(json);
+        var settings = document.RootElement.Deserialize<AppSettings>(JsonOptions) ?? new AppSettings();
+        if (!document.RootElement.TryGetProperty(nameof(AppSettings.CaptureToolbarSchemaVersion), out _))
+            settings.CaptureToolbarSchemaVersion = 0;
+        if (settings.CaptureToolbarSchemaVersion < 1)
+        {
+            // Introduce only the new tool once; keep every other custom visibility choice intact.
+            if (settings.EnabledTools is not null && !settings.EnabledTools.Contains("zoom"))
+                settings.EnabledTools.Add("zoom");
+            settings.CaptureToolbarSchemaVersion = 1;
+        }
         settings.OpenWithApps = NormalizeOpenWithApps(settings.OpenWithApps);
         SensitiveSettingsProtection.Unprotect(settings);
 

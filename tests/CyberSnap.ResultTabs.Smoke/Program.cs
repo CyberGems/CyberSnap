@@ -80,7 +80,7 @@ internal static partial class Program
             }
             if (args.Contains("--tray-menu-only"))
             {
-                CheckTrayMenuMonitors();
+                CheckTrayMenuMonitors(args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} tray menu placement checks.");
                 return 0;
             }

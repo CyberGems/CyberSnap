@@ -651,6 +651,8 @@ public sealed partial class RegionOverlayForm : Form
     /// standalone ruler (one measurement, its own context menu) can take over.
     /// </summary>
     public event Action? StandaloneRulerRequested;
+    /// <summary>Close the overlay before Zoom freezes the live desktop.</summary>
+    public event Action? StandaloneZoomRequested;
     /// <summary>
     /// Raised when the user picks a self-contained capture action from the Area flyout that runs
     /// right away without a region selection ("_fullscreen" / "_activeWindow" / "_repeatLastArea").
@@ -2703,6 +2705,10 @@ public sealed partial class RegionOverlayForm : Form
         var rulerItem = WindowsMenuRenderer.Item("Ruler", iconId: "ruler", active: _mode == CaptureMode.Ruler, iconSize: 22);
         rulerItem.Click += (_, _) => SetMode(CaptureMode.Ruler, "ruler");
         menu.Items.Add(rulerItem);
+
+        var zoomItem = WindowsMenuRenderer.Item("Zoom", iconId: "zoom", iconSize: 22);
+        zoomItem.Click += (_, _) => SetMode(CaptureMode.Zoom, "zoom");
+        menu.Items.Add(zoomItem);
 
         menu.Items.Add(new ToolStripSeparator());
 

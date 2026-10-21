@@ -202,7 +202,7 @@ public sealed class TrayIcon : IDisposable
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("_standaloneOcr"), "ocr");
         var scanItem     = WindowsMenuRenderer.Item(T("QR & Barcodes"), HotkeyHint("_standaloneScan"), "scan");
         var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("_standaloneRuler"), "ruler");
-        var zoomItem     = WindowsMenuRenderer.Item(T("Zoom"), HotkeyHint("_standaloneZoom"), "zoomIn");
+        var zoomItem     = WindowsMenuRenderer.Item(T("Zoom"), HotkeyHint("_standaloneZoom"), "zoom");
         zoomItem.Click += (_, _) => OnZoom?.Invoke();
 
         ToolStripMenuItem? recordItem = null;

@@ -225,7 +225,7 @@ public sealed partial class RegionOverlayForm
         _autoDetectRect = Rectangle.Empty;
         _lastAutoDetectRect = Rectangle.Empty;
 
-        if (m is CaptureMode.ColorPicker or CaptureMode.Ruler)
+        if (m is CaptureMode.ColorPicker or CaptureMode.Ruler or CaptureMode.Zoom)
         {
             // Close layered magnifiers before Hide/ExitThread — otherwise a TopMost loupe
             // can outlive the overlay (and the standalone tool then looks "stuck").
@@ -234,6 +234,8 @@ public sealed partial class RegionOverlayForm
             CloseCaptureMagnifier();
             if (m == CaptureMode.ColorPicker)
                 StandaloneColorPickerRequested?.Invoke();
+            else if (m == CaptureMode.Zoom)
+                StandaloneZoomRequested?.Invoke();
             else
                 StandaloneRulerRequested?.Invoke();
             return;

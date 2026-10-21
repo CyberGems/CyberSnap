@@ -960,6 +960,7 @@ public partial class App
                 bool handoffStandaloneOcr = false;
                 bool handoffStandaloneScan = false;
                 bool handoffStandaloneRuler = false;
+                bool handoffStandaloneZoom = false;
 
                 overlay.StandaloneColorPickerRequested += () =>
                 {
@@ -992,6 +993,13 @@ public partial class App
                 overlay.StandaloneRulerRequested += () =>
                 {
                     handoffStandaloneRuler = true;
+                    overlay.Hide();
+                    overlay.Close();
+                };
+
+                overlay.StandaloneZoomRequested += () =>
+                {
+                    handoffStandaloneZoom = true;
                     overlay.Hide();
                     overlay.Close();
                 };
@@ -1050,6 +1058,8 @@ public partial class App
                             OnStandaloneScanHotkeyPressed();
                         else if (handoffStandaloneRuler)
                             OnStandaloneRulerHotkeyPressed();
+                        else if (handoffStandaloneZoom)
+                            OnStandaloneZoomHotkeyPressed();
                     });
                 };
 

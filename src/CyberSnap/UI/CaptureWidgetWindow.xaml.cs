@@ -320,7 +320,7 @@ public partial class CaptureWidgetWindow : Window
         ScreenRecordIcon.Source = Helpers.FluentIcons.RenderWpf("record", normalIconColor, 22); // record dot for MP4
         GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
         RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, 22); // Ruler tool icon
-        ZoomIcon.Source = Helpers.FluentIcons.RenderWpf("zoomIn", normalIconColor, 22);
+        ZoomIcon.Source = Helpers.FluentIcons.RenderWpf("zoom", normalIconColor, 22);
         MoreIcon.Source = Helpers.FluentIcons.RenderWpf("more", normalIconColor, 18);
         System.Windows.Automation.AutomationProperties.SetName(WidgetMoreButton,
             LocalizationService.Translate(_settings.InterfaceLanguage, "More"));

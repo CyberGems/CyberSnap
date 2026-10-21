@@ -12,6 +12,7 @@ internal static partial class Program
 {
     private static void CheckZoom(string temp, string? renderDirectory)
     {
+        CheckZoomToolIntegration(temp, renderDirectory);
         var size = new DrawingSize(800, 600);
         Assert(ZoomViewport.NormalizeZoom(double.NaN) == 2 && ZoomViewport.NormalizeZoom(double.PositiveInfinity) == 2
             && ZoomViewport.NormalizeZoom(0) == 1.25 && ZoomViewport.NormalizeZoom(10) == 4,

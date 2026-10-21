@@ -18,7 +18,7 @@ public partial class SettingsWindow
         ToolsPickerIcon.Data = FluentIcons.GetGeometry("picker");
         ToolsQrIcon.Data = FluentIcons.GetGeometry("scan");
         ToolsRulerIcon.Data = FluentIcons.GetGeometry("ruler");
-        ToolsZoomIcon.Data = FluentIcons.GetGeometry("zoomIn");
+        ToolsZoomIcon.Data = FluentIcons.GetGeometry("zoom");
         ApplyZoomControls();
         ApplyColorFormatControls(_settingsService.Settings);
         RefreshToolShortcut();
