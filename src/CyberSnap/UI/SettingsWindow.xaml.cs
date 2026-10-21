@@ -92,6 +92,7 @@ public partial class SettingsWindow : Window
         ApplyThemeColors();
         LoadFileNameTokenButtons();
         LoadSettings();
+        InitializeToolsSettings();
         InitializeAutomaticBackups();
         InitializeSearch();
         UpdateWindowTitle();
@@ -817,6 +818,7 @@ public partial class SettingsWindow : Window
 
     private void SetCaptureSavePreferenceStatus(string message)
     {
+        SetToolsPreferenceStatus(message);
         if (CaptureSavePreferenceStatusText is null)
             return;
 
@@ -1077,16 +1079,20 @@ public partial class SettingsWindow : Window
 
     private void RulerCaptureAllScreensCheck_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded) return;
-        _settingsService.Settings.RulerCaptureAllScreens = RulerCaptureAllScreensCheck.IsChecked == true;
-        _settingsService.Save();
+        if (!IsLoaded || _suppressToolsPreferenceChange || _suppressGeneralPreferenceChange) return;
+        UpdateToolsPreference("Capture all screens", _settingsService.Settings.RulerCaptureAllScreens,
+            RulerCaptureAllScreensCheck.IsChecked == true,
+            value => _settingsService.Settings.RulerCaptureAllScreens = value,
+            value => RulerCaptureAllScreensCheck.IsChecked = value);
     }
 
     private void RulerContextMenuEnabledCheck_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded) return;
-        _settingsService.Settings.RulerContextMenuEnabled = RulerContextMenuEnabledCheck.IsChecked == true;
-        _settingsService.Save();
+        if (!IsLoaded || _suppressToolsPreferenceChange || _suppressGeneralPreferenceChange) return;
+        UpdateToolsPreference("Enable context menu", _settingsService.Settings.RulerContextMenuEnabled,
+            RulerContextMenuEnabledCheck.IsChecked == true,
+            value => _settingsService.Settings.RulerContextMenuEnabled = value,
+            value => RulerContextMenuEnabledCheck.IsChecked = value);
     }
 
     private void SetStartupPreferenceStatus(string message)

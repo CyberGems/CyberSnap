@@ -95,6 +95,8 @@ public sealed class SettingsService : IDisposable
         target.VideoAutoCopyToClipboard = source.VideoAutoCopyToClipboard;
         target.GifAutoCopyToClipboard = source.GifAutoCopyToClipboard;
         target.ColorDetailAutoCopy = source.ColorDetailAutoCopy;
+        target.ColorDetailCopyFormat = source.ColorDetailCopyFormat;
+        target.ColorDetailIncludeHash = source.ColorDetailIncludeHash;
         target.OcrShowResultWindow = source.OcrShowResultWindow;
         target.ScanShowResultWindow = source.ScanShowResultWindow;
         target.ShowColorDetailWindow = source.ShowColorDetailWindow;

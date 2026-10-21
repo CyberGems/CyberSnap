@@ -139,7 +139,7 @@ public static class ToolListBuilder
             Action<string, uint, uint> setHotkey,
             bool allowSingleKeyHotkeys = false)
         {
-            var card = new Border { Style = (Style)owner.FindResource("CompactItemCard") };
+            var card = new Border { Style = (Style)owner.FindResource("CompactItemCard"), Tag = toolId };
 
             var grid = new Grid { VerticalAlignment = VerticalAlignment.Center };
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });

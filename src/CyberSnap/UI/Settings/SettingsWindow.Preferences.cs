@@ -1348,6 +1348,7 @@ public partial class SettingsWindow
                 AutoCopyColorCheck.IsChecked = s.ColorDetailAutoCopy;
             if (ShowColorDetailWindowCheck != null)
                 ShowColorDetailWindowCheck.IsChecked = ResultDelivery.ForColor(s).ShowWindow;
+            ApplyColorFormatControls(s);
             if (AutoCopyOcrCheck != null)
                 AutoCopyOcrCheck.IsChecked = AutoCopyPreferences.ShouldCopy(s, AutoCopyKind.Ocr);
             if (OcrShowResultWindowCheck != null)

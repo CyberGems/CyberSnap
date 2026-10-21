@@ -26,6 +26,7 @@ public partial class SettingsWindow
         public SearchEntrySource Source { get; init; }
         public FrameworkElement? TargetElement { get; init; }
         public string? TargetSettingKey { get; init; }
+        public string? ToolKey { get; init; }
     }
 
     // ── Search state ──
@@ -151,6 +152,8 @@ public partial class SettingsWindow
                         MatchText = translatedLabel,
                         ContextText = translatedDesc,
                         Source = SearchEntrySource.Schema,
+                        ToolKey = page.Key == "tools" ? section.Key switch
+                        { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", _ => null } : null,
                         TargetSettingKey = setting.BindingPath ?? setting.Key
                     });
 
@@ -164,6 +167,8 @@ public partial class SettingsWindow
                             MatchText = translatedDesc,
                             ContextText = translatedLabel,
                             Source = SearchEntrySource.Schema,
+                            ToolKey = page.Key == "tools" ? section.Key switch
+                            { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", _ => null } : null,
                             TargetSettingKey = setting.BindingPath ?? setting.Key
                         });
                     }
@@ -181,7 +186,7 @@ public partial class SettingsWindow
             (CapturePanel,    "capture",       "Capture"),
             (EditorPanel,     "editor",        "Editor"),
             (RecordingPanel,  "recording",     "Video & GIF"),
-            (OcrPanel,        "ocr",           "OCR & Translation"),
+            (ToolsPanel,      "tools",         "Tools"),
             (HotkeysPanel,    "hotkeys",       "Hotkeys"),
             (HistoryPanel,    "history",       "Gallery"),
             (UploadsPanel,    "uploads",       "Uploads"),
@@ -210,7 +215,7 @@ public partial class SettingsWindow
             .ToList();
     }
 
-    private static void DiscoverTextsInTree(
+    private void DiscoverTextsInTree(
         DependencyObject root, string pageKey, string pageTitle,
         ref string? currentSection, List<SettingsSearchEntry> entries)
     {
@@ -229,16 +234,22 @@ public partial class SettingsWindow
                     if (kind == "SectionLabel")
                         currentSection = text;
 
+                    string? toolKey = pageKey == "tools" ? ToolKeyForElement(tb) : null;
+                    string? section = kind == "SectionLabel" ? text : currentSection;
+                    if (toolKey is not null)
+                        section = $"{LocalizationService.Translate(ToolTitle(toolKey))} › {section}";
+
                     // Index all meaningful TextBlocks
                     entries.Add(new SettingsSearchEntry
                     {
                         PageKey = pageKey,
                         PageTitle = pageTitle,
-                        SectionTitle = kind == "SectionLabel" ? text : currentSection,
+                        SectionTitle = section,
                         MatchText = text,
                         ContextText = kind ?? "",
                         Source = SearchEntrySource.VisualTree,
-                        TargetElement = tb
+                        TargetElement = tb,
+                        ToolKey = toolKey
                     });
                 }
             }
@@ -356,11 +367,12 @@ public partial class SettingsWindow
         // VisualTreeHelper.GetParent returns null for their children. We force them
         // visible briefly, run a synchronous layout pass, then hide them again after
         // we've extracted the containers we need.
-        var allPanels = new ScrollViewer[]
+        var allPanels = new FrameworkElement[]
         {
             SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
-            CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
-            HotkeysPanel, HistoryPanel, UploadsPanel, BackupDataPanel
+            CapturePanel, EditorPanel, RecordingPanel, ToolsPanel,
+            HotkeysPanel, HistoryPanel, UploadsPanel, BackupDataPanel,
+            OcrToolPanel, PickerToolPanel, QrToolPanel, RulerToolPanel
         };
 
         var originalVisibility = new Visibility[allPanels.Length];
@@ -466,7 +478,34 @@ public partial class SettingsWindow
                         Margin = new Thickness(0, 0, 0, 8),
                         FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Display")
                     };
-                    cardStack.Children.Add(categoryLabel);
+                    if (entry.PageKey == "tools")
+                    {
+                        var openTool = new System.Windows.Controls.Button
+                        {
+                            Content = categoryText,
+                            FontSize = 10,
+                            MinWidth = 0, MinHeight = 0, Height = double.NaN,
+                            Padding = new Thickness(4, 2, 4, 2),
+                            Margin = new Thickness(-4, 0, 0, 8),
+                            Background = System.Windows.Media.Brushes.Transparent,
+                            BorderThickness = new Thickness(0),
+                            Foreground = (System.Windows.Media.Brush)FindResource("ThemeAccentBrush"),
+                            HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                            ToolTip = LocalizationService.Translate("Open this tool's settings")
+                        };
+                        AutomationProperties.SetName(openTool, categoryText);
+                        openTool.Click += (_, _) =>
+                        {
+                            ClearSearch();
+                            SelectSettingsTab("tools");
+                            if (entry.ToolKey is not null) SelectToolSettings(entry.ToolKey);
+                            UpdateLayout();
+                            ScrollToElement(container);
+                            HighlightSettingCard(container);
+                        };
+                        cardStack.Children.Add(openTool);
+                    }
+                    else cardStack.Children.Add(categoryLabel);
                     cardStack.Children.Add(container);
 
                     cardBorder.Child = cardStack;
@@ -476,8 +515,8 @@ public partial class SettingsWindow
         }
 
         // ── Re-collapse all panels; only SearchResultsPanel stays visible ──
-        foreach (var panel in allPanels)
-            panel.Visibility = Visibility.Collapsed;
+        for (int i = 0; i < allPanels.Length; i++)
+            allPanels[i].Visibility = originalVisibility[i];
         SearchResultsPanel.Visibility = Visibility.Visible;
 
         int count = containerEntries.Count;
@@ -586,7 +625,9 @@ public partial class SettingsWindow
         double score = 0;
 
         if (matchText.Equals(normalized, StringComparison.Ordinal))
-            score += 10;
+            // Long translated labels can share many small words with unrelated
+            // descriptions. An exact setting name must always rank above those.
+            return 10 * (tokens.Length + 1);
         else if (matchText.StartsWith(normalized, StringComparison.Ordinal))
             score += 7;
         else
@@ -743,6 +784,8 @@ public partial class SettingsWindow
 
     private void SelectSettingsTab(string pageKey)
     {
+        if (_isSearching || !string.IsNullOrWhiteSpace(SettingsSearchBox.Text)) ClearSearch();
+        pageKey = pageKey.ToLowerInvariant();
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
         {
             ["general"]       = SettingsTab,
@@ -751,7 +794,12 @@ public partial class SettingsWindow
             ["notifications"] = ToastTab,
             ["capture"]       = CaptureTab,
             ["recording"]     = RecordingTab,
-            ["ocr"]           = OcrTab,
+            ["tools"]         = ToolsTab,
+            ["ocr"]           = ToolsTab,
+            ["picker"]        = ToolsTab,
+            ["qr"]            = ToolsTab,
+            ["scan"]          = ToolsTab,
+            ["ruler"]         = ToolsTab,
             ["hotkeys"]       = HotkeysTab,
             ["history"]       = HistoryTab,
             ["uploads"]       = UploadsTab,
@@ -766,6 +814,8 @@ public partial class SettingsWindow
         {
             tab.IsChecked = true;
             ApplyMainTabSelection();
+            if (tab == ToolsTab && pageKey != "tools")
+                SelectToolSettings(pageKey);
         }
     }
 
@@ -944,6 +994,9 @@ public partial class SettingsWindow
             // Standalone ruler
             "rulercaptureallscreens"    => RulerCaptureAllScreensCheck,
             "rulercontextmenuenabled"   => RulerContextMenuEnabledCheck,
+            "colordetailcopyformat"     => ColorCopyFormatCombo,
+            "colordetailincludehash"    => ColorIncludeHashCheck,
+            "savestandalonetohistory"   => SaveStandaloneToHistoryCheck,
             // Capture / Overlay
             "showcrosshairguides"       => CrosshairGuidesCheck,
             "crosshair"                 => CrosshairGuidesCheck,
@@ -976,7 +1029,7 @@ public partial class SettingsWindow
             "translatefrom"             => TranslateFromCombo,
             "ocrdefaulttranslateto"     => TranslateToCombo,
             "translateto"               => TranslateToCombo,
-            "translationmodel"          => FindName("TranslationModelCombo") as FrameworkElement,
+            "translationmodel"          => EngineRow_MyMemory,
             // History
             "savehistory"               => SaveHistoryCheck,
             "historyretention"          => HistoryRetentionCombo,
@@ -1032,6 +1085,7 @@ public partial class SettingsWindow
     /// <summary>Clears the query and leaves search-results mode (bar stays visible).</summary>
     private void ClearSearch()
     {
+        _searchDebounceTimer.Stop();
         _suppressSearchTextEvents = true;
         SettingsSearchBox.Clear();
         _suppressSearchTextEvents = false;

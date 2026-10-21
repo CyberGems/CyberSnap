@@ -35,15 +35,9 @@ public partial class SettingsWindow
 
     private void SaveStandaloneToHistoryCheck_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _suppressHistoryPreferenceChange) return;
-
-        var previous = _settingsService.Settings.SaveStandaloneToHistory;
-        var selected = SaveStandaloneToHistoryCheck.IsChecked == true;
-        UpdateHistoryPreference(
-            "settings.save-standalone-history",
-            "Save standalone tools to Gallery",
-            previous,
-            selected,
+        if (!IsLoaded || _suppressHistoryPreferenceChange || _suppressToolsPreferenceChange) return;
+        UpdateToolsPreference("Save tool results to Gallery", _settingsService.Settings.SaveStandaloneToHistory,
+            SaveStandaloneToHistoryCheck.IsChecked == true,
             value => _settingsService.Settings.SaveStandaloneToHistory = value,
             value => SaveStandaloneToHistoryCheck.IsChecked = value);
     }

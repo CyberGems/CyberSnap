@@ -139,7 +139,7 @@ public partial class SettingsWindow
             [SoundsTab] = "\uE767", // Sounds
             [CaptureTab] = "\uE7C2", // Capture
             [RecordingTab] = "\uE768", // Video
-            [OcrTab] = "\uE8C8", // OCR
+            [ToolsTab] = "\uEE6F", // Tools
             [HotkeysTab] = "\uE765", // Hotkeys
             [HistoryTab] = "\uEB9F", // History
             [UploadsTab] = "\uE898", // Uploads
@@ -738,6 +738,7 @@ public partial class SettingsWindow
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         TrayOverflowText.Set(TrayPinDescription, LocalizationService.Translate(
             "Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings."));
+        RefreshToolShortcut();
         // ApplyTo caches the already-translated title-bar tooltips as their source;
         // re-apply them from the clean "Close"/"Minimize"/"Maximize" keys.
         SettingsTitleBar?.RefreshTooltips();
@@ -942,7 +943,7 @@ public partial class SettingsWindow
             WidgetPanel.Visibility = Visibility.Collapsed;
             EditorPanel.Visibility = Visibility.Collapsed;
             RecordingPanel.Visibility = Visibility.Collapsed;
-            OcrPanel.Visibility = Visibility.Collapsed;
+            ToolsPanel.Visibility = Visibility.Collapsed;
             HistoryPanel.Visibility = Visibility.Collapsed;
             UploadsPanel.Visibility = Visibility.Collapsed;
             BackupDataPanel.Visibility = Visibility.Collapsed;
@@ -961,7 +962,7 @@ public partial class SettingsWindow
             WidgetPanel.Visibility = WidgetTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             EditorPanel.Visibility = EditorTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             RecordingPanel.Visibility = RecordingTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            ToolsPanel.Visibility = ToolsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             UploadsPanel.Visibility = UploadsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             BackupDataPanel.Visibility = BackupDataTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -970,8 +971,8 @@ public partial class SettingsWindow
             PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
             UpdateSettingsSearchChrome();
 
-            if (OcrTab.IsChecked == true)
-                LoadOcrTab();
+            if (ToolsTab.IsChecked == true)
+                ApplyToolsSelection();
 
             if (UploadsTab.IsChecked == true)
                 LoadUploadsTab();
@@ -1015,7 +1016,7 @@ public partial class SettingsWindow
         if (WidgetTab.IsChecked == true) return "Widget";
         if (EditorTab.IsChecked == true) return "Editor";
         if (RecordingTab.IsChecked == true) return "Video & GIF";
-        if (OcrTab.IsChecked == true) return "OCR";
+        if (ToolsTab.IsChecked == true) return "Tools";
         if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (HistoryTab.IsChecked == true) return "Gallery";
         if (UploadsTab.IsChecked == true) return "Uploads";

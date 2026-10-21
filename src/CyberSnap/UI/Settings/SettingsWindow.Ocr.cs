@@ -415,10 +415,11 @@ public partial class SettingsWindow
             }
 
             applyRuntime?.Invoke(previous);
-            setStatus($"{label} change was not saved. Previous setting restored.");
+            setStatus(string.Format(LocalizationService.Translate("{0} change was not saved. Previous setting restored."),
+                LocalizationService.Translate(label)));
             ToastWindow.ShowError(
-                $"{label} failed",
-                $"The previous OCR setting was restored. Check Config -> OCR and try again.\n{ex.Message}");
+                string.Format(LocalizationService.Translate("{0} failed"), LocalizationService.Translate(label)),
+                $"{LocalizationService.Translate("The previous OCR setting was restored. Check Config -> Tools -> OCR and try again.")}\n{ex.Message}");
         }
     }
 

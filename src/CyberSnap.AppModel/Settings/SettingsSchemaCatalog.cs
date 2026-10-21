@@ -38,16 +38,6 @@ public static class SettingsSchemaCatalog
                     [
                         new SettingDefinition("after_capture", "When finished", SettingsValueKind.Choice, "Steps that run after an image capture is confirmed.", "AfterCapture"),
                         new SettingDefinition("image_auto_copy", "Auto-copy screenshots", SettingsValueKind.Toggle, "Copy each finished screenshot to the clipboard.", "ImageAutoCopyToClipboard"),
-                        new SettingDefinition("ocr_auto_copy", "Auto-copy OCR text", SettingsValueKind.Toggle, "Copy recognized text to the clipboard.", "OcrAutoCopyToClipboard"),
-                        new SettingDefinition("scan_auto_copy", "Auto-copy QR/barcode results", SettingsValueKind.Toggle, "Copy decoded QR and barcode content to the clipboard.", "ScanAutoCopyToClipboard"),
-                    ]),
-                new SettingsSectionDefinition(
-                    "standalone_ruler",
-                    "Standalone ruler",
-                    "Behavior of the standalone ruler tool.",
-                    [
-                        new SettingDefinition("ruler_capture_all", "Capture all screens", SettingsValueKind.Toggle, "When enabled, the ruler's Enter capture takes all screens. When disabled, only the screen(s) the ruler occupies are captured. Applies only to multi-monitor setups.", "RulerCaptureAllScreens"),
-                        new SettingDefinition("ruler_context_menu", "Enable context menu", SettingsValueKind.Toggle, "When disabled, right-click exits the ruler instead of showing the context menu.", "RulerContextMenuEnabled"),
                     ]),
             ]),
         new(
@@ -66,8 +56,6 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("dock_side", "Toolbar Position", SettingsValueKind.Choice, "Choose a position for the capture toolbar.", "CaptureDockSide"),
                         new SettingDefinition("scroll_auto_copy", "Auto-copy scrolling captures", SettingsValueKind.Toggle, "Copy each finished scrolling capture to the clipboard.", "ScrollAutoCopyToClipboard"),
                         new SettingDefinition("scroll_preview", "Show preview after scrolling capture", SettingsValueKind.Toggle, "Open the scrolling capture preview independently of screenshots.", "ShowScrollCapturePreview"),
-                        new SettingDefinition("color_auto_copy", "Auto-copy picked colors", SettingsValueKind.Toggle, "Copy the picked color in its favorite format.", "ColorDetailAutoCopy"),
-                        new SettingDefinition("color_window", "Show the color result window", SettingsValueKind.Toggle, "Open the result window after picking a color.", "ShowColorDetailWindow"),
                     ]),
                 new SettingsSectionDefinition(
                     "image_output",
@@ -123,9 +111,9 @@ public static class SettingsSchemaCatalog
                     ]),
             ]),
         new(
-            "ocr",
-            "OCR & Translation",
-            "Text capture defaults and local/cloud translation runtime settings.",
+            "tools",
+            "Tools",
+            "Preferences for OCR, Color Picker, QR and barcode scanning, and Ruler.",
             [
                 new SettingsSectionDefinition(
                     "ocr_defaults",
@@ -133,9 +121,32 @@ public static class SettingsSchemaCatalog
                     "Base OCR and translation selections.",
                     [
                         new SettingDefinition("ocr_language", "OCR language", SettingsValueKind.Choice, "Preferred OCR language or auto-detection.", "OcrLanguageTag"),
+                        new SettingDefinition("ocr_auto_copy", "Enable OCR auto-copy", SettingsValueKind.Toggle, "Copy recognized text to the clipboard.", "OcrAutoCopyToClipboard"),
+                        new SettingDefinition("ocr_window", "Show the OCR result window", SettingsValueKind.Toggle, "Open the OCR window after recognition, whether or not the text was copied.", "OcrShowResultWindow"),
                         new SettingDefinition("translate_from", "Translate from", SettingsValueKind.Choice, "Default source language for translation.", "OcrDefaultTranslateFrom"),
                         new SettingDefinition("translate_to", "Translate to", SettingsValueKind.Choice, "Default target language for translation.", "OcrDefaultTranslateTo"),
                         new SettingDefinition("translation_model", "Translation model", SettingsValueKind.Choice, "Runtime used when translating OCR results.", "TranslationModel"),
+                    ]),
+                new SettingsSectionDefinition("picker", "Color Picker", "Color output",
+                    [
+                        new SettingDefinition("color_auto_copy", "Auto-copy picked colors", SettingsValueKind.Toggle, "Copy the picked color in its favorite format.", "ColorDetailAutoCopy"),
+                        new SettingDefinition("color_window", "Show the color result window", SettingsValueKind.Toggle, "Open the result window after picking a color.", "ShowColorDetailWindow"),
+                        new SettingDefinition("color_format", "Favorite format", SettingsValueKind.Choice, "Used when automatically copying a picked color.", "ColorDetailCopyFormat"),
+                        new SettingDefinition("color_hash", "Include # in HEX", SettingsValueKind.Toggle, "Add the # prefix when copying a HEX color.", "ColorDetailIncludeHash"),
+                    ]),
+                new SettingsSectionDefinition("qr", "QR & Barcodes", "Scan results",
+                    [
+                        new SettingDefinition("scan_auto_copy", "Auto-copy QR/barcode results", SettingsValueKind.Toggle, "Copy decoded QR and barcode content to the clipboard.", "ScanAutoCopyToClipboard"),
+                        new SettingDefinition("scan_window", "Show the QR & Barcode result window", SettingsValueKind.Toggle, "Open the result window after a scan, whether or not the code was copied.", "ScanShowResultWindow"),
+                    ]),
+                new SettingsSectionDefinition("ruler", "Ruler", "Behavior of the standalone ruler tool.",
+                    [
+                        new SettingDefinition("ruler_capture_all", "Capture all screens", SettingsValueKind.Toggle, "When enabled, the ruler's Enter capture takes all screens. When disabled, only the screen(s) the ruler occupies are captured. Applies only to multi-monitor setups.", "RulerCaptureAllScreens"),
+                        new SettingDefinition("ruler_context_menu", "Enable context menu", SettingsValueKind.Toggle, "When disabled, right-click exits the ruler instead of showing the context menu.", "RulerContextMenuEnabled"),
+                    ]),
+                new SettingsSectionDefinition("tool_history", "Tool history", "Shared preferences for tool results.",
+                    [
+                        new SettingDefinition("tool_history", "Save tool results to Gallery", SettingsValueKind.Toggle, "When enabled, results from Color Picker, OCR, and QR/Barcode tools will be saved in the Gallery.", "SaveStandaloneToHistory"),
                     ]),
             ]),
         new(

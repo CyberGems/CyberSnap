@@ -54,6 +54,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--tools-only"))
+            {
+                CheckToolsSettings(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} tool settings checks.");
+                return 0;
+            }
             if (args.Contains("--about-only"))
             {
                 CheckAboutUpdates(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -116,6 +122,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckToolsSettings(temp, args.FirstOrDefault());
             CheckAutomaticBackups(temp, args.FirstOrDefault());
             CheckAboutUpdates(settings, args.FirstOrDefault());
             CheckTrayMenuMonitors();

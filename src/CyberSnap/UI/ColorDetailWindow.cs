@@ -39,6 +39,7 @@ internal sealed class ColorDetailWindow : Window
     private bool _autoCopy;
     private ColorDetailCopyFormat _format;
     private bool _showWindowPref;
+    private bool _refreshingFormat;
 
     private Border _previewBorder = null!;
     private TextBlock _previewName = null!;
@@ -56,6 +57,7 @@ internal sealed class ColorDetailWindow : Window
     private string? _copiedText;
     private Action<bool>? _setShowToggle;
     private Action<bool>? _setAutoToggle;
+    private Action<bool>? _setHashToggle;
     private CyberSnapTitleBar _titleBar = null!;
 
     private string _builtLang = "";
@@ -176,9 +178,25 @@ internal sealed class ColorDetailWindow : Window
     internal void RefreshDeliveryPreferences(AppSettings settings)
     {
         ApplyDeliveryPrefs(settings.ColorDetailAutoCopy, settings.ShowColorDetailWindow);
+        bool formatChanged = _format != settings.ColorDetailCopyFormat || _includeHash != settings.ColorDetailIncludeHash;
+        _format = settings.ColorDetailCopyFormat;
+        _includeHash = settings.ColorDetailIncludeHash;
+        _refreshingFormat = true;
+        try
+        {
+            _formatCombo.SelectedIndex = _format switch
+            {
+                ColorDetailCopyFormat.Rgb => 1,
+                ColorDetailCopyFormat.Hsl => 2,
+                _ => 0
+            };
+        }
+        finally { _refreshingFormat = false; }
         _setAutoToggle?.Invoke(_autoCopy);
         _setShowToggle?.Invoke(_showWindowPref);
-        ApplyCopyActionState();
+        _setHashToggle?.Invoke(_includeHash);
+        if (formatChanged) RefreshAll();
+        else ApplyCopyActionState();
     }
 
     private void OnDeliveryPreferencesChanged()
@@ -571,6 +589,7 @@ internal sealed class ColorDetailWindow : Window
         };
         _formatCombo.SelectionChanged += (_, _) =>
         {
+            if (_refreshingFormat) return;
             _format = _formatCombo.SelectedIndex switch
             {
                 1 => ColorDetailCopyFormat.Rgb,
@@ -597,7 +616,8 @@ internal sealed class ColorDetailWindow : Window
             SavePrefs();
         }, set => _setAutoToggle = set,
             T("Copy the picked color automatically. Turning this off shows this window instead.")));
-        _optionsPanel.Children.Add(OptionToggleRow(T("Include # in HEX"), _includeHash, v => { _includeHash = v; SavePrefs(); RefreshAll(); }));
+        _optionsPanel.Children.Add(OptionToggleRow(T("Include # in HEX"), _includeHash,
+            v => { _includeHash = v; SavePrefs(); RefreshAll(); }, set => _setHashToggle = set));
         _optionsPanel.Children.Add(OptionToggleRow(T("Show this window"), _showWindowPref, v =>
         {
             // Interlocked pair: hiding the window while auto-copy is off

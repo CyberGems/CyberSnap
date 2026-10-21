@@ -93,7 +93,7 @@ internal static partial class Program
                 SettingsService.PublishAutoCopyPreferences(lastOutput);
                 Change(AutoCopyKind.Image, 0, "settings last-output fallback", () => ChangeConfig(AutoCopyKind.Image, 0));
                 Change(AutoCopyKind.Scroll, 0, "settings last-output fallback", () => ChangeConfig(AutoCopyKind.Scroll, 0));
-                Call(config, "SelectSettingsTab", "capture");
+                Call(config, "SelectSettingsTab", "picker");
                 Pump();
                 Element<FrameworkElement>(config, "ShowColorDetailWindowRow").BringIntoView();
                 Pump();
