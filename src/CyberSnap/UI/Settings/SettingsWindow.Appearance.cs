@@ -736,7 +736,8 @@ public partial class SettingsWindow
     {
         LocalizationService.ApplyCurrentCulture(_settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
-        TrayOverflowText.Set(TrayPinDescription, TrayPinDescription.Text);
+        TrayOverflowText.Set(TrayPinDescription, LocalizationService.Translate(
+            "Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings."));
         // ApplyTo caches the already-translated title-bar tooltips as their source;
         // re-apply them from the clean "Close"/"Minimize"/"Maximize" keys.
         SettingsTitleBar?.RefreshTooltips();
