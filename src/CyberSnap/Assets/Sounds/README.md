@@ -30,10 +30,10 @@ The project automatically embeds every `Assets/Sounds/*.mp3` (`EmbeddedResource`
 
 Default MP3s in this folder are **short synthesized UI sounds** (mono 44.1 kHz). Replace any file with your own assets and rebuild to override the embedded default.
 
-The capture-preview cue is a **290 ms warm, felt-like touch** made from two
-overlapping mellow notes (F4 and a quieter C5). Rounded attacks, a tapered decay,
-and a lower level keep it gentle. It has no noise layer or sharp settling tap.
-No external recordings or samples are used.
+The capture-preview cue is a **210 ms double tap**: two brief, rounded,
+descending tones. Its fixed gain matches the approved audition level, measured
+against the system-notification cue. It is synthesized without external
+recordings or samples.
 Regenerate it with Python and FFmpeg:
 
 ```powershell

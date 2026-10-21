@@ -11,37 +11,32 @@ import wave
 
 
 SAMPLE_RATE = 44_100
-DURATION = 0.290
-PEAK = 0.135  # Approximately -17.4 dBFS, quieter than the other built-in cues.
+DURATION = 0.210
+PEAK = 0.24
+# Keep the approved Option C level: +1.4 dB after peak normalization.
+# This matches the system cue's measured loudness in the audition comparison.
+MATCHED_GAIN = 10 ** (1.4 / 20)
 
 
-def soft_note(time, frequency, level, decay):
-    if not 0.0 < time < 0.250:
+def soft_note(time, frequency, duration, attack, decay):
+    if not 0.0 < time < duration:
         return 0.0
-    # Rounded attack and a long taper avoid a sharp strike or an abrupt cutoff.
-    attack = math.sin(min(1.0, time / 0.018) * math.pi / 2) ** 2
-    release = math.cos(max(0.0, (time - 0.180) / 0.070) * math.pi / 2) ** 2
+    onset = math.sin(min(1.0, time / attack) * math.pi / 2) ** 2
+    release = math.sin(min(1.0, (duration - time) / 0.025) * math.pi / 2) ** 2
     phase = 2 * math.pi * frequency * time
-    body = math.sin(phase) + 0.08 * math.exp(-time / 0.035) * math.sin(2 * phase)
-    return level * attack * math.exp(-time / decay) * release * body
+    return onset * math.exp(-time / decay) * release * math.sin(phase)
 
 
 def synthesize():
-    """A warm, felt-like touch: two overlapping mellow notes with no noise layer."""
+    """The approved Option C: two brief, rounded, descending taps."""
     samples = []
     for index in range(round(SAMPLE_RATE * DURATION)):
         time = index / SAMPLE_RATE
-        # F4 and a quieter C5 form one soft gesture rather than two alert beeps.
-        samples.append(soft_note(time - 0.008, 349.228, 1.0, 0.075)
-                       + soft_note(time - 0.022, 523.251, 0.28, 0.065))
+        samples.append(0.62 * soft_note(time - 0.008, 830.609, 0.080, 0.005, 0.023)
+                       + soft_note(time - 0.067, 659.255, 0.110, 0.007, 0.032))
 
-    # Taper and remove DC before peak normalization to avoid abrupt waveform edges.
-    offset = sum(samples) / len(samples)
-    for index, value in enumerate(samples):
-        edge = min(1.0, index / (SAMPLE_RATE * 0.005), (len(samples) - 1 - index) / (SAMPLE_RATE * 0.005))
-        samples[index] = (value - offset) * edge
     gain = PEAK / max(abs(value) for value in samples)
-    return b''.join(struct.pack('<h', round(value * gain * 32767)) for value in samples)
+    return b''.join(struct.pack('<h', round(value * gain * MATCHED_GAIN * 32767)) for value in samples)
 
 
 def main():
