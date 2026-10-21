@@ -419,7 +419,7 @@ public partial class SettingsWindow
             // Col 4: Enable checkbox (checked = this sound plays) — pinned right, aligns with master switch
             var enableCheck = new CheckBox
             {
-                Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(8, 0, 0, 0),
                 IsChecked = !isMuted,
                 Cursor = System.Windows.Input.Cursors.Hand,
