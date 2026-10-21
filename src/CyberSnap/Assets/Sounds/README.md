@@ -28,7 +28,17 @@ The project automatically embeds every `Assets/Sounds/*.mp3` (`EmbeddedResource`
    - Call `SoundService.Play…()` where appropriate.
 3. **Rebuild.** If the MP3 is missing, that event stays silent (no error).
 
-Default MP3s in this folder are **soft synthesized UI blips** (mono 44.1 kHz). Replace any file with your own assets and rebuild to override the embedded default.
+Default MP3s in this folder are **short synthesized UI sounds** (mono 44.1 kHz). Replace any file with your own assets and rebuild to override the embedded default.
+
+The capture-preview cue is a **265 ms airy slide with a soft settling tap**,
+distinct from the pitched system-notification blip. It is synthesized from
+deterministic filtered noise and a damped, inharmonic tap, with a peak level
+matching the other built-in sounds. No external recordings or samples are used.
+Regenerate it with Python and FFmpeg:
+
+```powershell
+python scripts/audio/generate-preview-sound.py
+```
 
 ## Requirements
 
