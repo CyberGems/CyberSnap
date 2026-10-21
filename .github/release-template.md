@@ -8,7 +8,7 @@
 
 <!-- Maintainer: Rewrite the marked paragraph for every release. Use 25-45 words, lead with user-facing changes, and do not repeat the app name or version. -->
 <!-- changelog-summary:start -->
-OCR, QR, and trimming sessions now share tabbed windows, with independent clipboard and result preferences for each capture mode. The widget handles mixed-DPI monitors more reliably. Updated .NET 10 packages include a per-user installer that preserves startup choices without administrator prompts.
+Scheduled backups now protect settings and achievements with configurable intervals, retention, and recovery copies. Backup controls are easier to read, and files use short, local-time names. Tray menus stay within the screen with vertical taskbars, and the widget follows monitors without a corner detour.
 <!-- changelog-summary:end -->
 
 > **New to CyberSnap?** A fast, privacy-focused Windows toolkit for screenshots, annotation, OCR, QR scanning, screen recording, and sharing.
@@ -17,66 +17,52 @@ OCR, QR, and trimming sessions now share tabbed windows, with independent clipbo
 
 ### ✨ Key Features & Highlights
 
-- 🗂️ **Tabbed results and trimming**:
-  - OCR and QR/barcode results stay together in tabbed windows.
-  - MP4 and GIF trimming sessions retain independent playback, selection, and export state when switching tabs.
-  - Result windows open more reliably in the foreground; capture destination changes update the confirmation dock consistently.
+- 💾 **Scheduled backups for settings and achievements**:
+  - Enabled by default with a daily schedule and three retained copies. Choose startup, daily, weekly, or monthly backups, a custom folder, and a retention limit of 1–50 copies.
+  - Backups run while the app is open; missed intervals produce one catch-up copy on the next launch.
+  - Create, restore, or delete copies from Settings. Files are verified before old copies are removed, and restoration first creates a separate recovery copy.
+  - API keys and passwords are excluded. Restoration preserves current credentials and backup preferences. Captures and recordings are not included.
 
-- 🎛️ **Independent delivery preferences**:
-  - Configure clipboard delivery separately for images, scrolling captures, OCR, QR/barcodes, MP4, GIF, and colors.
-  - Ordinary and scrolling captures have separate preview preferences; MP4 and GIF have separate Trimmer preferences.
-  - The widget's grouped More menu and open tools stay synchronized with Settings. OCR, QR, and color tools keep a result window available when auto-copy is disabled.
+- 🗂️ **Clearer backup controls and filenames**:
+  - Available copies are part of Automatic backups; manual JSON export and import have their own Manual backup section.
+  - Backup files use readable local timestamps, such as `CyberSnap-backup-2026-10-20_07-39-11.json`. A short suffix prevents collisions; older backup filenames remain supported.
+  - Filenames, dates, sizes, and aligned actions stay visible. The page keeps scrolling over the backup list and folder path, and the schedule status uses normal text size and contrast.
 
-- 🖥️ **More reliable capture widget**:
-  - Improved placement, popup positioning, monitor following, and active-window tracking across displays with different DPI scales.
-  - Corrected clipped borders and hidden edge indicators, with consistent menu checkmarks and synchronized widget preferences.
+- 🖥️ **Tray and widget positioning fixes**:
+  - The tray menu stays inside the monitor's working area on secondary displays with a vertical taskbar, including mixed DPI scales.
+  - Following the active monitor moves the widget directly to its final docked position, eliminating the brief jump to the left edge when docked at the top.
 
-- 📦 **.NET 10 and per-user installation**:
-  - Migrated to .NET 10 LTS and updated SQLite components. Both packages include the .NET runtime and FFmpeg.
-  - The installer now uses `%LocalAppData%\Programs\CyberSnap` without requesting administrator privileges. Shortcuts, associations, and startup registration apply to the current user.
-  - The installer startup choice is honored on first launch; later changes remain effective. Uninstalling removes startup entries and shortcuts, and installed-app registration no longer creates duplicates.
-  - Installer file properties carry the release's numeric version; packaging verifies it and rejects compiler warnings.
-  - **Upgrading from an all-users installation in Program Files? Uninstall that copy before using this installer.** The new installer does not migrate a machine-wide installation in place. This change does not require administrator privileges for subsequent per-user installs or uninstalls.
-
-- ✅ **Verification**:
-  - Runtime, SQLite full-text search, delivery, tabs, monitor/DPI, and real MP4/GIF export smoke checks passed.
-  - A disposable Windows VM passed 88 installation, actual sign-in startup, and uninstall checks using standard accounts in English and Spanish, with UAC enabled and no elevation prompts.
+- ✅ **Verification and packages**:
+  - Release builds and focused WPF smoke checks cover backups, tray placement, and widget monitor transitions.
+  - The installer and portable packages include the .NET 10 runtime and FFmpeg. The installer remains per-user and does not request administrator privileges.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
-Los resultados de OCR y QR y las sesiones de recorte se agrupan en ventanas con pestañas, con preferencias independientes de portapapeles y resultados para cada modo. El widget mejora su comportamiento entre monitores con distintas escalas DPI. Los paquetes actualizados a .NET 10 incluyen un instalador por usuario que respeta la elección de inicio automático sin pedir permisos de administrador.
-
----
+Las copias programadas protegen la configuración y los logros con frecuencia, retención y copias de recuperación configurables. El panel mejora su legibilidad y usa nombres de archivo cortos con hora local. El menú del tray permanece dentro del monitor con barras verticales y el widget cambia de pantalla sin pasar por una esquina.
 
 ### ✨ Novedades destacadas
 
-- 🗂️ **Resultados y recorte con pestañas**:
-  - Los resultados de OCR y QR/códigos de barras se agrupan en ventanas con pestañas.
-  - Las sesiones de recorte MP4 y GIF conservan su estado de reproducción, selección y exportación al cambiar de pestaña.
-  - Los resultados aparecen en primer plano con mayor fiabilidad y los cambios de destino actualizan correctamente la barra de confirmación de captura.
+- 💾 **Copias programadas de configuración y logros**:
+  - Activadas por defecto, diariamente y con tres copias conservadas. Elige al iniciar, diaria, semanal o mensual, una carpeta personalizada y entre 1 y 50 copias.
+  - Funcionan mientras la aplicación está abierta; los intervalos pendientes crean una sola copia al volver a abrirla.
+  - Crea, restaura o elimina copias desde Configuración. Se verifican antes de eliminar las antiguas y se guarda una copia de recuperación independiente antes de restaurar.
+  - Se excluyen las claves API y contraseñas. Al restaurar se conservan las credenciales y preferencias de respaldo actuales. No se incluyen capturas ni grabaciones.
 
-- 🎛️ **Preferencias de entrega independientes**:
-  - Configura el portapapeles por separado para imágenes, capturas con desplazamiento, OCR, QR/códigos de barras, MP4, GIF y colores.
-  - Las capturas normales y con desplazamiento tienen preferencias de vista previa independientes; MP4 y GIF tienen preferencias de Recortador separadas.
-  - El menú Más del widget y las herramientas abiertas se sincronizan con Configuración. OCR, QR y color mantienen disponible su ventana de resultados cuando la copia automática está desactivada.
+- 🗂️ **Panel de respaldos y nombres más claros**:
+  - Las copias disponibles se integran en Copias de seguridad automáticas. La exportación e importación JSON tienen su propia sección Copia de seguridad manual.
+  - Los archivos usan fecha y hora local, por ejemplo `CyberSnap-backup-2026-10-20_07-39-11.json`. Un sufijo corto evita colisiones y las copias con nombres anteriores siguen siendo compatibles.
+  - Se muestran nombre, fecha y tamaño, con acciones alineadas. La rueda sigue desplazando la página sobre la lista y la ruta, y las fechas de programación tienen el tamaño y contraste normales del panel.
 
-- 🖥️ **Widget de captura más fiable**:
-  - Mejoras de posición, menús emergentes, seguimiento de monitores y detección de ventana activa entre pantallas con distintas escalas DPI.
-  - Correcciones de bordes recortados e indicadores ocultos en los extremos, marcas de selección coherentes y preferencias sincronizadas.
+- 🖥️ **Correcciones de posición del tray y del widget**:
+  - El menú del tray permanece dentro del área útil de los monitores secundarios con barra de tareas vertical, incluso entre pantallas con distintas escalas DPI.
+  - Al seguir el monitor activo, el widget va directamente a su posición final y evita el salto momentáneo al lado izquierdo cuando está anclado arriba.
 
-- 📦 **.NET 10 e instalación por usuario**:
-  - Migración a .NET 10 LTS y actualización de SQLite. Ambos paquetes incluyen el runtime de .NET y FFmpeg.
-  - El instalador usa `%LocalAppData%\Programs\CyberSnap` sin solicitar permisos de administrador. Los accesos directos, las asociaciones y el inicio automático se aplican al usuario actual.
-  - Se respeta la opción de inicio automático del instalador en el primer arranque y los cambios posteriores siguen funcionando. La desinstalación elimina las entradas de inicio y los accesos directos, y ya no se duplica la entrada en Aplicaciones instaladas.
-  - Las propiedades del instalador incluyen la versión numérica correcta; el empaquetado la verifica y rechaza los avisos del compilador.
-  - **Si tienes una instalación para todos los usuarios en Program Files, desinstálala antes de usar este instalador.** El nuevo instalador no migra esa instalación directamente. Las siguientes instalaciones y desinstalaciones por usuario no requieren permisos de administrador.
-
-- ✅ **Verificación**:
-  - Superadas las comprobaciones de runtime, búsqueda de texto de SQLite, entrega, pestañas, monitores/DPI y exportación real de MP4/GIF.
-  - Una máquina virtual desechable de Windows superó 88 comprobaciones de instalación, inicio automático al iniciar sesión y desinstalación con cuentas estándar en inglés y español, con UAC activado y sin pedir elevación.
+- ✅ **Verificación y paquetes**:
+  - La compilación Release y las comprobaciones WPF cubren respaldos, posición del tray y transiciones del widget entre monitores.
+  - El instalador y el paquete portable incluyen el runtime de .NET 10 y FFmpeg. La instalación sigue siendo por usuario y no solicita permisos de administrador.
 
 </details>
 
