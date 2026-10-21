@@ -85,10 +85,11 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Color Picker**: Sample any color on screen with HEX/RGB/HSL detail view and per-row copy
 - **Ruler**: On-screen measurement tool
 - **Barcode / QR Scanner**: Scan codes standalone or on top of a capture
+- **Zoom**: Freeze the monitor under the pointer at 2×, pan with the mouse, and zoom from 1.25× to 4× using the wheel or `+` / `-`. Press `Enter` to capture the visible view, or `C` then drag to capture a region. Captures follow the usual preview, saving, clipboard, editor, and Gallery preferences. `Ctrl+C` copies the view, `Ctrl+S` saves it, and `Esc` or right-click exits. Available from the tray, widget, and a configurable global hotkey, with initial magnification, smoothing, and animation settings under Configuration → Tools → Zoom.
 
 ### 🖥️ Desktop Integration
 - **System Tray**: Runs in background with custom context menu
-- **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus standalone launchers for OCR, color picker, QR and ruler
+- **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus standalone launchers for OCR, color picker, QR, ruler, and Zoom
 - **Auto-Start**: Launch at Windows sign-in
 - **Auto-Update**: Built-in updater with toast notifications, changelog preview, and per-version skip
 - **Setup Wizard**: First-run configuration assistant

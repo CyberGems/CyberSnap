@@ -467,7 +467,8 @@ public static class ToolListBuilder
             ("_standaloneOcr", "OCR (Standalone)", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
             ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
             ("_standaloneScan", "QR & Barcodes (Standalone)", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
-            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon)
+            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
+            ("_standaloneZoom", "Zoom", '\uE8A3')
             // Future standalone tools follow the convention: ("_standalone{name}", "Label", icon)
         };
 

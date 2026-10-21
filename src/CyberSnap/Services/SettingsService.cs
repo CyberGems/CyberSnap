@@ -678,6 +678,7 @@ public sealed class SettingsService : IDisposable
         settings.DefaultCaptureMode = NormalizeEnum(settings.DefaultCaptureMode, CaptureMode.Rectangle);
         settings.WindowDetection = NormalizeEnum(settings.WindowDetection, WindowDetectionMode.WindowOnly);
         settings.CaptureDockSide = NormalizeEnum(settings.CaptureDockSide, CaptureDockSide.Top);
+        settings.ZoomInitialLevel = Capture.ZoomViewport.NormalizeZoom(settings.ZoomInitialLevel);
         settings.ScrollingCaptureMode = NormalizeEnum(settings.ScrollingCaptureMode, ScrollingCaptureMode.AssistAutoscroll);
         if (settings.ScrollingCaptureMode == ScrollingCaptureMode.Manual)
         {
@@ -759,6 +760,8 @@ public sealed class SettingsService : IDisposable
             settings.ScrollCaptureHotkeyKey = 0;
         if (IsUnsafeModifierlessHotkey(settings.StandaloneRulerHotkeyModifiers, settings.StandaloneRulerHotkeyKey))
             settings.StandaloneRulerHotkeyKey = 0;
+        if (IsUnsafeModifierlessHotkey(settings.StandaloneZoomHotkeyModifiers, settings.StandaloneZoomHotkeyKey))
+            settings.StandaloneZoomHotkeyKey = 0;
     }
 
     private static bool IsUnsafeModifierlessHotkey(uint modifiers, uint key) =>

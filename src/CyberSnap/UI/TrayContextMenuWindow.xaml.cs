@@ -214,6 +214,7 @@ public partial class TrayContextMenuWindow : Window
         QrText.Text = T("QR");
         ColorPickerText.Text = T("Color");
         RulerText.Text = T("Ruler");
+        ZoomText.Text = T("Zoom");
         AnnotationsText.Text = T("Editor");
         GalleryText.Text = T("Gallery");
         
@@ -227,6 +228,7 @@ public partial class TrayContextMenuWindow : Window
         SetTooltip(QrBtn, T("Scan QR codes and barcodes on screen"));
         SetTooltip(ColorPickerBtn, T("Capture a color sample from the screen"));
         SetTooltip(RulerBtn, T("Measure distances on the screen"));
+        SetTooltip(ZoomBtn, T("Magnify the frozen screen and capture the view or a region"));
         SetTooltip(AnnotationsBtn, T("Open the annotations editor"));
         SetTooltip(GalleryBtn, T("Browse and manage your captures"));
         SetTooltip(GifRecordBtn, T("Record the screen as an animated GIF"));
@@ -278,6 +280,7 @@ public partial class TrayContextMenuWindow : Window
         QrIcon.Source = GetIcon("scan", fgColor, 20);
         ColorPickerIcon.Source = GetIcon("picker", fgColor, 20);
         RulerIcon.Source = GetIcon("ruler", fgColor, 20);
+        ZoomIcon.Source = GetIcon("zoomIn", fgColor, 20);
         // Bottom row: larger assets for accessibility while keeping compact tile height.
         AnnotationsIcon.Source = GetIcon("compose", fgColor, 20);
         GalleryIcon.Source = GetIcon("history", fgColor, 20);
@@ -935,6 +938,12 @@ public partial class TrayContextMenuWindow : Window
     {
         try { CloseMenu(); _trayIcon.TriggerRuler(); }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.ruler", ex); }
+    }
+
+    private void Zoom_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); _trayIcon.TriggerZoom(); }
+        catch (Exception ex) { AppDiagnostics.LogError("traymenu.zoom", ex); }
     }
 
     private void Annotations_Click(object sender, RoutedEventArgs e)

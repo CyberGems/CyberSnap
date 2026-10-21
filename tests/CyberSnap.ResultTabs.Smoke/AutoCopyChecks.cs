@@ -180,6 +180,13 @@ internal static partial class Program
                 var toggleBounds = toggle.TransformToAncestor(panel).TransformBounds(new Rect(toggle.RenderSize));
                 Assert(toggleBounds.Bottom <= panel.ActualHeight && toggleBounds.Right <= panel.ActualWidth,
                     "cursor toggle fits the reduced widget panel", false);
+                foreach (string icon in new[] { "ScrollCaptureIcon", "ScreenRecordIcon", "GifRecordIcon", "ZoomIcon", "GrabTextIcon", "ColorPickerIcon", "QrScanIcon", "RulerIcon" })
+                {
+                    var image = Element<System.Windows.Controls.Image>(widget, icon);
+                    var bounds = image.TransformToAncestor(panel).TransformBounds(new Rect(image.RenderSize));
+                    Assert(bounds.Left >= 0 && bounds.Top >= 0 && bounds.Right <= panel.ActualWidth && bounds.Bottom <= panel.ActualHeight,
+                        "all eight widget actions fit without clipping: " + icon, false);
+                }
                 Assert(CopyFlags(settings.Settings).SequenceEqual(before), "opening the widget preserves all copy preferences", false);
                 if (scale == 1.1) CheckWidgetMenu(widget, settings, outputDirectory);
                 if (scale == 1.0)

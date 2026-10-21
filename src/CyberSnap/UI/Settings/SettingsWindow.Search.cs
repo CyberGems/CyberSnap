@@ -153,7 +153,7 @@ public partial class SettingsWindow
                         ContextText = translatedDesc,
                         Source = SearchEntrySource.Schema,
                         ToolKey = page.Key == "tools" ? section.Key switch
-                        { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", _ => null } : null,
+                        { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", "zoom" => "zoom", _ => null } : null,
                         TargetSettingKey = setting.BindingPath ?? setting.Key
                     });
 
@@ -168,7 +168,7 @@ public partial class SettingsWindow
                             ContextText = translatedLabel,
                             Source = SearchEntrySource.Schema,
                             ToolKey = page.Key == "tools" ? section.Key switch
-                            { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", _ => null } : null,
+                            { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", "zoom" => "zoom", _ => null } : null,
                             TargetSettingKey = setting.BindingPath ?? setting.Key
                         });
                     }
@@ -499,6 +499,8 @@ public partial class SettingsWindow
                             ClearSearch();
                             SelectSettingsTab("tools");
                             if (entry.ToolKey is not null) SelectToolSettings(entry.ToolKey);
+                            else if (_selectedToolKey == "zoom" && ToolHistoryCard.IsAncestorOf(container))
+                                SelectToolSettings("ocr");
                             UpdateLayout();
                             ScrollToElement(container);
                             HighlightSettingCard(container);
@@ -800,6 +802,7 @@ public partial class SettingsWindow
             ["qr"]            = ToolsTab,
             ["scan"]          = ToolsTab,
             ["ruler"]         = ToolsTab,
+            ["zoom"]          = ToolsTab,
             ["hotkeys"]       = HotkeysTab,
             ["history"]       = HistoryTab,
             ["uploads"]       = UploadsTab,
@@ -994,6 +997,9 @@ public partial class SettingsWindow
             // Standalone ruler
             "rulercaptureallscreens"    => RulerCaptureAllScreensCheck,
             "rulercontextmenuenabled"   => RulerContextMenuEnabledCheck,
+            "zoominitiallevel"         => ZoomInitialLevelCombo,
+            "zoomsmoothimage"          => ZoomSmoothImageCheck,
+            "zoomanimate"              => ZoomAnimateCheck,
             "colordetailcopyformat"     => ColorCopyFormatCombo,
             "colordetailincludehash"    => ColorIncludeHashCheck,
             "savestandalonetohistory"   => SaveStandaloneToHistoryCheck,

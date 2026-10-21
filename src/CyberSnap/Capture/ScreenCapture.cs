@@ -233,7 +233,7 @@ public static class ScreenCapture
         }
     }
 
-    private static void DrawCursor(Bitmap bitmap, Rectangle captureBounds)
+    internal static void DrawCursor(Bitmap bitmap, Rectangle captureBounds)
     {
         var cursorInfo = new User32.CURSORINFO
         {

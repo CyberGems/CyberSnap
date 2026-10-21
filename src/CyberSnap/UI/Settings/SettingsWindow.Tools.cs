@@ -18,17 +18,20 @@ public partial class SettingsWindow
         ToolsPickerIcon.Data = FluentIcons.GetGeometry("picker");
         ToolsQrIcon.Data = FluentIcons.GetGeometry("scan");
         ToolsRulerIcon.Data = FluentIcons.GetGeometry("ruler");
+        ToolsZoomIcon.Data = FluentIcons.GetGeometry("zoomIn");
+        ApplyZoomControls();
         ApplyColorFormatControls(_settingsService.Settings);
         RefreshToolShortcut();
         HotkeyChanged += RefreshToolShortcut;
         LocalizationChanged += RefreshToolShortcut;
+        LocalizationChanged += ApplyZoomControls;
     }
 
     private void ToolTab_Checked(object sender, RoutedEventArgs e)
     {
         if (sender is not RadioButton { Tag: string key }) return;
         _selectedToolKey = key;
-        if (OcrToolPanel is null || PickerToolPanel is null || QrToolPanel is null || RulerToolPanel is null) return;
+        if (OcrToolPanel is null || PickerToolPanel is null || QrToolPanel is null || RulerToolPanel is null || ZoomToolPanel is null) return;
         ApplyToolsSelection();
         ToolsPanel.ScrollToTop();
     }
@@ -39,6 +42,9 @@ public partial class SettingsWindow
         PickerToolPanel.Visibility = _selectedToolKey == "picker" ? Visibility.Visible : Visibility.Collapsed;
         QrToolPanel.Visibility = _selectedToolKey == "qr" ? Visibility.Visible : Visibility.Collapsed;
         RulerToolPanel.Visibility = _selectedToolKey == "ruler" ? Visibility.Visible : Visibility.Collapsed;
+        ZoomToolPanel.Visibility = _selectedToolKey == "zoom" ? Visibility.Visible : Visibility.Collapsed;
+        ToolHistoryCard.Visibility = ToolHistoryLabel.Visibility = ToolSoundsButton.Visibility =
+            _selectedToolKey == "zoom" ? Visibility.Collapsed : Visibility.Visible;
         if (_selectedToolKey == "ocr" && ToolsTab.IsChecked == true)
             LoadOcrTab();
         RefreshToolShortcut();
@@ -51,6 +57,7 @@ public partial class SettingsWindow
             "picker" => ToolPickerTab,
             "qr" or "scan" => ToolQrTab,
             "ruler" => ToolRulerTab,
+            "zoom" => ToolZoomTab,
             _ => ToolOcrTab
         };
         tab.IsChecked = true;
@@ -62,6 +69,7 @@ public partial class SettingsWindow
         "picker" => "_standaloneColorPicker",
         "qr" => "_standaloneScan",
         "ruler" => "_standaloneRuler",
+        "zoom" => "_standaloneZoom",
         _ => "_standaloneOcr"
     };
 
@@ -83,6 +91,45 @@ public partial class SettingsWindow
     }
 
     private void ToolSounds_Click(object sender, RoutedEventArgs e) => SelectSettingsTab("sounds");
+
+    private void ApplyZoomControls()
+    {
+        bool previous = _suppressToolsPreferenceChange;
+        _suppressToolsPreferenceChange = true;
+        try
+        {
+            var settings = _settingsService.Settings;
+            for (int index = 0; index < ZoomInitialLevelCombo.Items.Count; index++)
+                ((ComboBoxItem)ZoomInitialLevelCombo.Items[index]).Content = $"{1.25 + index * 0.25:0.##}×";
+            double level = Capture.ZoomViewport.NormalizeZoom(settings.ZoomInitialLevel);
+            ZoomInitialLevelCombo.SelectedIndex = Math.Clamp((int)Math.Round((level - 1.25) / 0.25), 0, 11);
+            ZoomSmoothImageCheck.IsChecked = settings.ZoomSmoothImage;
+            ZoomAnimateCheck.IsChecked = settings.ZoomAnimate;
+        }
+        finally { _suppressToolsPreferenceChange = previous; }
+    }
+
+    private void ZoomInitialLevel_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToolsPreferenceChange || ZoomInitialLevelCombo.SelectedIndex < 0) return;
+        double level = 1.25 + ZoomInitialLevelCombo.SelectedIndex * 0.25;
+        UpdateToolsPreference("Initial zoom level", _settingsService.Settings.ZoomInitialLevel, level,
+            value => _settingsService.Settings.ZoomInitialLevel = value, _ => ApplyZoomControls());
+    }
+
+    private void ZoomSmoothImage_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToolsPreferenceChange) return;
+        UpdateToolsPreference("Smooth the enlarged image", _settingsService.Settings.ZoomSmoothImage, ZoomSmoothImageCheck.IsChecked == true,
+            value => _settingsService.Settings.ZoomSmoothImage = value, _ => ApplyZoomControls());
+    }
+
+    private void ZoomAnimate_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToolsPreferenceChange) return;
+        UpdateToolsPreference("Animate zoom changes", _settingsService.Settings.ZoomAnimate, ZoomAnimateCheck.IsChecked == true,
+            value => _settingsService.Settings.ZoomAnimate = value, _ => ApplyZoomControls());
+    }
 
     private void ApplyColorFormatControls(AppSettings settings)
     {
@@ -176,6 +223,7 @@ public partial class SettingsWindow
             if (ReferenceEquals(element, PickerToolPanel)) return "picker";
             if (ReferenceEquals(element, QrToolPanel)) return "qr";
             if (ReferenceEquals(element, RulerToolPanel)) return "ruler";
+            if (ReferenceEquals(element, ZoomToolPanel)) return "zoom";
             element = LogicalTreeHelper.GetParent(element);
         }
         return null;
@@ -186,6 +234,7 @@ public partial class SettingsWindow
         "picker" => "Color Picker",
         "qr" => "QR & Barcodes",
         "ruler" => "Ruler",
+        "zoom" => "Zoom",
         _ => "OCR"
     };
 }

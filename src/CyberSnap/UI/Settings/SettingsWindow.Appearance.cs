@@ -250,6 +250,7 @@ public partial class SettingsWindow
             finally { _suppressShowSuiteChange = false; }
             RulerCaptureAllScreensCheck.IsChecked = s.RulerCaptureAllScreens;
             RulerContextMenuEnabledCheck.IsChecked = s.RulerContextMenuEnabled;
+            ApplyZoomControls();
 
             SaveHistoryCheck.IsChecked = s.SaveHistory;
             SaveStandaloneToHistoryCheck.IsChecked = s.SaveStandaloneToHistory;

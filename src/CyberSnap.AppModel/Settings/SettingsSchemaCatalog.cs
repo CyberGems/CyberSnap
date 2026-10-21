@@ -113,7 +113,7 @@ public static class SettingsSchemaCatalog
         new(
             "tools",
             "Tools",
-            "Preferences for OCR, Color Picker, QR and barcode scanning, and Ruler.",
+            "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, and Zoom.",
             [
                 new SettingsSectionDefinition(
                     "ocr_defaults",
@@ -143,6 +143,12 @@ public static class SettingsSchemaCatalog
                     [
                         new SettingDefinition("ruler_capture_all", "Capture all screens", SettingsValueKind.Toggle, "When enabled, the ruler's Enter capture takes all screens. When disabled, only the screen(s) the ruler occupies are captured. Applies only to multi-monitor setups.", "RulerCaptureAllScreens"),
                         new SettingDefinition("ruler_context_menu", "Enable context menu", SettingsValueKind.Toggle, "When disabled, right-click exits the ruler instead of showing the context menu.", "RulerContextMenuEnabled"),
+                    ]),
+                new SettingsSectionDefinition("zoom", "Zoom", "Frozen screen magnification and capture.",
+                    [
+                        new SettingDefinition("zoom_initial", "Initial zoom level", SettingsValueKind.Number, "Freeze the monitor under the pointer and start at this magnification.", "ZoomInitialLevel"),
+                        new SettingDefinition("zoom_smooth", "Smooth the enlarged image", SettingsValueKind.Toggle, "Soften enlarged edges. Disable for sharp individual pixels.", "ZoomSmoothImage"),
+                        new SettingDefinition("zoom_animate", "Animate zoom changes", SettingsValueKind.Toggle, "Ease into the initial zoom and changes made with the wheel or keyboard.", "ZoomAnimate"),
                     ]),
                 new SettingsSectionDefinition("tool_history", "Tool history", "Shared preferences for tool results.",
                     [

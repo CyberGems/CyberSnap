@@ -73,6 +73,9 @@ internal static partial class Program
                         SetField(menu, "_showGallery", true);
                         Call(menu, "ApplySectionVisibility", false);
                         menu.Show();
+                        Assert(Element<System.Windows.Controls.Primitives.UniformGrid>(menu, "ToolsSection")
+                            .IsAncestorOf(Element<System.Windows.Controls.Button>(menu, "ZoomBtn")),
+                            "Zoom belongs to the tray's standalone tools section", false);
                         AssertVisible();
                         Pump();
                         AssertVisible();

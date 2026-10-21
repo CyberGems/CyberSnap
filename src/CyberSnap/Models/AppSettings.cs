@@ -371,6 +371,12 @@ public sealed class AppSettings
     public uint StandaloneScanHotkeyModifiers { get; set; }
     public uint StandaloneScanHotkeyKey { get; set; }
 
+    public uint StandaloneZoomHotkeyModifiers { get; set; }
+    public uint StandaloneZoomHotkeyKey { get; set; }
+    public double ZoomInitialLevel { get; set; } = 2;
+    public bool ZoomSmoothImage { get; set; } = true;
+    public bool ZoomAnimate { get; set; } = true;
+
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.CopyToClipboard;
     public bool OpenEditorAfterCapture { get; set; }
     /// <summary>
@@ -887,6 +893,7 @@ public sealed class AppSettings
         "_standaloneColorPicker" => (StandaloneColorPickerHotkeyModifiers, StandaloneColorPickerHotkeyKey),
         "_standaloneOcr" => (StandaloneOcrHotkeyModifiers, StandaloneOcrHotkeyKey),
         "_standaloneScan" => (StandaloneScanHotkeyModifiers, StandaloneScanHotkeyKey),
+        "_standaloneZoom" => (StandaloneZoomHotkeyModifiers, StandaloneZoomHotkeyKey),
         _ => GetGenericToolHotkey(toolId),
     };
 
@@ -928,6 +935,7 @@ public sealed class AppSettings
             case "_standaloneColorPicker": StandaloneColorPickerHotkeyModifiers = mod; StandaloneColorPickerHotkeyKey = key; break;
             case "_standaloneOcr": StandaloneOcrHotkeyModifiers = mod; StandaloneOcrHotkeyKey = key; break;
             case "_standaloneScan": StandaloneScanHotkeyModifiers = mod; StandaloneScanHotkeyKey = key; break;
+            case "_standaloneZoom": StandaloneZoomHotkeyModifiers = mod; StandaloneZoomHotkeyKey = key; break;
             default:
                 ToolHotkeys ??= new();
                 ToolHotkeys[toolId] = new[] { mod, key };
@@ -993,6 +1001,8 @@ public sealed class AppSettings
         StandaloneOcrHotkeyKey = 0;
         StandaloneScanHotkeyModifiers = 0;
         StandaloneScanHotkeyKey = 0;
+        StandaloneZoomHotkeyModifiers = 0;
+        StandaloneZoomHotkeyKey = 0;
         ToolHotkeys = null;
         EditorToolHotkeys = null;
         EditorViewHotkeys = null;

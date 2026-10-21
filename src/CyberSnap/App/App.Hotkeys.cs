@@ -25,6 +25,7 @@ public partial class App
         _hotkeyService.StandaloneColorPickerHotkeyPressed += OnStandaloneColorPickerHotkeyPressed;
         _hotkeyService.StandaloneOcrHotkeyPressed += OnStandaloneOcrHotkeyPressed;
         _hotkeyService.StandaloneScanHotkeyPressed += OnStandaloneScanHotkeyPressed;
+        _hotkeyService.StandaloneZoomHotkeyPressed += OnStandaloneZoomHotkeyPressed;
         _hotkeyService.RepeatLastAreaHotkeyPressed += OnRepeatLastAreaHotkeyPressed;
 
         var s = _settingsService!.Settings;
@@ -47,6 +48,7 @@ public partial class App
         TryRegister(_hotkeyService.RegisterStandaloneColorPicker(s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey), "Standalone Color Picker", s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneOcr(s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey), "Standalone OCR", s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneScan(s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey), "Standalone Scanner", s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneZoom(s.StandaloneZoomHotkeyModifiers, s.StandaloneZoomHotkeyKey), "Zoom", s.StandaloneZoomHotkeyModifiers, s.StandaloneZoomHotkeyKey);
         if (failed.Count > 0 && notifyConflicts)
             ToastWindow.ShowError("Hotkey conflict", string.Format(LocalizationService.Translate("{0} — already in use by another app"), string.Join(", ", failed)));
         else if (showReadyNotification)
@@ -205,6 +207,7 @@ public partial class App
 
     private void OnStandaloneRulerHotkeyPressed()
     {
+        if (Volatile.Read(ref _isZooming) != 0) return;
         // Dismiss tray context menu so it doesn't appear frozen in the screenshot
         _trayIcon?.CloseContextMenu();
         BeginStandaloneToolSession();
@@ -246,6 +249,7 @@ public partial class App
 
     private void OnStandaloneOcrHotkeyPressed()
     {
+        if (Volatile.Read(ref _isZooming) != 0) return;
         _trayIcon?.CloseContextMenu();
         BeginStandaloneToolSession();
 
@@ -273,6 +277,7 @@ public partial class App
 
     private void OnStandaloneColorPickerHotkeyPressed()
     {
+        if (Volatile.Read(ref _isZooming) != 0) return;
         _trayIcon?.CloseContextMenu();
         BeginStandaloneToolSession();
 
@@ -300,6 +305,7 @@ public partial class App
 
     private void OnStandaloneScanHotkeyPressed()
     {
+        if (Volatile.Read(ref _isZooming) != 0) return;
         _trayIcon?.CloseContextMenu();
         BeginStandaloneToolSession();
 

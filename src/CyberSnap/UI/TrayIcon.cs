@@ -32,6 +32,7 @@ public sealed class TrayIcon : IDisposable
     public event Action? OnStandaloneColorPicker;
     public event Action? OnStandaloneOcr;
     public event Action? OnStandaloneScan;
+    public event Action? OnZoom;
     public event Action? OnAnnotationEditor;
     public event Action? OnSettings;
     public event Action? OnAchievements;
@@ -201,6 +202,8 @@ public sealed class TrayIcon : IDisposable
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("_standaloneOcr"), "ocr");
         var scanItem     = WindowsMenuRenderer.Item(T("QR & Barcodes"), HotkeyHint("_standaloneScan"), "scan");
         var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("_standaloneRuler"), "ruler");
+        var zoomItem     = WindowsMenuRenderer.Item(T("Zoom"), HotkeyHint("_standaloneZoom"), "zoomIn");
+        zoomItem.Click += (_, _) => OnZoom?.Invoke();
 
         ToolStripMenuItem? recordItem = null;
         ToolStripMenuItem? recordGifItem = null;
@@ -266,6 +269,7 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(scanItem);
         menu.Items.Add(standaloneColorPickerItem);
         menu.Items.Add(rulerItem);
+        menu.Items.Add(zoomItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(annotationEditorItem);
         menu.Items.Add(historyItem);
@@ -328,6 +332,7 @@ public sealed class TrayIcon : IDisposable
     public void TriggerCapture() => OnCapture?.Invoke();
     public void TriggerScrollCapture() => OnScrollCapture?.Invoke();
     public void TriggerRuler() => OnRuler?.Invoke();
+    public void TriggerZoom() => OnZoom?.Invoke();
     public void TriggerColorPicker() => OnStandaloneColorPicker?.Invoke();
     public void TriggerOcr() => OnStandaloneOcr?.Invoke();
     public void TriggerScan() => OnStandaloneScan?.Invoke();

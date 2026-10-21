@@ -21,8 +21,8 @@ internal static partial class Program
         double originalScale = UiScale.Current;
         var toolsPage = SettingsSchemaCatalog.Pages.Single(page => page.Key == "tools");
         var toolBindings = toolsPage.Sections.SelectMany(section => section.Items).Select(item => item.BindingPath).ToArray();
-        Assert(new[] { "OcrLanguageTag", "ColorDetailCopyFormat", "ScanShowResultWindow", "RulerCaptureAllScreens", "SaveStandaloneToHistory" }
-            .All(toolBindings.Contains), "the settings catalog routes all four tools and their shared history to Tools");
+        Assert(new[] { "OcrLanguageTag", "ColorDetailCopyFormat", "ScanShowResultWindow", "RulerCaptureAllScreens", "ZoomInitialLevel", "ZoomSmoothImage", "ZoomAnimate", "SaveStandaloneToHistory" }
+            .All(toolBindings.Contains), "the settings catalog routes all five tools and their shared history to Tools");
         Assert(!SettingsSchemaCatalog.Pages.Where(page => page.Key != "tools").SelectMany(page => page.Sections)
             .SelectMany(section => section.Items).Any(item => toolBindings.Contains(item.BindingPath)),
             "moved tool settings do not keep stale search routes in other pages");
@@ -63,13 +63,13 @@ internal static partial class Program
                     Assert(window.Width >= window.MinWidth && window.ActualWidth >= window.MinWidth - 6,
                         "the tool layout fixture respects the application's actual minimum width: " + context, false);
                     var before = ToolPreferenceSnapshot(settings.Settings);
-                    foreach (string key in new[] { "ocr", "picker", "qr", "ruler" })
+                    foreach (string key in new[] { "ocr", "picker", "qr", "ruler", "zoom" })
                     {
                         Call(window, "SelectSettingsTab", key); Pump();
                         Assert(Element<RadioButton>(window, "ToolsTab").IsChecked == true
                             && Element<TextBlock>(window, "PageTitleText").Text == LocalizationService.Translate("Tools"),
                             "legacy and tool-specific routes open the localized Tools page: " + key + ", " + context, false);
-                        foreach (string tool in new[] { "Ocr", "Picker", "Qr", "Ruler" })
+                        foreach (string tool in new[] { "Ocr", "Picker", "Qr", "Ruler", "Zoom" })
                             Assert(Element<StackPanel>(window, tool + "ToolPanel").Visibility == (tool.Equals(key, StringComparison.OrdinalIgnoreCase)
                                 ? Visibility.Visible : Visibility.Collapsed), "only the selected tool is visible: " + key + ", " + context, false);
                         var strip = Element<WrapPanel>(window, "ToolsTabStrip");
@@ -84,6 +84,7 @@ internal static partial class Program
                             "ocr" => new[] { "OcrLanguageCombo", "TranslateFromCombo", "TranslateToCombo" },
                             "picker" => new[] { "AutoCopyColorCheck", "ColorCopyFormatCombo", "ColorIncludeHashCheck" },
                             "qr" => new[] { "AutoCopyScanCheck", "ScanShowResultWindowCheck" },
+                            "zoom" => new[] { "ZoomInitialLevelCombo", "ZoomSmoothImageCheck", "ZoomAnimateCheck" },
                             _ => new[] { "RulerCaptureAllScreensCheck", "RulerContextMenuEnabledCheck" }
                         })
                         {
@@ -196,6 +197,16 @@ internal static partial class Program
                     "failed tool saves restore the UI and do not publish an unsaved format: " + language);
             }
             settings.FlushPendingWrites();
+            Call(config, "SelectSettingsTab", "zoom"); Pump();
+            Element<ComboBox>(config, "ZoomInitialLevelCombo").SelectedIndex = 6;
+            Element<CheckBox>(config, "ZoomSmoothImageCheck").IsChecked = false;
+            Element<CheckBox>(config, "ZoomAnimateCheck").IsChecked = false;
+            using (var zoomReload = new SettingsService(path))
+            {
+                zoomReload.Load();
+                Assert(zoomReload.Settings.ZoomInitialLevel == 2.75 && !zoomReload.Settings.ZoomSmoothImage
+                    && !zoomReload.Settings.ZoomAnimate, "Zoom controls persist their actual selections: " + language);
+            }
             Element<CheckBox>(config, "RulerCaptureAllScreensCheck").IsChecked = false;
             Element<CheckBox>(config, "RulerContextMenuEnabledCheck").IsChecked = true;
             Element<CheckBox>(config, "SaveStandaloneToHistoryCheck").IsChecked = true;
@@ -214,7 +225,7 @@ internal static partial class Program
 
     private static void CheckToolSearchNavigation(SettingsWindow window, string language)
     {
-        foreach (var (label, panel) in new[] { ("Favorite format", "PickerToolPanel"), ("Show the QR & Barcode result window", "QrToolPanel"), ("Capture all screens", "RulerToolPanel"), ("OCR language", "OcrToolPanel"), ("Save tool results to Gallery", "ToolHistoryRow") })
+        foreach (var (label, panel) in new[] { ("Favorite format", "PickerToolPanel"), ("Show the QR & Barcode result window", "QrToolPanel"), ("Capture all screens", "RulerToolPanel"), ("OCR language", "OcrToolPanel"), ("Initial zoom level", "ZoomToolPanel"), ("Save tool results to Gallery", "ToolHistoryRow") })
         {
             Call(window, "SelectSettingsTab", "capture");
             Element<TextBox>(window, "SettingsSearchBox").Text = LocalizationService.Translate(label);
@@ -224,7 +235,7 @@ internal static partial class Program
                 .FirstOrDefault(button => Equals(button.ToolTip, LocalizationService.Translate("Open this tool's settings")));
             Assert(link is not null, "search finds tool controls even when their subpage was hidden: " + label + ", " + language);
             link!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
-            Assert(Element<FrameworkElement>(window, panel).Visibility == Visibility.Visible
+            Assert(Element<FrameworkElement>(window, panel).IsVisible
                 && Element<RadioButton>(window, "ToolsTab").IsChecked == true
                 && ((System.Collections.ICollection)Field(window, "_movedElements")).Count == 0,
                 "search restores the live control and navigates to the correct tool: " + label + ", " + language
@@ -252,7 +263,7 @@ internal static partial class Program
         settings.OcrAutoCopyToClipboard, settings.OcrShowResultWindow, settings.TranslationModel,
         settings.ColorDetailAutoCopy, settings.ShowColorDetailWindow, settings.ColorDetailCopyFormat, settings.ColorDetailIncludeHash,
         settings.ScanAutoCopyToClipboard, settings.ScanShowResultWindow, settings.RulerCaptureAllScreens,
-        settings.RulerContextMenuEnabled, settings.SaveStandaloneToHistory);
+        settings.RulerContextMenuEnabled, settings.SaveStandaloneToHistory, settings.ZoomInitialLevel, settings.ZoomSmoothImage, settings.ZoomAnimate);
 
     private static string TrayDescriptionText(TextBlock text)
         => string.Concat(text.Inlines.Select(inline => inline switch

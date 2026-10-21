@@ -187,6 +187,7 @@ public partial class App
         _trayIcon = new TrayIcon(_settingsService?.Settings);
         _trayIcon.OnCapture += OnHotkeyPressed;
         _trayIcon.OnRuler += OnStandaloneRulerHotkeyPressed;
+        _trayIcon.OnZoom += OnStandaloneZoomHotkeyPressed;
         _trayIcon.OnStandaloneColorPicker += OnStandaloneColorPickerHotkeyPressed;
         _trayIcon.OnStandaloneOcr += OnStandaloneOcrHotkeyPressed;
         _trayIcon.OnStandaloneScan += OnStandaloneScanHotkeyPressed;

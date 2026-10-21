@@ -2273,7 +2273,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Standalone tools: one settings page with four focused subpages. -->
+            <!-- Standalone tools: focused subpages sharing shortcut and result preferences. -->
             <ScrollViewer x:Name="ToolsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
                 <StackPanel>
                     <WrapPanel x:Name="ToolsTabStrip" Margin="0,0,0,8">
@@ -2309,6 +2309,14 @@
                                 <TextBlock Text="Ruler" Services:LocalizationService.SourceText="Ruler"/>
                             </StackPanel>
                         </RadioButton>
+                        <RadioButton x:Name="ToolZoomTab" Tag="zoom" GroupName="Tools" Style="{StaticResource SettingsSubTab}"
+                                     AutomationProperties.Name="Zoom" Checked="ToolTab_Checked">
+                            <StackPanel Orientation="Horizontal">
+                                <Path x:Name="ToolsZoomIcon" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                                <TextBlock Text="Zoom" Services:LocalizationService.SourceText="Zoom"/>
+                            </StackPanel>
+                        </RadioButton>
                     </WrapPanel>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -2327,7 +2335,7 @@
                             </StackPanel>
                             <WrapPanel Grid.Column="2" VerticalAlignment="Center" MaxWidth="210">
                                 <Button Content="Change shortcut" Margin="0,2,6,2" Click="ChangeToolShortcut_Click" Services:LocalizationService.SourceContent="Change shortcut"/>
-                                <Button Content="Sounds" Margin="0,2,0,2" Click="ToolSounds_Click" Services:LocalizationService.SourceContent="Sounds"/>
+                                <Button x:Name="ToolSoundsButton" Content="Sounds" Margin="0,2,0,2" Click="ToolSounds_Click" Services:LocalizationService.SourceContent="Sounds"/>
                             </WrapPanel>
                         </Grid>
                         </StackPanel>
@@ -2759,9 +2767,62 @@
                             </StackPanel>
                         </Border>
                     </StackPanel>
+                    <StackPanel x:Name="ZoomToolPanel" Visibility="Collapsed">
+                        <TextBlock Text="Magnification" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Magnification"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE8A3;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Initial zoom level" Style="{StaticResource SettingTitle}" TextWrapping="Wrap" Services:LocalizationService.SourceText="Initial zoom level"/>
+                                        <TextBlock Text="Freeze the monitor under the pointer and start at this magnification." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Freeze the monitor under the pointer and start at this magnification."/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="ZoomInitialLevelCombo" Grid.Column="2" Width="110" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Initial zoom level" SelectionChanged="ZoomInitialLevel_Changed">
+                                        <ComboBoxItem Content="1.25×"/><ComboBoxItem Content="1.5×"/><ComboBoxItem Content="1.75×"/>
+                                        <ComboBoxItem Content="2×"/><ComboBoxItem Content="2.25×"/><ComboBoxItem Content="2.5×"/>
+                                        <ComboBoxItem Content="2.75×"/><ComboBoxItem Content="3×"/><ComboBoxItem Content="3.25×"/>
+                                        <ComboBoxItem Content="3.5×"/><ComboBoxItem Content="3.75×"/><ComboBoxItem Content="4×"/>
+                                    </ComboBox>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE91B;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Smooth the enlarged image" Style="{StaticResource SettingTitle}" TextWrapping="Wrap" Services:LocalizationService.SourceText="Smooth the enlarged image"/>
+                                        <TextBlock Text="Soften enlarged edges. Disable for sharp individual pixels." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Soften enlarged edges. Disable for sharp individual pixels."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ZoomSmoothImageCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Smooth the enlarged image"
+                                              Checked="ZoomSmoothImage_Changed" Unchecked="ZoomSmoothImage_Changed"/>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE768;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Animate zoom changes" Style="{StaticResource SettingTitle}" TextWrapping="Wrap" Services:LocalizationService.SourceText="Animate zoom changes"/>
+                                        <TextBlock Text="Ease into the initial zoom and changes made with the wheel or keyboard." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Ease into the initial zoom and changes made with the wheel or keyboard."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ZoomAnimateCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Animate zoom changes"
+                                              Checked="ZoomAnimate_Changed" Unchecked="ZoomAnimate_Changed"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="Using Zoom" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Using Zoom"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Move the pointer to pan. Use the wheel or + / - to zoom from 1.25× to 4×." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Move the pointer to pan. Use the wheel or + / - to zoom from 1.25× to 4×."/>
+                                <TextBlock Text="Enter captures the full view. Press C, then drag to capture a region of the locked view." Margin="0,8,0,0" Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Enter captures the full view. Press C, then drag to capture a region of the locked view."/>
+                                <TextBlock Text="Captures use your usual preview, saving, clipboard, editor, and Gallery preferences." Margin="0,8,0,0" Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Captures use your usual preview, saving, clipboard, editor, and Gallery preferences."/>
+                                <TextBlock Text="Ctrl+C copies the full view. Ctrl+S saves it. Esc or right-click exits without capturing." Margin="0,8,0,0" Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Ctrl+C copies the full view. Ctrl+S saves it. Esc or right-click exits without capturing."/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                     <TextBlock x:Name="ToolsPreferenceStatusText" Style="{StaticResource SettingsStatusText}" Visibility="Collapsed"
                                AutomationProperties.Name="Tool preference status" AutomationProperties.LiveSetting="Polite" Margin="0,0,0,10"/>
-                    <TextBlock Text="Tool history" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Tool history"/>
+                    <TextBlock x:Name="ToolHistoryLabel" Text="Tool history" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Tool history"/>
                     <Border x:Name="ToolHistoryCard" Style="{StaticResource Card}">
                         <StackPanel>
                         <Grid x:Name="ToolHistoryRow" Style="{StaticResource SettingRow}">

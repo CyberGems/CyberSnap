@@ -19,7 +19,7 @@ namespace CyberSnap.Services;
 public static class HotkeyConflictProbe
 {
     // Transient id used only for the probe register/unregister round-trip; distinct from the
-    // 9001–9016 range owned by HotkeyService.
+    // 9001–9017 range owned by HotkeyService.
     private const int ProbeId = 9999;
 
     /// <summary>
