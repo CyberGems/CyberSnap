@@ -88,43 +88,6 @@
             </Setter>
         </Style>
 
-        <!-- Larger chip-style sub-tabs for Settings → Uploads -->
-        <Style x:Key="UploadSubTab" TargetType="RadioButton">
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Margin" Value="2,0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" Padding="14,7" CornerRadius="7" Cursor="Hand"
-                                Background="Transparent" BorderThickness="1" BorderBrush="Transparent"
-                                SnapsToDevicePixels="True">
-                            <TextBlock x:Name="Tb" Text="{TemplateBinding Content}" FontSize="12.5"
-                                       FontFamily="Segoe UI Variable Text"
-                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}" Opacity="0.55"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                                <Setter TargetName="Tb" Property="Opacity" Value="1"/>
-                                <Setter TargetName="Tb" Property="FontWeight" Value="SemiBold"/>
-                                <Setter TargetName="Tb" Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
-                            </Trigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsMouseOver" Value="True"/>
-                                    <Condition Property="IsChecked" Value="False"/>
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
-                                <Setter TargetName="Tb" Property="Opacity" Value="0.82"/>
-                            </MultiTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style x:Key="SectionLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -195,7 +158,9 @@
                                 <Setter TargetName="VectorIcon" Property="Data" Value="M10.5 4.00003C10.7761 4.00003 11 4.22389 11 4.50003C10.9999 4.77614 10.7761 5.00003 10.5 5.00003H6C4.89543 5.00003 4 5.89546 4 7.00002V14C4.00004 15.1045 4.89545 16 6 16H13C14.1045 16 14.9999 15.1045 15 14V9.50002C15 9.22388 15.2238 9.00002 15.5 9.00002C15.7761 9.00002 16 9.22388 16 9.50002V14C15.9999 15.6568 14.6568 17 13 17H6C4.34317 17 3.00004 15.6568 3 14V7.00002C3 5.34318 4.34314 4.00003 6 4.00003H10.5ZM16.1465 3.14652C16.3417 2.95126 16.6582 2.95126 16.8535 3.14652C17.0487 3.34179 17.0487 3.65832 16.8535 3.85355L9.06054 11.6455L7.99999 12L8.35351 10.9395L16.1465 3.14652Z"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="Tools">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xEE6F;"/>
+                                <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="VectorIcon" Property="Data" Value="F0 M6,7 V5 A2,2 0 0 1 8,3 H12 A2,2 0 0 1 14,5 V7 H13 V5 A1,1 0 0 0 12,4 H8 A1,1 0 0 0 7,5 V7 Z M4,7 H16 A2,2 0 0 1 18,9 V15 A2,2 0 0 1 16,17 H4 A2,2 0 0 1 2,15 V9 A2,2 0 0 1 4,7 Z M4,8 A1,1 0 0 0 3,9 V15 A1,1 0 0 0 4,16 H16 A1,1 0 0 0 17,15 V9 A1,1 0 0 0 16,8 Z M3,11 H8 V12 H3 Z M12,11 H17 V12 H12 Z M8,10 H12 V13 H8 Z M9,11 V12 H11 V11 Z"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="Video">
                                 <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
@@ -270,7 +235,7 @@
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
-        <Style x:Key="ToolTab" TargetType="RadioButton">
+        <Style x:Key="SettingsSubTab" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
             <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
@@ -1133,14 +1098,18 @@
 
         <!-- Sidebar + Content -->
         <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="{Binding ActualHeight, ElementName=SettingsFooterOverlay}"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="165"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Sidebar navigation: scroll when UiScale / DPI shrinks the frame below the tab list. -->
-            <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
-                    Padding="10,14,8,40">
+            <Border x:Name="SettingsSidebar" Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
+                    Padding="10,14,8,8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               CanContentScroll="False"
@@ -1185,7 +1154,7 @@
             </Border>
 
             <!-- Content area -->
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="1" Grid.RowSpan="2">
                 <!-- Sticky content header: title (left) + search (right, ~25–30% width).
                      Opaque strip so scrolled cards don't collide with the search bar.
                      Right inset = panel padding (18) + scrollbar (12) + a small visual nudge (4). -->
@@ -2311,7 +2280,7 @@
             <ScrollViewer x:Name="ToolsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <WrapPanel x:Name="ToolsTabStrip" Margin="0,0,0,8">
-                        <RadioButton x:Name="ToolOcrTab" Tag="ocr" GroupName="Tools" Style="{StaticResource ToolTab}"
+                        <RadioButton x:Name="ToolOcrTab" Tag="ocr" GroupName="Tools" Style="{StaticResource SettingsSubTab}"
                                      AutomationProperties.Name="OCR" Checked="ToolTab_Checked" IsChecked="True">
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="ToolsOcrIcon" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"
@@ -2319,7 +2288,7 @@
                                 <TextBlock Text="OCR" Services:LocalizationService.SourceText="OCR"/>
                             </StackPanel>
                         </RadioButton>
-                        <RadioButton x:Name="ToolPickerTab" Tag="picker" GroupName="Tools" Style="{StaticResource ToolTab}"
+                        <RadioButton x:Name="ToolPickerTab" Tag="picker" GroupName="Tools" Style="{StaticResource SettingsSubTab}"
                                      AutomationProperties.Name="Color Picker" Checked="ToolTab_Checked">
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="ToolsPickerIcon" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"
@@ -2327,7 +2296,7 @@
                                 <TextBlock Text="Color Picker" Services:LocalizationService.SourceText="Color Picker"/>
                             </StackPanel>
                         </RadioButton>
-                        <RadioButton x:Name="ToolQrTab" Tag="qr" GroupName="Tools" Style="{StaticResource ToolTab}"
+                        <RadioButton x:Name="ToolQrTab" Tag="qr" GroupName="Tools" Style="{StaticResource SettingsSubTab}"
                                      AutomationProperties.Name="QR &amp; Barcodes" Checked="ToolTab_Checked">
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="ToolsQrIcon" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"
@@ -2335,7 +2304,7 @@
                                 <TextBlock Text="QR &amp; Barcodes" Services:LocalizationService.SourceText="QR &amp; Barcodes"/>
                             </StackPanel>
                         </RadioButton>
-                        <RadioButton x:Name="ToolRulerTab" Tag="ruler" GroupName="Tools" Style="{StaticResource ToolTab}"
+                        <RadioButton x:Name="ToolRulerTab" Tag="ruler" GroupName="Tools" Style="{StaticResource SettingsSubTab}"
                                      AutomationProperties.Name="Ruler" Checked="ToolTab_Checked">
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="ToolsRulerIcon" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"
@@ -4544,43 +4513,38 @@
             <!-- Uploads / Share -->
             <ScrollViewer x:Name="UploadsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
-                    <!-- Browser-style chip sub-tabs (persisted last selection) -->
-                    <Border Background="{DynamicResource ThemeCardBrush}"
-                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                            CornerRadius="10" Padding="5" Margin="0,0,0,12" HorizontalAlignment="Left">
-                        <StackPanel Orientation="Horizontal">
+                    <WrapPanel x:Name="UploadSubTabStrip" Margin="0,0,0,8">
                             <RadioButton x:Name="UploadSubTabGeneral" Content="General" Tag="general"
                                          GroupName="UploadSubTabs" IsChecked="True"
-                                         Style="{StaticResource UploadSubTab}"
+                                         Style="{StaticResource SettingsSubTab}"
                                          Services:LocalizationService.SourceContent="General"
                                          Click="UploadSubTab_Click"
                                          AutomationProperties.Name="Upload general settings"/>
                             <RadioButton x:Name="UploadSubTabCyberGems" Content="CyberSnap" Tag="cybergems"
                                          GroupName="UploadSubTabs"
-                                         Style="{StaticResource UploadSubTab}"
+                                         Style="{StaticResource SettingsSubTab}"
                                          Services:LocalizationService.SourceContent="CyberSnap"
                                          Click="UploadSubTab_Click"
                                          AutomationProperties.Name="CyberSnap Share settings"/>
                             <RadioButton x:Name="UploadSubTabImgBB" Content="ImgBB" Tag="imgbb"
                                          GroupName="UploadSubTabs"
-                                         Style="{StaticResource UploadSubTab}"
+                                         Style="{StaticResource SettingsSubTab}"
                                          Services:LocalizationService.SourceContent="ImgBB"
                                          Click="UploadSubTab_Click"
                                          AutomationProperties.Name="ImgBB settings"/>
                             <RadioButton x:Name="UploadSubTabImgur" Content="Imgur" Tag="imgur"
                                          GroupName="UploadSubTabs"
-                                         Style="{StaticResource UploadSubTab}"
+                                         Style="{StaticResource SettingsSubTab}"
                                          Services:LocalizationService.SourceContent="Imgur"
                                          Click="UploadSubTab_Click"
                                          AutomationProperties.Name="Imgur settings"/>
                             <RadioButton x:Name="UploadSubTabCustom" Content="Custom destination" Tag="custom"
                                          GroupName="UploadSubTabs"
-                                         Style="{StaticResource UploadSubTab}"
+                                         Style="{StaticResource SettingsSubTab}"
                                          Services:LocalizationService.SourceContent="Custom destination"
                                          Click="UploadSubTab_Click"
                                          AutomationProperties.Name="Custom destination settings"/>
-                        </StackPanel>
-                    </Border>
+                    </WrapPanel>
 
                     <StackPanel x:Name="UploadSectionGeneral">
                     <TextBlock Text="Share defaults" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
@@ -5759,11 +5723,9 @@
             </Grid>
         </Grid>
 
-        <!-- Hairline + branding overlaid on the body. A reserved footer Grid row
-             painted a full-width band under the line (the "invasive bar"); overlay
-             keeps only the divider and the About hit-target. No Background so empty
-             space beside the branding still passes clicks through to content. -->
-        <Grid Grid.Row="1"
+        <!-- Branding stays overlaid on the body; the sidebar reserves this height
+             so its vertical divider ends at the footer's horizontal hairline. -->
+        <Grid x:Name="SettingsFooterOverlay" Grid.Row="1"
               VerticalAlignment="Bottom"
               Panel.ZIndex="200">
             <Grid.RowDefinitions>

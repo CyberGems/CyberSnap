@@ -139,7 +139,6 @@ public partial class SettingsWindow
             [SoundsTab] = "\uE767", // Sounds
             [CaptureTab] = "\uE7C2", // Capture
             [RecordingTab] = "\uE768", // Video
-            [ToolsTab] = "\uEE6F", // Tools
             [HotkeysTab] = "\uE765", // Hotkeys
             [HistoryTab] = "\uEB9F", // History
             [UploadsTab] = "\uE898", // Uploads
