@@ -15,6 +15,52 @@
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
+        <Style x:Key="TipCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid x:Name="CheckRoot" Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="CheckBoxBorder" Width="16" Height="16" CornerRadius="3"
+                                    Background="{DynamicResource ThemeCardBrush}"
+                                    BorderBrush="{DynamicResource ThemeTextSecondaryBrush}" BorderThickness="1"
+                                    VerticalAlignment="Center">
+                                <Path x:Name="CheckMark" Data="M1,4 L4,7 L9,1" Width="10" Height="8" Stretch="Uniform"
+                                      Stroke="{DynamicResource ThemeAccentForegroundBrush}" StrokeThickness="1.8"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="CheckRoot" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="TipPrimaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForegroundBrush}"/>
             <Setter Property="FontSize" Value="12"/>
@@ -191,19 +237,9 @@
                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                            TextWrapping="Wrap" LineHeight="18"/>
 
-                <StackPanel Grid.Row="2" Grid.ColumnSpan="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            Margin="0,12,0,0">
-                    <TextBlock x:Name="DontShowAgainLabel"
-                               FontSize="12"
-                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                               VerticalAlignment="Center"
-                               Margin="0,0,8,0"/>
-                    <CheckBox x:Name="DontShowAgainCheck"
-                              IsChecked="True"
-                              VerticalAlignment="Center"/>
-                </StackPanel>
+                <CheckBox x:Name="DontShowAgainCheck" Grid.Row="2" Grid.ColumnSpan="2"
+                          Style="{StaticResource TipCheckBox}" IsChecked="True"
+                          HorizontalAlignment="Left" Margin="0,12,0,0"/>
 
                 <StackPanel Grid.Row="3" Grid.ColumnSpan="2"
                             Orientation="Horizontal"

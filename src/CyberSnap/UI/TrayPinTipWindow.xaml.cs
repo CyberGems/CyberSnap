@@ -28,7 +28,7 @@ public partial class TrayPinTipWindow : Window
 
         TitleText.Text = T("Keep CyberSnap visible in the tray");
         TrayOverflowText.Set(BodyText, T("Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings."));
-        DontShowAgainLabel.Text = T("Don't show again");
+        DontShowAgainCheck.Content = T("Don't show again");
         GotItBtn.Content = T("Got it");
         OpenSettingsBtn.Content = T("Open Windows Settings");
         CloseBtn.ToolTip = T("Dismiss");
