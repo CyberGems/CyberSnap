@@ -434,27 +434,22 @@ public partial class SettingsWindow
     {
         try
         {
-            var areaIconColor = Theme.IsDark
-                ? System.Drawing.Color.FromArgb(225, 255, 255, 255)
-                : System.Drawing.Color.FromArgb(210, 0, 0, 0);
             var assignContent = new StackPanel
             {
                 Orientation = System.Windows.Controls.Orientation.Horizontal,
                 VerticalAlignment = VerticalAlignment.Center,
             };
-            var assignIcon = new System.Windows.Controls.Image
+            var assignIcon = new System.Windows.Shapes.Path
             {
-                Source = ToolIcons.RenderToolIconWpf(
-                    "rect",
-                    ToolDef.AllTools.First(t => t.Id == "rect").Icon,
-                    areaIconColor,
-                    16),
+                Data = FluentIcons.GetGeometry("captureRect"),
+                Stretch = Stretch.Uniform,
                 Width = 14,
                 Height = 14,
                 Margin = new Thickness(0, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center,
             };
-            System.Windows.Media.RenderOptions.SetBitmapScalingMode(assignIcon, System.Windows.Media.BitmapScalingMode.HighQuality);
+            assignIcon.SetBinding(System.Windows.Shapes.Shape.FillProperty,
+                new System.Windows.Data.Binding(nameof(Button.Foreground)) { Source = AssignPrtScBtn });
             // Icon inside the brackets as a centered block (not an inline run, whose
             // baseline sits low): [ icon name ].
             string prefix = string.Format(

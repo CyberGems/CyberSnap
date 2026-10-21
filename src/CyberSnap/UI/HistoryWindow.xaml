@@ -101,6 +101,7 @@
         </Style>
 
         <Style x:Key="HistoryActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Template" Value="{StaticResource CyberSnapActionButtonTemplate}"/>
             <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinWidth" Value="{StaticResource SettingsControlMinWidth}"/>
@@ -112,7 +113,26 @@
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
+        <Style x:Key="HistoryAccentButton" TargetType="Button" BasedOn="{StaticResource CyberSnapAccentButton}">
+            <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinWidth" Value="{StaticResource SettingsControlMinWidth}"/>
+            <Setter Property="Padding" Value="{StaticResource SettingsControlPadding}"/>
+            <Setter Property="FontSize" Value="{StaticResource SettingsControlFontSize}"/>
+        </Style>
+
+        <Style x:Key="HistorySelectionButton" TargetType="Button" BasedOn="{StaticResource HistoryActionButton}">
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="Selected">
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="HistoryDangerButton" TargetType="Button" BasedOn="{StaticResource CyberSnapDangerButton}">
+            <Setter Property="Template" Value="{StaticResource CyberSnapDangerButtonTemplate}"/>
             <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinWidth" Value="82"/>
@@ -444,13 +464,13 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button x:Name="SelectBtn" Style="{StaticResource HistoryActionButton}"
+                                    <Button x:Name="SelectBtn" Style="{StaticResource HistorySelectionButton}"
                                             MinWidth="0" Width="38" Padding="0" Margin="0,0,6,0"
                                             ToolTip="Select history items"
                                             AutomationProperties.Name="Select history items"
                                             AutomationProperties.HelpText="Select history items"
                                             Cursor="Hand" Click="ToggleSelectMode">
-                                        <Image x:Name="SelectBtnIcon" Width="16" Height="16" Stretch="Uniform"
+                                        <Path x:Name="SelectBtnIcon" Width="16" Height="16" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                                IsHitTestVisible="False"/>
                                     </Button>
                                     <Button x:Name="SelectAllBtn" Style="{StaticResource HistoryActionButton}"
@@ -459,7 +479,7 @@
                                             ToolTip="Select all items"
                                             AutomationProperties.Name="Select all history items"
                                             Cursor="Hand" Click="SelectAllClick">
-                                        <Image x:Name="SelectAllBtnIcon" Width="16" Height="16" Stretch="Uniform"
+                                        <Path x:Name="SelectAllBtnIcon" Width="16" Height="16" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                                IsHitTestVisible="False"/>
                                     </Button>
                                     <Button x:Name="UnselectBtn" Style="{StaticResource HistoryActionButton}"
@@ -468,7 +488,7 @@
                                             ToolTip="Clear selection"
                                             AutomationProperties.Name="Clear history selection"
                                             Cursor="Hand" Click="UnselectClick">
-                                        <Image x:Name="UnselectBtnIcon" Width="16" Height="16" Stretch="Uniform"
+                                        <Path x:Name="UnselectBtnIcon" Width="16" Height="16" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                                IsHitTestVisible="False"/>
                                     </Button>
                                     <Button x:Name="DeleteSelectedBtn" Style="{StaticResource HistoryDangerButton}"
@@ -479,7 +499,7 @@
                                             AutomationProperties.HelpText="Delete selected history items"
                                             Cursor="Hand" Click="DeleteSelectedClick">
                                         <Grid IsHitTestVisible="False">
-                                            <Image x:Name="DeleteSelectedBtnIcon" Width="16" Height="16" Stretch="Uniform"
+                                            <Path x:Name="DeleteSelectedBtnIcon" Width="16" Height="16" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             <Border x:Name="DeleteSelectedCountBadge" CornerRadius="8" MinWidth="16" Height="16"
                                                     Background="#E54B4B" Padding="4,0"
@@ -496,7 +516,7 @@
                                             AutomationProperties.Name="Clear current history tab"
                                             AutomationProperties.HelpText="Delete all items in the current history tab"
                                             Cursor="Hand" Click="DeleteAllClick">
-                                        <Image x:Name="DeleteAllBtnIcon" Width="16" Height="16" Stretch="Uniform"
+                                        <Path x:Name="DeleteAllBtnIcon" Width="16" Height="16" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                                IsHitTestVisible="False"/>
                                     </Button>
                                 </StackPanel>
@@ -754,7 +774,7 @@
                                    AutomationProperties.Name="History empty state detail"
                                    AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.LiveSetting="Polite"/>
-                        <Button x:Name="HistoryEmptyRetryButton" Content="Retry" Style="{StaticResource HistoryActionButton}"
+                        <Button x:Name="HistoryEmptyRetryButton" Content="Retry" Style="{StaticResource HistoryAccentButton}"
                                 HorizontalAlignment="Center" Margin="0,14,0,0" Visibility="Collapsed"
                                 ToolTip="Retry loading history"
                                 AutomationProperties.Name="Retry loading history"

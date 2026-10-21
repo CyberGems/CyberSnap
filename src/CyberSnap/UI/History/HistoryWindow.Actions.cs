@@ -28,6 +28,7 @@ public partial class HistoryWindow
             : _historyService.ImageEntries;
         var ocrTag = _settingsService.Settings.OcrLanguageTag;
         int total = entries.Count;
+        ReindexAllBtn.SetResourceReference(StyleProperty, "HistoryActionButton");
 
         if (isIndexing)
         {
@@ -56,6 +57,7 @@ public partial class HistoryWindow
             int indexed = _imageSearchIndexService.CountReadyEntries(entries, ocrTag);
             if (indexed < total)
             {
+                ReindexAllBtn.SetResourceReference(StyleProperty, "HistoryAccentButton");
                 ReindexAllProgressPanel.Visibility = Visibility.Visible;
                 ReindexAllBtn.Content = string.Format(
                     LocalizationService.Translate("Index {0} remaining"),

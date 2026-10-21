@@ -378,11 +378,11 @@ public partial class HistoryWindow : Window
         var secondary = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
         ImageSearchIcon.Source = Helpers.FluentIcons.RenderWpf("search", secondary, 18);
         ImageSearchIcon.Opacity = 0.55;
-        SelectBtnIcon.Source = Helpers.FluentIcons.RenderWpf("select", secondary, 16);
-        SelectAllBtnIcon.Source = Helpers.FluentIcons.RenderWpf("check", secondary, 16);
-        UnselectBtnIcon.Source = Helpers.FluentIcons.RenderWpf("close", secondary, 16);
-        DeleteSelectedBtnIcon.Source = Helpers.FluentIcons.RenderWpf("trash", secondary, 16);
-        DeleteAllBtnIcon.Source = Helpers.FluentIcons.RenderWpf("trash", secondary, 16);
+        SelectBtnIcon.Data = Helpers.FluentIcons.GetGeometry("select");
+        SelectAllBtnIcon.Data = Helpers.FluentIcons.GetGeometry("check");
+        UnselectBtnIcon.Data = Helpers.FluentIcons.GetGeometry("close");
+        DeleteSelectedBtnIcon.Data = Helpers.FluentIcons.GetGeometry("trash");
+        DeleteAllBtnIcon.Data = Helpers.FluentIcons.GetGeometry("trash");
         RefreshSelectBtnVisual();
         UpdateSearchFilterIcon();
     }
@@ -395,12 +395,7 @@ public partial class HistoryWindow : Window
     {
         if (SelectBtnIcon == null || SelectBtn == null)
             return;
-        var c = _selectMode ? Theme.Accent : Theme.TextSecondary;
-        SelectBtnIcon.Source = Helpers.FluentIcons.RenderWpf(
-            "select", System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B), 16);
-        SelectBtn.Background = _selectMode
-            ? Theme.Brush(Theme.AccentSubtle)
-            : System.Windows.Media.Brushes.Transparent;
+        SelectBtn.Tag = _selectMode ? "Selected" : null;
     }
 
     protected override void OnSourceInitialized(EventArgs e)

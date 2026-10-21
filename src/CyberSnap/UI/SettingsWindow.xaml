@@ -257,6 +257,7 @@
 
 
         <Style TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Template" Value="{StaticResource CyberSnapActionButtonTemplate}"/>
             <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinWidth" Value="{StaticResource SettingsControlMinWidth}"/>
@@ -267,6 +268,51 @@
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="SettingsAccentButton" TargetType="Button" BasedOn="{StaticResource CyberSnapAccentButton}">
+            <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinWidth" Value="{StaticResource SettingsControlMinWidth}"/>
+            <Setter Property="Padding" Value="{StaticResource SettingsControlPadding}"/>
+            <Setter Property="FontSize" Value="{StaticResource SettingsControlFontSize}"/>
+        </Style>
+
+        <Style x:Key="SettingsActionToggleButton" TargetType="ToggleButton">
+            <Setter Property="Template" Value="{StaticResource CyberSnapActionButtonTemplate}"/>
+            <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="FontSize" Value="{StaticResource SettingsControlFontSize}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SettingsHelpButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Template" Value="{StaticResource CyberSnapActionButtonTemplate}"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Opacity" Value="0.7"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Implicit RadioButton style: forces foreground so WPF Light/System theme
@@ -572,6 +618,7 @@
         </Style>
 
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource CyberSnapDangerButton}">
+            <Setter Property="Template" Value="{StaticResource CyberSnapDangerButtonTemplate}"/>
             <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinWidth" Value="108"/>
@@ -580,6 +627,7 @@
         </Style>
 
         <Style x:Key="HistoryActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Template" Value="{StaticResource CyberSnapActionButtonTemplate}"/>
             <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinWidth" Value="{StaticResource SettingsControlMinWidth}"/>
@@ -770,35 +818,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
             <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4" Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonHoverBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonPressedBrush}"/>
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Template" Value="{StaticResource CyberSnapActionButtonTemplate}"/>
         </Style>
 
         <!-- Browse / reset: same chrome as play so actions read as buttons, status does not. -->
@@ -840,10 +860,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonPressedBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
                                 <Setter Property="RenderTransform">
                                     <Setter.Value>
                                         <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
@@ -901,10 +925,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonPressedBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
                                 <Setter Property="RenderTransform">
                                     <Setter.Value>
                                         <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
@@ -1243,32 +1271,15 @@
                     <!-- Reopens the Print Screen advisory banner after it was hidden.
                          Same info glyph as the help card above, no extra chrome. -->
                     <Button x:Name="PrtScInfoBtn" Width="28" Height="28"
+                            Style="{StaticResource SettingsHelpButton}"
                             HorizontalAlignment="Right" Margin="0,10,4,0"
-                            Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
+                            Cursor="Hand"
                             Visibility="Collapsed" Click="PrtScInfoBtn_Click"
                             ToolTip="How to unbind Snipping Tool from the PrtSc key?"
                             Services:LocalizationService.SourceToolTip="How to unbind Snipping Tool from the PrtSc key?">
                         <Button.Content>
-                            <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
+                            <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button.Content>
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="Transparent">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Opacity" Value="1"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
                     </Button>
 
                     <Border x:Name="PrtScWarnBanner" CornerRadius="6" Padding="14,12" Margin="0,12,0,16"
@@ -1293,27 +1304,10 @@
 
                             <!-- Close Button -->
                             <Button Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right"
-                                    Width="24" Height="24" Content="×" FontSize="20" Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
+                                    Style="{StaticResource SettingsHelpButton}"
+                                    Width="24" Height="24" Content="×" FontSize="20" Foreground="#FFFFFFFF" Cursor="Hand"
                                     Click="ClosePrtScWarnBanner_Click" ToolTip="Hide"
                                     Services:LocalizationService.SourceToolTip="Hide" Margin="8,0,0,0">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border Background="Transparent">
-                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Opacity" Value="1"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
                             </Button>
 
                         </Grid>
@@ -1328,9 +1322,8 @@
                                         HorizontalAlignment="Left" Padding="12,5" Height="28" MinHeight="28" FontSize="11"
                                         Background="#1EFFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" Foreground="#FFFFFFFF"
                                         Cursor="Hand" Click="OpenWinSettingsBtn_Click"/>
-                                <Button x:Name="AssignPrtScBtn" Content="Assign PrtSc to Area Capture"
+                                <Button x:Name="AssignPrtScBtn" Content="Assign PrtSc to Area Capture" Style="{StaticResource SettingsAccentButton}"
                                         HorizontalAlignment="Left" Padding="12,5" Height="28" MinHeight="28" FontSize="11"
-                                        Background="#1EFFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" Foreground="#FFFFFFFF"
                                         Cursor="Hand" Margin="8,0,0,0" Click="AssignPrtScBtn_Click"/>
                             </StackPanel>
                         </StackPanel>
@@ -2908,6 +2901,7 @@
                                         <TextBlock x:Name="FileNameTemplatePreviewText" FontSize="11" Margin="0,8,0,0"
                                                    Foreground="{DynamicResource ThemeTextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
                                         <ToggleButton x:Name="FileNameCustomizeToggle"
+                                                      Style="{StaticResource SettingsActionToggleButton}"
                                                       Content="Customize…"
                                                       Margin="0,8,0,0"
                                                       Padding="10,4"
@@ -5464,7 +5458,7 @@
                                     <TextBlock x:Name="AutomaticBackupStatusText" TextWrapping="Wrap" Style="{StaticResource SettingTitle}" Margin="0" AutomationProperties.LiveSetting="Polite"/>
                                     <TextBlock x:Name="AutomaticBackupErrorText" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextPrimaryBrush}" Visibility="Collapsed" Margin="0,6,0,4" AutomationProperties.LiveSetting="Assertive"/>
                                 </StackPanel>
-                                <Button x:Name="CreateBackupNowBtn" Grid.Column="2" Content="Back up now" VerticalAlignment="Center" Click="CreateBackupNow_Click" Services:LocalizationService.SourceContent="Back up now"/>
+                                <Button x:Name="CreateBackupNowBtn" Grid.Column="2" Content="Back up now" Style="{StaticResource SettingsAccentButton}" VerticalAlignment="Center" Click="CreateBackupNow_Click" Services:LocalizationService.SourceContent="Back up now"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -5494,7 +5488,7 @@
                                                 <TextBlock x:Name="BackupDescriptionText" Text="{Binding Description}" TextWrapping="Wrap" Style="{StaticResource SettingDescription}"/>
                                             </StackPanel>
                                             <Button Grid.Column="2" Content="{Binding RestoreLabel}" IsEnabled="{Binding CanRestore}" Click="RestoreAutomaticBackup_Click" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <Button Grid.Column="3" Content="{Binding DeleteLabel}" Click="DeleteAutomaticBackup_Click" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="3" Content="{Binding DeleteLabel}" Style="{StaticResource DangerButton}" Click="DeleteAutomaticBackup_Click" VerticalAlignment="Center"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

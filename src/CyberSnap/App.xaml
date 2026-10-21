@@ -44,6 +44,69 @@
             </Setter>
         </Style>
 
+        <!-- Neutral action chrome matching About, shared by Settings and Gallery. -->
+        <ControlTemplate x:Key="CyberSnapActionButtonTemplate" TargetType="{x:Type ButtonBase}">
+            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="4" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                <ContentPresenter x:Name="Content" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  TextElement.Foreground="{TemplateBinding Foreground}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsMouseOver" Value="True"/>
+                        <Condition Property="IsEnabled" Value="True"/>
+                    </MultiTrigger.Conditions>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter TargetName="Content" Property="TextElement.Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                </MultiTrigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                    <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="CyberSnapDangerButtonTemplate" TargetType="{x:Type ButtonBase}">
+            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="4" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                <ContentPresenter x:Name="Content" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  TextElement.Foreground="{TemplateBinding Foreground}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsMouseOver" Value="True"/>
+                        <Condition Property="IsEnabled" Value="True"/>
+                    </MultiTrigger.Conditions>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeDangerButtonHoverBackground}"/>
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ChromeDangerButtonHoverBorderBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ChromeDangerButtonHoverForeground}"/>
+                    <Setter TargetName="Content" Property="TextElement.Foreground" Value="{DynamicResource ChromeDangerButtonHoverForeground}"/>
+                </MultiTrigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ChromeDangerButtonHoverBorderBrush}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
         <!-- Global Button style -->
         <Style TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="Background" Value="{DynamicResource ChromeButtonBackground}"/>
