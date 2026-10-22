@@ -158,6 +158,16 @@ public sealed partial class RegionOverlayForm
 
     private void SetMode(CaptureMode m, string? toolId = null, bool showHelpBanner = true)
     {
+        if (m == CaptureMode.Pin)
+        {
+            PinImageOnConfirm = true;
+            m = CaptureMode.Rectangle;
+            toolId = "pin";
+        }
+        else if (toolId != "pin" && ToolDef.IsCaptureTool(m))
+        {
+            PinImageOnConfirm = false;
+        }
         if (_isTyping) CommitText();
         bool previousWasEmoji = _mode == CaptureMode.Emoji;
         bool pickerWasOpen = previousWasEmoji && _emojiPickerOpen;
@@ -283,7 +293,8 @@ public sealed partial class RegionOverlayForm
         // Show a mode-specific help banner so the user knows what to do.
         // Tool name + icon in theme label color, action description + suffix in theme accent.
         var suffix = " · " + LocalizationService.Translate("Right-click or Esc to cancel");
-        var tool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == m);
+        var tool = ToolDef.AllTools.FirstOrDefault(t => t.Id == _activeToolId)
+            ?? ToolDef.AllTools.FirstOrDefault(t => t.Mode == m);
         // Render the SAME vector icon the toolbar uses, by id — not the font char (which has no
         // glyph in the banner's text font and shows up as a generic box).
         var iconId = tool != null ? ToolbarIconIdFor(tool.Id) : null;

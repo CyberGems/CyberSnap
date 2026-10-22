@@ -645,6 +645,12 @@ public sealed class SettingsService : IDisposable
                 settings.EnabledTools.Add("zoom");
             settings.CaptureToolbarSchemaVersion = 1;
         }
+        if (settings.CaptureToolbarSchemaVersion < 2)
+        {
+            if (settings.EnabledTools is not null && !settings.EnabledTools.Contains("pin"))
+                settings.EnabledTools.Add("pin");
+            settings.CaptureToolbarSchemaVersion = 2;
+        }
         settings.OpenWithApps = NormalizeOpenWithApps(settings.OpenWithApps);
         SensitiveSettingsProtection.Unprotect(settings);
 

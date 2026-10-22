@@ -89,6 +89,15 @@ internal static partial class Program
                             "Zoom and Pin share an aligned, symmetric final tools row", false);
                         Assert(Element<System.Windows.Controls.TextBlock>(menu, "PinText").Text == "Pin",
                             "the tray keeps the short Pin tool name in both languages", false);
+                        foreach (var (added, existing) in new[] { ("Zoom", "Ocr"), ("Pin", "Qr") })
+                        {
+                            var addedIcon = Element<System.Windows.Controls.Image>(menu, added + "Icon").TransformToAncestor(tools).Transform(new Point());
+                            var existingIcon = Element<System.Windows.Controls.Image>(menu, existing + "Icon").TransformToAncestor(tools).Transform(new Point());
+                            var addedText = Element<System.Windows.Controls.TextBlock>(menu, added + "Text").TransformToAncestor(tools).Transform(new Point());
+                            var existingText = Element<System.Windows.Controls.TextBlock>(menu, existing + "Text").TransformToAncestor(tools).Transform(new Point());
+                            Assert(Math.Abs(addedIcon.X - existingIcon.X) < 1 && Math.Abs(addedText.X - existingText.X) < 1,
+                                "new tray tool icons and labels align with their column: " + added, false);
+                        }
                         if (renderDirectory is not null && language == "es" && !compact && anchor.X == bounds.Left)
                             Render(menu, renderDirectory, "tray-zoom-" + (screen.Primary ? "primary" : "secondary") + ".png");
                         if (compact && anchor.X == bounds.Right - 1)

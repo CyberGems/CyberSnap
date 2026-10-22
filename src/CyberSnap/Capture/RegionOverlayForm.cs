@@ -673,8 +673,9 @@ public sealed partial class RegionOverlayForm : Form
         _centerSelectionAspectRatio = centerSelectionAspectRatio;
         _bmpW = _screenshot.Width;
         _bmpH = _screenshot.Height;
-        _mode = initialMode;
-        _activeToolId = ToolDef.AllTools.FirstOrDefault(t => t.Mode == _mode)?.Id;
+        PinImageOnConfirm = initialMode == CaptureMode.Pin;
+        _mode = PinImageOnConfirm ? CaptureMode.Rectangle : initialMode;
+        _activeToolId = PinImageOnConfirm ? "pin" : ToolDef.AllTools.FirstOrDefault(t => t.Mode == _mode)?.Id;
         _showTime = DateTime.UtcNow;
 
         // Magnifier bitmap for color picker
@@ -2709,6 +2710,10 @@ public sealed partial class RegionOverlayForm : Form
         var zoomItem = WindowsMenuRenderer.Item("Zoom", iconId: "zoom", iconSize: 22);
         zoomItem.Click += (_, _) => SetMode(CaptureMode.Zoom, "zoom");
         menu.Items.Add(zoomItem);
+
+        var pinItem = WindowsMenuRenderer.Item("Pin to screen", iconId: "pin", iconSize: 22);
+        pinItem.Click += (_, _) => SetMode(CaptureMode.Pin, "pin");
+        menu.Items.Add(pinItem);
 
         menu.Items.Add(new ToolStripSeparator());
 

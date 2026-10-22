@@ -70,7 +70,7 @@ public partial class App
 
     private void StartPinRegionCapture()
     {
-        try { LaunchOverlayNow(CaptureMode.Rectangle, imageReady: PinCapturedRegion); }
+        try { LaunchOverlayNow(CaptureMode.Pin, imageReady: PinCapturedRegion); }
         catch (Exception ex)
         {
             ResetCapturing();

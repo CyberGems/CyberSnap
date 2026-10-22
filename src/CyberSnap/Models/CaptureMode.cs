@@ -29,5 +29,6 @@ public enum CaptureMode
     ScrollCapture = 23,
     Record = 24,
     RecordGif = 25,
-    Zoom = 26
+    Zoom = 26,
+    Pin = 27
 }

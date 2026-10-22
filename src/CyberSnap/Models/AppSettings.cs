@@ -755,8 +755,8 @@ public sealed class AppSettings
     // Toolbar customization: which tools appear in the dock
     // null = all tools enabled (default). List of tool IDs from ToolDef.AllTools.
     public List<string>? EnabledTools { get; set; }
-    /// <summary>1 introduces Zoom to existing capture bars, while preserving later visibility choices.</summary>
-    public int CaptureToolbarSchemaVersion { get; set; } = 1;
+    /// <summary>1 introduces Zoom and 2 adds Pin, while preserving later visibility choices.</summary>
+    public int CaptureToolbarSchemaVersion { get; set; } = 2;
 
     // Generic hotkeys for any tool by ID. Key = tool id, Value = [modifiers, virtualKey].
     // Tools with dedicated properties (rect, ocr, picker, etc.) are mapped to those properties instead.
@@ -1032,6 +1032,7 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
         new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       0), // ruler (annotation, but kept in capture row)
         new("zoom",        "Zoom",         '\uE8A3', CaptureMode.Zoom,        0),
+        new("pin",         "Pin to screen", '\uE718', CaptureMode.Pin,       0),
         new("undo",        "Undo",         '\uE7A7', null,                    1),
         new("select",      "Pick",         '\uE1E3', CaptureMode.Move,        1),
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1),

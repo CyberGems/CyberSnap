@@ -25,7 +25,7 @@ internal static partial class Program
         {
             settings.Load();
             Assert(settings.Settings.ZoomShowHelpBar, "existing configurations keep the Zoom help bar enabled when the preference is absent");
-            Assert(settings.Settings.EnabledTools!.SequenceEqual(new[] { "rect", "ocr", "picker", "ruler", "zoom" })
+            Assert(settings.Settings.EnabledTools!.SequenceEqual(new[] { "rect", "ocr", "picker", "ruler", "zoom", "pin" })
                 && settings.Settings.ZoomInitialLevel == 2.5,
                 "existing custom capture bars gain Zoom once without re-enabling other hidden tools");
             settings.Settings.EnabledTools!.Remove("zoom");

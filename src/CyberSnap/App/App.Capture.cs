@@ -664,7 +664,7 @@ public partial class App
                     UiScale = _settingsService.Settings.UiScale,
                     ConfirmRegionBeforeCapture = true // Permanent confirm for area capture redesign
                 };
-                overlay.PinImageOnConfirm = imageReady is not null;
+                overlay.PinImageOnConfirm |= imageReady is not null;
                 void MarkCommitted()
                 {
                     if (zoomCapture is null) return;
@@ -794,14 +794,15 @@ public partial class App
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
                     MarkCommitted();
 
-                    if (imageReady is not null && commitAction == RegionOverlayForm.ConfirmCommitAction.Default)
+                    var pinImageReady = overlay.PinImageOnConfirm ? imageReady ?? PinCapturedRegion : null;
+                    if (pinImageReady is not null && commitAction == RegionOverlayForm.ConfirmCommitAction.Default)
                     {
                         outcomeDelegatedToPreview = true; // The Pin callback releases the session after creating its window.
                         overlay.Close();
                         EndOverlayLoop();
                         Dispatcher.BeginInvoke(() =>
                         {
-                            try { imageReady(cropped, monitorPoint); }
+                            try { pinImageReady(cropped, monitorPoint); }
                             catch (Exception ex)
                             {
                                 ResetCapturing();
