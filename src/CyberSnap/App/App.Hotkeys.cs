@@ -68,6 +68,7 @@ public partial class App
 
     private void OnHotkeyPressed()
     {
+        if (TryCaptureFromZoom(_settingsService!.Settings.DefaultCaptureMode)) return;
         if (TrySwitchActiveOverlay(_settingsService!.Settings.DefaultCaptureMode))
             return;
 

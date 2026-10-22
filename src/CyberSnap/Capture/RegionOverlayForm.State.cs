@@ -1443,6 +1443,14 @@ public sealed partial class RegionOverlayForm
     private CaptureMode _modeBeforeConfirm = CaptureMode.Rectangle;
     private string? _toolIdBeforeConfirm;
 
+    /// <summary>Starts confirmation over an already rendered frame without taking another screenshot.</summary>
+    public void ConfirmFullFrame()
+    {
+        _selectionMonitorClientBounds = new Rectangle(0, 0, _bmpW, _bmpH);
+        EnterConfirmMode(_selectionMonitorClientBounds);
+        EnsureToolbarReady();
+    }
+
     private void EnterConfirmMode(Rectangle rect, Point? releaseAnchor = null)
     {
         PendingCommitAction = ConfirmCommitAction.Default;

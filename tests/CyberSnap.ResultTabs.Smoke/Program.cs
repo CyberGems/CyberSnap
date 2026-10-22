@@ -25,7 +25,8 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        Application app = args.Contains("--zoom-only") ? new ZoomFlowTestApp() : new Application();
+        app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
         // from physical input on the shared desktop; all test edits are explicit.
@@ -49,6 +50,7 @@ internal static partial class Program
         Directory.CreateDirectory(temp);
         string settingsPath = Path.Combine(temp, "settings.json");
         using var settings = new SettingsService(settingsPath);
+        if (app is ZoomFlowTestApp) SetZoomAppField(app, "_settingsService", settings);
         settings.Settings.InterfaceLanguage = "en";
         settings.Save();
         try

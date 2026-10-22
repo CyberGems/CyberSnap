@@ -9,6 +9,7 @@ namespace CyberSnap;
 public partial class App
 {
     private int _isZooming;
+    private StandaloneZoomForm? _activeZoomForm;
     public void OnStandaloneZoomProxy() => OnStandaloneZoomHotkeyPressed();
 
     private void OnStandaloneZoomHotkeyPressed()
@@ -44,8 +45,12 @@ public partial class App
                         catch { frozen.Dispose(); throw; }
                         using (form)
                         {
+                            Volatile.Write(ref _activeZoomForm, form);
+                            form.CaptureRequested += request => LaunchOverlayNow(request.SelectionMode, request);
                             form.FormClosed += (_, _) => result = form.TakeResult();
-                            Forms.Application.Run(form);
+                            try { Forms.Application.Run(form); }
+                            finally { Interlocked.CompareExchange(ref _activeZoomForm, null, form); }
+                            if (form.CaptureOutputDelegated) return;
                             var action = form.CommitAction;
                             var monitor = form.MonitorPoint;
                             if (Dispatcher.HasShutdownStarted) { result?.Dispose(); return; }
@@ -77,6 +82,23 @@ public partial class App
             ResetCapturing();
             throw;
         }
+    }
+
+    private bool TryCaptureFromZoom(Models.CaptureMode mode)
+    {
+        if (Volatile.Read(ref _isZooming) == 0) return false;
+        var form = Volatile.Read(ref _activeZoomForm);
+        if (form?.CapturePending == true) return false; // The usual hotkey can still switch the active overlay.
+        if (form is null) return true; // Zoom is still freezing the monitor.
+        try
+        {
+            form.BeginInvoke((Action)(() =>
+            {
+                if (!form.IsDisposed && !form.CapturePending) form.BeginCapture(false, mode);
+            }));
+        }
+        catch (InvalidOperationException) when (form.IsDisposed || form.Disposing || !form.IsHandleCreated) { }
+        return true;
     }
 
     private void DeliverZoomCapture(Bitmap? result, RegionOverlayForm.ConfirmCommitAction action, Point monitor)

@@ -1645,7 +1645,11 @@ public sealed partial class RegionOverlayForm
                     {
                         _autoDetectRect = Rectangle.Empty;
                         _autoDetectActive = false;
-                        RegionSelected?.Invoke(clickRect);
+                        // A click selects the detected window/full frame, just as a drag
+                        // selects an area. Both must pass through capture confirmation.
+                        if (ConfirmRegionBeforeCapture || _mode is CaptureMode.Rectangle or CaptureMode.Center)
+                            EnterConfirmMode(clickRect, e.Location);
+                        else RegionSelected?.Invoke(clickRect);
                     }
                 }
                 else if (_selectionRect.Width > 2 && _selectionRect.Height > 2)

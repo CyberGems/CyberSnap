@@ -12,6 +12,9 @@ internal static partial class Program
 {
     private static void CheckZoom(string temp, string? renderDirectory)
     {
+        var app = (CyberSnap.App)System.Windows.Application.Current;
+        var appSettings = (SettingsService)ZoomAppField(app, "_settingsService")!;
+        appSettings.Settings.HasSeenQuickStartGuide = true;
         CheckZoomToolIntegration(temp, renderDirectory);
         var size = new DrawingSize(800, 600);
         Assert(ZoomViewport.NormalizeZoom(double.NaN) == 2 && ZoomViewport.NormalizeZoom(double.PositiveInfinity) == 2
@@ -43,6 +46,8 @@ internal static partial class Program
         Assert(animated.Selection(new DrawingPoint(700, 500), new DrawingPoint(-20, -30)) == new Rectangle(0, 0, 700, 500),
             "reverse region drags clip to the monitor bounds");
         animated.EndSelection();
+        animated.Advance(0.1, true);
+        Assert(animated.SourceBounds == frozen, "canceling an in-progress zoom animation preserves the displayed transform");
         animated.ChangeZoom(20, false);
         Assert(animated.Zoom == 4, "wheel and keyboard zoom stop at 4x");
         animated.ChangeZoom(-20, false);
@@ -80,28 +85,34 @@ internal static partial class Program
             }
             Assert(displayed.GetPixel(400, 260).ToArgb() == expected.GetPixel(400, 260).ToArgb(),
                 "the display samples the same original frame as capture output, smooth=" + smooth);
-            Bitmap? captured = null;
-            form.FormClosed += (_, _) => captured = form.TakeResult();
-            ZoomKey(form, Forms.Keys.Enter);
-            using (captured)
+            using var captured = ExerciseZoomCapture(form, true, overlay =>
             {
-                Assert(captured is { Width: 800, Height: 600 }, "Enter transfers ownership of a full-resolution magnified viewport");
-                Assert(EqualZoomBitmaps(expected, captured!), "full capture matches the view exactly and excludes the HUD");
-            }
+                Assert(overlay.ConfirmRect == new Rectangle(0, 0, 800, 600),
+                    "Enter selects the full viewport for confirmation without immediately capturing");
+                Assert((bool)Field(overlay, "_isConfirmingSelection") && Field(overlay, "_toolbarForm") is Forms.Form { Visible: true },
+                    "full-view confirmation exposes the usual annotation toolbar");
+                CommitZoomOverlay(overlay);
+            });
+            Assert(captured is { Width: 800, Height: 600 } && EqualZoomBitmaps(expected, captured),
+                "confirmed full view matches the magnified frame exactly and excludes the HUD");
+            Assert(form.CaptureOutputDelegated && form.Result is null && form.IsDisposed,
+                "regular capture owns the output, so Zoom cannot dispatch a duplicate result");
 
             using var regionForm = NewZoomForm(source, new AppSettings { ZoomAnimate = false, ZoomSmoothImage = smooth });
-            _ = regionForm.Handle;
-            ZoomKey(regionForm, Forms.Keys.C);
-            ZoomMouse(regionForm, "OnMouseDown", Forms.MouseButtons.Left, 570, 410);
-            ZoomMouse(regionForm, "OnMouseMove", Forms.MouseButtons.Left, 220, 130);
-            Bitmap? regionCapture = null;
-            regionForm.FormClosed += (_, _) => regionCapture = regionForm.TakeResult();
-            ZoomMouse(regionForm, "OnMouseUp", Forms.MouseButtons.Left, 220, 130);
-            using (regionCapture)
-            using (var crop = expected.Clone(new Rectangle(220, 130, 350, 280), PixelFormat.Format32bppArgb))
-                Assert(regionCapture is not null && EqualZoomBitmaps(crop, regionCapture),
-                    "a reverse drag captures precisely the locked viewport region without selection chrome, smooth=" + smooth);
+            using var regionCapture = ExerciseZoomCapture(regionForm, false, overlay =>
+            {
+                OverlayZoomMouse(overlay, "OnMouseDown", 570, 410);
+                OverlayZoomMouse(overlay, "OnMouseMove", 220, 130);
+                OverlayZoomMouse(overlay, "OnMouseUp", 220, 130);
+                Assert(overlay.ConfirmRect == new Rectangle(220, 130, 350, 280) && regionForm.Result is null,
+                    "reverse drag enters confirmation without producing output");
+                CommitZoomOverlay(overlay);
+            });
+            using var crop = expected.Clone(new Rectangle(220, 130, 350, 280), PixelFormat.Format32bppArgb);
+            Assert(regionCapture is not null && EqualZoomBitmaps(crop, regionCapture),
+                "confirmed region crops precisely the locked magnified view, smooth=" + smooth);
         }
+        CheckZoomConfirmationFlow(source, app, renderDirectory);
 
         foreach (var action in new[] { Forms.Keys.Escape, Forms.Keys.Control | Forms.Keys.C, Forms.Keys.Control | Forms.Keys.S })
         {
@@ -118,25 +129,12 @@ internal static partial class Program
         using (var form = NewZoomForm(source, new AppSettings { ZoomAnimate = false }))
         {
             _ = form.Handle;
-            ZoomKey(form, Forms.Keys.C);
-            ZoomMouse(form, "OnMouseDown", Forms.MouseButtons.Left, 50, 50);
-            ZoomMouse(form, "OnMouseUp", Forms.MouseButtons.Left, 50, 50);
-            Assert(form.Result is null && !form.IsDisposed, "an empty region keeps selection open without producing a fake capture");
-            ZoomKey(form, Forms.Keys.C);
-            Assert(!((ZoomViewport)Field(form, "_viewport")).IsSelecting, "C returns from region selection to panning");
-            ZoomMouse(form, "OnMouseDown", Forms.MouseButtons.Right, 50, 50);
-            Assert(form.IsDisposed && form.Result is null, "right-click exits without capturing");
-        }
-
-        using (var form = NewZoomForm(source, new AppSettings { ZoomAnimate = false }))
-        {
-            _ = form.Handle;
             SetField(form, "_rendererUnavailable", true);
             var viewport = (ZoomViewport)Field(form, "_viewport");
             using var reference = viewport.Render(source, true);
-            ZoomKey(form, Forms.Keys.C);
-            using var frozenView = form.RenderView();
-            Assert(EqualZoomBitmaps(reference, frozenView), "systems without Direct2D preserve the locked capture using the CPU renderer");
+            using var capture = ExerciseZoomCapture(form, true, overlay => CommitZoomOverlay(overlay));
+            Assert(capture is not null && EqualZoomBitmaps(reference, capture),
+                "systems without Direct2D use the identical frozen CPU frame in standard confirmation");
         }
 
         using (var largeSource = new Bitmap(3840, 2160))
@@ -205,11 +203,7 @@ internal static partial class Program
                 _ = form.Handle;
                 using var preview = form.RenderView(includeChrome: true);
                 preview.Save(Path.Combine(renderDirectory, "zoom-view-" + language + ".png"));
-                ZoomKey(form, Forms.Keys.C);
-                ZoomMouse(form, "OnMouseDown", Forms.MouseButtons.Left, 240, 170);
-                ZoomMouse(form, "OnMouseMove", Forms.MouseButtons.Left, 600, 360);
-                using var selectionPreview = form.RenderView(includeChrome: true);
-                selectionPreview.Save(Path.Combine(renderDirectory, "zoom-region-" + language + ".png"));
+
             }
         }
     }

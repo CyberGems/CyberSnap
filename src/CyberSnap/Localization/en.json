@@ -2481,5 +2481,8 @@
   "Zoom could not start": "Zoom could not start",
   "Zoom capture failed": "Zoom capture failed",
   "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, and Zoom.": "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, and Zoom.",
-  "Frozen screen magnification and capture.": "Frozen screen magnification and capture."
+  "Frozen screen magnification and capture.": "Frozen screen magnification and capture.",
+  "Press C or your capture hotkey to select a region, then adjust and annotate it before confirming. Enter opens confirmation for the full view.": "Press C or your capture hotkey to select a region, then adjust and annotate it before confirming. Enter opens confirmation for the full view.",
+  "Canceling selection or confirmation returns to the same Zoom view. Confirmed captures follow your usual output preferences, including optional Preview.": "Canceling selection or confirmation returns to the same Zoom view. Confirmed captures follow your usual output preferences, including optional Preview.",
+  "Wheel / + / -: zoom · C: select and annotate · Enter: confirm full view · Esc / right-click: exit": "Wheel / + / -: zoom · C: select and annotate · Enter: confirm full view · Esc / right-click: exit"
 }

@@ -623,9 +623,9 @@ public partial class App
         RunAfterPreviewChromeHidden(() => LaunchWithDelay(() => LaunchOverlayNow(initialMode)));
     }
 
-    private void LaunchOverlayNow(CaptureMode initialMode)
+    private void LaunchOverlayNow(CaptureMode initialMode, ZoomCaptureRequest? zoomCapture = null)
     {
-        var thread = new Thread(() =>
+        void RunOverlay()
         {
             Bitmap? screenshot = null;
             // Set when RegionSelected delegates to the Preview dialog. FormClosed skips
@@ -638,22 +638,24 @@ public partial class App
                 var s = _settingsService!.Settings;
 
                 bool showCursor = _settingsService!.Settings.ShowCursor;
-                var (bmp, bounds) = _settingsService.Settings.OverlayCaptureAllMonitors
-                    ? ScreenCapture.CaptureAllScreens(showCursor)
-                    : ScreenCapture.CaptureCurrentScreen(showCursor);
+                var (bmp, bounds) = zoomCapture is not null
+                    ? (zoomCapture.Frame, zoomCapture.Bounds)
+                    : _settingsService.Settings.OverlayCaptureAllMonitors
+                        ? ScreenCapture.CaptureAllScreens(showCursor)
+                        : ScreenCapture.CaptureCurrentScreen(showCursor);
                 screenshot = bmp;
                 var captureBounds = bounds;
 
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
-                var overlay = new RegionOverlayForm(
+                using var overlay = new RegionOverlayForm(
                     screenshot,
                     bounds,
                     initialMode,
-                    _settingsService!.Settings.WindowDetection,
+                    zoomCapture is null ? _settingsService!.Settings.WindowDetection : WindowDetectionMode.Off,
                     _settingsService.Settings.CenterSelectionAspectRatio)
                 {
                     ShowCrosshairGuides = _settingsService!.Settings.ShowCrosshairGuides,
-                    DetectWindows = _settingsService.Settings.DetectWindows,
+                    DetectWindows = zoomCapture is null && _settingsService.Settings.DetectWindows,
                     ShowCaptureMagnifier = _settingsService.Settings.ShowCaptureMagnifier,
                     AnnotationStrokeShadow = _settingsService.Settings.AnnotationStrokeShadow,
                     StrokeWidth = _settingsService.Settings.StrokeWidth,
@@ -661,6 +663,16 @@ public partial class App
                     UiScale = _settingsService.Settings.UiScale,
                     ConfirmRegionBeforeCapture = true // Permanent confirm for area capture redesign
                 };
+                void MarkCommitted()
+                {
+                    if (zoomCapture is null) return;
+                    zoomCapture.Commit();
+                    Volatile.Write(ref _isZooming, 0);
+                }
+                void EndOverlayLoop()
+                {
+                    if (zoomCapture is null) System.Windows.Forms.Application.ExitThread();
+                }
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
                 overlay.SetConfirmPillShowLabels(_settingsService.Settings.ConfirmPillShowLabels);
                 overlay.SetConfirmDoneShowLabel(_settingsService.Settings.ConfirmDoneShowLabel);
@@ -765,8 +777,8 @@ public partial class App
                     // with permanent confirm the active tool may have been switched to an
                     // annotation (Arrow/Rect/…) before committing, so the old mode filter was
                     // skipping valid region selections and leaving a stale larger rect.
-                    if (overlay.ActiveMode is CaptureMode.Rectangle or CaptureMode.Center
-                        || Models.ToolDef.IsAnnotationTool(overlay.ActiveMode))
+                    if (zoomCapture is null && (overlay.ActiveMode is CaptureMode.Rectangle or CaptureMode.Center
+                        || Models.ToolDef.IsAnnotationTool(overlay.ActiveMode)))
                         LastCaptureArea.PersistFromOverlaySelection(_settingsService!.Settings, _settingsService, sel, captureBounds);
 
                     var commitAction = overlay.PendingCommitAction;
@@ -778,6 +790,7 @@ public partial class App
                     UI.PopupWindowHelper.SetMonitorHintPoint(monitorPoint);
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
+                    MarkCommitted();
 
                     // Decide delegate ownership of the capture session BEFORE closing the
                     // overlay: FormClosed fires synchronously inside Close(). When the Preview
@@ -790,7 +803,7 @@ public partial class App
                         outcomeDelegatedToPreview = true;
 
                     overlay.Close();
-                    System.Windows.Forms.Application.ExitThread();
+                    EndOverlayLoop();
 
                     Dispatcher.BeginInvoke(() =>
                     {
@@ -837,16 +850,18 @@ public partial class App
                         captureBounds.X + sel.Right, captureBounds.Y + sel.Bottom));
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
+                    MarkCommitted();
                     overlay.Close();
-                    System.Windows.Forms.Application.ExitThread();
+                    EndOverlayLoop();
                     HandleOcrResult(cropped);
                 };
 
                 overlay.ImmediateCaptureRequested += actionId =>
                 {
+                    MarkCommitted();
                     // Overlay already closed itself; end its message loop, then run the action on
                     // the UI thread. These capture modes are self-contained (no region select).
-                    System.Windows.Forms.Application.ExitThread();
+                    EndOverlayLoop();
                     Dispatcher.BeginInvoke(() =>
                     {
                         switch (actionId)
@@ -866,6 +881,7 @@ public partial class App
 
                 overlay.ScrollRegionSelected += sel =>
                 {
+                    MarkCommitted();
                     // Keep the capture slot claimed while the scrolling form is being
                     // created on its own STA thread. FormClosed fires synchronously from
                     // overlay.Close(), so releasing here would allow a second capture
@@ -875,7 +891,7 @@ public partial class App
                     UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(
                         captureBounds.X + sel.Right, captureBounds.Y + sel.Bottom));
                     overlay.Close();
-                    System.Windows.Forms.Application.ExitThread();
+                    EndOverlayLoop();
                     Dispatcher.BeginInvoke(() => LaunchScrollingCapture(sel));
                 };
 
@@ -887,8 +903,9 @@ public partial class App
                         captureBounds.X + sel.Right, captureBounds.Y + sel.Bottom));
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var scanned = ScreenCapture.CropRegion(annotated, sel);
+                    MarkCommitted();
                     overlay.Close();
-                    System.Windows.Forms.Application.ExitThread();
+                    EndOverlayLoop();
                     Dispatcher.BeginInvoke(() =>
                     {
                         try
@@ -945,13 +962,14 @@ public partial class App
 
                 overlay.RecordingRequested += fmt =>
                 {
+                    MarkCommitted();
                     // ConfirmRect is Rectangle.Empty when recording is requested from the
                     // toolbar before any area has been confirmed; treat it as "no selection"
                     // so RecordingForm starts in area-selection mode instead of PreRecording.
                     var rect = overlay.ConfirmRect;
                     overlay.Hide();
                     overlay.Close();
-                    System.Windows.Forms.Application.ExitThread();
+                    EndOverlayLoop();
                     Dispatcher.BeginInvoke(() =>
                         LaunchGifRecording(fmt, rect.IsEmpty ? (System.Drawing.Rectangle?)null : rect));
                 };
@@ -964,6 +982,7 @@ public partial class App
 
                 overlay.StandaloneColorPickerRequested += () =>
                 {
+                    MarkCommitted();
                     // Close the frozen overlay first so the standalone tool screenshots the
                     // live desktop. Do not ExitThread here — Close() ends Application.Run,
                     // and FormClosed launches the tool after this window is actually gone.
@@ -974,6 +993,7 @@ public partial class App
 
                 overlay.StandaloneOcrRequested += () =>
                 {
+                    MarkCommitted();
                     // Close the frozen overlay first so standalone OCR captures the
                     // live desktop and uses the same flow as its dedicated hotkey/tray action.
                     handoffStandaloneOcr = true;
@@ -983,6 +1003,7 @@ public partial class App
 
                 overlay.StandaloneScanRequested += () =>
                 {
+                    MarkCommitted();
                     // Close the frozen overlay first so standalone scanning captures the
                     // live desktop and uses the same flow as its dedicated hotkey/tray action.
                     handoffStandaloneScan = true;
@@ -992,6 +1013,7 @@ public partial class App
 
                 overlay.StandaloneRulerRequested += () =>
                 {
+                    MarkCommitted();
                     handoffStandaloneRuler = true;
                     overlay.Hide();
                     overlay.Close();
@@ -999,6 +1021,7 @@ public partial class App
 
                 overlay.StandaloneZoomRequested += () =>
                 {
+                    MarkCommitted();
                     handoffStandaloneZoom = true;
                     overlay.Hide();
                     overlay.Close();
@@ -1006,6 +1029,7 @@ public partial class App
 
                 overlay.ColorPicked += hex =>
                 {
+                    MarkCommitted();
                     Dispatcher.BeginInvoke(() =>
                     {
                         SoundService.PlayColorSound();
@@ -1026,13 +1050,14 @@ public partial class App
                             () => _settingsService.Settings.HasFirstColorPicker = true, "First color pick", "picker", d => _settingsService.Settings.FirstColorPickerAt = d);
                     });
                     overlay.Close();
-                    System.Windows.Forms.Application.ExitThread();
+                    EndOverlayLoop();
                 };
 
                 overlay.FormClosed += (_, _) =>
                 {
+                    if (zoomCapture is not null && !zoomCapture.IsCommitted) return;
                     var mode = overlay.CurrentMode;
-                    if (mode is CaptureMode.Rectangle or CaptureMode.Center)
+                    if (zoomCapture is null && (mode is CaptureMode.Rectangle or CaptureMode.Center))
                     {
                         Dispatcher.BeginInvoke(() =>
                         {
@@ -1065,26 +1090,33 @@ public partial class App
 
                 try
                 {
-                    System.Windows.Forms.Application.Run(overlay);
+                    if (zoomCapture is null) System.Windows.Forms.Application.Run(overlay);
+                    else zoomCapture.ShowDialog(overlay);
                 }
                 finally
                 {
-                    screenshot.Dispose();
+                    if (zoomCapture is null) screenshot.Dispose();
                 }
             }
             catch (Exception ex)
             {
-                screenshot?.Dispose();
+                if (zoomCapture is null) screenshot?.Dispose();
                 Dispatcher.BeginInvoke(() =>
                 {
-                    ResetCapturing();
+                    if (zoomCapture is null || zoomCapture.IsCommitted) ResetCapturing();
                     ShowCaptureProcessingFailed(
                         "Capture error",
                         "CyberSnap could not start the capture overlay. Try again, or check capture settings.",
                         ex.Message);
                 });
             }
-        });
+        }
+        if (zoomCapture is not null)
+        {
+            RunOverlay();
+            return;
+        }
+        var thread = new Thread(RunOverlay);
         thread.SetApartmentState(ApartmentState.STA);
         thread.IsBackground = true;
         thread.Start();

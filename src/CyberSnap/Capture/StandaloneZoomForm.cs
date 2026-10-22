@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
@@ -18,18 +19,22 @@ public sealed class StandaloneZoomForm : Form
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 16 };
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly Font _hudFont;
-    private readonly string _viewHelp, _regionHelp;
+    private readonly string _viewHelp;
     private readonly Rectangle _screenBounds;
-    private Bitmap? _lockedFrame;
     private ZoomRenderer? _renderer;
     private bool _rendererUnavailable;
-    private Point? _dragStart;
-    private Rectangle _selection;
+    private volatile bool _capturePending;
+    private ZoomCaptureRequest? _activeCapture;
+    private Point? _resumePointer;
+    private bool _waitForEscapeRelease;
     private double _lastTick;
     private bool _completed;
     private bool _closing, _ownsPointerClip;
     private Rectangle _previousPointerClip;
 
+    public event Action<ZoomCaptureRequest>? CaptureRequested;
+    public bool CapturePending => _capturePending;
+    public bool CaptureOutputDelegated { get; private set; }
     public Bitmap? Result { get; private set; }
     public RegionOverlayForm.ConfirmCommitAction CommitAction { get; private set; }
     public Point MonitorPoint => new(Bounds.X + Bounds.Width / 2, Bounds.Y + Bounds.Height / 2);
@@ -56,12 +61,12 @@ public sealed class StandaloneZoomForm : Form
         AccessibleName = Text;
         Cursor = Cursors.Default;
         _hudFont = UiChrome.ChromeFont(10);
-        _viewHelp = LocalizationService.Translate("Wheel / + / -: zoom · C: select region · Enter: capture view · Esc / right-click: exit");
-        _regionHelp = LocalizationService.Translate("Drag to capture a region · C: return to Zoom · Esc / right-click: exit");
+        _viewHelp = LocalizationService.Translate("Wheel / + / -: zoom · C: select and annotate · Enter: confirm full view · Esc / right-click: exit");
         _timer.Tick += (_, _) =>
         {
             double now = _clock.Elapsed.TotalSeconds;
-            _viewport.SetPointer(PointToClient(System.Windows.Forms.Cursor.Position));
+            UpdatePointer(PointToClient(System.Windows.Forms.Cursor.Position));
+            if (_waitForEscapeRelease && (GetAsyncKeyState((int)Keys.Escape) & 0x8000) == 0) _waitForEscapeRelease = false;
             if (_viewport.Advance(now - _lastTick, _animate)) Invalidate();
             _lastTick = now;
         };
@@ -75,6 +80,12 @@ public sealed class StandaloneZoomForm : Form
         Bounds = _screenBounds;
         Activate();
         Focus();
+        ResumeInput();
+    }
+
+    private void ResumeInput()
+    {
+        if (_ownsPointerClip) return;
         _previousPointerClip = System.Windows.Forms.Cursor.Clip;
         System.Windows.Forms.Cursor.Clip = Bounds;
         _ownsPointerClip = true;
@@ -85,18 +96,19 @@ public sealed class StandaloneZoomForm : Form
     protected override void OnDeactivate(EventArgs e)
     {
         base.OnDeactivate(e);
-        if (_ownsPointerClip && !_closing) Close();
+        if (_ownsPointerClip && !_closing && !_capturePending) Close();
     }
 
     protected override void OnDpiChanged(DpiChangedEventArgs e)
     {
         base.OnDpiChanged(e);
-        if (_ownsPointerClip && !_closing) Close();
+        if (_ownsPointerClip && !_closing && !_capturePending) Close();
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _closing = true;
+        if (_activeCapture is { IsCommitted: false }) _activeCapture.Cancel();
         ReleasePointer();
         base.OnFormClosing(e);
     }
@@ -125,8 +137,7 @@ public sealed class StandaloneZoomForm : Form
             try { _renderer!.Paint(_viewport, _smooth, DrawGpuChrome); return; }
             catch (Exception ex) { DiscardRenderer(ex); }
         }
-        if (_lockedFrame is not null) e.Graphics.DrawImageUnscaled(_lockedFrame, 0, 0);
-        else _viewport.Draw(e.Graphics, _original, _smooth);
+        _viewport.Draw(e.Graphics, _original, _smooth);
         DrawGdiChrome(e.Graphics);
         base.OnPaint(e);
     }
@@ -151,7 +162,7 @@ public sealed class StandaloneZoomForm : Form
         DoubleBuffered = true;
     }
 
-    /// <summary>Read the same rendered surface shown on screen, optionally including the help/selection chrome.</summary>
+    /// <summary>Read the same rendered surface shown on screen, optionally including the help chrome.</summary>
     public Bitmap RenderView(bool includeChrome = false)
     {
         if (EnsureRenderer())
@@ -159,7 +170,7 @@ public sealed class StandaloneZoomForm : Form
             try { return _renderer!.Snapshot(_viewport, _smooth, includeChrome ? DrawGpuChrome : null); }
             catch (Exception ex) { DiscardRenderer(ex); }
         }
-        var result = _lockedFrame is null ? _viewport.Render(_original, _smooth) : (Bitmap)_lockedFrame.Clone();
+        var result = _viewport.Render(_original, _smooth);
         if (includeChrome)
         {
             using var graphics = Graphics.FromImage(result);
@@ -168,38 +179,10 @@ public sealed class StandaloneZoomForm : Form
         return result;
     }
 
-    private void DrawGdiChrome(Graphics graphics)
-    {
-        if (_viewport.IsSelecting)
-        {
-            using var shade = new SolidBrush(Color.FromArgb(85, Color.Black));
-            using var region = new Region(ClientRectangle);
-            if (!_selection.IsEmpty) region.Exclude(_selection);
-            graphics.FillRegion(shade, region);
-            if (_selection.Width > 0 && _selection.Height > 0)
-            {
-                using var outline = new Pen(Accent, 2);
-                graphics.DrawRectangle(outline, _selection);
-            }
-        }
-        DrawHud(graphics);
-    }
+    private void DrawGdiChrome(Graphics graphics) => DrawHud(graphics);
 
     private void DrawGpuChrome(ZoomRenderer renderer)
     {
-        if (_viewport.IsSelecting)
-        {
-            var shade = Color.FromArgb(85, Color.Black);
-            if (_selection.IsEmpty) renderer.Fill(ClientRectangle, shade);
-            else
-            {
-                renderer.Fill(new Rectangle(0, 0, ClientSize.Width, _selection.Top), shade);
-                renderer.Fill(new Rectangle(0, _selection.Bottom, ClientSize.Width, ClientSize.Height - _selection.Bottom), shade);
-                renderer.Fill(new Rectangle(0, _selection.Top, _selection.Left, _selection.Height), shade);
-                renderer.Fill(new Rectangle(_selection.Right, _selection.Top, ClientSize.Width - _selection.Right, _selection.Height), shade);
-                renderer.Outline(_selection, Accent, 2);
-            }
-        }
         var (text, rect, padding) = HudLayout();
         renderer.Fill(rect, Color.FromArgb(240, Theme.BgSecondary.R, Theme.BgSecondary.G, Theme.BgSecondary.B));
         renderer.Outline(rect, Accent);
@@ -212,7 +195,7 @@ public sealed class StandaloneZoomForm : Form
     private (string Text, Rectangle Bounds, int Padding) HudLayout()
     {
         float scale = DeviceDpi / 96f;
-        string text = $"{_viewport.Zoom:0.##}×   " + (_viewport.IsSelecting ? _regionHelp : _viewHelp);
+        string text = $"{_viewport.Zoom:0.##}×   " + _viewHelp;
         int padding = (int)(12 * scale);
         var measured = TextRenderer.MeasureText(text, _hudFont,
             new Size(Math.Max(100, ClientSize.Width - padding * 4), 0), TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
@@ -247,13 +230,14 @@ public sealed class StandaloneZoomForm : Form
     {
         e.Handled = true;
         e.SuppressKeyPress = true;
-        if (e.KeyCode == Keys.Escape) Close();
+        if (_capturePending || _closing) return;
+        if (e.KeyCode == Keys.Escape) { if (!_waitForEscapeRelease) Close(); }
         else if (e.Control && e.KeyCode is Keys.C or Keys.S)
             Complete(new Rectangle(Point.Empty, _viewport.Size), e.KeyCode == Keys.C
                 ? RegionOverlayForm.ConfirmCommitAction.Copy : RegionOverlayForm.ConfirmCommitAction.Save);
-        else if (e.KeyCode == Keys.C) ToggleSelection();
+        else if (e.KeyCode == Keys.C) BeginCapture(false);
         else if (e.KeyCode == Keys.Enter)
-            Complete(_viewport.IsSelecting ? _selection : new Rectangle(Point.Empty, _viewport.Size));
+            BeginCapture(true);
         else if (e.KeyCode is Keys.Add or Keys.Oemplus or Keys.Up) _viewport.ChangeZoom(1, _animate);
         else if (e.KeyCode is Keys.Subtract or Keys.OemMinus or Keys.Down) _viewport.ChangeZoom(-1, _animate);
         else { e.Handled = false; e.SuppressKeyPress = false; }
@@ -261,63 +245,76 @@ public sealed class StandaloneZoomForm : Form
         base.OnKeyDown(e);
     }
 
-    private void ToggleSelection()
+    /// <summary>Temporarily lends the clean viewport to the regular modal capture flow.</summary>
+    public void BeginCapture(bool fullView, CaptureMode selectionMode = CaptureMode.Rectangle)
     {
-        _dragStart = null;
-        _selection = Rectangle.Empty;
-        Capture = false;
-        if (_viewport.IsSelecting)
+        if (_capturePending || _completed || _closing) return;
+        _capturePending = true;
+        _viewport.BeginSelection();
+        _timer.Stop();
+        ReleasePointer();
+        try
         {
-            _viewport.EndSelection();
-            _lockedFrame?.Dispose();
-            _lockedFrame = null;
-            Cursor = Cursors.Default;
+            using var frame = RenderView();
+            if (_includeCursor) ScreenCapture.DrawCursor(frame, _screenBounds);
+            var request = new ZoomCaptureRequest(frame, _screenBounds, fullView, selectionMode);
+            _activeCapture = request;
+            Hide();
+            CaptureRequested?.Invoke(request);
+            if (request.IsCommitted)
+            {
+                CaptureOutputDelegated = true;
+                _completed = true;
+                Close();
+            }
         }
-        else
+        finally
         {
-            _viewport.BeginSelection();
-            if (!EnsureRenderer()) _lockedFrame = _viewport.Render(_original, _smooth);
-            Cursor = Cursors.Cross;
+            _activeCapture = null;
+            _capturePending = false;
+            if (!_closing && !IsDisposed)
+            {
+                _viewport.EndSelection();
+                _resumePointer = PointToClient(System.Windows.Forms.Cursor.Position);
+                _waitForEscapeRelease = (GetAsyncKeyState((int)Keys.Escape) & 0x8000) != 0;
+                Show();
+                Bounds = _screenBounds;
+                Activate();
+                Focus();
+                ResumeInput();
+                _resumePointer = PointToClient(System.Windows.Forms.Cursor.Position);
+                Invalidate();
+            }
         }
-        Invalidate();
     }
+
+    private void UpdatePointer(Point point)
+    {
+        // Moving the pointer to select/annotate must not pan the restored viewport on cancellation.
+        if (_resumePointer == point) return;
+        _resumePointer = null;
+        _viewport.SetPointer(point);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
-        if (e.Button == MouseButtons.Right) { Close(); return; }
-        if (e.Button == MouseButtons.Left && _viewport.IsSelecting)
-        {
-            _dragStart = e.Location;
-            _selection = Rectangle.Empty;
-            Capture = true;
-        }
+        if (e.Button == MouseButtons.Right && !_capturePending) { Close(); return; }
         base.OnMouseDown(e);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
-        _viewport.SetPointer(e.Location);
-        if (_dragStart is Point start) _selection = _viewport.Selection(start, e.Location);
-        if (_viewport.IsSelecting) Invalidate();
+        UpdatePointer(e.Location);
         base.OnMouseMove(e);
-    }
-
-    protected override void OnMouseUp(MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left && _dragStart is Point start)
-        {
-            _selection = _viewport.Selection(start, e.Location);
-            _dragStart = null;
-            Capture = false;
-            Complete(_selection);
-        }
-        base.OnMouseUp(e);
     }
 
     private void Complete(Rectangle region, RegionOverlayForm.ConfirmCommitAction action = RegionOverlayForm.ConfirmCommitAction.Default)
     {
         region.Intersect(new Rectangle(Point.Empty, _viewport.Size));
-        if (_completed || region.Width < 2 || region.Height < 2) return;
+        if (_completed || _capturePending || _closing || region.Width < 2 || region.Height < 2) return;
         using var view = RenderView();
         if (_includeCursor && !_viewport.IsSelecting) ScreenCapture.DrawCursor(view, Bounds);
         Result = view.Clone(region, PixelFormat.Format32bppArgb);
@@ -341,7 +338,6 @@ public sealed class StandaloneZoomForm : Form
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= DisplaySettingsChanged;
             _timer.Dispose();
             _original.Dispose();
-            _lockedFrame?.Dispose();
             _renderer?.Dispose();
             Result?.Dispose();
             _hudFont.Dispose();

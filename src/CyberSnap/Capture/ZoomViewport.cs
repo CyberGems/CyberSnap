@@ -65,7 +65,12 @@ public sealed class ZoomViewport
 
     // Freeze the exact displayed transform, including an animation partway through its transition.
     public void BeginSelection() => IsSelecting = true;
-    public void EndSelection() => IsSelecting = false;
+    public void EndSelection()
+    {
+        IsSelecting = false;
+        TargetZoom = Zoom;
+        _targetPointer = _pointer;
+    }
 
     public Rectangle Selection(Point start, Point end)
     {
