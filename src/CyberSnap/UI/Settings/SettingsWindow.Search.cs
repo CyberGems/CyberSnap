@@ -1000,6 +1000,7 @@ public partial class SettingsWindow
             "zoominitiallevel"         => ZoomInitialLevelCombo,
             "zoomsmoothimage"          => ZoomSmoothImageCheck,
             "zoomanimate"              => ZoomAnimateCheck,
+            "zoomshowhelpbar"          => ZoomShowHelpBarCheck,
             "colordetailcopyformat"     => ColorCopyFormatCombo,
             "colordetailincludehash"    => ColorIncludeHashCheck,
             "savestandalonetohistory"   => SaveStandaloneToHistoryCheck,

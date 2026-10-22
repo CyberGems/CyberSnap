@@ -21,7 +21,7 @@ internal static partial class Program
         double originalScale = UiScale.Current;
         var toolsPage = SettingsSchemaCatalog.Pages.Single(page => page.Key == "tools");
         var toolBindings = toolsPage.Sections.SelectMany(section => section.Items).Select(item => item.BindingPath).ToArray();
-        Assert(new[] { "OcrLanguageTag", "ColorDetailCopyFormat", "ScanShowResultWindow", "RulerCaptureAllScreens", "ZoomInitialLevel", "ZoomSmoothImage", "ZoomAnimate", "SaveStandaloneToHistory" }
+        Assert(new[] { "OcrLanguageTag", "ColorDetailCopyFormat", "ScanShowResultWindow", "RulerCaptureAllScreens", "ZoomInitialLevel", "ZoomSmoothImage", "ZoomAnimate", "ZoomShowHelpBar", "SaveStandaloneToHistory" }
             .All(toolBindings.Contains), "the settings catalog routes all five tools and their shared history to Tools");
         Assert(!SettingsSchemaCatalog.Pages.Where(page => page.Key != "tools").SelectMany(page => page.Sections)
             .SelectMany(section => section.Items).Any(item => toolBindings.Contains(item.BindingPath)),
@@ -84,7 +84,7 @@ internal static partial class Program
                             "ocr" => new[] { "OcrLanguageCombo", "TranslateFromCombo", "TranslateToCombo" },
                             "picker" => new[] { "AutoCopyColorCheck", "ColorCopyFormatCombo", "ColorIncludeHashCheck" },
                             "qr" => new[] { "AutoCopyScanCheck", "ScanShowResultWindowCheck" },
-                            "zoom" => new[] { "ZoomInitialLevelCombo", "ZoomSmoothImageCheck", "ZoomAnimateCheck" },
+                            "zoom" => new[] { "ZoomInitialLevelCombo", "ZoomSmoothImageCheck", "ZoomAnimateCheck", "ZoomShowHelpBarCheck" },
                             _ => new[] { "RulerCaptureAllScreensCheck", "RulerContextMenuEnabledCheck" }
                         })
                         {
@@ -201,11 +201,13 @@ internal static partial class Program
             Element<ComboBox>(config, "ZoomInitialLevelCombo").SelectedIndex = 6;
             Element<CheckBox>(config, "ZoomSmoothImageCheck").IsChecked = false;
             Element<CheckBox>(config, "ZoomAnimateCheck").IsChecked = false;
+            Assert(Element<CheckBox>(config, "ZoomShowHelpBarCheck").IsChecked == true, "Tools loads the enabled help-bar default: " + language);
+            Element<CheckBox>(config, "ZoomShowHelpBarCheck").IsChecked = false;
             using (var zoomReload = new SettingsService(path))
             {
                 zoomReload.Load();
                 Assert(zoomReload.Settings.ZoomInitialLevel == 2.75 && !zoomReload.Settings.ZoomSmoothImage
-                    && !zoomReload.Settings.ZoomAnimate, "Zoom controls persist their actual selections: " + language);
+                    && !zoomReload.Settings.ZoomAnimate && !zoomReload.Settings.ZoomShowHelpBar, "Zoom controls persist their actual selections: " + language);
             }
             Element<CheckBox>(config, "RulerCaptureAllScreensCheck").IsChecked = false;
             Element<CheckBox>(config, "RulerContextMenuEnabledCheck").IsChecked = true;
@@ -225,7 +227,7 @@ internal static partial class Program
 
     private static void CheckToolSearchNavigation(SettingsWindow window, string language)
     {
-        foreach (var (label, panel) in new[] { ("Favorite format", "PickerToolPanel"), ("Show the QR & Barcode result window", "QrToolPanel"), ("Capture all screens", "RulerToolPanel"), ("OCR language", "OcrToolPanel"), ("Initial zoom level", "ZoomToolPanel"), ("Save tool results to Gallery", "ToolHistoryRow") })
+        foreach (var (label, panel) in new[] { ("Favorite format", "PickerToolPanel"), ("Show the QR & Barcode result window", "QrToolPanel"), ("Capture all screens", "RulerToolPanel"), ("OCR language", "OcrToolPanel"), ("Initial zoom level", "ZoomToolPanel"), ("Show help bar", "ZoomToolPanel"), ("Save tool results to Gallery", "ToolHistoryRow") })
         {
             Call(window, "SelectSettingsTab", "capture");
             Element<TextBox>(window, "SettingsSearchBox").Text = LocalizationService.Translate(label);
@@ -263,7 +265,7 @@ internal static partial class Program
         settings.OcrAutoCopyToClipboard, settings.OcrShowResultWindow, settings.TranslationModel,
         settings.ColorDetailAutoCopy, settings.ShowColorDetailWindow, settings.ColorDetailCopyFormat, settings.ColorDetailIncludeHash,
         settings.ScanAutoCopyToClipboard, settings.ScanShowResultWindow, settings.RulerCaptureAllScreens,
-        settings.RulerContextMenuEnabled, settings.SaveStandaloneToHistory, settings.ZoomInitialLevel, settings.ZoomSmoothImage, settings.ZoomAnimate);
+        settings.RulerContextMenuEnabled, settings.SaveStandaloneToHistory, settings.ZoomInitialLevel, settings.ZoomSmoothImage, settings.ZoomAnimate, settings.ZoomShowHelpBar);
 
     private static string TrayDescriptionText(TextBlock text)
         => string.Concat(text.Inlines.Select(inline => inline switch

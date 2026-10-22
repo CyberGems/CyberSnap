@@ -16,6 +16,7 @@ internal static partial class Program
         var appSettings = (SettingsService)ZoomAppField(app, "_settingsService")!;
         appSettings.Settings.HasSeenQuickStartGuide = true;
         CheckZoomToolIntegration(temp, renderDirectory);
+        Assert(new AppSettings().ZoomShowHelpBar, "the Zoom help bar is enabled by default");
         var size = new DrawingSize(800, 600);
         Assert(ZoomViewport.NormalizeZoom(double.NaN) == 2 && ZoomViewport.NormalizeZoom(double.PositiveInfinity) == 2
             && ZoomViewport.NormalizeZoom(0) == 1.25 && ZoomViewport.NormalizeZoom(10) == 4,
@@ -77,6 +78,7 @@ internal static partial class Program
             var viewport = (ZoomViewport)Field(form, "_viewport");
             using var expected = form.RenderView();
             using var displayed = form.RenderView(includeChrome: true);
+            Assert(!EqualZoomBitmaps(expected, displayed), "the default Zoom view includes its help bar");
             Assert(!(bool)Field(form, "_rendererUnavailable"), "the Direct2D rendering and readback path is available");
             if (!smooth)
             {
@@ -114,6 +116,17 @@ internal static partial class Program
         }
         CheckZoomConfirmationFlow(source, app, renderDirectory);
         CheckZoomTransitionContinuity(source, renderDirectory);
+
+        foreach (bool cpu in new[] { false, true })
+        {
+            using var form = NewZoomForm(source, new AppSettings { ZoomAnimate = false, ZoomShowHelpBar = false });
+            if (cpu) SetField(form, "_rendererUnavailable", true);
+            using var clean = form.RenderView();
+            using var displayed = form.RenderView(includeChrome: true);
+            Assert(EqualZoomBitmaps(clean, displayed), "hiding the help bar leaves only the enlarged image: CPU=" + cpu);
+            ZoomKey(form, Forms.Keys.Add);
+            Assert(((ZoomViewport)Field(form, "_viewport")).Zoom > 2, "Zoom shortcuts remain active when the help bar is hidden");
+        }
 
         foreach (var action in new[] { Forms.Keys.Escape, Forms.Keys.Control | Forms.Keys.C, Forms.Keys.Control | Forms.Keys.S })
         {
@@ -169,13 +182,14 @@ internal static partial class Program
             settings.Settings.ZoomInitialLevel = 2.75;
             settings.Settings.ZoomSmoothImage = false;
             settings.Settings.ZoomAnimate = false;
+            settings.Settings.ZoomShowHelpBar = false;
             settings.Settings.SetToolHotkey("_standaloneZoom", 6, 0x5A);
             settings.Save(); settings.FlushPendingWrites();
         }
         using (var settings = new SettingsService(settingsPath))
         {
             settings.Load();
-            Assert(settings.Settings.ZoomInitialLevel == 2.75 && !settings.Settings.ZoomSmoothImage && !settings.Settings.ZoomAnimate
+            Assert(settings.Settings.ZoomInitialLevel == 2.75 && !settings.Settings.ZoomSmoothImage && !settings.Settings.ZoomAnimate && !settings.Settings.ZoomShowHelpBar
                 && settings.Settings.GetToolHotkey("_standaloneZoom") == (6u, 0x5Au), "Zoom preferences and its global hotkey survive a reload");
             settings.Settings.ResetToDefaultHotkeys();
             Assert(settings.Settings.GetToolHotkey("_standaloneZoom") == (0u, 0u), "resetting hotkeys clears Zoom without introducing a global conflict");

@@ -27,6 +27,7 @@ public partial class App
                 ZoomInitialLevel = settings.ZoomInitialLevel,
                 ZoomSmoothImage = settings.ZoomSmoothImage,
                 ZoomAnimate = settings.ZoomAnimate && !settings.DisableAnimations,
+                ZoomShowHelpBar = settings.ZoomShowHelpBar,
                 ShowCursor = settings.ShowCursor
             };
             RunAfterPreviewChromeHidden(() =>

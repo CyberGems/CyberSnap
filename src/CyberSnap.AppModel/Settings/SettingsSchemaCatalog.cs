@@ -149,6 +149,7 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("zoom_initial", "Initial zoom level", SettingsValueKind.Number, "Freeze the monitor under the pointer and start at this magnification.", "ZoomInitialLevel"),
                         new SettingDefinition("zoom_smooth", "Smooth the enlarged image", SettingsValueKind.Toggle, "Soften enlarged edges. Disable for sharp individual pixels.", "ZoomSmoothImage"),
                         new SettingDefinition("zoom_animate", "Animate zoom changes", SettingsValueKind.Toggle, "Ease into the initial zoom and changes made with the wheel or keyboard.", "ZoomAnimate"),
+                        new SettingDefinition("zoom_help", "Show help bar", SettingsValueKind.Toggle, "Show the zoom level and keyboard shortcuts while Zoom is active.", "ZoomShowHelpBar"),
                     ]),
                 new SettingsSectionDefinition("tool_history", "Tool history", "Shared preferences for tool results.",
                     [

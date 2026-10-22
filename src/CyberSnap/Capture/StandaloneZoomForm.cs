@@ -15,7 +15,7 @@ public sealed class StandaloneZoomForm : Form
 {
     private readonly Bitmap _original;
     private readonly ZoomViewport _viewport;
-    private readonly bool _smooth, _animate, _includeCursor;
+    private readonly bool _smooth, _animate, _includeCursor, _showHelpBar;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 16 };
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly Font _hudFont;
@@ -47,6 +47,7 @@ public sealed class StandaloneZoomForm : Form
         _smooth = settings.ZoomSmoothImage;
         _animate = settings.ZoomAnimate && System.Windows.SystemParameters.ClientAreaAnimation;
         _includeCursor = settings.ShowCursor;
+        _showHelpBar = settings.ZoomShowHelpBar;
         _viewport = new ZoomViewport(frozenFrame.Size,
             new Point(screenPointer.X - screenBounds.X, screenPointer.Y - screenBounds.Y), settings.ZoomInitialLevel, _animate);
         AutoScaleMode = AutoScaleMode.None;
@@ -189,7 +190,7 @@ public sealed class StandaloneZoomForm : Form
 
     private void DrawGpuChrome(ZoomRenderer renderer)
     {
-        if (_capturePending) return;
+        if (_capturePending || !_showHelpBar) return;
         var (text, rect, padding) = HudLayout();
         renderer.Fill(rect, Color.FromArgb(240, Theme.BgSecondary.R, Theme.BgSecondary.G, Theme.BgSecondary.B));
         renderer.Outline(rect, Accent);
@@ -215,7 +216,7 @@ public sealed class StandaloneZoomForm : Form
 
     private void DrawHud(Graphics graphics)
     {
-        if (_capturePending) return;
+        if (_capturePending || !_showHelpBar) return;
         var (text, rect, padding) = HudLayout();
         using var background = new SolidBrush(Color.FromArgb(240, Theme.BgSecondary.R, Theme.BgSecondary.G, Theme.BgSecondary.B));
         using var border = new Pen(Accent);

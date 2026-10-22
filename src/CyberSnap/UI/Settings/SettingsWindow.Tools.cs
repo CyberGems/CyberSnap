@@ -105,6 +105,7 @@ public partial class SettingsWindow
             ZoomInitialLevelCombo.SelectedIndex = Math.Clamp((int)Math.Round((level - 1.25) / 0.25), 0, 11);
             ZoomSmoothImageCheck.IsChecked = settings.ZoomSmoothImage;
             ZoomAnimateCheck.IsChecked = settings.ZoomAnimate;
+            ZoomShowHelpBarCheck.IsChecked = settings.ZoomShowHelpBar;
         }
         finally { _suppressToolsPreferenceChange = previous; }
     }
@@ -129,6 +130,13 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressToolsPreferenceChange) return;
         UpdateToolsPreference("Animate zoom changes", _settingsService.Settings.ZoomAnimate, ZoomAnimateCheck.IsChecked == true,
             value => _settingsService.Settings.ZoomAnimate = value, _ => ApplyZoomControls());
+    }
+
+    private void ZoomShowHelpBar_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToolsPreferenceChange) return;
+        UpdateToolsPreference("Show help bar", _settingsService.Settings.ZoomShowHelpBar, ZoomShowHelpBarCheck.IsChecked == true,
+            value => _settingsService.Settings.ZoomShowHelpBar = value, _ => ApplyZoomControls());
     }
 
     private void ApplyColorFormatControls(AppSettings settings)

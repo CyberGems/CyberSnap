@@ -2808,6 +2808,17 @@
                                     <CheckBox x:Name="ZoomAnimateCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Animate zoom changes"
                                               Checked="ZoomAnimate_Changed" Unchecked="ZoomAnimate_Changed"/>
                                 </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Show help bar" Style="{StaticResource SettingTitle}" TextWrapping="Wrap" Services:LocalizationService.SourceText="Show help bar"/>
+                                        <TextBlock Text="Show the zoom level and keyboard shortcuts while Zoom is active." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Show the zoom level and keyboard shortcuts while Zoom is active."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ZoomShowHelpBarCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Show help bar"
+                                              Checked="ZoomShowHelpBar_Changed" Unchecked="ZoomShowHelpBar_Changed"/>
+                                </Grid>
                             </StackPanel>
                         </Border>
                         <TextBlock Text="Using Zoom" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Using Zoom"/>

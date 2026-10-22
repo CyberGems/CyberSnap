@@ -376,6 +376,7 @@ public sealed class AppSettings
     public double ZoomInitialLevel { get; set; } = 2;
     public bool ZoomSmoothImage { get; set; } = true;
     public bool ZoomAnimate { get; set; } = true;
+    public bool ZoomShowHelpBar { get; set; } = true;
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.CopyToClipboard;
     public bool OpenEditorAfterCapture { get; set; }
