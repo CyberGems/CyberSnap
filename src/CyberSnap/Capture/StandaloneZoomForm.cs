@@ -83,6 +83,12 @@ public sealed class StandaloneZoomForm : Form
         ResumeInput();
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        Native.Dwm.TrySetTransitionsForcedDisabled(Handle, true);
+    }
+
     private void ResumeInput()
     {
         if (_ownsPointerClip) return;
@@ -183,6 +189,7 @@ public sealed class StandaloneZoomForm : Form
 
     private void DrawGpuChrome(ZoomRenderer renderer)
     {
+        if (_capturePending) return;
         var (text, rect, padding) = HudLayout();
         renderer.Fill(rect, Color.FromArgb(240, Theme.BgSecondary.R, Theme.BgSecondary.G, Theme.BgSecondary.B));
         renderer.Outline(rect, Accent);
@@ -208,6 +215,7 @@ public sealed class StandaloneZoomForm : Form
 
     private void DrawHud(Graphics graphics)
     {
+        if (_capturePending) return;
         var (text, rect, padding) = HudLayout();
         using var background = new SolidBrush(Color.FromArgb(240, Theme.BgSecondary.R, Theme.BgSecondary.G, Theme.BgSecondary.B));
         using var border = new Pen(Accent);
@@ -257,9 +265,11 @@ public sealed class StandaloneZoomForm : Form
         {
             using var frame = RenderView();
             if (_includeCursor) ScreenCapture.DrawCursor(frame, _screenBounds);
-            var request = new ZoomCaptureRequest(frame, _screenBounds, fullView, selectionMode);
+            var request = new ZoomCaptureRequest(frame, _screenBounds, fullView, selectionMode, this);
             _activeCapture = request;
-            Hide();
+            // Keep the frozen viewport underneath the modal overlay. Hiding it here exposed
+            // the unscaled desktop while the capture window and its first frame were built.
+            Refresh();
             CaptureRequested?.Invoke(request);
             if (request.IsCommitted)
             {

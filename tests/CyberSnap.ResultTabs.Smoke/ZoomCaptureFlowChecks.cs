@@ -33,8 +33,8 @@ internal static partial class Program
         void Capture(ZoomCaptureRequest request)
         {
             Assert(request.FullView == fullView && request.Frame.Size == new Size(800, 600)
-                && request.Bounds == zoom.Bounds && zoom.CapturePending && !zoom.Visible,
-                "capture borrows the full clean viewport while Zoom is paused and hidden", false);
+                && request.Bounds == zoom.Bounds && zoom.CapturePending && zoom.Visible,
+                "capture borrows the clean viewport while Zoom remains visible as a frozen backdrop", false);
             using var overlay = new RegionOverlayForm(request.Frame, request.Bounds, request.SelectionMode,
                 WindowDetectionMode.Off) { DetectWindows = false, ConfirmRegionBeforeCapture = true };
             overlay.SetEnabledTools(null);
@@ -43,6 +43,7 @@ internal static partial class Program
                 using var annotated = overlay.RenderAnnotatedBitmap();
                 output = ScreenCapture.CropRegion(annotated, rect);
                 request.Commit();
+                Assert(!zoom.Visible, "committing removes the backdrop before output or live-tool handoff", false);
                 overlay.Close();
             };
             overlay.Shown += (_, _) => overlay.BeginInvoke((Action)(() => overlay.BeginInvoke((Action)(() =>
@@ -63,6 +64,7 @@ internal static partial class Program
         zoom.CaptureRequested += Capture;
         try
         {
+            if (!zoom.Visible) zoom.Show();
             if (selectionMode == CaptureMode.Rectangle) ZoomKey(zoom, fullView ? Forms.Keys.Enter : Forms.Keys.C);
             else zoom.BeginCapture(fullView, selectionMode);
         }
@@ -189,7 +191,7 @@ internal static partial class Program
                 var overlay = typeof(RegionOverlayForm).GetField("_currentOverlay", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null) as RegionOverlayForm;
                 if (overlay is { Visible: true } && zoom.CapturePending)
                 {
-                    Assert(!overlay.DetectWindows && !zoom.Visible && overlay.CurrentMode == mode,
+                    Assert(!overlay.DetectWindows && zoom.Visible && overlay.Owner == zoom && overlay.CurrentMode == mode,
                         "the actual App hotkey opens standard selection on the borrowed frame with live detection disabled: " + mode);
                     Call(overlay, "HandleEscapeKey");
                 }

@@ -113,6 +113,7 @@ internal static partial class Program
                 "confirmed region crops precisely the locked magnified view, smooth=" + smooth);
         }
         CheckZoomConfirmationFlow(source, app, renderDirectory);
+        CheckZoomTransitionContinuity(source, renderDirectory);
 
         foreach (var action in new[] { Forms.Keys.Escape, Forms.Keys.Control | Forms.Keys.C, Forms.Keys.Control | Forms.Keys.S })
         {
