@@ -179,7 +179,7 @@ internal static partial class Program
         zoom.CaptureRequested += request =>
         {
             requests++;
-            CallZoomApp(app, "LaunchOverlayNow", request.SelectionMode, request);
+            CallZoomApp(app, "LaunchOverlayNow", request.SelectionMode, request, null!);
         };
         zoom.Shown += (_, _) => zoom.BeginInvoke((Action)(() => CallZoomApp(app, "OnHotkeyPressed")));
         using var tick = new Forms.Timer { Interval = 30 };

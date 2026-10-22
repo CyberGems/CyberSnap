@@ -468,7 +468,8 @@ public static class ToolListBuilder
             ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
             ("_standaloneScan", "QR & Barcodes (Standalone)", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
             ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
-            ("_standaloneZoom", "Zoom", '\uE8A3')
+            ("_standaloneZoom", "Zoom", '\uE8A3'),
+            ("_standalonePin", "Pin to screen", '\uE718')
             // Future standalone tools follow the convention: ("_standalone{name}", "Label", icon)
         };
 

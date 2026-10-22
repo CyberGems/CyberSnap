@@ -113,7 +113,7 @@ public static class SettingsSchemaCatalog
         new(
             "tools",
             "Tools",
-            "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, and Zoom.",
+            "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, Zoom, and Pin.",
             [
                 new SettingsSectionDefinition(
                     "ocr_defaults",
@@ -143,6 +143,13 @@ public static class SettingsSchemaCatalog
                     [
                         new SettingDefinition("ruler_capture_all", "Capture all screens", SettingsValueKind.Toggle, "When enabled, the ruler's Enter capture takes all screens. When disabled, only the screen(s) the ruler occupies are captured. Applies only to multi-monitor setups.", "RulerCaptureAllScreens"),
                         new SettingDefinition("ruler_context_menu", "Enable context menu", SettingsValueKind.Toggle, "When disabled, right-click exits the ruler instead of showing the context menu.", "RulerContextMenuEnabled"),
+                    ]),
+                new SettingsSectionDefinition("pin", "Pin to screen", "Keep an image visible while you work.",
+                    [
+                        new SettingDefinition("pin_scale", "Initial image scale", SettingsValueKind.Number, "Large images are fitted to the monitor when opened.", "PinInitialScale"),
+                        new SettingDefinition("pin_smooth", "Smooth pinned images", SettingsValueKind.Toggle, "Soften enlarged edges in pinned images.", "PinSmoothImage"),
+                        new SettingDefinition("pin_top", "Keep pinned images on top", SettingsValueKind.Toggle, "Keep reference images above other windows.", "PinAlwaysOnTop"),
+                        new SettingDefinition("pin_capture", "Include pinned images in captures", SettingsValueKind.Toggle, "When disabled, CyberSnap hides pinned images from new captures.", "PinIncludeInCaptures"),
                     ]),
                 new SettingsSectionDefinition("zoom", "Zoom", "Frozen screen magnification and capture.",
                     [

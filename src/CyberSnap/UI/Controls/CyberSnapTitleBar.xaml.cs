@@ -196,11 +196,11 @@ public partial class CyberSnapTitleBar : UserControl
         AnnotationIcon.Opacity = 1.0;
 
         // About is a compact info window — no maximize (same idea as Toast / widget chrome).
-        // The color picker is a fixed tool popup: no minimize/maximize at all.
-        MaximizeBtn.Visibility = OwnerWindow is AboutWindow or ColorDetailWindow
+        // Fixed tool popups do not expose minimize/maximize actions.
+        MaximizeBtn.Visibility = OwnerWindow is AboutWindow or ColorDetailWindow or PinSourceWindow
             ? Visibility.Collapsed
             : Visibility.Visible;
-        MinimizeBtn.Visibility = OwnerWindow is ColorDetailWindow
+        MinimizeBtn.Visibility = OwnerWindow is ColorDetailWindow or PinSourceWindow
             ? Visibility.Collapsed
             : Visibility.Visible;
 
@@ -838,7 +838,7 @@ public partial class CyberSnapTitleBar : UserControl
 
         if (e.ClickCount == 2)
         {
-            if (OwnerWindow is not AboutWindow and not ColorDetailWindow)
+            if (OwnerWindow is not AboutWindow and not ColorDetailWindow and not PinSourceWindow)
                 ToggleMaximize();
             return;
         }
@@ -867,7 +867,7 @@ public partial class CyberSnapTitleBar : UserControl
 
     private void ToggleMaximize()
     {
-        if (OwnerWindow is not { } window || window is AboutWindow or ColorDetailWindow)
+        if (OwnerWindow is not { } window || window is AboutWindow or ColorDetailWindow or PinSourceWindow)
             return;
 
         window.WindowState = window.WindowState == WindowState.Maximized

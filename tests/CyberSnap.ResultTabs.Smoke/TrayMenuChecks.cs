@@ -81,11 +81,14 @@ internal static partial class Program
                         AssertVisible();
                         var tools = Element<System.Windows.Controls.Grid>(menu, "ToolsSection");
                         var zoom = Element<System.Windows.Controls.Button>(menu, "ZoomBtn");
-                        var zoomContent = (System.Windows.Controls.StackPanel)zoom.Content;
-                        var contentBounds = zoomContent.TransformToAncestor(zoom).TransformBounds(new Rect(zoomContent.RenderSize));
-                        Assert(zoom.ActualWidth >= tools.ActualWidth - 9
-                            && Math.Abs(contentBounds.Left + contentBounds.Width / 2 - zoom.ActualWidth / 2) < 1,
-                            "the last tool occupies a full-width row with its icon and label centered", false);
+                        var pin = Element<System.Windows.Controls.Button>(menu, "PinBtn");
+                        var zoomBounds = zoom.TransformToAncestor(tools).TransformBounds(new Rect(zoom.RenderSize));
+                        var pinBounds = pin.TransformToAncestor(tools).TransformBounds(new Rect(pin.RenderSize));
+                        Assert(Math.Abs(zoom.ActualWidth - pin.ActualWidth) < 1 && zoom.ActualWidth < tools.ActualWidth * .6
+                            && Math.Abs(zoomBounds.Top - pinBounds.Top) < 1 && !zoomBounds.IntersectsWith(pinBounds),
+                            "Zoom and Pin share an aligned, symmetric final tools row", false);
+                        Assert(Element<System.Windows.Controls.TextBlock>(menu, "PinText").Text == "Pin",
+                            "the tray keeps the short Pin tool name in both languages", false);
                         if (renderDirectory is not null && language == "es" && !compact && anchor.X == bounds.Left)
                             Render(menu, renderDirectory, "tray-zoom-" + (screen.Primary ? "primary" : "secondary") + ".png");
                         if (compact && anchor.X == bounds.Right - 1)

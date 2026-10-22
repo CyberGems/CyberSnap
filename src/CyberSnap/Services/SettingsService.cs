@@ -689,6 +689,7 @@ public sealed class SettingsService : IDisposable
         settings.WindowDetection = NormalizeEnum(settings.WindowDetection, WindowDetectionMode.WindowOnly);
         settings.CaptureDockSide = NormalizeEnum(settings.CaptureDockSide, CaptureDockSide.Top);
         settings.ZoomInitialLevel = Capture.ZoomViewport.NormalizeZoom(settings.ZoomInitialLevel);
+        settings.PinInitialScale = Capture.PinImageForm.NormalizeScale(settings.PinInitialScale);
         settings.ScrollingCaptureMode = NormalizeEnum(settings.ScrollingCaptureMode, ScrollingCaptureMode.AssistAutoscroll);
         if (settings.ScrollingCaptureMode == ScrollingCaptureMode.Manual)
         {

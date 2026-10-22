@@ -215,6 +215,8 @@ public partial class TrayContextMenuWindow : Window
         ColorPickerText.Text = T("Color");
         RulerText.Text = T("Ruler");
         ZoomText.Text = T("Zoom");
+        PinText.Text = T("Pin tool");
+        SetTooltip(PinBtn, T("Pin an image above other windows"));
         AnnotationsText.Text = T("Editor");
         GalleryText.Text = T("Gallery");
         
@@ -281,6 +283,7 @@ public partial class TrayContextMenuWindow : Window
         ColorPickerIcon.Source = GetIcon("picker", fgColor, 20);
         RulerIcon.Source = GetIcon("ruler", fgColor, 20);
         ZoomIcon.Source = GetIcon("zoom", fgColor, 20);
+        PinIcon.Source = GetIcon("pin", fgColor, 20);
         // Bottom row: larger assets for accessibility while keeping compact tile height.
         AnnotationsIcon.Source = GetIcon("compose", fgColor, 20);
         GalleryIcon.Source = GetIcon("history", fgColor, 20);
@@ -938,6 +941,12 @@ public partial class TrayContextMenuWindow : Window
     {
         try { CloseMenu(); _trayIcon.TriggerRuler(); }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.ruler", ex); }
+    }
+
+    private void Pin_Click(object sender, RoutedEventArgs e)
+    {
+        try { CloseMenu(); _trayIcon.TriggerPin(); }
+        catch (Exception ex) { AppDiagnostics.LogError("tray.pin", ex); }
     }
 
     private void Zoom_Click(object sender, RoutedEventArgs e)

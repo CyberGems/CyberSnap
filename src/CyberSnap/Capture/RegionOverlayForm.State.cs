@@ -13,6 +13,8 @@ namespace CyberSnap.Capture;
 
 public sealed partial class RegionOverlayForm
 {
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool PinImageOnConfirm { get; set; }
     private const int AnnotationSelectionHandleGapPx = 8;
     public CaptureMode CurrentMode => _mode;
     public void SetShowToolNumberBadges(bool show)
@@ -2329,11 +2331,11 @@ public sealed partial class RegionOverlayForm
         _ => null
     };
 
-    private static string ConfirmChromeShortLabel(ConfirmChromeKind kind) => kind switch
+    private string ConfirmChromeShortLabel(ConfirmChromeKind kind) => kind switch
     {
         ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel"),
         ConfirmChromeKind.Retry => LocalizationService.Translate("Retry"),
-        ConfirmChromeKind.Done => LocalizationService.Translate("Done"),
+        ConfirmChromeKind.Done => LocalizationService.Translate(PinImageOnConfirm && SelectedConfirmModeKind() == ConfirmChromeKind.ModeImage ? "Pin" : "Done"),
         ConfirmChromeKind.TogglePreview => LocalizationService.Translate("Preview"),
         ConfirmChromeKind.ModeImage => LocalizationService.Translate("Image"),
         ConfirmChromeKind.ModeOcr => "OCR",
@@ -2345,11 +2347,11 @@ public sealed partial class RegionOverlayForm
         _ => ""
     };
 
-    private static string ConfirmChromeTitle(ConfirmChromeKind kind) => kind switch
+    private string ConfirmChromeTitle(ConfirmChromeKind kind) => kind switch
     {
         ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel capture"),
         ConfirmChromeKind.Retry => LocalizationService.Translate("Retry selection"),
-        ConfirmChromeKind.Done => LocalizationService.Translate("Confirm screenshot"),
+        ConfirmChromeKind.Done => LocalizationService.Translate(PinImageOnConfirm && SelectedConfirmModeKind() == ConfirmChromeKind.ModeImage ? "Pin to screen" : "Confirm screenshot"),
         ConfirmChromeKind.TogglePreview => LocalizationService.Translate("Toggle capture preview on confirm"),
         ConfirmChromeKind.ModeImage => LocalizationService.Translate("Capture as Image"),
         ConfirmChromeKind.ModeOcr => LocalizationService.Translate("Extract Text (OCR)"),
@@ -3560,8 +3562,8 @@ public sealed partial class RegionOverlayForm
     /// windows (which it doesn't), so it collapses to zero width like the retractable
     /// modes (paint, hit-test, separators and gaps already skip those).
     /// </summary>
-    private bool IsPreviewToggleVisible() => SelectedConfirmModeKind() is
-        ConfirmChromeKind.ModeImage or ConfirmChromeKind.ModeScroll;
+    private bool IsPreviewToggleVisible() => !PinImageOnConfirm && (SelectedConfirmModeKind() is
+        ConfirmChromeKind.ModeImage or ConfirmChromeKind.ModeScroll);
 
     private void ResetConfirmModesExpanded(bool collapsed)
     {

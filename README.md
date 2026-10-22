@@ -87,9 +87,11 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Barcode / QR Scanner**: Scan codes standalone or on top of a capture
 - **Zoom**: Freeze the monitor under the pointer at 2×, pan with the mouse, and zoom from 1.25× to 4× using the wheel or `+` / `-`. Press `C` or your capture hotkey to select a region of the magnified view, then adjust it and add annotations in the usual capture confirmation. `Enter` opens confirmation with the full view selected. Canceling either step returns to the same Zoom level and framing. Confirmed captures follow the usual saving, clipboard, editor, and Gallery preferences; Preview remains optional. `Ctrl+C` copies the view, `Ctrl+S` saves it, and `Esc` or right-click exits. Available from the capture bar, tray, widget, and a configurable global hotkey, with initial magnification, smoothing, animation, and an optional help bar under Configuration → Tools → Zoom.
 
+- **Pin to Screen**: Keep temporary image references above other windows. Start from a region (with capture confirmation and annotations), the clipboard, a file, Preview, or Gallery. Drag between monitors, zoom with the wheel or `+` / `-`, change opacity with `Ctrl` + wheel, and copy the original with `Ctrl+C`. Middle-click resets zoom and opacity; `Esc` closes the focused reference. Hover for copy, options and close; right-click for saving, Editor and settings. Configure scale, smoothing, topmost behavior, capture visibility, and an optional shortcut under Configuration → Tools → Pin. References are temporary and do not automatically save to Gallery.
+
 ### 🖥️ Desktop Integration
 - **System Tray**: Runs in background with custom context menu
-- **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus standalone launchers for OCR, color picker, QR, ruler, and Zoom
+- **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus standalone launchers for OCR, color picker, QR, ruler, Zoom, and Pin
 - **Auto-Start**: Launch at Windows sign-in
 - **Auto-Update**: Built-in updater with toast notifications, changelog preview, and per-version skip
 - **Setup Wizard**: First-run configuration assistant

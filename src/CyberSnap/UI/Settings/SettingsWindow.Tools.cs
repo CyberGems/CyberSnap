@@ -4,6 +4,7 @@ using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using RadioButton = System.Windows.Controls.RadioButton;
+using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace CyberSnap.UI;
 
@@ -19,6 +20,8 @@ public partial class SettingsWindow
         ToolsQrIcon.Data = FluentIcons.GetGeometry("scan");
         ToolsRulerIcon.Data = FluentIcons.GetGeometry("ruler");
         ToolsZoomIcon.Data = FluentIcons.GetGeometry("zoom");
+        ToolsPinIcon.Data = FluentIcons.GetGeometry("pin");
+        ApplyPinControls();
         ApplyZoomControls();
         ApplyColorFormatControls(_settingsService.Settings);
         RefreshToolShortcut();
@@ -31,7 +34,7 @@ public partial class SettingsWindow
     {
         if (sender is not RadioButton { Tag: string key }) return;
         _selectedToolKey = key;
-        if (OcrToolPanel is null || PickerToolPanel is null || QrToolPanel is null || RulerToolPanel is null || ZoomToolPanel is null) return;
+        if (OcrToolPanel is null || PickerToolPanel is null || QrToolPanel is null || RulerToolPanel is null || ZoomToolPanel is null || PinToolPanel is null) return;
         ApplyToolsSelection();
         ToolsPanel.ScrollToTop();
     }
@@ -42,9 +45,10 @@ public partial class SettingsWindow
         PickerToolPanel.Visibility = _selectedToolKey == "picker" ? Visibility.Visible : Visibility.Collapsed;
         QrToolPanel.Visibility = _selectedToolKey == "qr" ? Visibility.Visible : Visibility.Collapsed;
         RulerToolPanel.Visibility = _selectedToolKey == "ruler" ? Visibility.Visible : Visibility.Collapsed;
+        PinToolPanel.Visibility = _selectedToolKey == "pin" ? Visibility.Visible : Visibility.Collapsed;
         ZoomToolPanel.Visibility = _selectedToolKey == "zoom" ? Visibility.Visible : Visibility.Collapsed;
         ToolHistoryCard.Visibility = ToolHistoryLabel.Visibility = ToolSoundsButton.Visibility =
-            _selectedToolKey == "zoom" ? Visibility.Collapsed : Visibility.Visible;
+            _selectedToolKey is "zoom" or "pin" ? Visibility.Collapsed : Visibility.Visible;
         if (_selectedToolKey == "ocr" && ToolsTab.IsChecked == true)
             LoadOcrTab();
         RefreshToolShortcut();
@@ -58,6 +62,7 @@ public partial class SettingsWindow
             "qr" or "scan" => ToolQrTab,
             "ruler" => ToolRulerTab,
             "zoom" => ToolZoomTab,
+            "pin" => ToolPinTab,
             _ => ToolOcrTab
         };
         tab.IsChecked = true;
@@ -70,6 +75,7 @@ public partial class SettingsWindow
         "qr" => "_standaloneScan",
         "ruler" => "_standaloneRuler",
         "zoom" => "_standaloneZoom",
+        "pin" => "_standalonePin",
         _ => "_standaloneOcr"
     };
 
@@ -91,6 +97,45 @@ public partial class SettingsWindow
     }
 
     private void ToolSounds_Click(object sender, RoutedEventArgs e) => SelectSettingsTab("sounds");
+
+    private static readonly double[] PinScales = { .25, .5, .75, 1, 1.25, 1.5, 2 };
+    private void ApplyPinControls()
+    {
+        bool previous = _suppressToolsPreferenceChange;
+        _suppressToolsPreferenceChange = true;
+        try
+        {
+            var settings = _settingsService.Settings;
+            PinInitialScaleCombo.Items.Clear();
+            var scales = PinScales.Append(Capture.PinImageForm.NormalizeScale(settings.PinInitialScale)).Distinct().OrderBy(scale => scale);
+            foreach (double scale in scales) PinInitialScaleCombo.Items.Add(new ComboBoxItem { Content = $"{scale:P0}", Tag = scale });
+            PinInitialScaleCombo.SelectedItem = PinInitialScaleCombo.Items.OfType<ComboBoxItem>().First(item => Math.Abs((double)item.Tag - Capture.PinImageForm.NormalizeScale(settings.PinInitialScale)) < .001);
+            PinSmoothImageCheck.IsChecked = settings.PinSmoothImage;
+            PinAlwaysOnTopCheck.IsChecked = settings.PinAlwaysOnTop;
+            PinIncludeInCapturesCheck.IsChecked = settings.PinIncludeInCaptures;
+        }
+        finally { _suppressToolsPreferenceChange = previous; }
+    }
+    private void PinInitialScale_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToolsPreferenceChange || PinInitialScaleCombo.SelectedItem is not ComboBoxItem { Tag: double selected }) return;
+        UpdateToolsPreference("Initial image scale", _settingsService.Settings.PinInitialScale, selected,
+            value => _settingsService.Settings.PinInitialScale = value, _ => ApplyPinControls());
+    }
+    private void PinPreference_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToolsPreferenceChange) return;
+        var check = (CheckBox)sender;
+        if (ReferenceEquals(check, PinSmoothImageCheck))
+            UpdateToolsPreference("Smooth pinned images", _settingsService.Settings.PinSmoothImage, check.IsChecked == true,
+                value => _settingsService.Settings.PinSmoothImage = value, _ => ApplyPinControls(), () => (Application.Current as App)?.RefreshPinnedImagePreferences());
+        else if (ReferenceEquals(check, PinAlwaysOnTopCheck))
+            UpdateToolsPreference("Keep pinned images on top", _settingsService.Settings.PinAlwaysOnTop, check.IsChecked == true,
+                value => _settingsService.Settings.PinAlwaysOnTop = value, _ => ApplyPinControls(), () => (Application.Current as App)?.RefreshPinnedImagePreferences());
+        else
+            UpdateToolsPreference("Include pinned images in captures", _settingsService.Settings.PinIncludeInCaptures, check.IsChecked == true,
+                value => _settingsService.Settings.PinIncludeInCaptures = value, _ => ApplyPinControls(), () => (Application.Current as App)?.RefreshPinnedImagePreferences());
+    }
 
     private void ApplyZoomControls()
     {
@@ -232,6 +277,7 @@ public partial class SettingsWindow
             if (ReferenceEquals(element, QrToolPanel)) return "qr";
             if (ReferenceEquals(element, RulerToolPanel)) return "ruler";
             if (ReferenceEquals(element, ZoomToolPanel)) return "zoom";
+            if (ReferenceEquals(element, PinToolPanel)) return "pin";
             element = LogicalTreeHelper.GetParent(element);
         }
         return null;
@@ -243,6 +289,7 @@ public partial class SettingsWindow
         "qr" => "QR & Barcodes",
         "ruler" => "Ruler",
         "zoom" => "Zoom",
+        "pin" => "Pin to screen",
         _ => "OCR"
     };
 }

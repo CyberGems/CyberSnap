@@ -2317,6 +2317,9 @@
                                 <TextBlock Text="Zoom" Services:LocalizationService.SourceText="Zoom"/>
                             </StackPanel>
                         </RadioButton>
+                        <RadioButton x:Name="ToolPinTab" Tag="pin" GroupName="Tools" Style="{StaticResource SettingsSubTab}" AutomationProperties.Name="Pin to screen" Checked="ToolTab_Checked">
+                            <StackPanel Orientation="Horizontal"><Path x:Name="ToolsPinIcon" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Pin tool" Services:LocalizationService.SourceText="Pin tool"/></StackPanel>
+                        </RadioButton>
                     </WrapPanel>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -2766,6 +2769,36 @@
                                 </Grid>
                             </StackPanel>
                         </Border>
+                    </StackPanel>
+                    <StackPanel x:Name="PinToolPanel" Visibility="Collapsed">
+                        <TextBlock Text="Pinned images" Services:LocalizationService.SourceText="Pinned images" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}"><StackPanel>
+                            <Grid Style="{StaticResource SettingRow}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE8A3;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                <StackPanel Grid.Column="1" Margin="0,0,16,0"><TextBlock Text="Initial image scale" Services:LocalizationService.SourceText="Initial image scale" Style="{StaticResource SettingTitle}"/><TextBlock Text="Large images are fitted to the monitor when opened." Services:LocalizationService.SourceText="Large images are fitted to the monitor when opened." Style="{StaticResource SettingDescription}"/></StackPanel>
+                                <ComboBox x:Name="PinInitialScaleCombo" Grid.Column="2" Width="110" VerticalAlignment="Center" AutomationProperties.Name="Initial image scale" SelectionChanged="PinInitialScale_Changed"><ComboBoxItem Content="25%"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="75%"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="125%"/><ComboBoxItem Content="150%"/><ComboBoxItem Content="200%"/></ComboBox>
+                            </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE91B;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                    <StackPanel Grid.Column="1" Margin="0,0,16,0"><TextBlock Text="Smooth pinned images" Services:LocalizationService.SourceText="Smooth pinned images" Style="{StaticResource SettingTitle}" TextWrapping="Wrap"/><TextBlock Text="Soften enlarged edges in pinned images." Services:LocalizationService.SourceText="Soften enlarged edges in pinned images." Style="{StaticResource SettingDescription}"/></StackPanel>
+                                    <CheckBox x:Name="PinSmoothImageCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Smooth pinned images" Checked="PinPreference_Changed" Unchecked="PinPreference_Changed"/>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE718;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                    <StackPanel Grid.Column="1" Margin="0,0,16,0"><TextBlock Text="Keep pinned images on top" Services:LocalizationService.SourceText="Keep pinned images on top" Style="{StaticResource SettingTitle}" TextWrapping="Wrap"/><TextBlock Text="Keep reference images above other windows." Services:LocalizationService.SourceText="Keep reference images above other windows." Style="{StaticResource SettingDescription}"/></StackPanel>
+                                    <CheckBox x:Name="PinAlwaysOnTopCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Keep pinned images on top" Checked="PinPreference_Changed" Unchecked="PinPreference_Changed"/>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}"><TextBlock Text="&#xE722;" Style="{StaticResource SettingIconGlyph}"/></Border>
+                                    <StackPanel Grid.Column="1" Margin="0,0,16,0"><TextBlock Text="Include pinned images in captures" Services:LocalizationService.SourceText="Include pinned images in captures" Style="{StaticResource SettingTitle}" TextWrapping="Wrap"/><TextBlock Text="When disabled, CyberSnap hides pinned images from new captures." Services:LocalizationService.SourceText="When disabled, CyberSnap hides pinned images from new captures." Style="{StaticResource SettingDescription}"/></StackPanel>
+                                    <CheckBox x:Name="PinIncludeInCapturesCheck" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Include pinned images in captures" Checked="PinPreference_Changed" Unchecked="PinPreference_Changed"/>
+                                </Grid>
+                        </StackPanel></Border>
+                        <TextBlock Text="Using Pin" Services:LocalizationService.SourceText="Using Pin" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}"><TextBlock Text="Drag to move. Wheel or + / - changes zoom. Ctrl + wheel changes opacity. Ctrl+C copies the original, middle-click resets, and Esc closes. Right-click opens more actions." Services:LocalizationService.SourceText="Drag to move. Wheel or + / - changes zoom. Ctrl + wheel changes opacity. Ctrl+C copies the original, middle-click resets, and Esc closes. Right-click opens more actions." Style="{StaticResource SettingDescription}"/></Border>
                     </StackPanel>
                     <StackPanel x:Name="ZoomToolPanel" Visibility="Collapsed">
                         <TextBlock Text="Magnification" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Magnification"/>

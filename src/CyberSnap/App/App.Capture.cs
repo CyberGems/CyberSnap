@@ -623,7 +623,8 @@ public partial class App
         RunAfterPreviewChromeHidden(() => LaunchWithDelay(() => LaunchOverlayNow(initialMode)));
     }
 
-    private void LaunchOverlayNow(CaptureMode initialMode, ZoomCaptureRequest? zoomCapture = null)
+    private void LaunchOverlayNow(CaptureMode initialMode, ZoomCaptureRequest? zoomCapture = null,
+        Action<Bitmap, System.Drawing.Point>? imageReady = null)
     {
         void RunOverlay()
         {
@@ -663,6 +664,7 @@ public partial class App
                     UiScale = _settingsService.Settings.UiScale,
                     ConfirmRegionBeforeCapture = true // Permanent confirm for area capture redesign
                 };
+                overlay.PinImageOnConfirm = imageReady is not null;
                 void MarkCommitted()
                 {
                     if (zoomCapture is null) return;
@@ -791,6 +793,24 @@ public partial class App
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
                     MarkCommitted();
+
+                    if (imageReady is not null && commitAction == RegionOverlayForm.ConfirmCommitAction.Default)
+                    {
+                        outcomeDelegatedToPreview = true; // The Pin callback releases the session after creating its window.
+                        overlay.Close();
+                        EndOverlayLoop();
+                        Dispatcher.BeginInvoke(() =>
+                        {
+                            try { imageReady(cropped, monitorPoint); }
+                            catch (Exception ex)
+                            {
+                                ResetCapturing();
+                                AppDiagnostics.LogError("pin.capture", ex);
+                                ToastWindow.ShowError("Pin failed", ex.Message);
+                            }
+                        });
+                        return;
+                    }
 
                     // Decide delegate ownership of the capture session BEFORE closing the
                     // overlay: FormClosed fires synchronously inside Close(). When the Preview

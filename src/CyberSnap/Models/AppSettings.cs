@@ -377,6 +377,10 @@ public sealed class AppSettings
     public bool ZoomSmoothImage { get; set; } = true;
     public bool ZoomAnimate { get; set; } = true;
     public bool ZoomShowHelpBar { get; set; } = true;
+    public double PinInitialScale { get; set; } = 1;
+    public bool PinSmoothImage { get; set; } = true;
+    public bool PinAlwaysOnTop { get; set; } = true;
+    public bool PinIncludeInCaptures { get; set; }
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.CopyToClipboard;
     public bool OpenEditorAfterCapture { get; set; }

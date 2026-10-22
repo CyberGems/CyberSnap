@@ -25,6 +25,7 @@ public sealed class HotkeyService : IDisposable
     private const int HOTKEY_STANDALONE_SCAN = 9015;
     private const int HOTKEY_REPEAT_LAST_AREA = 9016;
     private const int HOTKEY_STANDALONE_ZOOM = 9017;
+    private const int HOTKEY_STANDALONE_PIN = 9018;
 
     private bool _captureRegistered;
     private bool _recordRegistered;
@@ -39,6 +40,7 @@ public sealed class HotkeyService : IDisposable
     private bool _standaloneScanRegistered;
     private bool _repeatLastAreaRegistered;
     private bool _standaloneZoomRegistered;
+    private bool _standalonePinRegistered;
     private bool _registered;
 
     public event Action? HotkeyPressed;
@@ -54,6 +56,7 @@ public sealed class HotkeyService : IDisposable
     public event Action? StandaloneScanHotkeyPressed;
     public event Action? RepeatLastAreaHotkeyPressed;
     public event Action? StandaloneZoomHotkeyPressed;
+    public event Action? StandalonePinHotkeyPressed;
 
     private void EnsureMessageHook()
     {
@@ -100,6 +103,7 @@ public sealed class HotkeyService : IDisposable
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_AREA);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_ZOOM);
+        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_PIN);
         _captureRegistered = false;
         _recordRegistered = false;
         _recordGifRegistered = false;
@@ -113,6 +117,7 @@ public sealed class HotkeyService : IDisposable
         _standaloneScanRegistered = false;
         _repeatLastAreaRegistered = false;
         _standaloneZoomRegistered = false;
+        _standalonePinRegistered = false;
     }
 
     public bool Register(uint modifiers, uint key) => RegisterHotkey(ref _captureRegistered, HOTKEY_CAPTURE, modifiers, key);
@@ -128,6 +133,7 @@ public sealed class HotkeyService : IDisposable
     public bool RegisterStandaloneScan(uint modifiers, uint key) => RegisterHotkey(ref _standaloneScanRegistered, HOTKEY_STANDALONE_SCAN, modifiers, key);
     public bool RegisterRepeatLastArea(uint modifiers, uint key) => RegisterHotkey(ref _repeatLastAreaRegistered, HOTKEY_REPEAT_LAST_AREA, modifiers, key);
     public bool RegisterStandaloneZoom(uint modifiers, uint key) => RegisterHotkey(ref _standaloneZoomRegistered, HOTKEY_STANDALONE_ZOOM, modifiers, key);
+    public bool RegisterStandalonePin(uint modifiers, uint key) => RegisterHotkey(ref _standalonePinRegistered, HOTKEY_STANDALONE_PIN, modifiers, key);
 
     public void Unregister()
     {
@@ -144,6 +150,7 @@ public sealed class HotkeyService : IDisposable
         if (_standaloneScanRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN); _standaloneScanRegistered = false; }
         if (_repeatLastAreaRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_AREA); _repeatLastAreaRegistered = false; }
         if (_standaloneZoomRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_ZOOM); _standaloneZoomRegistered = false; }
+        if (_standalonePinRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_PIN); _standalonePinRegistered = false; }
         if (_registered)
         {
             ComponentDispatcher.ThreadPreprocessMessage -= OnMsg;
@@ -168,6 +175,7 @@ public sealed class HotkeyService : IDisposable
         else if (id == HOTKEY_STANDALONE_SCAN) { InvokeHandlersSafely(StandaloneScanHotkeyPressed, "hotkey.standalone-scan"); handled = true; }
         else if (id == HOTKEY_REPEAT_LAST_AREA) { InvokeHandlersSafely(RepeatLastAreaHotkeyPressed, "hotkey.repeat-last-area"); handled = true; }
         else if (id == HOTKEY_STANDALONE_ZOOM) { InvokeHandlersSafely(StandaloneZoomHotkeyPressed, "hotkey.standalone-zoom"); handled = true; }
+        else if (id == HOTKEY_STANDALONE_PIN) { InvokeHandlersSafely(StandalonePinHotkeyPressed, "hotkey.standalone-pin"); handled = true; }
     }
 
     private static void InvokeHandlersSafely(Action? handlers, string context)

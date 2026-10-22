@@ -79,6 +79,12 @@ namespace CyberSnap.UI
         private DispatcherTimer? _zoomHideTimer;
 
         public Bitmap EffectiveBitmap => _active.EffectiveBitmap;
+        private void PinImageBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (Application.Current is not CyberSnap.App app) return;
+            try { app.PinImage(PinImageForm.CopyPixels(EffectiveBitmap), _targetMonitorPoint); }
+            catch (Exception ex) { ToastWindow.ShowError("Pin failed", ex.Message); }
+        }
         public int ScaleFactor => _active.ScaleFactor;
         public bool IsScaled => _active.IsScaled;
 
@@ -324,6 +330,7 @@ namespace CyberSnap.UI
             SaveText.Text = LocalizationService.Translate("Save");
             SaveAsText.Text = LocalizationService.Translate("Save as...");
             CopyText.Text = LocalizationService.Translate("Copy");
+            PinImageText.Text = LocalizationService.Translate("Pin to screen");
             EditText.Text = LocalizationService.Translate("Send to Editor...");
             ExtractTextText.Text = LocalizationService.Translate("Extract text...");
             ExtractTextBtn.ToolTip = WithHotkeyHint(
@@ -541,6 +548,7 @@ namespace CyberSnap.UI
 
             // Render at 2× display DIPs so 150% DPI + UiScale LayoutTransform stay sharp
             // (same pattern as Settings achievements / crisp toolbar glyphs).
+            SetPreviewIcon(PinImageIcon, "pin", primaryIconColor, 13);
             SetPreviewIcon(SaveIcon, "save", primaryIconColor, 13);
             SetPreviewIcon(SaveAsIcon, "save", primaryIconColor, 13);
             SetPreviewIcon(CopyIcon, "copy", primaryIconColor, 13);
@@ -2504,7 +2512,8 @@ namespace CyberSnap.UI
             DeleteBtn.Visibility = CanDeleteSavedCapture() ? Visibility.Visible : Visibility.Collapsed;
 
             bool anyOptionalVisible =
-                SaveBtn.Visibility == Visibility.Visible
+                PinImageBtn.Visibility == Visibility.Visible
+                || SaveBtn.Visibility == Visibility.Visible
                 || SaveAsBtn.Visibility == Visibility.Visible
                 || CopyBtn.Visibility == Visibility.Visible
                 || EditBtn.Visibility == Visibility.Visible

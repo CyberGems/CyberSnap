@@ -162,6 +162,11 @@ public partial class HistoryWindow
         }
         if (vm.Entry.Kind == HistoryKind.Image && HasHistoryFilePath(vm.Entry.FilePath))
         {
+            actionMenu.Items.Add(CreateCardActionMenuItem("Pin to screen", () =>
+            {
+                suppressOpenAction = true;
+                if (Application.Current is CyberSnap.App app) app.PinImageFile(vm.Entry.FilePath);
+            }, null, "pin"));
             actionMenu.Items.Add(CreateCardActionMenuItem("Open in editor", () =>
             {
                 suppressOpenAction = true;

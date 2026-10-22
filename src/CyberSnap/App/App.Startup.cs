@@ -188,6 +188,7 @@ public partial class App
         _trayIcon.OnCapture += OnHotkeyPressed;
         _trayIcon.OnRuler += OnStandaloneRulerHotkeyPressed;
         _trayIcon.OnZoom += OnStandaloneZoomHotkeyPressed;
+        _trayIcon.OnPin += OnPinToolProxy;
         _trayIcon.OnStandaloneColorPicker += OnStandaloneColorPickerHotkeyPressed;
         _trayIcon.OnStandaloneOcr += OnStandaloneOcrHotkeyPressed;
         _trayIcon.OnStandaloneScan += OnStandaloneScanHotkeyPressed;

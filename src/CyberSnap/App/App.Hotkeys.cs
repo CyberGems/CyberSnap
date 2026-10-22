@@ -26,6 +26,7 @@ public partial class App
         _hotkeyService.StandaloneOcrHotkeyPressed += OnStandaloneOcrHotkeyPressed;
         _hotkeyService.StandaloneScanHotkeyPressed += OnStandaloneScanHotkeyPressed;
         _hotkeyService.StandaloneZoomHotkeyPressed += OnStandaloneZoomHotkeyPressed;
+        _hotkeyService.StandalonePinHotkeyPressed += OnPinToolProxy;
         _hotkeyService.RepeatLastAreaHotkeyPressed += OnRepeatLastAreaHotkeyPressed;
 
         var s = _settingsService!.Settings;
@@ -49,6 +50,8 @@ public partial class App
         TryRegister(_hotkeyService.RegisterStandaloneOcr(s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey), "Standalone OCR", s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneScan(s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey), "Standalone Scanner", s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneZoom(s.StandaloneZoomHotkeyModifiers, s.StandaloneZoomHotkeyKey), "Zoom", s.StandaloneZoomHotkeyModifiers, s.StandaloneZoomHotkeyKey);
+        var (pinModifiers, pinKey) = s.GetToolHotkey("_standalonePin");
+        TryRegister(_hotkeyService.RegisterStandalonePin(pinModifiers, pinKey), "Pin to screen", pinModifiers, pinKey);
         if (failed.Count > 0 && notifyConflicts)
             ToastWindow.ShowError("Hotkey conflict", string.Format(LocalizationService.Translate("{0} — already in use by another app"), string.Join(", ", failed)));
         else if (showReadyNotification)

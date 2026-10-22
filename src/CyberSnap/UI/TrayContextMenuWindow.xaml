@@ -557,10 +557,16 @@
                                        MaxWidth="76"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="ZoomBtn" Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource BottomButtonStyle}" Click="Zoom_Click" Padding="4,8" Margin="4,2,4,2">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="ZoomBtn" Grid.Row="2" Grid.Column="0" Style="{StaticResource BottomButtonStyle}" Click="Zoom_Click" Padding="4,8" Margin="4,2,2,2">
+                        <StackPanel Orientation="Horizontal">
                             <Grid Width="28"><Image x:Name="ZoomIcon" Width="20" Height="20" Stretch="Uniform"/></Grid>
                             <TextBlock x:Name="ZoomText" Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="PinBtn" Grid.Row="2" Grid.Column="1" Style="{StaticResource BottomButtonStyle}" Click="Pin_Click" Padding="4,8" Margin="2,2,4,2">
+                        <StackPanel Orientation="Horizontal">
+                            <Grid Width="28"><Image x:Name="PinIcon" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
+                            <TextBlock x:Name="PinText" Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </Grid>

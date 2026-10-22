@@ -153,7 +153,7 @@ public partial class SettingsWindow
                         ContextText = translatedDesc,
                         Source = SearchEntrySource.Schema,
                         ToolKey = page.Key == "tools" ? section.Key switch
-                        { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", "zoom" => "zoom", _ => null } : null,
+                        { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", "zoom" => "zoom", "pin" => "pin", _ => null } : null,
                         TargetSettingKey = setting.BindingPath ?? setting.Key
                     });
 
@@ -168,7 +168,7 @@ public partial class SettingsWindow
                             ContextText = translatedLabel,
                             Source = SearchEntrySource.Schema,
                             ToolKey = page.Key == "tools" ? section.Key switch
-                            { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", "zoom" => "zoom", _ => null } : null,
+                            { "ocr_defaults" => "ocr", "picker" => "picker", "qr" => "qr", "ruler" => "ruler", "zoom" => "zoom", "pin" => "pin", _ => null } : null,
                             TargetSettingKey = setting.BindingPath ?? setting.Key
                         });
                     }
@@ -499,7 +499,7 @@ public partial class SettingsWindow
                             ClearSearch();
                             SelectSettingsTab("tools");
                             if (entry.ToolKey is not null) SelectToolSettings(entry.ToolKey);
-                            else if (_selectedToolKey == "zoom" && ToolHistoryCard.IsAncestorOf(container))
+                            else if ((_selectedToolKey is "zoom" or "pin") && ToolHistoryCard.IsAncestorOf(container))
                                 SelectToolSettings("ocr");
                             UpdateLayout();
                             ScrollToElement(container);
@@ -803,6 +803,7 @@ public partial class SettingsWindow
             ["scan"]          = ToolsTab,
             ["ruler"]         = ToolsTab,
             ["zoom"]          = ToolsTab,
+            ["pin"]           = ToolsTab,
             ["hotkeys"]       = HotkeysTab,
             ["history"]       = HistoryTab,
             ["uploads"]       = UploadsTab,
@@ -1001,6 +1002,10 @@ public partial class SettingsWindow
             "zoomsmoothimage"          => ZoomSmoothImageCheck,
             "zoomanimate"              => ZoomAnimateCheck,
             "zoomshowhelpbar"          => ZoomShowHelpBarCheck,
+            "pininitialscale"          => PinInitialScaleCombo,
+            "pinsmoothimage"           => PinSmoothImageCheck,
+            "pinalwaysontop"           => PinAlwaysOnTopCheck,
+            "pinincludeincaptures"      => PinIncludeInCapturesCheck,
             "colordetailcopyformat"     => ColorCopyFormatCombo,
             "colordetailincludehash"    => ColorIncludeHashCheck,
             "savestandalonetohistory"   => SaveStandaloneToHistoryCheck,
