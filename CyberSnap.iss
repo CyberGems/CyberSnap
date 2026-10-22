@@ -12,6 +12,7 @@ OutputDir=.
 OutputBaseFilename=CyberSnap-Setup-{#AppVersion}
 SetupIconFile=.\src\CyberSnap\CyberSnap.ico
 WizardSmallImageFile=.\installer\installerWizardSmall.bmp
+WizardImageFile=.\installer\installerWizard.bmp
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
