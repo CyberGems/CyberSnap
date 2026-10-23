@@ -58,8 +58,9 @@ internal static partial class Program
             CheckSqliteRuntime();
             if (args.Contains("--widget-tooltips-only"))
             {
-                CheckWidgetToolTips(settings);
-                Console.WriteLine($"PASS: {_checks} widget tooltip checks.");
+                CheckWidgetToolTips(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                CheckTrayToolTips(args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} widget and tray tooltip checks.");
                 return 0;
             }
             if (args.Contains("--widget-animation-only"))
@@ -106,6 +107,7 @@ internal static partial class Program
             }
             if (args.Contains("--tray-menu-only"))
             {
+                CheckTrayToolTips(args.FirstOrDefault(a => !a.StartsWith("--")));
                 CheckTrayMenuMonitors(args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} tray menu placement checks.");
                 return 0;
@@ -498,7 +500,7 @@ internal static partial class Program
         Dispatcher.PushFrame(frame);
     }
 
-    private static void Render(Window window, string? directory, string name)
+    private static void Render(FrameworkElement window, string? directory, string name)
     {
         if (directory is null)
             return;

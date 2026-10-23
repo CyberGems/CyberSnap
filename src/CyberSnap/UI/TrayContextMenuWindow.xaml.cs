@@ -13,6 +13,7 @@ using CyberSnap.Models;
 using CyberSnap.Services;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfToolTip = System.Windows.Controls.ToolTip;
+using CaptureMode = CyberSnap.Models.CaptureMode;
 
 namespace CyberSnap.UI;
 
@@ -43,12 +44,12 @@ public partial class TrayContextMenuWindow : Window
         Theme.ApplyTo(Resources);
         Theme.ApplyTo(Application.Current.Resources);
 
-        LoadLocalizedLabels();
+        var saved = SettingsService.LoadStatic();
+        LoadLocalizedLabels(saved?.DefaultCaptureMode ?? CaptureMode.Rectangle);
         LoadIcons();
 
         // Restore persisted panel state (no animation on first show).
         // Area, header and footer are the panel skeleton and are never hidden.
-        var saved = SettingsService.LoadStatic();
         _isCompact = saved?.QuickPanelCompact ?? false;
         _showRecording = saved?.QuickPanelShowRecording ?? true;
         _showTools = saved?.QuickPanelShowTools ?? true;
@@ -185,7 +186,7 @@ public partial class TrayContextMenuWindow : Window
         }
     }
 
-    private void LoadLocalizedLabels()
+    private void LoadLocalizedLabels(CaptureMode captureMode)
     {
         TitleTextBlock.Text = $"CyberSnap  {UpdateService.GetCurrentVersionLabel()}";
         
@@ -195,13 +196,13 @@ public partial class TrayContextMenuWindow : Window
         {
             UpdateLed.Visibility = Visibility.Visible;
             SetTooltip(UpdateLed, T("Update available"));
-            SetTooltip(AboutHeaderBtn, $"{T("Open About CyberSnap")} ({T("Update available")})");
+            SetTooltip(AboutHeaderBtn, $"{T("About tooltip")} ({T("Update available")})");
         }
         else
         {
             UpdateLed.Visibility = Visibility.Collapsed;
             UpdateLed.ToolTip = null;
-            SetTooltip(AboutHeaderBtn, T("Open About CyberSnap"));
+            SetTooltip(AboutHeaderBtn, T("About tooltip"));
         }
 
         // Shorter labels for buttons
@@ -216,33 +217,33 @@ public partial class TrayContextMenuWindow : Window
         RulerText.Text = T("Ruler");
         ZoomText.Text = T("Zoom");
         PinText.Text = T("Pin tool");
-        SetTooltip(PinBtn, T("Pin an image above other windows"));
         AnnotationsText.Text = T("Editor");
         GalleryText.Text = T("Gallery");
         
-        // Tooltips — short action descriptions (labels stay compact on the tiles).
-        SetTooltip(AreaCaptureBtn, T("Capture a rectangular region of the screen"));
-        SetTooltip(ScrollQuickBtn, T("Capture a long scrolling page or window"));
-        SetTooltip(FullscreenBtn, T("Fullscreen capture"));
-        SetTooltip(ActiveWindowBtn, T("Active window"));
-        SetTooltip(RepeatLastAreaBtn, T("Repeat last area"));
-        SetTooltip(OcrBtn, T("Extract text from a region of the screen"));
-        SetTooltip(QrBtn, T("Scan QR codes and barcodes on screen"));
-        SetTooltip(ColorPickerBtn, T("Capture a color sample from the screen"));
-        SetTooltip(RulerBtn, T("Measure distances on the screen"));
-        SetTooltip(ZoomBtn, T("Magnify the frozen screen and capture the view or a region"));
-        SetTooltip(AnnotationsBtn, T("Open the annotations editor"));
-        SetTooltip(GalleryBtn, T("Browse and manage your captures"));
-        SetTooltip(GifRecordBtn, T("Record the screen as an animated GIF"));
-        SetTooltip(VideoRecordBtn, T("Record the screen as an MP4 video"));
+        // Share the widget's title and explanation while keeping tile labels compact.
+        SetTooltip(AreaCaptureBtn, CaptureToolTips.Get(captureMode == CaptureMode.Center
+            ? CaptureToolTipKind.Center : CaptureToolTipKind.Area));
+        SetTooltip(ScrollQuickBtn, CaptureToolTips.Get(CaptureToolTipKind.Scrolling));
+        SetTooltip(FullscreenBtn, CaptureToolTips.Get(CaptureToolTipKind.Fullscreen));
+        SetTooltip(ActiveWindowBtn, CaptureToolTips.Get(CaptureToolTipKind.Window));
+        SetTooltip(RepeatLastAreaBtn, CaptureToolTips.Get(CaptureToolTipKind.Repeat));
+        SetTooltip(OcrBtn, CaptureToolTips.Get(CaptureToolTipKind.Ocr));
+        SetTooltip(QrBtn, CaptureToolTips.Get(CaptureToolTipKind.Qr));
+        SetTooltip(ColorPickerBtn, CaptureToolTips.Get(CaptureToolTipKind.Color));
+        SetTooltip(RulerBtn, CaptureToolTips.Get(CaptureToolTipKind.Ruler));
+        SetTooltip(ZoomBtn, CaptureToolTips.Get(CaptureToolTipKind.Zoom));
+        SetTooltip(PinBtn, CaptureToolTips.Get(CaptureToolTipKind.Pin));
+        SetTooltip(AnnotationsBtn, CaptureToolTips.Get(CaptureToolTipKind.Editor));
+        SetTooltip(GalleryBtn, CaptureToolTips.Get(CaptureToolTipKind.Gallery));
+        SetTooltip(GifRecordBtn, CaptureToolTips.Get(CaptureToolTipKind.Gif));
 
         SetTooltip(SettingsBtn, T("Open CyberSnap settings"));
         SetTooltip(AchievementsBtn, T("Open Achievements"));
         SetTooltip(DonateBtn, T("Donate to project"));
         System.Windows.Automation.AutomationProperties.SetName(DonateBtn, T("Donate"));
-        SetTooltip(AboutBtn, T("Open About CyberSnap"));
+        SetTooltip(AboutBtn, T("About tooltip"));
         SetTooltip(ExitBtn, T("Quit CyberSnap"));
-        SetTooltip(PanelMenuBtn, T("Panel options"));
+        SetTooltip(PanelMenuBtn, CaptureToolTips.Get(CaptureToolTipKind.Panel));
 
         // Determine recording state and localize the compact record button.
         bool isRecording = Capture.RecordingForm.Current != null;
@@ -256,7 +257,7 @@ public partial class TrayContextMenuWindow : Window
         else
         {
             VideoRecordText.Text = T("Record");
-            SetTooltip(VideoRecordBtn, T("Record the screen as an MP4 video"));
+            SetTooltip(VideoRecordBtn, CaptureToolTips.Get(CaptureToolTipKind.Video));
             VideoRecordBtn.ClearValue(ForegroundProperty);
             GifRecordBtn.IsEnabled = true;
             GifRecordText.Text = T("Record") + " GIF";
@@ -322,13 +323,19 @@ public partial class TrayContextMenuWindow : Window
 
     private static string T(string text) => LocalizationService.Translate(text);
 
-    private void SetTooltip(FrameworkElement element, string text)
+    private void SetTooltip(FrameworkElement element, object content)
     {
         var tooltip = new WpfToolTip
         {
-            Content = text,
+            Content = content,
             Placement = System.Windows.Controls.Primitives.PlacementMode.Mouse
         };
+        string title = content is ActionToolTipContent action ? action.Title : (string)content;
+        string description = content is ActionToolTipContent detail ? detail.Description : "";
+        System.Windows.Automation.AutomationProperties.SetName(element, title);
+        System.Windows.Automation.AutomationProperties.SetHelpText(element, description);
+        System.Windows.Automation.AutomationProperties.SetName(tooltip, title);
+        System.Windows.Automation.AutomationProperties.SetHelpText(tooltip, description);
 
         tooltip.Opened += (_, _) =>
         {
@@ -350,7 +357,7 @@ public partial class TrayContextMenuWindow : Window
         element.ToolTip = tooltip;
         ToolTipService.SetInitialShowDelay(element, 400);
         ToolTipService.SetBetweenShowDelay(element, 0);
-        ToolTipService.SetShowDuration(element, 5000);
+        ToolTipService.SetShowDuration(element, content is ActionToolTipContent ? 10000 : 5000);
     }
 
     private void Window_PreviewMouseMove(object sender, WpfMouseEventArgs e)

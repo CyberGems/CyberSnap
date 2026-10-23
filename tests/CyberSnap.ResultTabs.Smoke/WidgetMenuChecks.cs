@@ -41,14 +41,17 @@ internal static partial class Program
 
         var button = Element<Button>(widget, "WidgetMoreButton");
         Call(widget, "More_Click", button, new RoutedEventArgs());
-        Pump();
         var openMenu = GetField<Forms.ContextMenuStrip>(widget, "_contextMenu");
+        Assert(openMenu is not null, "More creates its tracked native menu", false);
+        string initialCloseReason = "none";
+        openMenu!.Closed += (_, e) => initialCloseReason = e.CloseReason.ToString();
+        Pump();
         var buttonOrigin = button.PointToScreen(new Point());
         var buttonEnd = button.PointToScreen(new Point(button.ActualWidth, button.ActualHeight));
         var buttonBounds = new System.Drawing.RectangleF((float)buttonOrigin.X, (float)buttonOrigin.Y,
             (float)(buttonEnd.X - buttonOrigin.X), (float)(buttonEnd.Y - buttonOrigin.Y));
         Assert(openMenu.Visible && GetField<bool>(widget, "_moreMenuOpen") && GetField<bool>(widget, "_contextMenuOpen"),
-            "More opens exactly one tracked menu", false);
+            $"More opens exactly one tracked menu ({language}, {settings.Settings.WidgetDockEdge}, closed={initialCloseReason})", false);
         Assert(button.Background == (Brush)widget.FindResource("WidgetButtonHoverBg"),
             "More keeps its highlighted background while the menu is open", false);
         Assert(!openMenu.Bounds.IntersectsWith(System.Drawing.Rectangle.Ceiling(buttonBounds))

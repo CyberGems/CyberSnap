@@ -288,8 +288,6 @@
                         Padding="4,2"
                         Cursor="Hand"
                         VerticalAlignment="Center"
-                        ToolTip="Open About CyberSnap"
-                        Services:LocalizationService.SourceToolTip="Open About CyberSnap"
                         ToolTipService.InitialShowDelay="400"
                         ToolTipService.BetweenShowDelay="0"
                         MouseLeftButtonUp="AboutHeader_Click"
@@ -659,7 +657,6 @@
                     <Button x:Name="AboutBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="About_Click"
-                            ToolTip="Open About CyberSnap"
                             Padding="6"
                             Margin="2">
                         <Image x:Name="AboutIcon" Width="20" Height="20"

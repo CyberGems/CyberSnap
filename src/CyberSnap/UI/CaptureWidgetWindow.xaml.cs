@@ -125,6 +125,7 @@ public partial class CaptureWidgetWindow : Window
         LoadIcons();
         RefreshLayout();
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
+        RefreshToolTips();
         RefreshUpdateBadge();
     }
 
@@ -280,6 +281,7 @@ public partial class CaptureWidgetWindow : Window
             return;
         }
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
+        RefreshToolTips();
         RefreshUpdateBadge();
     }
 
@@ -386,11 +388,7 @@ public partial class CaptureWidgetWindow : Window
         LoadIcons();
         RefreshUpdateBadge();
 
-        // Tooltip reflects the configured default capture mode (area vs from-center).
-        var lang = _settings.InterfaceLanguage;
-        CaptureButton.ToolTip = _settings.DefaultCaptureMode == Models.CaptureMode.Center
-            ? LocalizationService.Translate(lang, "Quick screenshot (From center)")
-            : LocalizationService.Translate(lang, "Quick screenshot (Area Capture)");
+        RefreshToolTips();
 
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
@@ -524,16 +522,18 @@ public partial class CaptureWidgetWindow : Window
         {
             var lang = _settings.InterfaceLanguage;
             bool updateAvailable = (System.Windows.Application.Current as App)?.LatestUpdateResult?.IsUpdateAvailable ?? false;
+            System.Windows.Automation.AutomationProperties.SetName(WidgetBrandingBtn,
+                LocalizationService.Translate(lang, "About tooltip"));
             UpdateLed.Visibility = updateAvailable ? Visibility.Visible : Visibility.Collapsed;
             if (updateAvailable)
             {
                 UpdateLed.ToolTip = LocalizationService.Translate(lang, "Update available");
-                WidgetBrandingBtn.ToolTip = $"{LocalizationService.Translate(lang, "Open About CyberSnap")} ({LocalizationService.Translate(lang, "Update available")})";
+                WidgetBrandingBtn.ToolTip = $"{LocalizationService.Translate(lang, "About tooltip")} ({LocalizationService.Translate(lang, "Update available")})";
             }
             else
             {
                 UpdateLed.ToolTip = null;
-                WidgetBrandingBtn.ToolTip = LocalizationService.Translate(lang, "Open About CyberSnap");
+                WidgetBrandingBtn.ToolTip = LocalizationService.Translate(lang, "About tooltip");
             }
         }
         catch (Exception ex)

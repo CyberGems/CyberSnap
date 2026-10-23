@@ -132,8 +132,6 @@
                                 FocusVisualStyle="{x:Null}"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Left"
-                                ToolTip="Open About CyberSnap"
-                                Services:LocalizationService.SourceToolTip="Open About CyberSnap"
                                 Click="WidgetBranding_Click"
                                 MouseEnter="WidgetBranding_MouseEnter"
                                 MouseLeave="WidgetBranding_MouseLeave">
@@ -174,9 +172,8 @@
                                 </Ellipse>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="WidgetMoreButton" Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="More_Click" ToolTip="More"
+                        <Button x:Name="WidgetMoreButton" Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="More_Click"
                                 PreviewMouseLeftButtonDown="More_PreviewMouseLeftButtonDown"
-                                Services:LocalizationService.SourceToolTip="More"
                                 AutomationProperties.Name="More">
                             <Image x:Name="MoreIcon" Width="18" Height="18"/>
                         </Button>
@@ -186,7 +183,6 @@
                     <Grid Grid.Row="1" Margin="0,0,0,12" HorizontalAlignment="Center">
                         <Button x:Name="CaptureButton" Click="CaptureButton_Click" Cursor="Hand" Width="54" Height="54" FocusVisualStyle="{x:Null}"
                                 MouseEnter="CaptureButton_MouseEnter" MouseLeave="CaptureButton_MouseLeave"
-                                ToolTip="Quick screenshot (Area Capture)"
                                 AutomationProperties.Name="Quick screenshot"
                                 AutomationProperties.HelpText="Start a quick screenshot using the default capture mode.">
                             <Button.Template>
@@ -240,40 +236,40 @@
                             <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                            <Button Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click" ToolTip="Scrolling capture"
+                            <Button x:Name="ScrollToolButton" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click"
                                     AutomationProperties.Name="Scrolling capture">
                                 <Image x:Name="ScrollCaptureIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ScreenRecord_Click" ToolTip="Record screen (Video MP4)"
+                            <Button x:Name="VideoToolButton" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ScreenRecord_Click"
                                     AutomationProperties.Name="Record screen video">
                                 <Image x:Name="ScreenRecordIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="GifRecord_Click" ToolTip="Record animated GIF"
+                            <Button x:Name="GifToolButton" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="GifRecord_Click"
                                     AutomationProperties.Name="Record animated GIF">
                                 <Image x:Name="GifRecordIcon" Width="22" Height="22"/>
                             </Button>
                             <Border x:Name="ToolsSeparator" Grid.Row="1" Grid.ColumnSpan="3" Height="1" Margin="4,7,4,7" Background="{DynamicResource WidgetSeparator}"/>
-                            <Button Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="GrabText_Click" ToolTip="Extract text (OCR)"
+                            <Button x:Name="OcrToolButton" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="GrabText_Click"
                                     AutomationProperties.Name="Extract text OCR">
                                 <Image x:Name="GrabTextIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click" ToolTip="Color picker"
+                            <Button x:Name="ColorToolButton" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click"
                                     AutomationProperties.Name="Color picker">
                                 <Image x:Name="ColorPickerIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Grid.Row="2" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="QR and Barcodes"
+                            <Button x:Name="QrToolButton" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="QrScan_Click"
                                     AutomationProperties.Name="QR and Barcodes">
                                 <Image x:Name="QrScanIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Ruler_Click" ToolTip="Ruler"
+                            <Button x:Name="RulerToolButton" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Ruler_Click"
                                     AutomationProperties.Name="Ruler">
                                 <Image x:Name="RulerIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Grid.Row="3" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Zoom_Click" ToolTip="Zoom"
+                            <Button x:Name="ZoomToolButton" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Zoom_Click"
                                     AutomationProperties.Name="Zoom">
                                 <Image x:Name="ZoomIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button x:Name="PinToolButton" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Pin_Click" ToolTip="Pin to screen"
+                            <Button x:Name="PinToolButton" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Pin_Click"
                                     AutomationProperties.Name="Pin to screen">
                                 <Image x:Name="PinIcon" Width="22" Height="22"/>
                             </Button>

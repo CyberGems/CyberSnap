@@ -314,6 +314,14 @@
             </Setter>
         </Style>
 
+        <DataTemplate DataType="{x:Type ui:ActionToolTipContent}">
+            <StackPanel MaxWidth="320">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Description}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+            </StackPanel>
+        </DataTemplate>
+
         <!-- Global ToolTip Style -->
         <Style TargetType="ToolTip">
             <Setter Property="Background" Value="{DynamicResource ThemeTooltipBackgroundBrush}"/>
