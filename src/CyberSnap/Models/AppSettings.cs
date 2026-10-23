@@ -796,10 +796,6 @@ public sealed class AppSettings
             ["blur"] = (none, 0x31),        // 1 (Blur)
             ["emoji"] = (none, 0x32),       // 2 (Emoji)
             ["undo"] = (ctrl, 0x5A),        // Ctrl+Z (Undo)
-            ["ocr"] = (none, 0x4F),         // O (OCR)
-            ["picker"] = (none, 0x43),      // C (Color Picker)
-            ["scan"] = (none, 0x51),        // Q (QR & Barcodes)
-            ["ruler"] = (none, 0x52),       // R (Ruler)
         };
         return result;
     }
@@ -881,13 +877,24 @@ public sealed class AppSettings
         return null;
     }
 
-    /// <summary>Get hotkey (mod, key) for a tool ID, checking named properties first then dictionary.</summary>
-    public (uint mod, uint key) GetToolHotkey(string toolId) => toolId switch
+    /// <summary>Resolve toolbar aliases to their single global assignment.</summary>
+    public static string CanonicalHotkeyId(string toolId) => toolId switch
+    {
+        "ocr" => "_standaloneOcr",
+        "picker" => "_standaloneColorPicker",
+        "scan" => "_standaloneScan",
+        "ruler" => "_standaloneRuler",
+        "zoom" => "_standaloneZoom",
+        "pin" => "_standalonePin",
+        "scroll" => "_scrollCapture",
+        _ => toolId,
+    };
+
+    // Keep the persisted property names for compatibility. Every launcher and toolbar
+    // alias resolves to the same global binding; annotation bindings remain local.
+    public (uint mod, uint key) GetToolHotkey(string toolId) => CanonicalHotkeyId(toolId) switch
     {
         "rect" => (HotkeyModifiers, HotkeyKey),
-        "ocr" => (OcrHotkeyModifiers, OcrHotkeyKey),
-        "picker" => (PickerHotkeyModifiers, PickerHotkeyKey),
-        "scan" => (ScanHotkeyModifiers, ScanHotkeyKey),
         "center" => (CenterHotkeyModifiers, CenterHotkeyKey),
         "record" => (RecordHotkeyModifiers, RecordHotkeyKey),
         "recordGif" => (RecordGifHotkeyModifiers, RecordGifHotkeyKey),
@@ -901,7 +908,7 @@ public sealed class AppSettings
         "_standaloneOcr" => (StandaloneOcrHotkeyModifiers, StandaloneOcrHotkeyKey),
         "_standaloneScan" => (StandaloneScanHotkeyModifiers, StandaloneScanHotkeyKey),
         "_standaloneZoom" => (StandaloneZoomHotkeyModifiers, StandaloneZoomHotkeyKey),
-        _ => GetGenericToolHotkey(toolId),
+        var id => GetGenericToolHotkey(id),
     };
 
     private (uint mod, uint key) GetGenericToolHotkey(string toolId)
@@ -923,16 +930,12 @@ public sealed class AppSettings
     /// <summary>Set hotkey (mod, key) for a tool ID.</summary>
     public void SetToolHotkey(string toolId, uint mod, uint key)
     {
-        switch (toolId)
+        switch (CanonicalHotkeyId(toolId))
         {
             case "rect": HotkeyModifiers = mod; HotkeyKey = key; break;
-            case "ocr": OcrHotkeyModifiers = mod; OcrHotkeyKey = key; break;
-            case "picker": PickerHotkeyModifiers = mod; PickerHotkeyKey = key; break;
-            case "scan": ScanHotkeyModifiers = mod; ScanHotkeyKey = key; break;
             case "center": CenterHotkeyModifiers = mod; CenterHotkeyKey = key; break;
             case "record": RecordHotkeyModifiers = mod; RecordHotkeyKey = key; break;
             case "recordGif": RecordGifHotkeyModifiers = mod; RecordGifHotkeyKey = key; break;
-            // ruler handled by generic path (annotation tool, no default hotkey)
             case "_fullscreen": FullscreenHotkeyModifiers = mod; FullscreenHotkeyKey = key; break;
             case "_activeWindow": ActiveWindowHotkeyModifiers = mod; ActiveWindowHotkeyKey = key; break;
             case "_repeatLastArea": RepeatLastAreaHotkeyModifiers = mod; RepeatLastAreaHotkeyKey = key; break;
@@ -945,7 +948,7 @@ public sealed class AppSettings
             case "_standaloneZoom": StandaloneZoomHotkeyModifiers = mod; StandaloneZoomHotkeyKey = key; break;
             default:
                 ToolHotkeys ??= new();
-                ToolHotkeys[toolId] = new[] { mod, key };
+                ToolHotkeys[CanonicalHotkeyId(toolId)] = new[] { mod, key };
                 break;
         }
     }
@@ -959,7 +962,7 @@ public sealed class AppSettings
             ? new HashSet<string>(visibleToolIds, StringComparer.OrdinalIgnoreCase)
             : null;
 
-        foreach (var tool in ToolDef.AllTools.Where(t => t.Group is 0 or 1))
+        foreach (var tool in ToolDef.AllTools.Where(t => t.Group == 1))
         {
             if (visible != null && !visible.Contains(tool.Id))
                 continue;

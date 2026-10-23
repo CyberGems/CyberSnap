@@ -395,6 +395,20 @@ public sealed partial class RegionOverlayForm
 
     private void SwitchModeFromHotkey(CaptureMode mode)
     {
+        // A global launcher is consumed while a selection/annotation is in progress.
+        // It must never reset that work or open a competing tool above this overlay.
+        if (!CanActivateCaptureTool()) return;
+        HideToolbarTooltip();
+        if (mode == CaptureMode.Ocr && StandaloneOcrRequested is not null)
+        {
+            StandaloneOcrRequested.Invoke();
+            return;
+        }
+        if (mode == CaptureMode.Scan && StandaloneScanRequested is not null)
+        {
+            StandaloneScanRequested.Invoke();
+            return;
+        }
         SetMode(mode);
         // Color Picker / Ruler / Record close this overlay from SetMode; don't touch a disposing form.
         if (IsDisposed || Disposing || !Visible)
@@ -403,6 +417,9 @@ public sealed partial class RegionOverlayForm
         Invalidate();
         UpdateToolbarSurfaceOnly();
     }
+
+    private bool CanActivateCaptureTool() =>
+        !_isConfirmingSelection && !_isSelecting && !_isTyping && !_emojiPickerOpen;
 
     private static bool IsOverlaySwitchableMode(CaptureMode mode) =>
         ToolDef.AllTools.Any(tool => tool.Mode == mode);

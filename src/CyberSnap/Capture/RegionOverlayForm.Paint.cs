@@ -381,6 +381,8 @@ public sealed partial class RegionOverlayForm
                     active: gearActive);
             }
 
+            PaintToolbarKeyboardFocus(g, confirmation: true);
+
             if (!HasConfirmAnnotations() && !_centerMoveGripRect.IsEmpty)
             {
                 DrawCenterMoveGrip(g);

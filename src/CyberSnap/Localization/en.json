@@ -1,4 +1,12 @@
 {
+  "Global shortcuts": "Global shortcuts",
+  "Capture annotations": "Capture annotations",
+  "Click a field and press a shortcut. Use × to clear it. Global shortcuts are optional and also appear in the capture toolbar. Another app may already be using a combination.": "Click a field and press a shortcut. Use × to clear it. Global shortcuts are optional and also appear in the capture toolbar. Another app may already be using a combination.",
+  "Launch captures and tools from any app. Assign only the shortcuts you need.": "Launch captures and tools from any app. Assign only the shortcuts you need.",
+  "These shortcuts apply only while annotating a capture. Enter confirms, Esc cancels, R retries, and P toggles Preview.": "These shortcuts apply only while annotating a capture. Enter confirms, Esc cancels, R retries, and P toggles Preview.",
+  "These shortcuts apply only in the Annotations Editor.": "These shortcuts apply only in the Annotations Editor.",
+  "Select an area to keep on top of other windows.": "Select an area to keep on top of other windows.",
+  "Tab and Shift+Tab browse buttons. Space activates; Enter confirms the capture.": "Tab and Shift+Tab browse buttons. Space activates; Enter confirms the capture.",
   "Backup from {0}": "Backup from {0}",
   "Recovery copy from {0}": "Recovery copy from {0}",
   "Manual backup": "Manual backup",

@@ -549,6 +549,7 @@ public sealed partial class RegionOverlayForm
         if (_emojiPickerOpen) PaintEmojiPicker(g);
         if (_fontPickerOpen) PaintFontPicker(g);
         if (_altCapturePopupOpen) PaintAltCaptureButton(g);
+        PaintToolbarKeyboardFocus(g, confirmation: false);
         g.Restore(state);
     }
 

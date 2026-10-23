@@ -21,6 +21,12 @@ public sealed class WindowsToolTip : Form
     private const int PadY = 6;
     private const int AnchorGap = 8;
     private readonly Font _font = UiChrome.ChromeFont(8.5f);
+    private readonly Font _titleFont = UiChrome.ChromeFont(8.5f, FontStyle.Bold);
+    [System.ComponentModel.DefaultValue(false)]
+    public bool EmphasizeTitle { get; set; }
+    private string? _title;
+    private string? _description;
+    private int _titleHeight;
     private string _text = "";
     private bool _singleLine;
 
@@ -121,6 +127,17 @@ public sealed class WindowsToolTip : Form
         if (!singleLine)
             measureFlags |= TextFormatFlags.WordBreak;
         var preferred = TextRenderer.MeasureText(text, _font, measureSize, measureFlags);
+        _title = null;
+        _description = null;
+        if (EmphasizeTitle && !singleLine && text.IndexOf('\n') is int split && split > 0)
+        {
+            _title = text[..split];
+            _description = text[(split + 1)..];
+            var titleSize = TextRenderer.MeasureText(_title, _titleFont, measureSize, measureFlags);
+            var bodySize = TextRenderer.MeasureText(_description, _font, measureSize, measureFlags);
+            _titleHeight = titleSize.Height;
+            preferred = new Size(Math.Max(titleSize.Width, bodySize.Width), titleSize.Height + 4 + bodySize.Height);
+        }
         int width = singleLine
             ? Math.Max(1, preferred.Width + PadX * 2)
             : Math.Min(MaxWidth, Math.Max(1, preferred.Width + PadX * 2));
@@ -207,6 +224,16 @@ public sealed class WindowsToolTip : Form
         }
 
         var textRect = new Rectangle(PadX, PadY, Width - PadX * 2, Height - PadY * 2);
+        if (_title is not null && _description is not null)
+        {
+            var flags = TextFormatFlags.Left | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
+            TextRenderer.DrawText(g, _title, _titleFont,
+                new Rectangle(textRect.X, textRect.Y, textRect.Width, _titleHeight), UiChrome.SurfaceTextPrimary, flags);
+            TextRenderer.DrawText(g, _description, _font,
+                new Rectangle(textRect.X, textRect.Y + _titleHeight + 4, textRect.Width, textRect.Height - _titleHeight - 4),
+                UiChrome.SurfaceTextSecondary, flags);
+            return;
+        }
         var drawFlags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
         if (_singleLine)
             drawFlags |= TextFormatFlags.SingleLine;
@@ -227,6 +254,7 @@ public sealed class WindowsToolTip : Form
         {
             Region?.Dispose();
             _font.Dispose();
+            _titleFont.Dispose();
         }
         base.Dispose(disposing);
     }

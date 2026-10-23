@@ -45,10 +45,10 @@ public partial class App
         TryRegister(_hotkeyService.RegisterActiveWindow(s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey), "Active Window", s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey);
         TryRegister(_hotkeyService.RegisterRepeatLastArea(s.RepeatLastAreaHotkeyModifiers, s.RepeatLastAreaHotkeyKey), "Repeat last area", s.RepeatLastAreaHotkeyModifiers, s.RepeatLastAreaHotkeyKey);
         TryRegister(_hotkeyService.RegisterScrollCapture(s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey), "Scroll Capture", s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey);
-        TryRegister(_hotkeyService.RegisterStandaloneRuler(s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey), "Standalone Ruler", s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey);
-        TryRegister(_hotkeyService.RegisterStandaloneColorPicker(s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey), "Standalone Color Picker", s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey);
-        TryRegister(_hotkeyService.RegisterStandaloneOcr(s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey), "Standalone OCR", s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey);
-        TryRegister(_hotkeyService.RegisterStandaloneScan(s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey), "Standalone Scanner", s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneRuler(s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey), "Ruler", s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneColorPicker(s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey), "Color Picker", s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneOcr(s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey), "OCR", s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneScan(s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey), "QR & Barcodes", s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneZoom(s.StandaloneZoomHotkeyModifiers, s.StandaloneZoomHotkeyKey), "Zoom", s.StandaloneZoomHotkeyModifiers, s.StandaloneZoomHotkeyKey);
         var (pinModifiers, pinKey) = s.GetToolHotkey("_standalonePin");
         TryRegister(_hotkeyService.RegisterStandalonePin(pinModifiers, pinKey), "Pin to screen", pinModifiers, pinKey);
@@ -124,6 +124,7 @@ public partial class App
 
     private void OnGifHotkeyPressed()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.RecordGif)) return;
         if (RecordingForm.Current != null)
         {
             RecordingForm.Current.RequestStop();
@@ -137,6 +138,7 @@ public partial class App
 
     private void OnScrollCaptureHotkeyPressed()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.ScrollCapture)) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchScrollingCapture();
@@ -145,6 +147,7 @@ public partial class App
 
     private void OnFullscreenHotkeyPressed()
     {
+        if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_fullscreen")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchWithDelay(CaptureFullscreenNow);
@@ -155,6 +158,7 @@ public partial class App
 
     private void OnActiveWindowHotkeyPressed(IntPtr preferredWindow)
     {
+        if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_activeWindow")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
         LaunchWithDelay(() => CaptureActiveWindowNow(preferredWindow));
@@ -162,6 +166,7 @@ public partial class App
 
     private void OnRepeatLastAreaHotkeyPressed()
     {
+        if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_repeatLastArea")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
 
@@ -211,6 +216,7 @@ public partial class App
 
     private void OnStandaloneRulerHotkeyPressed()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.Ruler)) return;
         if (Volatile.Read(ref _isZooming) != 0) return;
         // Dismiss tray context menu so it doesn't appear frozen in the screenshot
         _trayIcon?.CloseContextMenu();
@@ -253,6 +259,7 @@ public partial class App
 
     private void OnStandaloneOcrHotkeyPressed()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.Ocr)) return;
         if (Volatile.Read(ref _isZooming) != 0) return;
         _trayIcon?.CloseContextMenu();
         BeginStandaloneToolSession();
@@ -281,6 +288,7 @@ public partial class App
 
     private void OnStandaloneColorPickerHotkeyPressed()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.ColorPicker)) return;
         if (Volatile.Read(ref _isZooming) != 0) return;
         _trayIcon?.CloseContextMenu();
         BeginStandaloneToolSession();
@@ -309,6 +317,7 @@ public partial class App
 
     private void OnStandaloneScanHotkeyPressed()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.Scan)) return;
         if (Volatile.Read(ref _isZooming) != 0) return;
         _trayIcon?.CloseContextMenu();
         BeginStandaloneToolSession();

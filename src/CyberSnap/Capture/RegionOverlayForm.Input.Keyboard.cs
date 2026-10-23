@@ -49,6 +49,7 @@ public sealed partial class RegionOverlayForm
     // ProcessCmdKey always receives ESC (OnKeyDown sometimes doesn't)
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        if (TryHandleToolbarNavigation(keyData)) return true;
         if ((keyData & Keys.KeyCode) == Keys.Escape)
         {
             HandleEscapeKey();
@@ -95,6 +96,12 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (TryHandleToolbarNavigation(e.KeyData))
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            return;
+        }
         if (e.KeyCode == Keys.Escape)
         {
             e.SuppressKeyPress = true;
@@ -276,6 +283,7 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnKeyUp(KeyEventArgs e)
     {
+        if (e.KeyCode == Keys.Space) _toolbarSpaceHeld = false;
         base.OnKeyUp(e);
 
         if (e.KeyCode is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey

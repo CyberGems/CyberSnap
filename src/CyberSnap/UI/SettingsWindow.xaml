@@ -1260,8 +1260,8 @@
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
                                 <TextBlock Text="Hotkey assignments" Services:LocalizationService.SourceText="Hotkey assignments" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock Text="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Alt+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)"
-                                           Services:LocalizationService.SourceText="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Alt+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)"
+                                <TextBlock Text="Click a field and press a shortcut. Use × to clear it. Global shortcuts are optional and also appear in the capture toolbar. Another app may already be using a combination."
+                                           Services:LocalizationService.SourceText="Click a field and press a shortcut. Use × to clear it. Global shortcuts are optional and also appear in the capture toolbar. Another app may already be using a combination."
                                            Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <Button x:Name="ResetHotkeysBtn" Content="Reset all" Grid.Column="2"
@@ -1346,17 +1346,27 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Row="0" Grid.Column="0">
-                            <TextBlock Text="Capture &amp; Global" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
+                            <TextBlock Text="Global shortcuts" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
+                                       Services:LocalizationService.SourceText="Global shortcuts"/>
+                            <TextBlock Text="Launch captures and tools from any app. Assign only the shortcuts you need."
+                                       Services:LocalizationService.SourceText="Launch captures and tools from any app. Assign only the shortcuts you need."
+                                       Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="4,0,0,10"/>
                             <StackPanel x:Name="CaptureToolsPanel"/>
                         </StackPanel>
                         <StackPanel Grid.Row="0" Grid.Column="2">
-                            <TextBlock Text="Capture Toolbar" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
-                                       Services:LocalizationService.SourceText="Capture Toolbar"/>
+                            <TextBlock Text="Capture annotations" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
+                                       Services:LocalizationService.SourceText="Capture annotations"/>
+                            <TextBlock Text="These shortcuts apply only while annotating a capture. Enter confirms, Esc cancels, R retries, and P toggles Preview."
+                                       Services:LocalizationService.SourceText="These shortcuts apply only while annotating a capture. Enter confirms, Esc cancels, R retries, and P toggles Preview."
+                                       Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="4,0,0,10"/>
                             <StackPanel x:Name="AnnotationToolsPanel"/>
                         </StackPanel>
                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,16,0,0">
                             <TextBlock Text="Annotations Editor" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
                                         Services:LocalizationService.SourceText="Annotations Editor"/>
+                            <TextBlock Text="These shortcuts apply only in the Annotations Editor."
+                                       Services:LocalizationService.SourceText="These shortcuts apply only in the Annotations Editor."
+                                       Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="4,0,0,10"/>
                             <StackPanel x:Name="EditorToolsPanel"/>
                         </StackPanel>
                     </Grid>

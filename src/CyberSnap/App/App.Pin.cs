@@ -20,6 +20,7 @@ public partial class App
 
     public void OnPinToolProxy()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.Pin)) return;
         _trayIcon?.CloseContextMenu();
         if (IsSessionBusy()) return;
         if (_pinChooser is { IsVisible: true }) { _pinChooser.Activate(); return; }

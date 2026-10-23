@@ -10,6 +10,7 @@ public sealed partial class RegionOverlayForm
 {
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        if (!_activatingToolbarWithKeyboard) ClearToolbarKeyboardFocus();
         Focus();
 
         // Logo / brand toggles the guide — handle before generic dismiss so click is not a no-op.
@@ -329,24 +330,8 @@ public sealed partial class RegionOverlayForm
                 else
                 {
                     var tool = _mainBarTools[btn];
-                    if (!_isConfirmingSelection &&
-                        tool.Mode == CaptureMode.Ocr &&
-                        StandaloneOcrRequested is not null)
-                    {
-                        HideToolbarTooltip();
-                        StandaloneOcrRequested.Invoke();
-                    }
-                    else if (!_isConfirmingSelection &&
-                        tool.Mode == CaptureMode.Scan &&
-                        StandaloneScanRequested is not null)
-                    {
-                        HideToolbarTooltip();
-                        StandaloneScanRequested.Invoke();
-                    }
-                    else if (tool.Mode.HasValue)
-                    {
-                        SetTool(tool);
-                    }
+                    if (tool.Mode is { } mode)
+                        SwitchModeFromHotkey(mode);
                 }
             }
             else if (btn >= CloseButtonIndex + 1 && btn < BtnCount)

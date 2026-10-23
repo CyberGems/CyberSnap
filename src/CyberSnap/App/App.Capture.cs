@@ -90,6 +90,7 @@ public partial class App
 
     private void LaunchRecordingWithFormat(RecordingFormat fmt)
     {
+        if (TrySwitchActiveOverlay(fmt == RecordingFormat.GIF ? CaptureMode.RecordGif : CaptureMode.Record)) return;
         if (RecordingForm.Current != null)
         {
             RecordingForm.Current.RequestStop();

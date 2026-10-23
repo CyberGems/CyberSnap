@@ -794,15 +794,30 @@ public sealed partial class RegionOverlayForm : Form
         if (!IsOverlaySwitchableMode(mode))
             return false;
 
+        return TryDispatchToCurrentOverlay(overlay => overlay.SwitchModeFromHotkey(mode));
+    }
+
+    public static bool TryRunCurrentOverlayCaptureAction(string actionId)
+    {
+        if (!IsImmediateCaptureAction(actionId)) return false;
+        return TryDispatchToCurrentOverlay(overlay =>
+        {
+            if (!overlay.CanActivateCaptureTool()) return;
+            overlay.SelectAltPopupTool(actionId);
+        });
+    }
+
+    private static bool TryDispatchToCurrentOverlay(Action<RegionOverlayForm> action)
+    {
         var overlay = _currentOverlay;
         if (overlay is null || overlay.IsDisposed || overlay.Disposing)
             return false;
         try
         {
             if (overlay.InvokeRequired)
-                overlay.BeginInvoke(new Action(() => overlay.SwitchModeFromHotkey(mode)));
+                overlay.BeginInvoke(new Action(() => { if (!overlay.IsDisposed && !overlay.Disposing) action(overlay); }));
             else
-                overlay.SwitchModeFromHotkey(mode);
+                action(overlay);
             return true;
         }
         catch (InvalidOperationException)
@@ -2345,6 +2360,7 @@ public sealed partial class RegionOverlayForm : Form
 
     private void HoverHoldTimer_Tick(object? sender, EventArgs e)
     {
+        if (HasToolbarKeyboardFocus()) return;
         bool changed = false;
 
         // 1. Mouse hold check (0.3 seconds) + progress ring redraw while holding
@@ -2486,7 +2502,7 @@ public sealed partial class RegionOverlayForm : Form
             }
             else if (_tooltipVisible && _tooltipButton == 997)
             {
-                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
+                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 10000)
                     HideToolbarTooltip();
             }
         }
@@ -2509,7 +2525,7 @@ public sealed partial class RegionOverlayForm : Form
             }
             else if (_tooltipVisible)
             {
-                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
+                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 10000)
                 {
                     HideToolbarTooltip();
                 }
@@ -2547,7 +2563,7 @@ public sealed partial class RegionOverlayForm : Form
                 }
                 else if (_tooltipVisible)
                 {
-                    if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
+                    if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 10000)
                     {
                         HideToolbarTooltip();
                     }

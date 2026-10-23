@@ -78,7 +78,7 @@ public sealed partial class RegionOverlayForm
                 return;
 
             _tooltipButton = tipId;
-            _toolbarToolTip ??= new WindowsToolTip();
+            _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
 
             var settings = Services.SettingsService.LoadStatic();
             var altToolId = _altPopupSlots[_hoveredAltSlotIndex].ToolId;
@@ -119,7 +119,7 @@ public sealed partial class RegionOverlayForm
                 return;
 
             _tooltipButton = 997;
-            _toolbarToolTip ??= new WindowsToolTip();
+            _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
             var brandText = LocalizationService.Translate("Quick Start guide")
                 + "\n" + LocalizationService.Translate("Click to open the capture guide");
             var brandLocal = !_logoRect.IsEmpty ? _logoRect : _brandRect;
@@ -143,7 +143,7 @@ public sealed partial class RegionOverlayForm
                 return;
 
             _tooltipButton = 996;
-            _toolbarToolTip ??= new WindowsToolTip();
+            _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
             var dragText = LocalizationService.Translate("Drag to move toolbar")
                 + "\n" + LocalizationService.Translate("Click and hold to drag the toolbar");
             var dragAnchor = new Rectangle(
@@ -164,7 +164,7 @@ public sealed partial class RegionOverlayForm
                 return;
 
             _tooltipButton = 998;
-            _toolbarToolTip ??= new WindowsToolTip();
+            _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
             var activatorText = LocalizationService.Translate("More options")
                 + "\n" + LocalizationService.Translate("Hidden tools, preferences, and quick start guide");
             var activatorAnchor = new Rectangle(
@@ -188,7 +188,7 @@ public sealed partial class RegionOverlayForm
             return;
 
         _tooltipButton = _hoveredButton;
-        _toolbarToolTip ??= new WindowsToolTip();
+        _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
 
         var text = GetToolbarTooltipText(_hoveredButton);
         if (string.IsNullOrWhiteSpace(text))
@@ -244,13 +244,13 @@ public sealed partial class RegionOverlayForm
             if (button == _mergedCaptureButtonIndex)
             {
                 var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
-                text += "\n" + (defaultMode == CaptureMode.Center
+                text += " · " + (defaultMode == CaptureMode.Center
                     ? LocalizationService.Translate("Hold to show Area Capture tool")
                     : LocalizationService.Translate("Hold to show From Center tool"));
             }
             else if (button == _mergedRecordButtonIndex)
             {
-                text += "\n" + LocalizationService.Translate("Hold to show GIF recording");
+                text += " · " + LocalizationService.Translate("Hold to show GIF recording");
             }
 
             return text;
@@ -291,9 +291,8 @@ public sealed partial class RegionOverlayForm
         if (tool.Id == "undo")
             return LocalizationService.Translate("Undo") + "  (Ctrl+Z)";
 
-        var title = tool.Id == "ocr"
-            ? LocalizationService.Translate("Extract text (OCR)")
-            : LocalizationService.Translate(tool.Label);
+        var content = CaptureToolTipFor(tool.Id);
+        var title = content?.Title ?? LocalizationService.Translate(tool.Label);
 
         var hotkey = settings?.GetToolHotkey(tool.Id) ?? (0u, 0u);
         if (hotkey.key != 0)
@@ -308,7 +307,7 @@ public sealed partial class RegionOverlayForm
         }
 
         if (includeHideHint)
-            text += "\n" + LocalizationService.Translate("Right-click to hide");
+            text += " · " + LocalizationService.Translate("Right-click to hide");
 
         return text;
     }
@@ -333,12 +332,42 @@ public sealed partial class RegionOverlayForm
         var hotkey = settings?.GetToolHotkey(toolId) ?? (0u, 0u);
         if (hotkey.key != 0)
             title += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
-        return title;
+        var content = CaptureToolTipFor(toolId);
+        return content is null ? title : title + "\n" + content.Description;
+    }
+
+    private static CyberSnap.UI.ActionToolTipContent? CaptureToolTipFor(string id)
+    {
+        CyberSnap.UI.CaptureToolTipKind? kind = id switch
+        {
+            "rect" => UI.CaptureToolTipKind.Area,
+            "center" => UI.CaptureToolTipKind.Center,
+            "scroll" => UI.CaptureToolTipKind.Scrolling,
+            "record" => UI.CaptureToolTipKind.Video,
+            "recordGif" => UI.CaptureToolTipKind.Gif,
+            "ocr" => UI.CaptureToolTipKind.Ocr,
+            "picker" => UI.CaptureToolTipKind.Color,
+            "scan" => UI.CaptureToolTipKind.Qr,
+            "ruler" => UI.CaptureToolTipKind.Ruler,
+            "zoom" => UI.CaptureToolTipKind.Zoom,
+            "pin" => UI.CaptureToolTipKind.Pin,
+            "_fullscreen" => UI.CaptureToolTipKind.Fullscreen,
+            "_activeWindow" => UI.CaptureToolTipKind.Window,
+            "_repeatLastArea" => UI.CaptureToolTipKind.Repeat,
+            _ => null
+        };
+        if (kind is null) return null;
+        var content = UI.CaptureToolTips.Get(kind.Value);
+        return id == "pin" ? content with
+        {
+            Description = LocalizationService.Translate("Select an area to keep on top of other windows.")
+        } : content;
     }
 
     /// <summary>One-line “how to use” hint for tooltips (reuses capture-banner phrasing).</summary>
     private static string GetToolUsageHint(ToolDef tool)
     {
+        if (CaptureToolTipFor(tool.Id) is { } content) return content.Description;
         if (tool.Mode is not { } m)
             return "";
 
@@ -401,7 +430,7 @@ public sealed partial class RegionOverlayForm
         }
 
         _tooltipButton = 800 + _hoveredConfirmButton;
-        _toolbarToolTip ??= new WindowsToolTip();
+        _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
 
         var slotKind = _confirmChromeKinds[_hoveredConfirmButton];
         var kind = DisplayConfirmChromeKind(slotKind);
@@ -473,7 +502,7 @@ public sealed partial class RegionOverlayForm
             return;
 
         _tooltipButton = 997;
-        _toolbarToolTip ??= new WindowsToolTip();
+        _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
         var text = LocalizationService.Translate("More options")
             + "\n" + LocalizationService.Translate("Hidden tools, preferences, and quick start guide");
         var anchorScreen = new Rectangle(

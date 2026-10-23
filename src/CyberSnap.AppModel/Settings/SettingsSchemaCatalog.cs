@@ -139,7 +139,7 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("scan_auto_copy", "Auto-copy QR/barcode results", SettingsValueKind.Toggle, "Copy decoded QR and barcode content to the clipboard.", "ScanAutoCopyToClipboard"),
                         new SettingDefinition("scan_window", "Show the QR & Barcode result window", SettingsValueKind.Toggle, "Open the result window after a scan, whether or not the code was copied.", "ScanShowResultWindow"),
                     ]),
-                new SettingsSectionDefinition("ruler", "Ruler", "Behavior of the standalone ruler tool.",
+                new SettingsSectionDefinition("ruler", "Ruler", "Measure distances and dimensions in pixels.",
                     [
                         new SettingDefinition("ruler_capture_all", "Capture all screens", SettingsValueKind.Toggle, "When enabled, the ruler's Enter capture takes all screens. When disabled, only the screen(s) the ruler occupies are captured. Applies only to multi-monitor setups.", "RulerCaptureAllScreens"),
                         new SettingDefinition("ruler_context_menu", "Enable context menu", SettingsValueKind.Toggle, "When disabled, right-click exits the ruler instead of showing the context menu.", "RulerContextMenuEnabled"),

@@ -1,5 +1,6 @@
 using System.Drawing;
 using CyberSnap.Capture;
+using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI;
 using Forms = System.Windows.Forms;
@@ -14,6 +15,7 @@ public partial class App
 
     private void OnStandaloneZoomHotkeyPressed()
     {
+        if (TrySwitchActiveOverlay(CaptureMode.Zoom)) return;
         _trayIcon?.CloseContextMenu();
         if (Volatile.Read(ref _activeStandaloneTools) != 0 || !TryClaimCaptureSlotAllowingPreviewReplace()) return;
         try

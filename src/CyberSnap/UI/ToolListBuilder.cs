@@ -462,15 +462,13 @@ public static class ToolListBuilder
             ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
             ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
 
-            // Standalone Utilities (global standalone launchers; overlay toolbar modes
-            // are reachable from capture itself, so they get no global hotkeys)
-            ("_standaloneOcr", "OCR (Standalone)", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
-            ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
-            ("_standaloneScan", "QR & Barcodes (Standalone)", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
-            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
+            // One optional global binding per tool, shared with the capture toolbar.
+            ("_standaloneOcr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
+            ("_standaloneColorPicker", "Color Picker", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
+            ("_standaloneScan", "QR & Barcodes", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
+            ("_standaloneRuler", "Ruler", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
             ("_standaloneZoom", "Zoom", '\uE8A3'),
             ("_standalonePin", "Pin to screen", '\uE718')
-            // Future standalone tools follow the convention: ("_standalone{name}", "Label", icon)
         };
 
         (uint mod, uint key) GetCaptureHotkey(string id) => settingsService.Settings.GetToolHotkey(id);
@@ -488,7 +486,7 @@ public static class ToolListBuilder
         foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 6), 2))
             AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
-        AddSectionHeader(capturePanel, "Standalone Utilities");
+        AddSectionHeader(capturePanel, "Tools");
         foreach (var item in System.Linq.Enumerable.Skip(captureItems, 8))
             AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
@@ -519,10 +517,12 @@ public static class ToolListBuilder
 
     public static HotkeyConflict? FindHotkeyConflict(AppSettings settings, string? excludeToolId, uint mod, uint key)
     {
+        if (key == 0) return null;
+        var excluded = excludeToolId is null ? null : AppSettings.CanonicalHotkeyId(excludeToolId);
         foreach (var tool in ToolDef.AllTools)
         {
             var id = tool.Id;
-            if (string.Equals(id, excludeToolId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(AppSettings.CanonicalHotkeyId(id), excluded, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             var (existingMod, existingKey) = settings.GetToolHotkey(id);
@@ -532,7 +532,7 @@ public static class ToolListBuilder
 
         foreach (var (id, label, _) in ExtraTools)
         {
-            if (string.Equals(id, excludeToolId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(AppSettings.CanonicalHotkeyId(id), excluded, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             var (existingMod, existingKey) = settings.GetToolHotkey(id);
