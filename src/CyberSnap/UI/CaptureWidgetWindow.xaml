@@ -18,6 +18,10 @@
         MouseLeave="Window_MouseLeave">
 
     <Window.Resources>
+        <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
+            <EventSetter Event="Opened" Handler="WidgetToolTip_Opened"/>
+            <EventSetter Event="Closed" Handler="WidgetToolTip_Closed"/>
+        </Style>
         <!-- CyberGems / Cyberpunk Styles -->
         <SolidColorBrush x:Key="WidgetBg" Color="#0D0F1A"/>
         <SolidColorBrush x:Key="WidgetAccent" Color="#00FFFF"/>

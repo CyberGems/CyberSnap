@@ -47,6 +47,7 @@ public partial class CaptureWidgetWindow : Window
     // Show desktop, sleep/resume, Hide→Show cycles). The managed Topmost property
     // stays true, so the user sees "activado pero no arriba". Re-assert natively.
     private readonly DispatcherTimer _topmostWatchdogTimer;
+    private System.Windows.Controls.ToolTip? _openToolTip;
 
     // Layout constants
     private const double PanelWidth = 196;
@@ -167,8 +168,34 @@ public partial class CaptureWidgetWindow : Window
             if (hwnd == IntPtr.Zero) return;
             Native.User32.SetWindowPos(hwnd, Native.User32.HWND_TOPMOST, 0, 0, 0, 0,
                 Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE);
+            // WPF tooltips have their own HWND. Raising the widget also overtakes an
+            // already-open tooltip, so restore its place above the panel afterwards.
+            AssertToolTipTopmost();
         }
         catch { /* best-effort: watchdog retries */ }
+    }
+
+    private void WidgetToolTip_Opened(object sender, RoutedEventArgs e)
+    {
+        _openToolTip = (System.Windows.Controls.ToolTip)sender;
+        AssertToolTipTopmost();
+    }
+
+    private void WidgetToolTip_Closed(object sender, RoutedEventArgs e)
+    {
+        if (ReferenceEquals(_openToolTip, sender))
+            _openToolTip = null;
+    }
+
+    private void AssertToolTipTopmost()
+    {
+        if (_openToolTip is not { IsOpen: true } tip ||
+            PresentationSource.FromVisual(tip) is not System.Windows.Interop.HwndSource source)
+            return;
+
+        Native.User32.SetWindowPos(source.Handle, Native.User32.HWND_TOPMOST, 0, 0, 0, 0,
+            Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE |
+            Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOOWNERZORDER);
     }
 
     /// <summary>

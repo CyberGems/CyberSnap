@@ -56,6 +56,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--widget-tooltips-only"))
+            {
+                CheckWidgetToolTips(settings);
+                Console.WriteLine($"PASS: {_checks} widget tooltip checks.");
+                return 0;
+            }
             if (args.Contains("--widget-animation-only"))
             {
                 CheckWidgetCollapseAppearance(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -137,6 +143,7 @@ internal static partial class Program
             }
             if (args.Contains("--widget-only"))
             {
+                CheckWidgetToolTips(settings);
                 CheckWidget(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} widget checks.");
                 return 0;
@@ -161,6 +168,7 @@ internal static partial class Program
             CheckOcr(settings, args.FirstOrDefault());
             CheckQr(settings, args.FirstOrDefault());
             CheckFooters(settings, settingsPath, args.FirstOrDefault());
+            CheckWidgetToolTips(settings);
             CheckWidget(settings, args.FirstOrDefault());
             CheckTrimmer(settings, temp, args.FirstOrDefault());
             Console.WriteLine($"PASS: {_checks} result-tab integration checks.");
