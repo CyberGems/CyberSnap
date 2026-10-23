@@ -26,13 +26,10 @@
         <SolidColorBrush x:Key="WidgetTextMuted" Color="#A0B4D2"/>
         <SolidColorBrush x:Key="WidgetBorder" Color="#2000FFFF"/>
         <SolidColorBrush x:Key="WidgetBorderActive" Color="#8000FFFF"/>
+        <SolidColorBrush x:Key="WidgetSeparator" Color="#10FFFFFF"/>
         <SolidColorBrush x:Key="WidgetPeekGripBg" Color="#2600FFFF"/>
         <SolidColorBrush x:Key="WidgetButtonHoverBg" Color="#1500FFFF"/>
         <SolidColorBrush x:Key="WidgetButtonPressedBg" Color="#3000FFFF"/>
-        <SolidColorBrush x:Key="WidgetToggleTrackBg" Color="#2A2A2A"/>
-        <SolidColorBrush x:Key="WidgetToggleTrackBorder" Color="#444444"/>
-        <SolidColorBrush x:Key="WidgetToggleThumbBg" Color="#888888"/>
-        <SolidColorBrush x:Key="WidgetToggleThumbHoverBg" Color="#AAAAAA"/>
         <Color x:Key="WidgetAccentColor">#00FFFF</Color>
         <sys:Double x:Key="WidgetGlowOpacity">0.6</sys:Double>
         <SolidColorBrush x:Key="CaptureBtnRed" Color="#FF3B30"/>
@@ -71,80 +68,6 @@
             </Setter>
         </Style>
 
-        <!-- Premium Modern Toggle Switch Style -->
-        <Style x:Key="WidgetToggleSwitch" TargetType="ToggleButton">
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Width" Value="34"/>
-            <Setter Property="Height" Value="18"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Grid Width="34" Height="18" Background="Transparent" SnapsToDevicePixels="True">
-                            <!-- Track Background -->
-                            <Border x:Name="Track" Width="34" Height="18" CornerRadius="9"
-                                    Background="{DynamicResource WidgetToggleTrackBg}"
-                                    BorderBrush="{DynamicResource WidgetToggleTrackBorder}"
-                                    BorderThickness="1.2"
-                                    SnapsToDevicePixels="True"/>
-
-                            <!-- Thumb (Smooth Sliding with Drop Shadow) -->
-                            <Border x:Name="Thumb" Width="12" Height="12" CornerRadius="6"
-                                    HorizontalAlignment="Left" Margin="3,3,0,3"
-                                    Background="{DynamicResource WidgetToggleThumbBg}"
-                                    SnapsToDevicePixels="True">
-                                <Border.RenderTransform>
-                                    <TranslateTransform x:Name="ThumbOffset" X="0"/>
-                                </Border.RenderTransform>
-                                <Border.Effect>
-                                    <DropShadowEffect Color="#000000" BlurRadius="3" ShadowDepth="1" Direction="270" Opacity="0.35"/>
-                                </Border.Effect>
-                                <Path x:Name="Check"
-                                      Data="M2.8,6.2 L5,8.4 L9.2,3.8"
-                                      Stroke="#0F141C"
-                                      StrokeThickness="1.6"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      Visibility="Collapsed"/>
-                            </Border>
-                        </Grid>
-
-                        <ControlTemplate.Triggers>
-                            <!-- Checked State. Thumb slide is animated in code-behind
-                                 (AnimateToggleThumb with Motion.FromTo) so the
-                                 "Disable animations" setting is respected; XAML
-                                 Storyboards here would bypass Motion.Disabled. -->
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource WidgetAccent}"/>
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WidgetAccent}"/>
-                                <Setter TargetName="Thumb" Property="Background" Value="#FFFFFF"/>
-                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
-                                <Setter TargetName="Track" Property="Effect" Value="{StaticResource CyanGlow}"/>
-                            </Trigger>
-
-                            <!-- Mouse Over States -->
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WidgetAccentHover}"/>
-                            </Trigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsChecked" Value="False"/>
-                                    <Condition Property="IsMouseOver" Value="True"/>
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="Thumb" Property="Background" Value="{DynamicResource WidgetToggleThumbHoverBg}"/>
-                            </MultiTrigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsChecked" Value="True"/>
-                                    <Condition Property="IsMouseOver" Value="True"/>
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource WidgetAccentHover}"/>
-                            </MultiTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
     <!-- Main Container -->
@@ -188,7 +111,6 @@
                         <RowDefinition Height="Auto"/> <!-- Title Bar: Branding + More -->
                         <RowDefinition Height="Auto"/> <!-- Capture Button -->
                         <RowDefinition Height="Auto"/> <!-- Quick Actions -->
-                        <RowDefinition Height="Auto"/> <!-- Settings / Toggles -->
                     </Grid.RowDefinitions>
 
                     <!-- Top Title Bar -->
@@ -305,72 +227,54 @@
                         </Button>
                     </Grid>
 
-                    <!-- Quick Action Shortcuts (Larger icons 22x22) -->
-                    <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,0,10">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <Button Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click" ToolTip="Scrolling capture"
+                    <!-- Three capture actions, followed by two rows of utility tools. -->
+                    <Grid x:Name="QuickActionsGrid" Grid.Row="2" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                            <Button Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click" ToolTip="Scrolling capture"
                                     AutomationProperties.Name="Scrolling capture">
                                 <Image x:Name="ScrollCaptureIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="ScreenRecord_Click" ToolTip="Record screen (Video MP4)"
+                            <Button Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ScreenRecord_Click" ToolTip="Record screen (Video MP4)"
                                     AutomationProperties.Name="Record screen video">
                                 <Image x:Name="ScreenRecordIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="GifRecord_Click" ToolTip="Record animated GIF"
+                            <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="GifRecord_Click" ToolTip="Record animated GIF"
                                     AutomationProperties.Name="Record animated GIF">
                                 <Image x:Name="GifRecordIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="Zoom_Click" ToolTip="Zoom"
-                                    AutomationProperties.Name="Zoom">
-                                <Image x:Name="ZoomIcon" Width="22" Height="22"/>
-                            </Button>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Style="{StaticResource WidgetActionButton}" Click="GrabText_Click" ToolTip="Extract text (OCR)"
+                            <Border x:Name="ToolsSeparator" Grid.Row="1" Grid.ColumnSpan="3" Height="1" Margin="4,7,4,7" Background="{DynamicResource WidgetSeparator}"/>
+                            <Button Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="GrabText_Click" ToolTip="Extract text (OCR)"
                                     AutomationProperties.Name="Extract text OCR">
                                 <Image x:Name="GrabTextIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click" ToolTip="Color picker"
+                            <Button Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click" ToolTip="Color picker"
                                     AutomationProperties.Name="Color picker">
                                 <Image x:Name="ColorPickerIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="QR and Barcodes"
+                            <Button Grid.Row="2" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="QR and Barcodes"
                                     AutomationProperties.Name="QR and Barcodes">
                                 <Image x:Name="QrScanIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="Ruler_Click" ToolTip="Ruler"
+                            <Button Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Ruler_Click" ToolTip="Ruler"
                                     AutomationProperties.Name="Ruler">
                                 <Image x:Name="RulerIcon" Width="22" Height="22"/>
                             </Button>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <!-- Settings / Toggle Row -->
-                    <Grid Grid.Row="3" Margin="0,2,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0" Margin="0,0,0,2"
-                              ToolTip="Include the mouse pointer in still captures"
-                              Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Capture cursor" FontSize="11" Foreground="{DynamicResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
-                                       Margin="0,0,8,0" VerticalAlignment="Center"
-                                       ToolTip="Include the mouse pointer in still captures"
-                                       Services:LocalizationService.SourceText="Capture cursor"
-                                       Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures"/>
-                            <ToggleButton x:Name="CaptureCursorToggle" Grid.Column="1" Style="{StaticResource WidgetToggleSwitch}"
-                                          Checked="CaptureCursorToggle_Changed" Unchecked="CaptureCursorToggle_Changed"
-                                          ToolTip="Include the mouse pointer in still captures"
-                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in still captures"
-                                          AutomationProperties.Name="Capture cursor"
-                                          AutomationProperties.HelpText="Include the mouse pointer in still captures"/>
-                        </Grid>
+                            <Button Grid.Row="3" Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Zoom_Click" ToolTip="Zoom"
+                                    AutomationProperties.Name="Zoom">
+                                <Image x:Name="ZoomIcon" Width="22" Height="22"/>
+                            </Button>
+                            <Button x:Name="PinToolButton" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Center" Style="{StaticResource WidgetActionButton}" Click="Pin_Click" ToolTip="Pin to screen"
+                                    AutomationProperties.Name="Pin to screen">
+                                <Image x:Name="PinIcon" Width="22" Height="22"/>
+                            </Button>
                     </Grid>
+
                 </Grid>
                 </Grid>
             </Border>

@@ -350,6 +350,15 @@ public sealed class SettingsService : IDisposable
             Helpers.WidgetPreferences.FromSettings(current).ApplyTo(Settings);
     }
 
+    internal void RefreshCursorCapturePreferences()
+    {
+        var current = LoadStatic(_settingsPath);
+        if (current is null) return;
+        Settings.ShowCursor = current.ShowCursor;
+        Settings.VideoShowCursor = current.VideoShowCursor;
+        Settings.GifShowCursor = current.GifShowCursor;
+    }
+
     /// <summary>Quick static load for read-only access (e.g. tooltips). Returns null on error.</summary>
     public static AppSettings? LoadStatic(string? settingsPath = null)
     {

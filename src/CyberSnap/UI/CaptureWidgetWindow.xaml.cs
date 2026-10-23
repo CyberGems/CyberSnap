@@ -27,7 +27,6 @@ public partial class CaptureWidgetWindow : Window
     private bool _isDragging;
     private bool _isDragArmed;
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
-    private bool _suppressCaptureCursorToggle; // reflecting ShowCursor into the toggle without re-saving/syncing
     private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
     private System.Windows.Forms.ContextMenuStrip? _contextMenu;
     private bool _moreMenuOpen;
@@ -51,7 +50,7 @@ public partial class CaptureWidgetWindow : Window
 
     // Layout constants
     private const double PanelWidth = 196;
-    private const double PanelHeight = 248; // keep both panel dimensions aligned at common fractional display DPIs
+    private const double PanelHeight = 280; // keep both panel dimensions aligned at common fractional display DPIs
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
@@ -117,13 +116,13 @@ public partial class CaptureWidgetWindow : Window
         SourceInitialized += OnSourceInitialized;
         Closed += OnClosed;
         SettingsService.AutoCopyPreferencesChanged += OnDeliveryPreferencesChanged;
+        SettingsService.SettingsChanged += OnDeliveryPreferencesChanged;
         SettingsService.WidgetPreferencesChanged += OnWidgetPreferencesChanged;
 
         Topmost = _settings.WidgetAlwaysOnTop;
 
         LoadIcons();
         RefreshLayout();
-        UpdateCaptureCursorState();
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
         RefreshUpdateBadge();
     }
@@ -131,6 +130,7 @@ public partial class CaptureWidgetWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         SettingsService.AutoCopyPreferencesChanged -= OnDeliveryPreferencesChanged;
+        SettingsService.SettingsChanged -= OnDeliveryPreferencesChanged;
         SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;
         var menu = _contextMenu;
         menu?.Close();
@@ -277,12 +277,6 @@ public partial class CaptureWidgetWindow : Window
         var hoverBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(21, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(21, 0, 255, 255) : System.Windows.Media.Color.FromArgb(21, 0, 120, 215);
         var pressedBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(48, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(48, 0, 255, 255) : System.Windows.Media.Color.FromArgb(48, 0, 120, 215);
 
-        // Toggle Switch colors
-        var toggleTrackBg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(42, 42, 42) : System.Windows.Media.Color.FromRgb(224, 224, 224);
-        var toggleTrackBorder = Theme.IsDark ? System.Windows.Media.Color.FromRgb(68, 68, 68) : System.Windows.Media.Color.FromRgb(204, 204, 204);
-        var toggleThumbBg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(136, 136, 136) : System.Windows.Media.Color.FromRgb(136, 136, 136);
-        var toggleThumbHoverBg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(170, 170, 170) : System.Windows.Media.Color.FromRgb(85, 85, 85);
-
         Resources["WidgetBg"] = new SolidColorBrush(bg);
         Resources["WidgetAccent"] = new SolidColorBrush(accent);
         Resources["WidgetAccentHover"] = new SolidColorBrush(accentHover);
@@ -290,13 +284,10 @@ public partial class CaptureWidgetWindow : Window
         Resources["WidgetTextMuted"] = new SolidColorBrush(textMuted);
         Resources["WidgetBorder"] = new SolidColorBrush(border);
         Resources["WidgetBorderActive"] = new SolidColorBrush(borderActive);
+        Resources["WidgetSeparator"] = Theme.Brush(Theme.Separator);
         Resources["WidgetPeekGripBg"] = new SolidColorBrush(peekGripBg);
         Resources["WidgetButtonHoverBg"] = new SolidColorBrush(hoverBg);
         Resources["WidgetButtonPressedBg"] = new SolidColorBrush(pressedBg);
-        Resources["WidgetToggleTrackBg"] = new SolidColorBrush(toggleTrackBg);
-        Resources["WidgetToggleTrackBorder"] = new SolidColorBrush(toggleTrackBorder);
-        Resources["WidgetToggleThumbBg"] = new SolidColorBrush(toggleThumbBg);
-        Resources["WidgetToggleThumbHoverBg"] = new SolidColorBrush(toggleThumbHoverBg);
         Resources["WidgetAccentColor"] = accent;
         Resources["WidgetGlowOpacity"] = Theme.IsDark ? 0.6 : 0.35;
     }
@@ -321,6 +312,9 @@ public partial class CaptureWidgetWindow : Window
         GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
         RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, 22); // Ruler tool icon
         ZoomIcon.Source = Helpers.FluentIcons.RenderWpf("zoom", normalIconColor, 22);
+        PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", normalIconColor, 22);
+        System.Windows.Automation.AutomationProperties.SetName(PinToolButton,
+            LocalizationService.Translate(_settings.InterfaceLanguage, "Pin to screen"));
         MoreIcon.Source = Helpers.FluentIcons.RenderWpf("more", normalIconColor, 18);
         System.Windows.Automation.AutomationProperties.SetName(WidgetMoreButton,
             LocalizationService.Translate(_settings.InterfaceLanguage, "More"));
@@ -351,9 +345,6 @@ public partial class CaptureWidgetWindow : Window
         AssertWidgetTopmost();
         try { _topmostWatchdogTimer.Start(); } catch { }
         _activeMonitorTimer.Start();
-        // Template parts exist now: park both thumbs on their rest position
-        // without playing the slide on startup.
-        SnapToggleThumbs();
     }
 
     public void RefreshLayout()
@@ -365,7 +356,6 @@ public partial class CaptureWidgetWindow : Window
         }
 
         ApplyTheme();
-        UpdateCaptureCursorState();
         LoadIcons();
         RefreshUpdateBadge();
 
@@ -430,50 +420,8 @@ public partial class CaptureWidgetWindow : Window
         PeekGrip.Visibility = _isExpanded ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void UpdateCaptureCursorState()
-    {
-        _suppressCaptureCursorToggle = true;
-        try { CaptureCursorToggle.IsChecked = _settings.ShowCursor; }
-        finally { _suppressCaptureCursorToggle = false; }
-    }
-
-    // Settings → widget: re-read ShowCursor so the toggle matches the Capture tab checkbox.
-    public void RefreshCaptureCursorToggle() => UpdateCaptureCursorState();
-
-    private const double WidgetToggleThumbTravel = 16.0;
-    private const int WidgetToggleSlideMs = 140;
     private const int WidgetCapturePopMs = 120;
     private const int WidgetCaptureSettleMs = 180;
-
-    /// <summary>
-    /// Slides a WidgetToggleSwitch thumb with Motion so "Disable animations"
-    /// snaps instantly instead of playing the old hardcoded XAML Storyboard.
-    /// </summary>
-    private void AnimateToggleThumb(System.Windows.Controls.Primitives.ToggleButton toggle, bool animate)
-    {
-        try
-        {
-            toggle.ApplyTemplate();
-            var offset = toggle.Template.FindName("ThumbOffset", toggle) as TranslateTransform;
-            if (offset is null)
-                return;
-            double target = toggle.IsChecked == true ? WidgetToggleThumbTravel : 0.0;
-            offset.BeginAnimation(TranslateTransform.XProperty, null);
-            if (!animate || Motion.Disabled)
-            {
-                offset.X = target;
-                return;
-            }
-            offset.BeginAnimation(TranslateTransform.XProperty,
-                Motion.FromTo(offset.X, target, WidgetToggleSlideMs, Motion.SmoothOut));
-        }
-        catch { /* best-effort microanimation; checked colors still apply via template */ }
-    }
-
-    private void SnapToggleThumbs()
-    {
-        AnimateToggleThumb(CaptureCursorToggle, animate: false);
-    }
 
     private void CaptureButton_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) =>
         AnimateCaptureButton(hovered: true);
@@ -997,9 +945,7 @@ public partial class CaptureWidgetWindow : Window
         if (_isExpanded) return;
         _isExpanded = true;
 
-        // Re-sync toggles from live settings (SettingsService.Settings may have been
-        // replaced while the peek was collapsed).
-        UpdateCaptureCursorState();
+        // Refresh update status when reopening the panel.
         RefreshUpdateBadge();
 
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Arrow;
@@ -1264,6 +1210,7 @@ public partial class CaptureWidgetWindow : Window
     private System.Windows.Forms.ContextMenuStrip BuildMoreMenu()
     {
         _settingsService.RefreshResultDeliveryPreferences();
+        _settingsService.RefreshCursorCapturePreferences();
         _settingsService.RefreshWidgetPreferences();
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
@@ -1358,7 +1305,7 @@ public partial class CaptureWidgetWindow : Window
         var captureMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Image capture"), showImages: true, iconId: "captureRect");
         AddDeliveryOptions(captureMenu, AutoCopyKind.Image);
         captureMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
-        // Cursor capture remains directly available on the panel for every mode.
+        captureMenu.DropDownItems.Add(BuildCursorCaptureToggle(AutoCopyKind.Image));
         captureMenu.DropDownItems.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
             () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
         captureMenu.DropDownItems.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
@@ -1607,20 +1554,9 @@ public partial class CaptureWidgetWindow : Window
         TriggerStandaloneTool(app => app.OnStandaloneZoomProxy());
     }
 
-    private void CaptureCursorToggle_Changed(object sender, RoutedEventArgs e)
+    private void Pin_Click(object sender, RoutedEventArgs e)
     {
-        bool programmatic = _suppressCaptureCursorToggle;
-        AnimateToggleThumb(CaptureCursorToggle, animate: !programmatic && IsLoaded);
-        if (programmatic) return;
-
-        // The widget's cursor toggle is screenshot-only: video and GIF have their
-        // own per-format toggles in Settings (and now also inline on the recording
-        // bar). VideoShowCursor and GifShowCursor are intentionally NOT touched
-        // here so the user can keep the three states independent.
-        _settings.ShowCursor = CaptureCursorToggle.IsChecked == true;
-        _settingsService.Save();
-        _settingsService.FlushPendingWrites();
-        ((App)System.Windows.Application.Current).SyncSettingsShowCursorCheck();
+        TriggerStandaloneTool(app => app.OnPinToolProxy());
     }
 
     private void WidgetBranding_Click(object sender, RoutedEventArgs e)

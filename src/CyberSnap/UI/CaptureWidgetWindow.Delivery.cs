@@ -21,6 +21,11 @@ public partial class CaptureWidgetWindow
         };
         var menu = WindowsMenuRenderer.Submenu(LocalizationService.Translate(label), showImages: true, iconId: iconId);
         AddDeliveryOptions(menu, kind);
+        if (kind is AutoCopyKind.Video or AutoCopyKind.Gif)
+        {
+            menu.DropDownItems.Add(new Forms.ToolStripSeparator());
+            menu.DropDownItems.Add(BuildCursorCaptureToggle(kind));
+        }
         WindowsMenuRenderer.NormalizeDropDownWidths(menu, minWidth: 240);
         return menu;
     }
@@ -97,6 +102,7 @@ public partial class CaptureWidgetWindow
             return;
         }
         _settingsService.RefreshResultDeliveryPreferences();
+        _settingsService.RefreshCursorCapturePreferences();
         if (_contextMenu is not { IsDisposed: false } menu) return;
         RefreshItems(menu.Items);
 
@@ -116,5 +122,30 @@ public partial class CaptureWidgetWindow
                 RefreshItems(item.DropDownItems);
             }
         }
+    }
+
+    public void RefreshCaptureCursorPreferences() => OnDeliveryPreferencesChanged();
+
+    private Forms.ToolStripMenuItem BuildCursorCaptureToggle(AutoCopyKind kind)
+    {
+        bool Get(AppSettings settings) => kind switch
+        {
+            AutoCopyKind.Video => settings.VideoShowCursor,
+            AutoCopyKind.Gif => settings.GifShowCursor,
+            _ => settings.ShowCursor
+        };
+        var item = BuildCaptureToggle("Capture cursor", Get(_settings), () =>
+        {
+            _settingsService.RefreshCursorCapturePreferences();
+            bool enabled = !Get(_settings);
+            switch (kind)
+            {
+                case AutoCopyKind.Video: _settings.VideoShowCursor = enabled; break;
+                case AutoCopyKind.Gif: _settings.GifShowCursor = enabled; break;
+                default: _settings.ShowCursor = enabled; break;
+            }
+        });
+        item.Tag = (Func<AppSettings, bool>)Get;
+        return item;
     }
 }

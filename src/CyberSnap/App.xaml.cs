@@ -660,16 +660,16 @@ public partial class App : Application
         _widgetWindow?.RefreshLayout();
     }
 
-    // Settings → widget: push ShowCursor onto the widget toggle.
-    public void SyncWidgetCaptureCursorToggle()
+    // Settings → widget: refresh cursor checkmarks in the capture submenus.
+    public void SyncWidgetCaptureCursorPreferences()
     {
         if (!Dispatcher.CheckAccess())
         {
-            _ = Dispatcher.BeginInvoke(SyncWidgetCaptureCursorToggle);
+            _ = Dispatcher.BeginInvoke(SyncWidgetCaptureCursorPreferences);
             return;
         }
 
-        _widgetWindow?.RefreshCaptureCursorToggle();
+        _widgetWindow?.RefreshCaptureCursorPreferences();
     }
 
     // Settings → widget: push the AlwaysOnTop value onto the widget window.
@@ -701,7 +701,7 @@ public partial class App : Application
         _settingsWindow?.RefreshAlwaysOnTopCheck();
     }
 
-    // Widget → Settings: when the widget's capture-cursor toggle changes, refresh Settings.
+    // Widget → Settings: reflect cursor preferences in Settings.
     public void SyncSettingsShowCursorCheck()
     {
         if (!Dispatcher.CheckAccess())

@@ -2773,5 +2773,6 @@
   "Pin an image above other windows": "Fijar una imagen por encima de otras ventanas",
   "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, Zoom, and Pin.": "Preferencias de OCR, selector de color, códigos QR y de barras, regla, Zoom y Pin.",
   "Activate": "Activar",
-  "Pin tool": "Pin"
+  "Pin tool": "Pin",
+  "Include the mouse pointer in still captures. Also available in the widget's Image capture menu.": "Incluye el puntero del mouse en las capturas de imagen. También está disponible en el menú Captura de imagen del widget."
 }

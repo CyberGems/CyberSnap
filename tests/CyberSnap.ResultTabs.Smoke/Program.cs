@@ -25,7 +25,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        Application app = args.Contains("--zoom-only") || args.Contains("--pin-only") ? new ZoomFlowTestApp() : new Application();
+        Application app = args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--widget-cursor-only") ? new ZoomFlowTestApp() : new Application();
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
@@ -56,6 +56,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--widget-cursor-only"))
+            {
+                CheckWidgetCursorPreferences(temp);
+                Console.WriteLine($"PASS: {_checks} widget cursor and Pin integration checks.");
+                return 0;
+            }
             if (args.Contains("--pin-only"))
             {
                 CheckPin(temp, settings, args.FirstOrDefault(a => !a.StartsWith("--")));

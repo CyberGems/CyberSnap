@@ -27,11 +27,11 @@ internal static partial class Program
                 "every widget More entry and Widget submenu has its own unscaled icon", false);
             var capture = (Forms.ToolStripMenuItem)menu.Items[2];
             Assert(capture.DropDownItems.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
-                new[] { "Auto-copy", "Show preview after capture", "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
-                "image capture submenu contains delivery choices and all four localized capture options", false);
+                new[] { "Auto-copy", "Show preview after capture", "Capture cursor", "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
+                "image capture submenu contains delivery choices and all five localized capture options", false);
             var copyFlags = CopyFlags(settings.Settings);
             bool magnifier = settings.Settings.ShowCaptureMagnifier;
-            capture.DropDownItems[3].PerformClick();
+            capture.DropDownItems.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == Tr("Show magnifier")).PerformClick();
             Assert(settings.Settings.ShowCaptureMagnifier != magnifier && CopyFlags(settings.Settings).SequenceEqual(copyFlags),
                 "nested capture toggle changes its own preference without changing clipboard delivery", false);
             capture.DropDownItems[3].PerformClick();

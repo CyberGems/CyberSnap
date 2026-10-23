@@ -131,6 +131,7 @@ public partial class SettingsWindow : Window
             GifOutcomeEditor.OutcomeChanged += GifOutcomeEditor_OutcomeChanged;
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.AutoCopyPreferencesChanged += OnAutoCopyPreferencesChanged;
+        SettingsService.SettingsChanged += RefreshShowCursorCheck;
         SettingsService.WidgetPreferencesChanged += OnWidgetPreferencesChanged;
         Activated += (_, _) =>
         {
@@ -143,6 +144,7 @@ public partial class SettingsWindow : Window
             if (_ownsBackupService) _backupService.Dispose();
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
             SettingsService.AutoCopyPreferencesChanged -= OnAutoCopyPreferencesChanged;
+            SettingsService.SettingsChanged -= RefreshShowCursorCheck;
             SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;
             SaveWindowBounds();
         };

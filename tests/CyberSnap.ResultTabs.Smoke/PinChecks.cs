@@ -249,9 +249,9 @@ internal static partial class Program
             preferences.Load();
             Assert(preferences.Settings.EnabledTools!.SequenceEqual(new[] { "rect", "zoom", "pin" }),
                 "existing capture bars gain only Pin while retaining all previous visibility choices");
-            preferences.Settings.EnabledTools.Remove("pin"); preferences.Save(); preferences.FlushPendingWrites();
+            preferences.Settings.EnabledTools!.Remove("pin"); preferences.Save(); preferences.FlushPendingWrites();
             preferences.Load();
-            Assert(!preferences.Settings.EnabledTools.Contains("pin"), "an upgraded capture bar can hide Pin permanently");
+            Assert(!preferences.Settings.EnabledTools!.Contains("pin"), "an upgraded capture bar can hide Pin permanently");
         }
         Assert(new AppSettings().GetToolHotkey("pin") == (0u, 0u), "Pin introduces no unapproved local shortcut");
         foreach (string language in new[] { "en", "es" })

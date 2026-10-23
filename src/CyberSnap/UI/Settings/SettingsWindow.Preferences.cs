@@ -294,7 +294,7 @@ public partial class SettingsWindow
                 if (WidgetCaptureCursorCheck != null)
                     WidgetCaptureCursorCheck.IsChecked = value;
             },
-            () => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
+            () => ((App)Application.Current).SyncWidgetCaptureCursorPreferences());
     }
 
     private void AnnotationStrokeShadowCheck_Changed(object sender, RoutedEventArgs e)
@@ -1388,13 +1388,19 @@ public partial class SettingsWindow
                 if (ShowCursorCheck != null)
                     ShowCursorCheck.IsChecked = value;
             },
-            value => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
+            value => ((App)Application.Current).SyncWidgetCaptureCursorPreferences());
     }
 
-    // Pulls Capture-tab + Widget "Capture cursor" checkboxes into sync after the widget toggle changes.
-    // Also refreshes Video/GIF show-cursor boxes (master may have rewritten those flags).
+    // Reflect independent image, video and GIF cursor preferences from open capture controls.
     public void RefreshShowCursorCheck()
     {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(RefreshShowCursorCheck);
+            return;
+        }
+        _settingsService.RefreshCursorCapturePreferences();
+        var previous = (_suppressGeneralPreferenceChange, _suppressCaptureSavePreferenceChange, _suppressRecordingPreferenceChange);
         _suppressGeneralPreferenceChange = true;
         _suppressCaptureSavePreferenceChange = true;
         _suppressRecordingPreferenceChange = true;
@@ -1412,9 +1418,7 @@ public partial class SettingsWindow
         }
         finally
         {
-            _suppressGeneralPreferenceChange = false;
-            _suppressCaptureSavePreferenceChange = false;
-            _suppressRecordingPreferenceChange = false;
+            (_suppressGeneralPreferenceChange, _suppressCaptureSavePreferenceChange, _suppressRecordingPreferenceChange) = previous;
         }
     }
 

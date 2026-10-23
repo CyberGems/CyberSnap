@@ -163,30 +163,44 @@ internal static partial class Program
                 widget.Show();
                 widget.GetType().GetField("_isExpanded", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
                     .SetValue(widget, true);
+                // Hold layout fixtures open while shared-desktop hover callbacks settle.
+                SetField(widget, "_contextMenuOpen", true);
                 widget.PositionWindow();
                 ((System.Windows.Threading.DispatcherTimer)Field(widget, "_collapseTimer")).Stop();
                 ((System.Windows.Threading.DispatcherTimer)Field(widget, "_hoverDelayTimer")).Stop();
                 Pump();
                 widget.UpdateLayout();
                 var panel = Element<Border>(widget, "MainPanelBorder");
-                var toggle = Element<ToggleButton>(widget, "CaptureCursorToggle");
+                Assert(Element<Grid>(widget, "ControlsGrid").Visibility == Visibility.Visible,
+                    "the expanded layout fixture renders its action controls: " + language + ", " + edge, false);
                 var panelClip = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutClip(panel);
                 if (scale == 1.1)
                     Render(widget, outputDirectory, $"widget-border-{language}-{edge}-default.png");
                 Assert(panelClip is null || panelClip.Bounds.Contains(new Rect(panel.RenderSize)),
                     $"widget border is not clipped at {edge}, scale {scale}: panel={panel.RenderSize}, clip={panelClip?.Bounds}", false);
-                Assert(VisualDescendants(panel).OfType<ToggleButton>().SequenceEqual(new[] { toggle }),
-                    "widget exposes only its cursor toggle", false);
-                var toggleBounds = toggle.TransformToAncestor(panel).TransformBounds(new Rect(toggle.RenderSize));
-                Assert(toggleBounds.Bottom <= panel.ActualHeight && toggleBounds.Right <= panel.ActualWidth,
-                    "cursor toggle fits the reduced widget panel", false);
-                foreach (string icon in new[] { "ScrollCaptureIcon", "ScreenRecordIcon", "GifRecordIcon", "ZoomIcon", "GrabTextIcon", "ColorPickerIcon", "QrScanIcon", "RulerIcon" })
+                Assert(!VisualDescendants(panel).OfType<ToggleButton>().Any(),
+                    "cursor preferences live in the capture menus instead of the widget action panel", false);
+                string[] icons = { "ScrollCaptureIcon", "ScreenRecordIcon", "GifRecordIcon", "GrabTextIcon", "ColorPickerIcon", "QrScanIcon", "RulerIcon", "ZoomIcon", "PinIcon" };
+                var positions = new List<Rect>();
+                foreach (string icon in icons)
                 {
                     var image = Element<System.Windows.Controls.Image>(widget, icon);
                     var bounds = image.TransformToAncestor(panel).TransformBounds(new Rect(image.RenderSize));
                     Assert(bounds.Left >= 0 && bounds.Top >= 0 && bounds.Right <= panel.ActualWidth && bounds.Bottom <= panel.ActualHeight,
-                        "all eight widget actions fit without clipping: " + icon, false);
+                        "all nine widget actions fit without clipping: " + icon, false);
+                    positions.Add(bounds);
                 }
+                for (int index = 0; index < positions.Count; index++)
+                {
+                    int row = index / 3, column = index % 3;
+                    Assert(Math.Abs(positions[index].X - positions[column].X) < 1
+                        && Math.Abs(positions[index].Y - positions[row * 3].Y) < 1,
+                        "the widget keeps the approved 3 by 3 icon order and aligned columns: " + icons[index], false);
+                }
+                var separator = Element<Border>(widget, "ToolsSeparator");
+                var line = separator.TransformToAncestor(panel).TransformBounds(new Rect(separator.RenderSize));
+                Assert(line.Top > positions[0].Bottom && line.Bottom < positions[3].Top,
+                    "a subtle separator divides capture actions from utility tools", false);
                 Assert(CopyFlags(settings.Settings).SequenceEqual(before), "opening the widget preserves all copy preferences", false);
                 if (scale == 1.1) CheckWidgetMenu(widget, settings, outputDirectory);
                 if (scale == 1.0)
@@ -197,7 +211,7 @@ internal static partial class Program
             }
             finally { widget.Close(); }
         }
-        Console.WriteLine("PASS: widget border, cursor toggle, expansion/collapse, EN/ES, five UI scales and all four dock edges.");
+        Console.WriteLine("PASS: widget border, nine aligned actions, separator, expansion/collapse, EN/ES, five UI scales and all four dock edges.");
     }
 
     private static IEnumerable<DependencyObject> VisualDescendants(DependencyObject root)

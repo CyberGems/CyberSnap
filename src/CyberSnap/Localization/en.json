@@ -2513,5 +2513,6 @@
   "Pin an image above other windows": "Pin an image above other windows",
   "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, Zoom, and Pin.": "Preferences for OCR, Color Picker, QR and barcode scanning, Ruler, Zoom, and Pin.",
   "Activate": "Activate",
-  "Pin tool": "Pin"
+  "Pin tool": "Pin",
+  "Include the mouse pointer in still captures. Also available in the widget's Image capture menu.": "Include the mouse pointer in still captures. Also available in the widget's Image capture menu."
 }

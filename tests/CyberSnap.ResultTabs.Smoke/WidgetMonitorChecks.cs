@@ -172,7 +172,7 @@ internal static partial class Program
                 };
                 Assert(Math.Abs(edgeError) <= tolerance, "the widget touches its selected physical edge: " + context, false);
                 double expectedWidth = (expanded || edge is CaptureDockSide.Top or CaptureDockSide.Bottom ? 196 : 9) * uiScale * scaleX;
-                double expectedHeight = (expanded || edge is CaptureDockSide.Left or CaptureDockSide.Right ? 248 : 9) * uiScale * scaleY;
+                double expectedHeight = (expanded || edge is CaptureDockSide.Left or CaptureDockSide.Right ? 280 : 9) * uiScale * scaleY;
                 Assert(Math.Abs(end.X - start.X - expectedWidth) <= tolerance
                     && Math.Abs(end.Y - start.Y - expectedHeight) <= tolerance,
                     "the native widget size uses its target monitor's DPI: " + context, false);
