@@ -24,6 +24,7 @@ internal static partial class Program
 
     private static void CheckWidgetMonitors(SettingsService settings)
     {
+        CheckWidgetCollapseAppearance(settings, null);
         var helper = typeof(CaptureWidgetWindow).Assembly.GetType("CyberSnap.UI.PopupWindowHelper")!;
         var screens = (Forms.Screen[])helper.GetMethod("GetSortedScreens")!.Invoke(null, null)!;
         var original = CyberSnap.Helpers.WidgetPreferences.FromSettings(settings.Settings);

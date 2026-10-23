@@ -56,6 +56,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--widget-animation-only"))
+            {
+                CheckWidgetCollapseAppearance(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} widget collapse appearance checks.");
+                return 0;
+            }
             if (args.Contains("--widget-cursor-only"))
             {
                 CheckWidgetCursorPreferences(temp);

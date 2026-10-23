@@ -968,7 +968,7 @@ public partial class CaptureWidgetWindow : Window
         _isExpanded = false;
         MainPanelBorder.Visibility = Visibility.Visible;
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Hand;
-        UpdateGripVisibility();
+        // The stretched peek must stay hidden until placement reaches its collapsed bounds.
 
         if (!TryGetWindowPlacement(expanded: false, out var left, out var top, out var width, out var height, out var halo))
         {
