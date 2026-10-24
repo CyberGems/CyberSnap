@@ -13,6 +13,12 @@ public partial class SettingsWindow
     private string _selectedToolKey = "ocr";
     private bool _suppressToolsPreferenceChange;
 
+    public void NavigateToPinSettings()
+    {
+        SelectSettingsTab("pin");
+        ToolsPanel.ScrollToTop();
+    }
+
     private void InitializeToolsSettings()
     {
         ToolsOcrIcon.Data = FluentIcons.GetGeometry("ocr");

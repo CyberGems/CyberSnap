@@ -24,6 +24,7 @@ internal static partial class Program
         if (renders is not null) Directory.CreateDirectory(renders);
         CheckPinMenuLifecycle();
         CheckPinImageAppearance(renders);
+        CheckPinSettingsNavigation(app, settings, renders);
         CheckPinChooserPresentation(renders);
         CheckPinCaptureBar(temp, renders);
         Assert(new AppSettings().PinAlwaysOnTop && new AppSettings().PinSmoothImage

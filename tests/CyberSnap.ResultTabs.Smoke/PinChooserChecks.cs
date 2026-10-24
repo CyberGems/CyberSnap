@@ -132,6 +132,24 @@ internal static partial class Program
                             Assert((!hasAffinity || SetWindowDisplayAffinity(handle, 0))
                                 && (!backdropHasAffinity || SetWindowDisplayAffinity(backdropHandle, 0)),
                                 "the synthetic chooser permits native pixel inspection");
+                            // Capture affinity changes can leave the previous,
+                            // excluded surface in DWM until the next presentation.
+                            // Rendering events before SetWindowDisplayAffinity do
+                            // not establish that the inspectable surface is ready.
+                            int inspectableFrames = 0;
+                            EventHandler onInspectableRender = (_, _) => inspectableFrames++;
+                            CompositionTarget.Rendering += onInspectableRender;
+                            try
+                            {
+                                chooser.InvalidateVisual();
+                                var ready = DateTime.UtcNow.AddSeconds(2);
+                                while (inspectableFrames < 2 && DateTime.UtcNow < ready)
+                                {
+                                    Forms.Application.DoEvents(); Pump(); Thread.Sleep(8);
+                                }
+                                Assert(inspectableFrames >= 2, "the inspectable chooser surface has been presented after changing capture affinity");
+                            }
+                            finally { CompositionTarget.Rendering -= onInspectableRender; }
                             Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
                             using var snapshot = new System.Drawing.Bitmap(bounds.Width, bounds.Height);
                             using (var graphics = System.Drawing.Graphics.FromImage(snapshot))
@@ -142,6 +160,9 @@ internal static partial class Program
                             if (renders is not null && language == "es" && theme == AppThemeMode.Dark && scale == 1.2)
                                 snapshot.Save(Path.Combine(renders, $"pin-native-{dpi.X:0.0}.png"));
                             var rightGutter = snapshot.GetPixel(bounds.Width - (int)(10 * dpi.X), (int)(bounds.Height * .65));
+                            if (renders is not null && (Math.Abs(rightGutter.R - Theme.BgPrimary.R) > 2
+                                || Math.Abs(rightGutter.G - Theme.BgPrimary.G) > 2 || Math.Abs(rightGutter.B - Theme.BgPrimary.B) > 2))
+                                snapshot.Save(Path.Combine(renders, $"pin-native-failure-{language}-{theme}-{dpi.X:0.00}-{scale:0.0}.png"));
                             Assert(Math.Abs(rightGutter.R - Theme.BgPrimary.R) <= 2
                                 && Math.Abs(rightGutter.G - Theme.BgPrimary.G) <= 2
                                 && Math.Abs(rightGutter.B - Theme.BgPrimary.B) <= 2,

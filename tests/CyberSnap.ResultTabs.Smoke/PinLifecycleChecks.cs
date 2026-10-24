@@ -72,7 +72,7 @@ internal static partial class Program
                 pin.EditRequested += output => { using (output) edits++; };
                 pin.OptionsRequested += () => options++;
                 pin.SetImageScale(1.2); pin.Opacity = .7;
-                for (int index = 0; index < 5; index++)
+                foreach (int index in new[] { 0, 1, 2, 4, 5 })
                 {
                     var menu = OpenPinContextMenu(pin);
                     ((Forms.ToolStripMenuItem)menu.Items[index]).PerformClick();
@@ -82,8 +82,17 @@ internal static partial class Program
                 }
                 Assert(copies == 1 && saves == 1 && edits == 1 && options == 1 && pin.ImageScale == 1 && pin.Opacity == 1,
                     "copy, modal save, editor, reset and settings keep their behavior after menu cleanup");
+                var opacityMenu = OpenPinContextMenu(pin);
+                var opacity = (Forms.ToolStripMenuItem)opacityMenu.Items[3];
+                var opacityDropDown = opacity.DropDown;
+                var opacityChoice = (Forms.ToolStripMenuItem)opacityDropDown.Items[4];
+                opacity.ShowDropDown();
+                Assert(opacityMenu.Visible && opacityDropDown.Visible, "the production opacity submenu opens before selecting a level");
+                opacityChoice.PerformClick(); Drain();
+                Assert(opacityMenu.IsDisposed && opacityDropDown.IsDisposed && pin.Opacity == .5,
+                    $"a command from the real opacity submenu safely closes and releases the entire menu tree: root={opacityMenu.IsDisposed}, child={opacityDropDown.IsDisposed}, opacity={pin.Opacity}");
                 var closeMenu = OpenPinContextMenu(pin);
-                ((Forms.ToolStripMenuItem)closeMenu.Items[5]).PerformClick();
+                ((Forms.ToolStripMenuItem)closeMenu.Items[6]).PerformClick();
                 Drain();
                 Assert(pin.IsDisposed && closeMenu.IsDisposed,
                     "Close from an open context menu safely releases both the Pin and its popup");

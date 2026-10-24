@@ -202,7 +202,7 @@ public sealed class PinImageForm : Form
             g.FillRectangle(fill, bar); g.DrawRectangle(border, bar);
             _buttons = new[] { new Rectangle(x + S(3), S(6), S(32), S(30)), new Rectangle(x + S(108), S(6), S(32), S(30)), new Rectangle(x + S(147), S(6), S(32), S(30)) };
             var pointer = PointToClient(System.Windows.Forms.Cursor.Position);
-            var icons = new[] { "copy", "gear", "close" };
+            var icons = new[] { "copy", "more", "close" };
             for (int i = 0; i < _buttons.Length; i++)
             {
                 var color = ToColor(_buttons[i].Contains(pointer) ? Theme.Accent : Theme.TextPrimary);
@@ -295,12 +295,58 @@ public sealed class PinImageForm : Form
         var menu = BuildContextMenu();
         _openMenus.Add(menu);
         menu.Closed += (_, _) => ReleaseContextMenu(menu);
-        try { menu.Show(this, location); }
+        try { ShowMenuOnCurrentMonitor(menu, location); }
         catch
         {
             ReleaseContextMenu(menu);
             throw;
         }
+    }
+
+    private void ShowMenuOnCurrentMonitor(ContextMenuStrip menu, Point location)
+    {
+        var anchor = PointToScreen(location);
+        var screen = Screen.FromPoint(anchor);
+        var work = PopupWindowHelper.TryGetNativeMonitorInfo(screen, out _, out var nativeWork)
+            ? nativeWork : screen.WorkingArea;
+        bool positioning = false;
+        Point Clamp(Point point, Size size) => new(
+            Math.Clamp(point.X, work.Left, Math.Max(work.Left, work.Right - size.Width)),
+            Math.Clamp(point.Y, work.Top, Math.Max(work.Top, work.Bottom - size.Height)));
+        bool OpensRight(ToolStripDropDown parent, ToolStripDropDown child)
+            => parent.Right + child.Width <= work.Right || parent.Left - child.Width < work.Left;
+        void Position(ToolStripDropDown popup, ToolStripMenuItem? owner)
+        {
+            if (positioning || popup.IsDisposed || !popup.Visible) return;
+            positioning = true;
+            try
+            {
+                var point = anchor;
+                if (owner?.Owner is ToolStripDropDown parent)
+                    point = new Point(OpensRight(parent, popup) ? parent.Right - 2 : parent.Left - popup.Width + 2,
+                        parent.PointToScreen(owner.Bounds.Location).Y - popup.Padding.Top);
+                popup.Location = Clamp(point, popup.Size);
+            }
+            finally { positioning = false; }
+        }
+        void Configure(ToolStripDropDown popup, ToolStripMenuItem? owner)
+        {
+            popup.MaximumSize = work.Size;
+            // WinForms may adopt another DPI or choose the adjacent monitor when
+            // opening. Clamp the final native size as well as the initial anchor.
+            popup.Opened += (_, _) => Position(popup, owner);
+            popup.Layout += (_, _) => Position(popup, owner);
+            foreach (var item in popup.Items.OfType<ToolStripMenuItem>())
+            {
+                if (!item.HasDropDownItems) continue;
+                Configure(item.DropDown, item);
+                item.DropDownOpening += (_, _) => item.DropDownDirection = OpensRight(popup, item.DropDown)
+                    ? ToolStripDropDownDirection.Right : ToolStripDropDownDirection.Left;
+            }
+        }
+        Configure(menu, null);
+        menu.Show(this, PointToClient(Clamp(anchor, menu.PreferredSize)));
+        Position(menu, null);
     }
 
     private void ReleaseContextMenu(ContextMenuStrip menu)
@@ -327,6 +373,20 @@ public sealed class PinImageForm : Form
         Add("Copy original image", "copy", () => SendImage(CopyRequested));
         Add("Save as...", "save", () => SendImage(SaveRequested));
         Add("Send to Editor...", "compose", () => SendImage(EditRequested));
+        var opacity = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Opacity"), showImages: true, iconId: "eye");
+        if (opacity.Image is { } opacityImage) images.Add(opacityImage);
+        opacity.ToolTipText = LocalizationService.Translate("Ctrl + wheel changes opacity.");
+        menu.ShowItemToolTips = true;
+        for (int percent = 10; percent <= 100; percent += 10)
+        {
+            double value = percent / 100d;
+            var item = WindowsMenuRenderer.Item($"{value:P0}", iconId: "eye", active: Math.Abs(Opacity - value) < .001);
+            if (item.Image is { } image) images.Add(image);
+            item.Click += (_, _) => Opacity = value;
+            opacity.DropDownItems.Add(item);
+        }
+        WindowsMenuRenderer.NormalizeDropDownWidths(opacity, minWidth: 150);
+        menu.Items.Add(opacity);
         Add("Reset zoom and opacity", "zoomReset", ResetView);
         Add("Pin settings", "gear", () => OptionsRequested?.Invoke());
         Add("Close", "close", Close);

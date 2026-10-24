@@ -70,13 +70,14 @@ internal static partial class Program
         }
         finally { Theme.SetMode(AppThemeMode.System); }
         CheckPinImageMenus(renders);
+        CheckPinMenuPlacement(renders);
     }
 
     private static void CheckPinImageMenus(string? renders)
     {
         string originalLanguage = LocalizationService.CurrentLanguageSetting;
-        var labels = new[] { "Copy original image", "Save as...", "Send to Editor...", "Reset zoom and opacity", "Pin settings", "Close" };
-        var icons = new[] { "copy", "save", "compose", "zoomReset", "gear", "close" };
+        var labels = new[] { "Copy original image", "Save as...", "Send to Editor...", "Opacity", "Reset zoom and opacity", "Pin settings", "Close" };
+        var icons = new[] { "copy", "save", "compose", "eye", "zoomReset", "gear", "close" };
         try
         {
             foreach (string language in new[] { "en", "es" })
@@ -111,6 +112,18 @@ internal static partial class Program
                     snapshot.Save(Path.Combine(renders, $"pin-context-menu-{language}-{theme}.png"));
                 }
                 menu.Close();
+                var opacityItems = items[3].DropDownItems.OfType<Forms.ToolStripMenuItem>().ToArray();
+                Assert(opacityItems.Length == 10 && opacityItems.All(item => item.Image is Bitmap)
+                    && items[3].ToolTipText == LocalizationService.Translate("Ctrl + wheel changes opacity."),
+                    "opacity has direct percentage choices, icons and a localized wheel shortcut hint");
+                Assert(Equals(opacityItems[9].Tag, true), "the current opacity is highlighted when opening its menu");
+                double zoomBeforeOpacity = pin.ImageScale;
+                for (int index = 0; index < opacityItems.Length; index++)
+                {
+                    opacityItems[index].PerformClick();
+                    Assert(Math.Abs(pin.Opacity - (index + 1) / 10d) < .001 && pin.ImageScale == zoomBeforeOpacity,
+                        "an opacity choice changes transparency without changing the image zoom");
+                }
                 int copies = 0, saves = 0, edits = 0, options = 0;
                 void Receive(Bitmap output, Action count)
                 {
@@ -124,10 +137,10 @@ internal static partial class Program
                 pin.OptionsRequested += () => options++;
                 for (int index = 0; index < 3; index++) items[index].PerformClick();
                 pin.SetImageScale(1.25); pin.Opacity = .5;
-                items[3].PerformClick(); items[4].PerformClick();
+                items[4].PerformClick(); items[5].PerformClick();
                 Assert(copies == 1 && saves == 1 && edits == 1 && options == 1 && pin.ImageScale == 1 && pin.Opacity == 1,
                     "adding icons preserves the copy, save, editor, reset and settings actions");
-                items[5].PerformClick();
+                items[6].PerformClick();
                 Assert(pin.IsDisposed, "the context menu's close command still closes only this Pin");
             }
         }

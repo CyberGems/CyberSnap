@@ -367,6 +367,8 @@ public partial class App
             win.NavigateToRecordingSettings();
         else if (navigateTo is "uploads" or "upload")
             win.NavigateToUploadsSettings();
+        else if (navigateTo == "pin")
+            win.NavigateToPinSettings();
         else if (navigateTo is "capture-confirm-pills" or "confirm-pills" or "confirm-destinations")
             win.NavigateToCaptureConfirmPills();
     }
