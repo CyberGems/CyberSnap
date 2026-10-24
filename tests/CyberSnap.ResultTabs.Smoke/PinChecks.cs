@@ -22,6 +22,7 @@ internal static partial class Program
         settings.Settings.DisableAnimations = true;
         settings.Settings.HasSeenQuickStartGuide = true;
         if (renders is not null) Directory.CreateDirectory(renders);
+        CheckPinImageAppearance(renders);
         CheckPinChooserPresentation(renders);
         CheckPinCaptureBar(temp, renders);
         Assert(new AppSettings().PinAlwaysOnTop && new AppSettings().PinSmoothImage

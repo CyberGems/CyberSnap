@@ -25,7 +25,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        Application app = args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-chooser-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
+        Application app = args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
@@ -56,6 +56,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--pin-appearance-only"))
+            {
+                CheckPinImageAppearance(args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} Pin appearance checks.");
+                return 0;
+            }
             if (args.Contains("--pin-chooser-only"))
             {
                 CheckPinChooserPresentation(args.FirstOrDefault(a => !a.StartsWith("--")));

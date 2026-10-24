@@ -170,14 +170,23 @@ public sealed class PinImageForm : Form
     {
         var g = e.Graphics;
         g.Clear(ToColor(Theme.BgSecondary));
-        g.InterpolationMode = _smooth ? InterpolationMode.HighQualityBicubic : InterpolationMode.NearestNeighbor;
-        g.PixelOffsetMode = PixelOffsetMode.Half;
-        using var attributes = new ImageAttributes();
-        attributes.SetWrapMode(WrapMode.TileFlipXY);
-        int imageWidth = Math.Max(1, (int)Math.Round(_original.Width * _scale));
-        int imageHeight = Math.Max(1, (int)Math.Round(_original.Height * _scale));
-        g.DrawImage(_original, new Rectangle((Width - imageWidth) / 2, (Height - imageHeight) / 2, imageWidth, imageHeight),
-            0, 0, _original.Width, _original.Height, GraphicsUnit.Pixel, attributes);
+        var imageState = g.Save();
+        try
+        {
+            g.InterpolationMode = _smooth ? InterpolationMode.HighQualityBicubic : InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = PixelOffsetMode.Half;
+            using var attributes = new ImageAttributes();
+            attributes.SetWrapMode(WrapMode.TileFlipXY);
+            int imageWidth = Math.Max(1, (int)Math.Round(_original.Width * _scale));
+            int imageHeight = Math.Max(1, (int)Math.Round(_original.Height * _scale));
+            g.DrawImage(_original, new Rectangle((Width - imageWidth) / 2, (Height - imageHeight) / 2, imageWidth, imageHeight),
+                0, 0, _original.Width, _original.Height, GraphicsUnit.Pixel, attributes);
+        }
+        finally { g.Restore(imageState); }
+        // The image's half-pixel sampling must not shift the one-pixel frame.
+        // Align all four strokes to client pixels, including the top/left edges.
+        g.PixelOffsetMode = PixelOffsetMode.None;
+        g.SmoothingMode = SmoothingMode.None;
         using var border = new Pen(ToColor(_hover ? Theme.Accent : Theme.Border));
         g.DrawRectangle(border, 0, 0, Width - 1, Height - 1);
         _buttons = Array.Empty<Rectangle>();
@@ -279,21 +288,31 @@ public sealed class PinImageForm : Form
 
     private void OpenMenu(Point location)
     {
-        var menu = WindowsMenuRenderer.Create(false, 230);
-        void Add(string text, Action action)
+        var menu = BuildContextMenu();
+        menu.Closed += (_, _) => menu.Dispose();
+        menu.Show(this, location);
+    }
+
+    private ContextMenuStrip BuildContextMenu()
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 230);
+        var images = new List<Image>();
+        void Add(string text, string icon, Action action)
         {
-            var item = WindowsMenuRenderer.Item(LocalizationService.Translate(text));
+            var item = WindowsMenuRenderer.Item(LocalizationService.Translate(text), iconId: icon);
+            if (item.Image is { } image) images.Add(image);
             item.Click += (_, _) => action();
             menu.Items.Add(item);
         }
-        Add("Copy original image", () => SendImage(CopyRequested));
-        Add("Save as...", () => SendImage(SaveRequested));
-        Add("Send to Editor...", () => SendImage(EditRequested));
-        Add("Reset zoom and opacity", ResetView);
-        Add("Pin settings", () => OptionsRequested?.Invoke());
-        Add("Close", Close);
-        menu.Closed += (_, _) => menu.Dispose();
-        menu.Show(this, location);
+        Add("Copy original image", "copy", () => SendImage(CopyRequested));
+        Add("Save as...", "save", () => SendImage(SaveRequested));
+        Add("Send to Editor...", "compose", () => SendImage(EditRequested));
+        Add("Reset zoom and opacity", "zoomReset", ResetView);
+        Add("Pin settings", "gear", () => OptionsRequested?.Invoke());
+        Add("Close", "close", Close);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 230);
+        menu.Disposed += (_, _) => { foreach (var image in images) image.Dispose(); };
+        return menu;
     }
 
     private static Color ToColor(System.Windows.Media.Color value) => Color.FromArgb(value.A, value.R, value.G, value.B);
