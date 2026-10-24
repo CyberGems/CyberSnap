@@ -238,22 +238,7 @@ public sealed partial class RegionOverlayForm
 
         if (button < _mainBarTools.Length)
         {
-            var tool = _mainBarTools[button];
-            var text = BuildToolTooltip(tool, settings, includeHideHint: true);
-
-            if (button == _mergedCaptureButtonIndex)
-            {
-                var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
-                text += " · " + (defaultMode == CaptureMode.Center
-                    ? LocalizationService.Translate("Hold to show Area Capture tool")
-                    : LocalizationService.Translate("Hold to show From Center tool"));
-            }
-            else if (button == _mergedRecordButtonIndex)
-            {
-                text += " · " + LocalizationService.Translate("Hold to show GIF recording");
-            }
-
-            return text;
+            return BuildToolTooltip(_mainBarTools[button], settings, includeHideHint: true);
         }
 
         if (button >= CloseButtonIndex + 1 && button < BtnCount)

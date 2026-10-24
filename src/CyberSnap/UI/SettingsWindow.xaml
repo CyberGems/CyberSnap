@@ -1361,7 +1361,7 @@
                                        Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="4,0,0,10"/>
                             <StackPanel x:Name="AnnotationToolsPanel"/>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,16,0,0">
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,16,0,0">
                             <TextBlock Text="Annotations Editor" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
                                         Services:LocalizationService.SourceText="Annotations Editor"/>
                             <TextBlock Text="These shortcuts apply only in the Annotations Editor."
