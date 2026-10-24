@@ -45,7 +45,7 @@ public partial class App
                 else if (source == "clipboard")
                 {
                     var image = System.Windows.Clipboard.GetImage();
-                    if (image is null) { ToastWindow.ShowError("Pin to screen", "The clipboard does not contain an image."); return; }
+                    if (image is null) { chooser.UpdateClipboardAvailability(false); return; }
                     var owned = ReadPinClipboardImage(image);
                     chooser.Close(); PinImage(owned);
                 }

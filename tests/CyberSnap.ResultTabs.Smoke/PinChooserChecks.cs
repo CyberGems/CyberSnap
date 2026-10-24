@@ -29,10 +29,6 @@ internal static partial class Program
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DeleteObject(IntPtr value);
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
-
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowDisplayAffinity(IntPtr hwnd, out uint affinity);
@@ -43,6 +39,7 @@ internal static partial class Program
 
     private static void CheckPinChooserPresentation(string? renders)
     {
+        CheckPinChooserClipboard(renders);
         double originalScale = UiScale.Current;
         string originalLanguage = LocalizationService.CurrentLanguageSetting;
         var helper = typeof(PinSourceWindow).Assembly.GetType("CyberSnap.UI.PopupWindowHelper")!;
@@ -65,14 +62,12 @@ internal static partial class Program
                 {
                     UiScale.Set(scale); Theme.SetMode(theme); LocalizationService.ApplyCurrentCulture(language);
                     helper.GetMethod("SetMonitorHintPoint")!.Invoke(null, [center]);
-                    var chooser = new PinSourceWindow
-                    {
-                        IsHitTestVisible = false,
-                        // Also exercise HWND creation on the non-primary monitor,
-                        // rather than only moving a window created on the primary.
-                        Left = (work.Left + 100) / dpi.X,
-                        Top = (work.Top + 100) / dpi.Y
-                    };
+                    var chooser = CreatePinChooserForTest(() => true);
+                    chooser.IsHitTestVisible = false;
+                    // Also exercise HWND creation on the non-primary monitor,
+                    // rather than only moving a window created on the primary.
+                    chooser.Left = (work.Left + 100) / dpi.X;
+                    chooser.Top = (work.Top + 100) / dpi.Y;
                     Forms.Form? backdrop = null;
                     IntPtr handle = IntPtr.Zero, backdropHandle = IntPtr.Zero;
                     try
@@ -126,20 +121,23 @@ internal static partial class Program
                         }
                         finally { CompositionTarget.Rendering -= onRender; }
                         bool hasAffinity = GetWindowDisplayAffinity(handle, out uint affinity);
+                        bool backdropHasAffinity = GetWindowDisplayAffinity(backdropHandle, out uint backdropAffinity);
                         Assert(PinChooserExcluded(handle), "the chooser is registered for capture exclusion before inspection");
                         try
                         {
-                            // PrintWindow can return a protected black surface. Only
-                            // this synthetic test chooser is temporarily inspectable;
-                            // its exclusion is checked and restored even on failure.
-                            Assert(!hasAffinity || SetWindowDisplayAffinity(handle, 0), "the synthetic chooser permits native pixel inspection");
+                            // Read the presented desktop surface: PrintWindow can
+                            // return a black WPF GPU buffer even after Rendering.
+                            // Only the synthetic chooser and its owner veil become
+                            // inspectable; restore both exclusions even on failure.
+                            Assert((!hasAffinity || SetWindowDisplayAffinity(handle, 0))
+                                && (!backdropHasAffinity || SetWindowDisplayAffinity(backdropHandle, 0)),
+                                "the synthetic chooser permits native pixel inspection");
                             Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
                             using var snapshot = new System.Drawing.Bitmap(bounds.Width, bounds.Height);
                             using (var graphics = System.Drawing.Graphics.FromImage(snapshot))
                             {
-                                var dc = graphics.GetHdc();
-                                try { Assert(PrintWindow(handle, dc, 2), "the native chooser surface can be inspected"); }
-                                finally { graphics.ReleaseHdc(dc); }
+                                graphics.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, snapshot.Size,
+                                    System.Drawing.CopyPixelOperation.SourceCopy);
                             }
                             if (renders is not null && language == "es" && theme == AppThemeMode.Dark && scale == 1.2)
                                 snapshot.Save(Path.Combine(renders, $"pin-native-{dpi.X:0.0}.png"));
@@ -151,8 +149,11 @@ internal static partial class Program
                         }
                         finally
                         {
-                            Assert((!hasAffinity || (SetWindowDisplayAffinity(handle, affinity)
-                                && GetWindowDisplayAffinity(handle, out uint restored) && restored == affinity))
+                            bool chooserRestored = !hasAffinity || (SetWindowDisplayAffinity(handle, affinity)
+                                && GetWindowDisplayAffinity(handle, out uint restored) && restored == affinity);
+                            bool backdropRestored = !backdropHasAffinity || (SetWindowDisplayAffinity(backdropHandle, backdropAffinity)
+                                && GetWindowDisplayAffinity(backdropHandle, out uint restoredBackdrop) && restoredBackdrop == backdropAffinity);
+                            Assert(chooserRestored && backdropRestored
                                 && PinChooserExcluded(handle), "capture exclusion is preserved after pixel inspection");
                         }
                         Assert(GetWindowRect(backdropHandle, out var veil) && veil.Rectangle == ScreenCapture.GetVirtualScreenBounds()
@@ -208,6 +209,73 @@ internal static partial class Program
             UiScale.Set(originalScale); Theme.SetMode(AppThemeMode.System);
             LocalizationService.ApplyCurrentCulture(originalLanguage);
         }
+    }
+
+    private static PinSourceWindow CreatePinChooserForTest(Func<bool> clipboardContainsImage)
+        => (PinSourceWindow)Activator.CreateInstance(typeof(PinSourceWindow),
+            BindingFlags.Instance | BindingFlags.NonPublic, null, [clipboardContainsImage], null)!;
+
+    private static void CheckPinChooserClipboard(string? renders)
+    {
+        string originalLanguage = LocalizationService.CurrentLanguageSetting;
+        try
+        {
+            foreach (string language in new[] { "en", "es" })
+            {
+                LocalizationService.ApplyCurrentCulture(language);
+                bool hasImage = false;
+                var chooser = CreatePinChooserForTest(() => hasImage);
+                var requests = new List<string>();
+                chooser.SourceRequested += requests.Add;
+                try
+                {
+                    chooser.Show(); Pump();
+                    var deadline = DateTime.UtcNow.AddSeconds(3);
+                    while (chooser.Opacity != 1 && DateTime.UtcNow < deadline)
+                    {
+                        Forms.Application.DoEvents(); Pump(); Thread.Sleep(8);
+                    }
+                    var handle = new WindowInteropHelper(chooser).Handle;
+                    var button = (Button)Field(chooser, "_clipboardButton");
+                    Assert(!button.IsEnabled && ToolTipService.GetShowOnDisabled(button)
+                        && Equals(button.ToolTip, LocalizationService.Translate("The clipboard does not contain an image.")),
+                        "an empty clipboard disables its source and explains why in a localized tooltip: " + language);
+                    button.ApplyTemplate();
+                    var border = (Border)button.Template.FindName("Bd", button);
+                    Assert(border.Opacity == .45, "the unavailable clipboard source uses the shared disabled appearance");
+                    Assert(VisualDescendants(chooser).OfType<Button>().Count(candidate => candidate.IsEnabled
+                        && !string.IsNullOrEmpty(AutomationProperties.GetName(candidate))) == 2,
+                        "region and file sources stay enabled when there is no clipboard image");
+                    button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Assert(requests.Count == 0, "an unavailable clipboard source never starts Pin or requests an error toast");
+                    if (renders is not null) Render(chooser, renders, "pin-empty-clipboard-" + language + ".png");
+                    Assert((bool)Field(chooser, "_clipboardListenerRegistered")
+                        || Field(chooser, "_clipboardPollTimer") is System.Windows.Threading.DispatcherTimer { IsEnabled: true },
+                        "the open chooser watches clipboard changes with a notification listener or fallback timer");
+                    hasImage = true;
+                    SendMessageW(handle, 0x031D, IntPtr.Zero, IntPtr.Zero); Pump();
+                    Assert(button.IsEnabled && button.ToolTip is null && border.Opacity == 1,
+                        "a clipboard image immediately enables the source and clears its unavailable tooltip");
+                    button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Assert(requests.SequenceEqual(new[] { "clipboard" }), "an available image keeps the normal clipboard Pin route");
+                    hasImage = false;
+                    SendMessageW(handle, 0x031D, IntPtr.Zero, IntPtr.Zero); Pump();
+                    Assert(!button.IsEnabled && Equals(button.ToolTip, LocalizationService.Translate("The clipboard does not contain an image.")),
+                        "copying text or clearing the clipboard disables the source again without reopening Pin");
+                    hasImage = true;
+                    SendMessageW(handle, 0x031D, IntPtr.Zero, IntPtr.Zero);
+                    hasImage = false; // Contents change after the notification but before clicking.
+                    button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Assert(!button.IsEnabled && requests.Count == 1,
+                        "the click rechecks clipboard availability and blocks a stale enabled action");
+                }
+                finally { chooser.Close(); Pump(); }
+                Assert(!(bool)Field(chooser, "_clipboardListenerRegistered") && Field(chooser, "_windowSource") is null
+                    && Field(chooser, "_clipboardPollTimer") is not System.Windows.Threading.DispatcherTimer { IsEnabled: true },
+                    "closing Pin unregisters clipboard notifications and stops any fallback polling");
+            }
+        }
+        finally { LocalizationService.ApplyCurrentCulture(originalLanguage); }
     }
 
     private static void CheckPinChooserAttention(PinSourceWindow chooser, Forms.Form backdrop,

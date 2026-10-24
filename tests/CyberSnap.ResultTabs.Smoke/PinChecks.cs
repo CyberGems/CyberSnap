@@ -87,7 +87,7 @@ internal static partial class Program
             Call(pin, "OnKeyDown", new Forms.KeyEventArgs(Forms.Keys.Escape));
             Assert(pin.IsDisposed, "Esc closes the focused Pin only");
 
-            var chooser = new PinSourceWindow();
+            var chooser = CreatePinChooserForTest(() => true);
             try
             {
                 var sources = new List<string>();

@@ -5,6 +5,20 @@ namespace CyberSnap.Native;
 internal static partial class User32
 {
     public const int WM_HOTKEY = 0x0312;
+    public const int WM_CLIPBOARDUPDATE = 0x031D;
+    public const uint CF_BITMAP = 2;
+
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool AddClipboardFormatListener(IntPtr hWnd);
+
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool RemoveClipboardFormatListener(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsClipboardFormatAvailable(uint format);
 
     public const uint MOD_ALT = 0x0001;
     public const uint MOD_CONTROL = 0x0002;

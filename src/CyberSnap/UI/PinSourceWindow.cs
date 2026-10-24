@@ -26,9 +26,17 @@ public sealed class PinSourceWindow : Window
     private bool _centered;
     private DispatcherTimer? _attentionTimer;
     private System.Drawing.Point _attentionOrigin;
+    private readonly Func<bool> _clipboardContainsImage;
+    private Button _clipboardButton = null!;
+    private HwndSource? _windowSource;
+    private bool _clipboardListenerRegistered;
+    private DispatcherTimer? _clipboardPollTimer;
     public event Action<string>? SourceRequested;
-    public PinSourceWindow()
+    public PinSourceWindow() : this(() => User32.IsClipboardFormatAvailable(User32.CF_BITMAP)) { }
+
+    internal PinSourceWindow(Func<bool> clipboardContainsImage)
     {
+        _clipboardContainsImage = clipboardContainsImage;
         _openMonitorPoint = PopupWindowHelper.TakeMonitorHintPoint() ?? System.Windows.Forms.Cursor.Position;
         _uiScale = UiScale.Current;
         Theme.Refresh();
@@ -88,7 +96,21 @@ public sealed class PinSourceWindow : Window
             var button = new Button { Content = content, MinHeight = 105, Margin = new Thickness(i == 0 ? 0 : 5, 0, i == 2 ? 0 : 5, 0), Padding = new Thickness(10) };
             button.Style = sourceButtonStyle;
             System.Windows.Automation.AutomationProperties.SetName(button, LocalizationService.Translate(text));
-            button.Click += (_, _) => SourceRequested?.Invoke(id);
+            if (id == "clipboard")
+            {
+                _clipboardButton = button;
+                ToolTipService.SetShowOnDisabled(button, true);
+                RefreshClipboardAvailability();
+            }
+            button.Click += (_, _) =>
+            {
+                if (id == "clipboard")
+                {
+                    RefreshClipboardAvailability();
+                    if (!button.IsEnabled) return;
+                }
+                SourceRequested?.Invoke(id);
+            };
             Grid.SetColumn(button, i); sources.Children.Add(button);
         }
         body.Children.Add(sources); panel.Children.Add(body);
@@ -105,6 +127,18 @@ public sealed class PinSourceWindow : Window
         {
             var interop = new WindowInteropHelper(this);
             _captureHandle = interop.Handle;
+            _windowSource = HwndSource.FromHwnd(_captureHandle);
+            _windowSource?.AddHook(WindowProc);
+            _clipboardListenerRegistered = User32.AddClipboardFormatListener(_captureHandle);
+            if (!_clipboardListenerRegistered)
+            {
+                AppDiagnostics.LogWarning("pin.clipboard-listener",
+                    $"Clipboard notifications unavailable (Win32 {Marshal.GetLastWin32Error()}); using periodic refresh.");
+                _clipboardPollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                _clipboardPollTimer.Tick += (_, _) => RefreshClipboardAvailability();
+                _clipboardPollTimer.Start();
+            }
+            RefreshClipboardAvailability();
             Capture.CaptureWindowExclusion.Apply(_captureHandle);
             _backdrop = new PinSourceBackdrop();
             _backdrop.MouseDown += (_, _) => RequestAttention();
@@ -136,15 +170,42 @@ public sealed class PinSourceWindow : Window
         {
             if (_backdrop is { IsDisposed: false }) _backdrop.Visible = IsVisible;
         };
+        Activated += (_, _) => RefreshClipboardAvailability();
         Closed += (_, _) =>
         {
             _closed = true;
             StopAttention();
+            _clipboardPollTimer?.Stop();
+            if (_clipboardListenerRegistered)
+                User32.RemoveClipboardFormatListener(_captureHandle);
+            _clipboardListenerRegistered = false;
+            _windowSource?.RemoveHook(WindowProc);
+            _windowSource = null;
             Capture.CaptureWindowExclusion.Unregister(_captureHandle);
             _backdrop?.Close();
             _backdrop?.Dispose();
             _backdrop = null;
         };
+    }
+
+    private IntPtr WindowProc(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (message == User32.WM_CLIPBOARDUPDATE && !_closed)
+            RefreshClipboardAvailability();
+        return IntPtr.Zero;
+    }
+
+    private void RefreshClipboardAvailability()
+    {
+        if (!_closed) UpdateClipboardAvailability(_clipboardContainsImage());
+    }
+
+    internal void UpdateClipboardAvailability(bool hasImage)
+    {
+        if (_closed) return;
+        _clipboardButton.IsEnabled = hasImage;
+        _clipboardButton.ToolTip = hasImage ? null
+            : LocalizationService.Translate("The clipboard does not contain an image.");
     }
 
     private void RequestAttention()
