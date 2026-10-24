@@ -20,6 +20,7 @@ public sealed class PinImageForm : Form
     private bool _hover;
     private bool _disposed;
     private readonly System.Windows.Forms.Timer _hoverTimer = new() { Interval = 100 };
+    private readonly HashSet<ContextMenuStrip> _openMenus = new();
     private double _scale;
     private readonly double _minimumScale;
     private Rectangle[] _buttons = Array.Empty<Rectangle>();
@@ -77,6 +78,7 @@ public sealed class PinImageForm : Form
         Shown += (_, _) => ApplyCapturePreferences(settings.PinIncludeInCaptures, settings.PinAlwaysOnTop);
         _hoverTimer.Tick += (_, _) =>
         {
+            if (_disposed) return;
             bool hover = ClientRectangle.Contains(PointToClient(System.Windows.Forms.Cursor.Position));
             if (hover != _hover) { _hover = hover; Invalidate(); }
         };
@@ -139,6 +141,7 @@ public sealed class PinImageForm : Form
 
     private void KeepReachable()
     {
+        if (_disposed || IsDisposed || Disposing) return;
         var work = Screen.FromRectangle(Bounds).WorkingArea;
         // Oversized references can extend off-screen, but leave a draggable portion reachable.
         Left = Math.Clamp(Left, work.Left - Math.Max(0, Width - 48), Math.Max(work.Left, work.Right - Math.Min(Width, 48)));
@@ -288,9 +291,26 @@ public sealed class PinImageForm : Form
 
     private void OpenMenu(Point location)
     {
+        if (_disposed || IsDisposed || Disposing) return;
         var menu = BuildContextMenu();
-        menu.Closed += (_, _) => menu.Dispose();
-        menu.Show(this, location);
+        _openMenus.Add(menu);
+        menu.Closed += (_, _) => ReleaseContextMenu(menu);
+        try { menu.Show(this, location); }
+        catch
+        {
+            ReleaseContextMenu(menu);
+            throw;
+        }
+    }
+
+    private void ReleaseContextMenu(ContextMenuStrip menu)
+    {
+        if (!_openMenus.Remove(menu)) return;
+        // Closed fires inside ToolStripDropDown.SetVisibleCore, which still uses
+        // the HWND afterwards. Never dispose on that stack or invoke through the
+        // Pin HWND, since a Close command can destroy the owner before cleanup runs.
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Background, new Action(menu.Dispose));
     }
 
     private ContextMenuStrip BuildContextMenu()
@@ -321,6 +341,12 @@ public sealed class PinImageForm : Form
         if (disposing && !_disposed)
         {
             _disposed = true;
+            _hoverTimer.Stop();
+            foreach (var menu in _openMenus.ToArray())
+            {
+                if (!menu.IsDisposed) menu.Close(ToolStripDropDownCloseReason.CloseCalled);
+                ReleaseContextMenu(menu);
+            }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= DisplayChanged;
             if (IsHandleCreated) CaptureWindowExclusion.Unregister(Handle);
             _hoverTimer.Dispose(); _font.Dispose(); _original.Dispose();
