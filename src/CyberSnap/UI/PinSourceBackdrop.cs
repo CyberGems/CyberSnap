@@ -16,7 +16,7 @@ internal sealed class PinSourceBackdrop : Form
         ShowInTaskbar = false;
         TopMost = true;
         BackColor = Color.Black;
-        Opacity = 0.20;
+        Opacity = 0.40;
         Bounds = ScreenCapture.GetVirtualScreenBounds();
     }
 

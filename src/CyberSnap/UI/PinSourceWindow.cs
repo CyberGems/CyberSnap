@@ -24,6 +24,8 @@ public sealed class PinSourceWindow : Window
     private PinSourceBackdrop? _backdrop;
     private bool _closed;
     private bool _centered;
+    private DispatcherTimer? _attentionTimer;
+    private System.Drawing.Point _attentionOrigin;
     public event Action<string>? SourceRequested;
     public PinSourceWindow()
     {
@@ -39,7 +41,9 @@ public sealed class PinSourceWindow : Window
         AllowsTransparency = true; Background = Brushes.Transparent; ShowInTaskbar = false; Topmost = true;
         WindowStartupLocation = WindowStartupLocation.Manual;
         Opacity = 0;
-        CyberSnapWindowChrome.Apply(this);
+        // This fixed-size transparent window already gets its rounded silhouette
+        // from the Border below. A second, native WindowChrome region can retain
+        // the old monitor's pixel width during DPI adoption and crop the right side.
         var panel = new StackPanel();
         var title = new CyberSnapTitleBar { Title = Title };
         title.CloseRequested += (_, _) => Close();
@@ -103,7 +107,7 @@ public sealed class PinSourceWindow : Window
             _captureHandle = interop.Handle;
             Capture.CaptureWindowExclusion.Apply(_captureHandle);
             _backdrop = new PinSourceBackdrop();
-            _backdrop.MouseDown += (_, _) => Activate();
+            _backdrop.MouseDown += (_, _) => RequestAttention();
             _backdrop.Show();
             interop.Owner = _backdrop.Handle;
         };
@@ -135,12 +139,60 @@ public sealed class PinSourceWindow : Window
         Closed += (_, _) =>
         {
             _closed = true;
+            StopAttention();
             Capture.CaptureWindowExclusion.Unregister(_captureHandle);
             _backdrop?.Close();
             _backdrop?.Dispose();
             _backdrop = null;
         };
     }
+
+    private void RequestAttention()
+    {
+        if (_closed) return;
+        Activate();
+        if (Motion.Disabled)
+        {
+            StopAttention();
+            return;
+        }
+        if (!_centered || _attentionTimer is not null
+            || !User32.GetWindowRect(_captureHandle, out var bounds)) return;
+
+        // Move the native window, not its content, to avoid clipping its edges or
+        // mixing WPF coordinates between monitors. Repeated clicks cannot drift it.
+        _attentionOrigin = new System.Drawing.Point(bounds.Left, bounds.Top);
+        double amplitude = 4 * VisualTreeHelper.GetDpi(this).DpiScaleX;
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
+        _attentionTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(16)
+        };
+        _attentionTimer.Tick += (_, _) =>
+        {
+            double progress = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds / 280;
+            if (_closed || Motion.Disabled || progress >= 1)
+            {
+                StopAttention();
+                return;
+            }
+            int offset = (int)Math.Round(amplitude * Math.Sin(progress * 4 * Math.PI) * (1 - progress));
+            MoveForAttention(_attentionOrigin.X + offset, _attentionOrigin.Y);
+        };
+        _attentionTimer.Start();
+    }
+
+    private void StopAttention()
+    {
+        if (_attentionTimer is null) return;
+        _attentionTimer.Stop();
+        _attentionTimer = null;
+        if (!_closed) MoveForAttention(_attentionOrigin.X, _attentionOrigin.Y);
+    }
+
+    private void MoveForAttention(int x, int y)
+        => User32.SetWindowPos(_captureHandle, IntPtr.Zero, x, y, 0, 0,
+            User32.SWP_NOSIZE | User32.SWP_NOZORDER | User32.SWP_NOACTIVATE);
 
     private void SynchronizeRenderDpi()
     {
