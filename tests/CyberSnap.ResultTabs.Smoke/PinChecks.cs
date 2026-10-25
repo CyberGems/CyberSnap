@@ -213,6 +213,7 @@ internal static partial class Program
                 OverlayZoomMouse(overlay, "OnMouseUp", 620, 420);
                 Assert((bool)Field(overlay, "_isConfirmingSelection") && !(bool)Call(overlay, "IsPreviewToggleVisible")!,
                     "Pin offers normal region confirmation and annotations without a Preview toggle");
+                CheckLockedConfirmDestination(overlay, "Pin app route");
                 Call(overlay, "RequestRetrySelection");
                 Assert(overlay.PinImageOnConfirm && !(bool)Field(overlay, "_isConfirmingSelection"),
                     "retrying a Pin region keeps its output purpose from both launch paths");

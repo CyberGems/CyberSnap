@@ -9,6 +9,8 @@ on:
       - 'src/CyberSnap/App/App.Pin.cs'
       - 'src/CyberSnap/Capture/PinImageForm.cs'
       - 'src/CyberSnap/Capture/StandaloneZoomForm.cs'
+      - 'src/CyberSnap/Capture/ZoomCaptureRequest.cs'
+      - 'src/CyberSnap/Capture/RegionOverlayForm.State.cs'
       - 'src/CyberSnap/Models/AppSettings.cs'
       - 'src/CyberSnap/Models/Editor*HotkeyDef.cs'
       - 'src/CyberSnap/Localization/en.json'
@@ -34,5 +36,5 @@ jobs:
         run: ./scripts/Test-Localization.ps1 -Strict
       - name: Build smoke checks
         run: dotnet build tests/CyberSnap.ResultTabs.Smoke --configuration Release
-      - name: Check hotkey scopes, Pin formats and Zoom help
+      - name: Check hotkey scopes, capture destinations, Pin formats and Zoom help
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --capture-tool-regressions-only

@@ -15,6 +15,9 @@ public sealed partial class RegionOverlayForm
 {
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool PinImageOnConfirm { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal bool LockConfirmDestination { get; set; }
+    private bool IsConfirmDestinationLocked => PinImageOnConfirm || LockConfirmDestination;
     private const int AnnotationSelectionHandleGapPx = 8;
     public CaptureMode CurrentMode => _mode;
     public void SetShowToolNumberBadges(bool show)
@@ -2228,6 +2231,13 @@ public sealed partial class RegionOverlayForm
             ConfirmChromeKind.Cancel,
             ConfirmChromeKind.Done
         };
+        if (IsConfirmDestinationLocked)
+        {
+            // Pin and frozen Zoom captures keep their output purpose while the crop is edited.
+            _confirmChromeKinds = _confirmChromeKinds.Where(kind =>
+                !IsConfirmModesClusterKind(kind)
+                && (kind != ConfirmChromeKind.TogglePreview || IsPreviewToggleVisible())).ToArray();
+        }
         _confirmChromeRects = new Rectangle[_confirmChromeKinds.Length];
         _confirmChromeLayoutDirty = true;
     }
@@ -2251,7 +2261,8 @@ public sealed partial class RegionOverlayForm
             ? "Extract and copy text from the selection"
             : "Extract text from the selection");
 
-    private static bool IsConfirmChromeDisabled(ConfirmChromeKind kind) => false;
+    private bool IsConfirmChromeDisabled(ConfirmChromeKind kind) =>
+        IsConfirmDestinationLocked && IsConfirmModesClusterKind(kind);
 
     /// <summary>Destination pill highlighted as "selected" for the tool that locked the region.</summary>
     private ConfirmChromeKind SelectedConfirmModeKind() => _modeBeforeConfirm switch
@@ -2742,6 +2753,7 @@ public sealed partial class RegionOverlayForm
     /// confirm dock. The whole pill set re-derives from the new source mode.</summary>
     private void SwitchConfirmDestination(ConfirmChromeKind newDestination)
     {
+        if (IsConfirmDestinationLocked) return;
         // OCR is the only destination that hides the annotation chrome; everything else keeps it.
         bool wasOcr = _modeBeforeConfirm == CaptureMode.Ocr;
         _modeBeforeConfirm = newDestination switch
@@ -2784,6 +2796,7 @@ public sealed partial class RegionOverlayForm
     /// <summary>Dispatches a swappable destination pill to its capture action.</summary>
     private void RunConfirmDestination(ConfirmChromeKind kind)
     {
+        if (IsConfirmDestinationLocked) return;
         switch (kind)
         {
             case ConfirmChromeKind.ModeOcr:
@@ -3578,6 +3591,7 @@ public sealed partial class RegionOverlayForm
 
     private void ExpandConfirmModes()
     {
+        if (IsConfirmDestinationLocked) return;
         try { _confirmModesCollapseTimer.Stop(); } catch { }
         if (_confirmModesExpanded && _confirmModesExpandTarget >= 1f)
             return;

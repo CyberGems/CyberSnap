@@ -98,6 +98,7 @@ internal static partial class Program
                         Assert((bool)Field(overlay, "_isConfirmingSelection") && overlay.ConfirmRect == new Rectangle(0, 0, 800, 600),
                             "a click selects the full frame for confirmation without bypassing it");
                     }
+                    CheckLockedConfirmDestination(overlay, full ? "Zoom full view" : "Zoom region");
                     Call(overlay, "HandleEscapeKey");
                 });
                 Assert(output is null && !zoom.IsDisposed && zoom.Visible && !zoom.CaptureOutputDelegated

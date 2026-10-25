@@ -11,6 +11,9 @@ This targeted suite covers:
 - **Hotkey scopes:** capture annotations and Editor shortcuts can share a key.
   Duplicates within a stage, Editor tool/view collisions, global collisions,
   restoring F6, aliases, and saved settings are also checked.
+- **Capture destinations:** Pin and frozen Zoom confirmations retain their output
+  purpose, reject alternate destinations and shortcuts, and keep a compact dock.
+  Regular captures retain their destination switcher. Both UI languages are checked.
 - **Pin imports:** real indexed BMP/GIF, animated GIF, RGB24 BMP, RGB48/RGBA64
   TIFF, and CMYK JPEG/TIFF fixtures. Checks verify colors, alpha, first-frame
   selection, released files, and localized errors for damaged images.

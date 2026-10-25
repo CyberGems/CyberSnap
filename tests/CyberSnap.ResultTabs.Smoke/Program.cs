@@ -59,6 +59,7 @@ internal static partial class Program
             if (args.Contains("--capture-tool-regressions-only"))
             {
                 CheckStageHotkeyConflicts();
+                CheckCaptureDestinationPolicy();
                 CheckPinImageFormats(temp);
                 CheckZoomHelpBar(args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} capture tool regression checks.");
