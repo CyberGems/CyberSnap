@@ -81,17 +81,17 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Configurable Format**: PNG or JPEG with quality control
 - **Post-Upload Actions**: Open URL in browser after successful upload
 
-### 🛠️ Standalone Tools
+### 🛠️ Tools
 - **Color Picker**: Sample any color on screen with HEX/RGB/HSL detail view and per-row copy
 - **Ruler**: On-screen measurement tool
 - **Barcode / QR Scanner**: Scan codes standalone or on top of a capture
 - **Zoom**: Freeze the monitor under the pointer at 2×, pan with the mouse, and zoom from 1.25× to 4× using the wheel or `+` / `-`. Press `C` or your capture hotkey to select a region of the magnified view, then adjust it and add annotations in the usual capture confirmation. `Enter` opens confirmation with the full view selected. Canceling either step returns to the same Zoom level and framing. Confirmed captures follow the usual saving, clipboard, editor, and Gallery preferences; Preview remains optional. `Ctrl+C` copies the view, `Ctrl+S` saves it, and `Esc` or right-click exits. Available from the capture bar, tray, widget, and a configurable global hotkey, with initial magnification, smoothing, animation, and an optional help bar under Configuration → Tools → Zoom.
 
-- **Pin to Screen**: Keep temporary image references above other windows. Start from a region (with capture confirmation and annotations), the clipboard, a file, Preview, Gallery, the widget, or the capture bar. The capture-bar button reuses the frozen image: select a region, adjust and annotate it, then confirm to pin it directly. Drag between monitors, zoom with the wheel or `+` / `-`, change opacity with `Ctrl` + wheel, and copy the original with `Ctrl+C`. Middle-click resets zoom and opacity; `Esc` closes the focused reference. Hover for copy, options and close; right-click for saving, Editor and settings. Configure scale, smoothing, topmost behavior, capture visibility, and an optional shortcut under Configuration → Tools → Pin. References are temporary and do not automatically save to Gallery.
+- **Pin to Screen**: Keep temporary image references above other windows. Start from a region (with capture confirmation and annotations), the clipboard, a file, Preview, Gallery, the widget, or the capture bar. The capture-bar button reuses the frozen image: select a region, adjust and annotate it, then confirm to pin it directly. Drag between monitors, zoom with the wheel or `+` / `-`, change opacity with `Ctrl` + wheel or the Opacity menu, and copy the original with `Ctrl+C`. Middle-click or `0` resets zoom and opacity; `Esc` closes the focused reference. Hover for copy, options and close; right-click for saving, Editor and settings. Configure scale, smoothing, topmost behavior, capture visibility, window shadow, image border, and an optional shortcut under Configuration → Tools → Pin. Shadow and border are on by default; the hover outline remains visible with the border off. References are temporary and do not automatically save to Gallery.
 
 ### 🖥️ Desktop Integration
 - **System Tray**: Runs in background with custom context menu
-- **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus standalone launchers for OCR, color picker, QR, ruler, Zoom, and Pin
+- **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus one global shortcut per tool (OCR, color picker, QR, ruler, Zoom, and Pin), also shown in capture-bar tooltips. Existing assignments are preserved.
 - **Auto-Start**: Launch at Windows sign-in
 - **Auto-Update**: Built-in updater with toast notifications, changelog preview, and per-version skip
 - **Setup Wizard**: First-run configuration assistant
@@ -220,7 +220,7 @@ Run [Verify Windows installer](https://github.com/CyberGems/CyberSnap/actions/wo
 
 ## ⌨️ Keyboard Shortcuts
 
-Capture, recording, and standalone tools expose configurable hotkeys in **Settings → Hotkeys**. Only Area Capture ships with a default:
+Capture, recording, and tools expose configurable global hotkeys in **Settings → Hotkeys**. Each tool has one assignment, shared with the capture bar; only Area Capture ships with a default:
 
 | Action | Default Hotkey |
 |---|---|
@@ -232,10 +232,14 @@ Capture, recording, and standalone tools expose configurable hotkeys in **Settin
 | Repeat last area | Not set |
 | Screen Recorder (MP4) | Not set |
 | Screen Recorder (GIF) | Not set |
-| OCR (Standalone) | Not set |
-| Color Picker (Standalone) | Not set |
-| QR & Barcodes (Standalone) | Not set |
-| Ruler (Standalone) | Not set |
+| OCR | Not set |
+| Color Picker | Not set |
+| QR & Barcodes | Not set |
+| Ruler | Not set |
+| Zoom | Not set |
+| Pin to Screen | Not set |
+
+During capture, `Tab` / `Shift+Tab` moves through visible toolbar buttons; `Space` or `Enter` activates the focused button. Annotation shortcuts and confirmation controls belong to their own stage: for example, `R` retries and `P` toggles Preview during confirmation.
 
 Open the annotation editor directly: `CyberSnap.exe --editor`
 

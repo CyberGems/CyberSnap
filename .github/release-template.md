@@ -8,61 +8,52 @@
 
 <!-- Maintainer: Rewrite the marked paragraph for every release. Use 25-45 words, lead with user-facing changes, and do not repeat the app name or version. -->
 <!-- changelog-summary:start -->
-Scheduled backups now protect settings and achievements with configurable intervals, retention, and recovery copies. Backup controls are easier to read, and files use short, local-time names. Tray menus stay within the screen with vertical taskbars, and the widget follows monitors without a corner detour.
+Zoom freezes and magnifies your screen with seamless region or full-view capture, confirmation, and annotations. Pin keeps image references floating across monitors with zoom, opacity, shadows, and borders. A reorganized widget, clearer tooltips, and unified tool shortcuts streamline everyday capture.
 <!-- changelog-summary:end -->
-
-> **New to CyberSnap?** A fast, privacy-focused Windows toolkit for screenshots, annotation, OCR, QR scanning, screen recording, and sharing.
-
----
 
 ### ✨ Key Features & Highlights
 
-- 💾 **Scheduled backups for settings and achievements**:
-  - Enabled by default with a daily schedule and three retained copies. Choose startup, daily, weekly, or monthly backups, a custom folder, and a retention limit of 1–50 copies.
-  - Backups run while the app is open; missed intervals produce one catch-up copy on the next launch.
-  - Create, restore, or delete copies from Settings. Files are verified before old copies are removed, and restoration first creates a separate recovery copy.
-  - API keys and passwords are excluded. Restoration preserves current credentials and backup preferences. Captures and recordings are not included.
+- 🔍 **Zoom, integrated with the capture workflow**:
+  - Freeze the monitor under the pointer at 2× by default, pan with the mouse, and zoom from 1.25× to 4× with the wheel or `+` / `-`.
+  - Press `C` or your capture hotkey for a region, or `Enter` for the full view. Refine the selection and annotate in the usual confirmation stage, then follow your normal clipboard, save, Editor, Gallery, and optional Preview preferences.
+  - Canceling returns to the same Zoom view. Entering capture preserves the enlarged image without a distracting transition.
+  - Configure initial zoom, smoothing, animation, and the help bar, enabled by default, under Settings → Tools → Zoom.
 
-- 🗂️ **Clearer backup controls and filenames**:
-  - Available copies are part of Automatic backups; manual JSON export and import have their own Manual backup section.
-  - Backup files use readable local timestamps, such as `CyberSnap-backup-2026-10-20_07-39-11.json`. A short suffix prevents collisions; older backup filenames remain supported.
-  - Filenames, dates, sizes, and aligned actions stay visible. The page keeps scrolling over the backup list and folder path, and the schedule status uses normal text size and contrast.
+- 📌 **Pin to Screen for temporary image references**:
+  - Pin a selected region, clipboard image, or image file; also available from Preview, Gallery, widget, and capture bar. Regions support confirmation and annotations before pinning.
+  - Move references between monitors, zoom with the wheel or `+` / `-`, change opacity with `Ctrl` + wheel or the Opacity menu, copy with `Ctrl+C`, save with `Ctrl+S`, or send to the Editor.
+  - Middle-click or `0` resets zoom and opacity. Hover for copy, More, and close controls; right-click for the full menu, with icons and monitor-aware placement.
+  - Settings control initial scale, smoothing, always-on-top behavior, capture visibility, shadow, and border. Shadow and border default to on; the hover outline stays visible when the normal border is disabled.
+  - The source chooser uses a 40% dimmed backdrop, mixed-DPI centering, and subtle outside-click feedback. Clipboard import is disabled when no image is available, with a contextual tooltip.
+  - References are temporary and do not automatically save to Gallery. Menu and close lifecycle fixes prevent disposed-menu crashes.
 
-- 🖥️ **Tray and widget positioning fixes**:
-  - The tray menu stays inside the monitor's working area on secondary displays with a vertical taskbar, including mixed DPI scales.
-  - Following the active monitor moves the widget directly to its final docked position, eliminating the brief jump to the left edge when docked at the top.
+- ⌨️ **Consistent tools and keyboard controls**:
+  - One configurable global shortcut per tool, also shown in capture-bar tooltips. Existing assignments and stage-specific annotation/confirmation controls are preserved; tools remain unassigned by default.
+  - `Tab` / `Shift+Tab` navigates visible capture-toolbar buttons; `Space` or `Enter` activates the focused button.
+  - Settings groups OCR, Color Picker, QR, Ruler, Zoom, and Pin under Tools, removes obsolete standalone terminology, and keeps Editor shortcut cards at a readable width.
 
-- ✅ **Verification and packages**:
-  - Release builds and focused WPF smoke checks cover backups, tray placement, and widget monitor transitions.
-  - The installer and portable packages include the .NET 10 runtime and FFmpeg. The installer remains per-user and does not request administrator privileges.
+- 🧩 **A clearer widget, tray, and Settings**:
+  - Nine widget actions form a 3×3 grid with a subtle tool separator; the tray pairs Zoom and Pin in aligned columns.
+  - Image, MP4, and GIF cursor preferences move into their respective widget submenus and remain independent.
+  - Useful two-line English/Spanish tooltips cover the widget, tray, and capture bar. Widget tips stay above the panel, and collapsing no longer flashes cyan.
+  - Settings navigation, subtabs, hover states, sound toggles, and footer scrolling are refined. Capture Preview gets its own distinct, softer default sound, and the installer uses the app artwork.
+
+- 📦 **Packages and winget**:
+  - Installer and portable packages include the .NET 10 runtime and FFmpeg. Installation remains per-user without administrator prompts.
+  - Release automation updates the oldest pending CyberSnap winget PR and closes duplicates instead of accumulating submissions. Availability in winget still depends on upstream review.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
-Las copias programadas protegen la configuración y los logros con frecuencia, retención y copias de recuperación configurables. El panel mejora su legibilidad y usa nombres de archivo cortos con hora local. El menú del tray permanece dentro del monitor con barras verticales y el widget cambia de pantalla sin pasar por una esquina.
-
-### ✨ Novedades destacadas
-
-- 💾 **Copias programadas de configuración y logros**:
-  - Activadas por defecto, diariamente y con tres copias conservadas. Elige al iniciar, diaria, semanal o mensual, una carpeta personalizada y entre 1 y 50 copias.
-  - Funcionan mientras la aplicación está abierta; los intervalos pendientes crean una sola copia al volver a abrirla.
-  - Crea, restaura o elimina copias desde Configuración. Se verifican antes de eliminar las antiguas y se guarda una copia de recuperación independiente antes de restaurar.
-  - Se excluyen las claves API y contraseñas. Al restaurar se conservan las credenciales y preferencias de respaldo actuales. No se incluyen capturas ni grabaciones.
-
-- 🗂️ **Panel de respaldos y nombres más claros**:
-  - Las copias disponibles se integran en Copias de seguridad automáticas. La exportación e importación JSON tienen su propia sección Copia de seguridad manual.
-  - Los archivos usan fecha y hora local, por ejemplo `CyberSnap-backup-2026-10-20_07-39-11.json`. Un sufijo corto evita colisiones y las copias con nombres anteriores siguen siendo compatibles.
-  - Se muestran nombre, fecha y tamaño, con acciones alineadas. La rueda sigue desplazando la página sobre la lista y la ruta, y las fechas de programación tienen el tamaño y contraste normales del panel.
-
-- 🖥️ **Correcciones de posición del tray y del widget**:
-  - El menú del tray permanece dentro del área útil de los monitores secundarios con barra de tareas vertical, incluso entre pantallas con distintas escalas DPI.
-  - Al seguir el monitor activo, el widget va directamente a su posición final y evita el salto momentáneo al lado izquierdo cuando está anclado arriba.
-
-- ✅ **Verificación y paquetes**:
-  - La compilación Release y las comprobaciones WPF cubren respaldos, posición del tray y transiciones del widget entre monitores.
-  - El instalador y el paquete portable incluyen el runtime de .NET 10 y FFmpeg. La instalación sigue siendo por usuario y no solicita permisos de administrador.
+- **Zoom integrado**: congela y amplía de 1.25× a 4×. `C` o el atajo de captura selecciona una región; `Enter` selecciona la vista completa. Ajusta y anota en la confirmación habitual, con Vista previa opcional. Cancelar devuelve al mismo Zoom y la transición a captura conserva la imagen ampliada. Barra de ayuda opcional, activada por defecto.
+- **Fijar en pantalla (Pin)**: referencias temporales desde región, portapapeles, archivo, Vista previa, Galería, widget o barra de captura. Mueve entre monitores, amplía con rueda o `+` / `-`, cambia opacidad con `Ctrl` + rueda o su menú, copia, guarda o abre en el Editor. Clic central o `0` restablece zoom y opacidad. Sombra y borde configurables, activados por defecto; el borde al pasar el mouse siempre permanece disponible.
+- **Pin más pulido**: selector con fondo atenuado al 40%, centrado entre distintas escalas y aviso sutil al hacer clic fuera. Portapapeles deshabilitado si no contiene una imagen, con tooltip dinámico. Menús con iconos que permanecen en su monitor y correcciones de los cierres inesperados al usar o cerrar la herramienta.
+- **Atajos y barra de captura**: un atajo global por herramienta, conservando tus asignaciones y los controles de cada etapa. `Tab` / `Shift+Tab` recorre botones visibles; `Espacio` o `Enter` activa el enfocado. Configuración agrupa las seis herramientas y mejora el ancho de las tarjetas de atajos del Editor.
+- **Widget y tray**: cuadrícula 3×3 con separación de herramientas, Zoom y Pin alineados en el tray, y ajustes de cursor independientes en los submenús de Imagen, MP4 y GIF. Tooltips útiles de dos líneas en ambos idiomas, siempre visibles sobre el widget, y sin destello cian al ocultarse.
+- **Otros ajustes**: navegación y subpestañas de Configuración, hover consistente, toggles de Sonidos sin recortes, scroll separado del footer, sonido predeterminado propio para Vista previa e ilustraciones de la app en el instalador.
+- **Distribución**: instalador y portable con .NET 10 y FFmpeg incluidos. La automatización mantiene actualizado el PR más antiguo de winget y cierra duplicados; su aprobación depende de los revisores de winget.
 
 </details>
 

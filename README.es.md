@@ -48,7 +48,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 ## ✨ Funciones principales
 
 ### 📷 Captura
-- **Widget de captura flotante**: widget siempre disponible en pantalla para capturar con un clic
+- **Widget de captura flotante**: acceso con un clic y nueve botones en una cuadrícula 3×3, con separación entre capturas y herramientas, incluido Pin. Su menú Más agrupa las preferencias por modo, con ajustes independientes de cursor para imágenes, MP4 y GIF, y de Recortador para MP4 y GIF.
 - **Autocopia independiente**: elige por separado qué enviar al portapapeles para capturas normales, capturas con desplazamiento, OCR, QR/códigos de barras, MP4, GIF y colores. Las capturas normales y con desplazamiento tienen preferencias de vista previa independientes. Los presets de imágenes conservan las preferencias de portapapeles y vista previa de las capturas con desplazamiento. OCR, QR y el selector de color mantienen su ventana de resultados habilitada al desactivar la autocopia.
 - **Modos de captura flexibles**: área, ventana activa, pantalla completa y captura con desplazamiento (páginas largas cosidas en una sola imagen)
 - **Grabación de pantalla**: graba en MP4 o GIF con un recortador con pestañas: recorte y reproducción independientes, tira de fotogramas, forma de onda y corte preciso
@@ -81,14 +81,16 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 - **Formato configurable**: PNG o JPEG con control de calidad
 - **Acciones posteriores a la subida**: abre la URL en el navegador tras una subida exitosa
 
-### 🛠️ Herramientas independientes
+### 🛠️ Herramientas
 - **Selector de color**: muestrea cualquier color de la pantalla con vista de detalle HEX/RGB/HSL y copia por fila
 - **Regla**: herramienta de medición en pantalla
 - **Escáner de códigos de barras / QR**: escanea códigos de forma independiente o sobre una captura
+- **Zoom**: congela el monitor bajo el puntero a 2×, desplázate con el mouse y amplía entre 1.25× y 4× con la rueda o `+` / `-`. Pulsa `C` o tu atajo de captura para seleccionar una región de la vista ampliada y ajustarla o anotarla en la confirmación habitual. `Enter` abre la confirmación con la vista completa seleccionada. Cancelar devuelve al mismo nivel y encuadre de Zoom. Las capturas confirmadas respetan tus preferencias de guardado, portapapeles, Editor, Galería y Vista previa opcional. `Ctrl+C` copia la vista, `Ctrl+S` la guarda y `Esc` o clic derecho sale. Disponible en la barra de captura, tray, widget y mediante un atajo global configurable. Configuración → Herramientas → Zoom permite ajustar la ampliación inicial, suavizado, animación y barra de ayuda opcional.
+- **Fijar en pantalla (Pin)**: mantén referencias temporales de imágenes sobre otras ventanas. Parte de una región (con confirmación y anotaciones), portapapeles, archivo, Vista previa, Galería, widget o barra de captura. El botón de la barra reutiliza la imagen congelada y permite seleccionar, ajustar, anotar y confirmar para fijarla directamente. Arrastra entre monitores, amplía con la rueda o `+` / `-`, cambia la opacidad con `Ctrl` + rueda o su menú y copia el original con `Ctrl+C`. Clic central o `0` restablece zoom y opacidad; `Esc` cierra la referencia enfocada. Al pasar el mouse aparecen copiar, opciones y cerrar; clic derecho permite guardar, abrir en el Editor o ir a los ajustes. Configura escala, suavizado, siempre visible, inclusión en capturas, sombra, borde y atajo en Configuración → Herramientas → Pin. Sombra y borde están activados por defecto; el borde al pasar el mouse se conserva aunque desactives el borde normal. Las referencias son temporales y no se guardan automáticamente en Galería.
 
 ### 🖥️ Integración con el escritorio
 - **Bandeja del sistema**: se ejecuta en segundo plano con menú contextual personalizado
-- **Atajos configurables**: capturas de área, centro, pantalla completa, ventana, desplazamiento y repetición, grabación de pantalla, más lanzadores independientes de OCR, selector de color, QR y regla
+- **Atajos configurables**: capturas de área, centro, pantalla completa, ventana, desplazamiento y repetición, grabación de pantalla, más un atajo global por herramienta (OCR, selector de color, QR, Regla, Zoom y Pin), visible también en los tooltips de la barra de captura. Se conservan las asignaciones existentes.
 - **Inicio automático**: se inicia al iniciar sesión en Windows
 - **Actualización automática**: actualizador integrado con avisos emergentes, vista previa del changelog y omisión por versión
 - **Asistente de configuración**: asistente de configuración en el primer uso
@@ -212,7 +214,7 @@ Ejecuta manualmente [Verify Windows installer](https://github.com/CyberGems/Cybe
 
 ## ⌨️ Atajos de teclado
 
-Las capturas, la grabación y las herramientas independientes exponen atajos configurables en **Ajustes → Teclado**. Solo Selección de área trae uno por defecto:
+Las capturas, la grabación y las herramientas exponen atajos globales configurables en **Configuración → Teclado**. Cada herramienta tiene una sola asignación, compartida con la barra de captura. Solo Selección de área trae uno por defecto:
 
 | Acción | Atajo predeterminado |
 |---|---|
@@ -224,10 +226,14 @@ Las capturas, la grabación y las herramientas independientes exponen atajos con
 | Repetir última área | Sin asignar |
 | Grabador de pantalla (MP4) | Sin asignar |
 | Grabador de pantalla (GIF) | Sin asignar |
-| OCR independiente | Sin asignar |
-| Selector de color independiente | Sin asignar |
-| QR y códigos de barras independiente | Sin asignar |
-| Regla independiente | Sin asignar |
+| OCR | Sin asignar |
+| Selector de color | Sin asignar |
+| QR y códigos de barras | Sin asignar |
+| Regla | Sin asignar |
+| Zoom | Sin asignar |
+| Fijar en pantalla | Sin asignar |
+
+Durante la captura, `Tab` / `Shift+Tab` recorre los botones visibles de la barra; `Espacio` o `Enter` activa el botón enfocado. Los atajos de anotación y los controles de confirmación actúan en su propia etapa: por ejemplo, `R` reintenta y `P` alterna Vista previa durante la confirmación.
 
 Abre el editor de anotaciones directamente: `CyberSnap.exe --editor`
 
