@@ -37,6 +37,7 @@ public sealed class ZoomCaptureRequest
         // Alternate destinations such as video/scrolling would recapture the live desktop.
         // This confirmation must keep using the borrowed, magnified still image.
         overlay.LockConfirmDestination = true;
+        overlay.RefreshToolbar(); // Clear capture controls and hitboxes before the overlay is shown.
         _cancel = overlay.CancelFromShortcut;
         Native.Dwm.TrySetTransitionsForcedDisabled(overlay.Handle, true);
         if (FullView) overlay.Shown += (_, _) => overlay.BeginInvoke((Action)overlay.ConfirmFullFrame);

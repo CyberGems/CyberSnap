@@ -74,7 +74,7 @@ public sealed partial class RegionOverlayForm : Form
     /// Text-extraction confirm (OCR) has no use for drawing tools, so it skips them too.
     /// </summary>
     private bool ShowAnnotationChrome => _isConfirmingSelection && _modeBeforeConfirm != CaptureMode.Ocr;
-    private bool HideCaptureToolbar => PinImageOnConfirm && !_isConfirmingSelection;
+    private bool HideCaptureToolbar => IsConfirmDestinationLocked && !_isConfirmingSelection;
 
     private bool _isConfirmingSelection;
     private Rectangle _confirmRect;

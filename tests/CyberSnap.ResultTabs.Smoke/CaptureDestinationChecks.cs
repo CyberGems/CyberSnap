@@ -21,8 +21,11 @@ internal static partial class Program
                 if (purpose == "Zoom")
                     typeof(RegionOverlayForm).GetProperty("LockConfirmDestination", BindingFlags.Instance | BindingFlags.NonPublic)!
                         .SetValue(overlay, true);
-                if (purpose == "Pin")
-                    Assert(((Rectangle)Field(overlay, "_toolbarRect")).IsEmpty, "Pin selection has no capture bar before confirmation: " + language);
+                if (purpose != "Image")
+                    CheckHiddenCaptureBar(overlay, purpose + ", " + language);
+                else
+                    Assert(!((Rectangle)Field(overlay, "_toolbarRect")).IsEmpty,
+                        "regular image selection retains its capture bar: " + language);
                 Call(overlay, "EnterConfirmMode", new Rectangle(180, 100, 440, 320), null!);
                 if (purpose != "Image")
                 {
@@ -41,6 +44,21 @@ internal static partial class Program
                     "regular captures can return to image confirmation: " + language);
             }
         }
+    }
+
+    private static void CheckHiddenCaptureBar(RegionOverlayForm overlay, string purpose)
+    {
+        Call(overlay, "RefreshToolbar");
+        Call(overlay, "EnsureToolbarReady");
+        Assert(Field(overlay, "_toolbarForm") is not Forms.Form { Visible: true }
+            && ((Rectangle)Field(overlay, "_toolbarRect")).IsEmpty
+            && ((Rectangle[])Field(overlay, "_toolbarButtons")).Length == 0
+            && ((Rectangle)Field(overlay, "_logoRect")).IsEmpty
+            && ((Rectangle)Field(overlay, "_brandRect")).IsEmpty
+            && ((Rectangle)Field(overlay, "_captureGripRect")).IsEmpty,
+            purpose + " selection and retry keep capture chrome hidden across refreshes");
+        Assert(!((System.Collections.IEnumerable)Call(overlay, "GetToolbarKeyboardTargets")!).Cast<object>().Any(),
+            "the hidden " + purpose + " capture bar has no keyboard targets");
     }
 
     private static void CheckLockedConfirmDestination(RegionOverlayForm overlay, string purpose)

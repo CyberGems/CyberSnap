@@ -93,12 +93,15 @@ internal static partial class Program
                 {
                     if (!full)
                     {
+                        CheckHiddenCaptureBar(overlay, "Zoom");
                         OverlayZoomMouse(overlay, "OnMouseDown", 200, 180);
                         OverlayZoomMouse(overlay, "OnMouseUp", 200, 180);
                         Assert((bool)Field(overlay, "_isConfirmingSelection") && overlay.ConfirmRect == new Rectangle(0, 0, 800, 600),
                             "a click selects the full frame for confirmation without bypassing it");
                     }
                     CheckLockedConfirmDestination(overlay, full ? "Zoom full view" : "Zoom region");
+                    Assert(Field(overlay, "_toolbarForm") is Forms.Form { Visible: true },
+                        "Zoom confirmation still presents annotation tools: full=" + full);
                     Call(overlay, "HandleEscapeKey");
                 });
                 Assert(output is null && !zoom.IsDisposed && zoom.Visible && !zoom.CaptureOutputDelegated
@@ -118,6 +121,15 @@ internal static partial class Program
             OverlayZoomMouse(overlay, "OnMouseDown", 180, 100);
             OverlayZoomMouse(overlay, "OnMouseMove", 650, 450);
             OverlayZoomMouse(overlay, "OnMouseUp", 650, 450);
+            Assert(Field(overlay, "_toolbarForm") is Forms.Form { Visible: true },
+                "the selected Zoom region exposes annotations before retry");
+            Call(overlay, "RequestRetrySelection");
+            CheckHiddenCaptureBar(overlay, "Zoom retry");
+            OverlayZoomMouse(overlay, "OnMouseDown", 180, 100);
+            OverlayZoomMouse(overlay, "OnMouseMove", 650, 450);
+            OverlayZoomMouse(overlay, "OnMouseUp", 650, 450);
+            Assert(Field(overlay, "_toolbarForm") is Forms.Form { Visible: true },
+                "reselecting the Zoom region restores annotation tools");
             // Use the standard bottom-right resize handle, then draw with the normal annotation tool.
             OverlayZoomMouse(overlay, "OnMouseDown", 650, 450);
             OverlayZoomMouse(overlay, "OnMouseMove", 620, 420);
@@ -194,6 +206,7 @@ internal static partial class Program
                 {
                     Assert(!overlay.DetectWindows && zoom.Visible && overlay.Owner == zoom && overlay.CurrentMode == mode,
                         "the actual App hotkey opens standard selection on the borrowed frame with live detection disabled: " + mode);
+                    CheckHiddenCaptureBar(overlay, "Zoom hotkey " + mode);
                     Call(overlay, "HandleEscapeKey");
                 }
                 else if (requests == 1 && !zoom.CapturePending)

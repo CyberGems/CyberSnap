@@ -203,21 +203,6 @@ internal static partial class Program
         finally { CallZoomApp(app, "ClosePinnedImages"); }
     }
 
-    private static void CheckPinSelectionChrome(RegionOverlayForm overlay)
-    {
-        Call(overlay, "RefreshToolbar");
-        Call(overlay, "EnsureToolbarReady");
-        Assert(Field(overlay, "_toolbarForm") is not Forms.Form { Visible: true }
-            && ((Rectangle)Field(overlay, "_toolbarRect")).IsEmpty
-            && ((Rectangle[])Field(overlay, "_toolbarButtons")).Length == 0
-            && ((Rectangle)Field(overlay, "_logoRect")).IsEmpty
-            && ((Rectangle)Field(overlay, "_brandRect")).IsEmpty
-            && ((Rectangle)Field(overlay, "_captureGripRect")).IsEmpty,
-            "Pin selection and retry keep capture chrome hidden across refreshes");
-        Assert(!((System.Collections.IEnumerable)Call(overlay, "GetToolbarKeyboardTargets")!).Cast<object>().Any(),
-            "the hidden Pin capture bar has no keyboard targets");
-    }
-
     private static void CheckPinCaptureRoute(CyberSnap.App app, SettingsService settings, List<PinImageForm> pins, bool fromToolbar = false)
     {
         using var source = new Bitmap(800, 600);
@@ -236,11 +221,16 @@ internal static partial class Program
             {
                 if (fromToolbar)
                 {
+                    // This fixture borrows a Zoom request only to inject a synthetic desktop frame.
+                    // Restore the regular capture context before exercising its Pin button.
+                    typeof(RegionOverlayForm).GetProperty("LockConfirmDestination", BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .SetValue(overlay, false);
+                    Call(overlay, "RefreshToolbar");
                     Assert(!overlay.PinImageOnConfirm, "a regular capture retains its normal output before selecting Pin");
                     ClickPinCaptureBar(overlay);
                 }
                 Assert(overlay.PinImageOnConfirm, "region selection uses the Pin capture purpose");
-                CheckPinSelectionChrome(overlay);
+                CheckHiddenCaptureBar(overlay, "Pin");
                 OverlayZoomMouse(overlay, "OnMouseDown", 180, 100);
                 OverlayZoomMouse(overlay, "OnMouseMove", 620, 420);
                 OverlayZoomMouse(overlay, "OnMouseUp", 620, 420);
@@ -251,7 +241,7 @@ internal static partial class Program
                 Call(overlay, "RequestRetrySelection");
                 Assert(overlay.PinImageOnConfirm && !(bool)Field(overlay, "_isConfirmingSelection"),
                     "retrying a Pin region keeps its output purpose from both launch paths");
-                CheckPinSelectionChrome(overlay);
+                CheckHiddenCaptureBar(overlay, "Pin");
                 OverlayZoomMouse(overlay, "OnMouseDown", 180, 100);
                 OverlayZoomMouse(overlay, "OnMouseMove", 620, 420);
                 OverlayZoomMouse(overlay, "OnMouseUp", 620, 420);
@@ -327,7 +317,7 @@ internal static partial class Program
             Assert(overlay.Visible && overlay.Handle == handle && overlay.PinImageOnConfirm
                 && overlay.CurrentMode == CaptureMode.Rectangle && (string)Field(overlay, "_activeToolId") == "pin",
                 "Pin reuses the current frozen overlay and retains its selection purpose");
-            CheckPinSelectionChrome(overlay);
+            CheckHiddenCaptureBar(overlay, "Pin");
             Call(overlay, "SetMode", CaptureMode.Rectangle, "rect", false);
             Assert(!overlay.PinImageOnConfirm, "switching back to Area restores the usual capture output");
             overlay.Close();
@@ -335,7 +325,7 @@ internal static partial class Program
         using var initialSource = new Bitmap(800, 600);
         using var initialPin = new RegionOverlayForm(initialSource, new Rectangle(0, 0, 800, 600), CaptureMode.Pin);
         initialPin.Show(); Forms.Application.DoEvents();
-        CheckPinSelectionChrome(initialPin);
+        CheckHiddenCaptureBar(initialPin, "Pin");
         Assert(initialPin.PinImageOnConfirm && initialPin.CurrentMode == CaptureMode.Rectangle,
             "starting directly in Pin mode uses the normal region-selection engine");
     }
