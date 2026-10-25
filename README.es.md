@@ -242,6 +242,8 @@ Las capturas, la grabación y las herramientas exponen atajos globales configura
 
 Durante la captura, `Tab` / `Shift+Tab` recorre los botones visibles de la barra; `Espacio` o `Enter` activa el botón enfocado. Los atajos de anotación y los controles de confirmación actúan en su propia etapa: por ejemplo, `R` reintenta y `P` alterna Vista previa durante la confirmación.
 
+Las anotaciones de captura y el Editor pueden compartir atajos locales, incluido `F6` para Dibujo libre. Se detectan asignaciones duplicadas dentro de cada etapa; las herramientas y los atajos de vista del Editor comparten una etapa. Los atajos globales se siguen comprobando contra ambas etapas.
+
 Abre el editor de anotaciones directamente: `CyberSnap.exe --editor`
 
 ---

@@ -15,6 +15,7 @@ internal static partial class Program
 {
     private static void CheckUnifiedToolHotkeys(string temp, SettingsService service, CyberSnap.App app, string? renders)
     {
+        CheckStageHotkeyConflicts();
         var aliases = new[] { ("ocr", "_standaloneOcr"), ("picker", "_standaloneColorPicker"),
             ("scan", "_standaloneScan"), ("ruler", "_standaloneRuler"), ("zoom", "_standaloneZoom"),
             ("pin", "_standalonePin"), ("scroll", "_scrollCapture") };
@@ -76,6 +77,63 @@ internal static partial class Program
         CheckGlobalToolDispatch(app);
         CheckToolbarKeyboardNavigation(renders);
         CheckStageKeyboardControls();
+    }
+
+    private static void CheckStageHotkeyConflicts()
+    {
+        var settings = new AppSettings();
+        Assert(settings.GetToolHotkey("draw") == (0u, 0x75u)
+            && settings.GetEditorToolHotkey("editorDraw") == (0u, 0x75u),
+            "capture and Editor keep their existing F6 defaults");
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "draw", 0, 0x75) is null
+            && ToolListBuilder.FindHotkeyConflict(settings, "editorDraw", 0, 0x75) is null,
+            "reassigning unchanged F6 does not report the other stage's default");
+
+        settings.SetToolHotkey("draw", 0, 0x83);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "draw", 0, 0x75) is null,
+            "capture F6 can be restored while Editor F6 remains assigned");
+        settings.SetToolHotkey("draw", 0, 0x75);
+        settings.SetEditorToolHotkey("editorDraw", 0, 0x83);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "editorDraw", 0, 0x75) is null,
+            "Editor F6 can be restored while capture F6 remains assigned");
+        settings.SetEditorToolHotkey("editorDraw", 0, 0x75);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "draw", 0, 0x38) is null,
+            "capture annotations can reuse an Editor view shortcut");
+        settings.SetToolHotkey("draw", 0, 0x83);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "editorZoomIn", 0, 0x83) is null,
+            "Editor view shortcuts can reuse a capture annotation shortcut");
+        settings.SetToolHotkey("draw", 0, 0x75);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "arrow", 0, 0x74)?.ToolId == "line",
+            "duplicate capture annotation shortcuts are still rejected");
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "editorArrow", 0, 0x74)?.ToolId == "editorLine",
+            "duplicate Editor tool shortcuts are still rejected");
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "editorZoomIn", 0, 0x37)?.ToolId == "editorZoomOut",
+            "duplicate Editor view shortcuts are still rejected");
+        settings.SetEditorViewHotkey("editorZoomIn", 0, 0x73);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "editorArrow", 0, 0x73)?.ToolId == "editorZoomIn"
+            && ToolListBuilder.FindHotkeyConflict(settings, "editorZoomIn", 0, 0x73)?.ToolId == "editorArrow",
+            "Editor tools and view shortcuts share one conflict scope");
+
+        settings.SetToolHotkey("pin", 6, 0x75);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "draw", 6, 0x75)?.ToolId == "pin"
+            && ToolListBuilder.FindHotkeyConflict(settings, "editorDraw", 6, 0x75)?.ToolId == "pin",
+            "both local stages still reject a collision with a global tool shortcut");
+        settings.SetToolHotkey("draw", 6, 0x76);
+        settings.SetEditorToolHotkey("editorDraw", 6, 0x77);
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "pin", 6, 0x76)?.ToolId == "draw"
+            && ToolListBuilder.FindHotkeyConflict(settings, "pin", 6, 0x77)?.ToolId == "editorDraw",
+            "global assignments still check capture and Editor local shortcuts");
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "ocr", 6, 0x75)?.ToolId == "pin"
+            && ToolListBuilder.FindHotkeyConflict(settings, "_standalonePin", 6, 0x75) is null,
+            "global duplicates remain rejected and canonical aliases never conflict with themselves");
+        settings.SetToolHotkey("draw", 0, 0x75);
+        settings.SetEditorToolHotkey("editorDraw", 0, 0x75);
+        Assert(SettingsService.TryDeserialize(JsonSerializer.Serialize(settings), out var reloaded)
+            && reloaded.GetToolHotkey("draw") == (0u, 0x75u)
+            && reloaded.GetEditorToolHotkey("editorDraw") == (0u, 0x75u),
+            "shared local keys survive settings reload without clearing either stage");
+        Assert(ToolListBuilder.FindHotkeyConflict(settings, "draw", 0, 0) is null,
+            "clearing a shortcut does not report conflicts");
     }
 
     private static string ToolTipText(ToolDef tool, AppSettings settings) => (string)typeof(RegionOverlayForm)

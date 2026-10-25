@@ -519,8 +519,17 @@ public static class ToolListBuilder
     {
         if (key == 0) return null;
         var excluded = excludeToolId is null ? null : AppSettings.CanonicalHotkeyId(excludeToolId);
+        bool isEditorShortcut = EditorToolHotkeyDef.Tools.Any(t => string.Equals(t.Id, excluded, StringComparison.OrdinalIgnoreCase))
+            || EditorViewHotkeyDef.Shortcuts.Any(t => string.Equals(t.Id, excluded, StringComparison.OrdinalIgnoreCase));
+        bool isCaptureAnnotation = ToolDef.AllTools.Any(t => t.Group == 1
+            && string.Equals(t.Id, excluded, StringComparison.OrdinalIgnoreCase));
+
+        // Capture annotations and Editor shortcuts belong to separate stages. Global
+        // bindings still conflict with both, and each stage checks its own duplicates.
         foreach (var tool in ToolDef.AllTools)
         {
+            if (isEditorShortcut && tool.Group == 1)
+                continue;
             var id = tool.Id;
             if (string.Equals(AppSettings.CanonicalHotkeyId(id), excluded, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -539,6 +548,8 @@ public static class ToolListBuilder
             if (existingMod == mod && existingKey == key)
                 return new HotkeyConflict(id, label);
         }
+
+        if (isCaptureAnnotation) return null;
 
         foreach (var (id, label, _) in EditorToolHotkeyDef.Tools)
         {
