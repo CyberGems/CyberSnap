@@ -210,6 +210,11 @@ dotnet publish src/CyberSnap/CyberSnap.csproj `
 Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 o posterior ejecutando `scripts/Build-Installer.ps1` con `-AppVersion` (una versión numérica o una etiqueta con prefijo `v`). El script rechaza los avisos del compilador, verifica la versión numérica del archivo instalador y también se usa en CI. `CyberSnap.iss` empaqueta lo que haya en `publish-win64`, incluido `ffmpeg.exe`.
 
 Ejecuta manualmente [Verify Windows installer](https://github.com/CyberGems/CyberSnap/actions/workflows/verify-installer.yml) para comprobar la instalación, el inicio automático al abrir una sesión real de Windows y la desinstalación en una VM desechable. Las comprobaciones usan cuentas estándar con las solicitudes de credenciales de UAC activadas y conservan el instalador y los registros durante siete días como artefactos de Actions, sin crear una release. El parámetro opcional `installer_run_id` reutiliza un instalador de prueba anterior únicamente si no han cambiado las fuentes del empaquetado. `scripts/Test-Installer.ps1` está pensado exclusivamente para esas VM alojadas y rechaza su ejecución local normal.
+
+Antes de compilar cada release, CI actualiza los iconos del About desde los repositorios oficiales indicados en `scripts/SuiteIconSources.json`. Comprueba que todas las apps del catálogo tengan una fuente, que los PNG se decodifiquen y que cumplan los límites de tamaño y dimensiones cuadradas. Valida el conjunto completo antes de reemplazar imágenes; una fuente ausente o inválida detiene el release. El resumen del proceso muestra las URL y los hashes SHA256. El [workflow de verificación de iconos](https://github.com/CyberGems/CyberSnap/actions/workflows/verify-suite-icons.yml) comprueba el proceso sin publicar un release.
+
+Al preparar un release localmente, ejecuta `pwsh -NoProfile -File scripts/Sync-SuiteIcons.ps1` antes de compilar y crear la etiqueta. Revisa los PNG modificados e inclúyelos en el commit de preparación del release. Añade `-Check` para detectar copias desactualizadas sin modificar archivos. Para trabajar sin conexión, `-Source Local` lee los originales de los repositorios vecinos (o de `-ProjectsRoot <carpeta>`).
+
 ---
 
 ## ⌨️ Atajos de teclado
