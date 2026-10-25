@@ -160,7 +160,7 @@ internal static class SelectionSizeReadout
         int lineH = LineHeight(font);
         int iconBox = IconBox(lineH);
 
-        DrawPill(g, new Pill { Lines = lines, Rect = pillRect }, font, lineH, iconBox, emphasize: false);
+        DrawPill(g, new Pill { Lines = lines, Rect = pillRect }, font, lineH, iconBox, emphasize: false, opaque: true);
         if (showGrip)
             DrawDragGrip(g, gripRect, hovered);
 
@@ -199,7 +199,7 @@ internal static class SelectionSizeReadout
                     new Seg(Arrow.Vertical, selectionHeight.ToString())
                 }
             };
-            DrawPill(g, new Pill { Lines = lines, Rect = chipRect }, font, lineH, iconBox, emphasize: false);
+            DrawPill(g, new Pill { Lines = lines, Rect = chipRect }, font, lineH, iconBox, emphasize: false, opaque: true);
         }
 
         if (!gripRect.IsEmpty)
@@ -888,7 +888,7 @@ internal static class SelectionSizeReadout
 
     // ── Rendering ───────────────────────────────────────────────────────────────
 
-    private static void DrawPill(Graphics g, Pill pill, Font font, int lineH, int iconBox, bool emphasize = false, Color? accentOverride = null)
+    private static void DrawPill(Graphics g, Pill pill, Font font, int lineH, int iconBox, bool emphasize = false, Color? accentOverride = null, bool opaque = false)
     {
         var accent = accentOverride ?? UiChrome.AccentColor;
         var rect = pill.Rect;
@@ -899,7 +899,7 @@ internal static class SelectionSizeReadout
 
         using (var path = WindowsDockRenderer.RoundedRect(rect, Radius))
         {
-            int bgA = emphasize ? 240 : 225;
+            int bgA = opaque ? 255 : (emphasize ? 240 : 225);
             using var bg = new SolidBrush(Color.FromArgb(bgA, UiChrome.SurfaceTier1));
             g.FillPath(bg, path);
             using var border = new Pen(Color.FromArgb(emphasize ? 220 : 150, accent), emphasize ? 1.4f : 1f);

@@ -552,32 +552,35 @@ public sealed partial class RegionOverlayForm
     /// <summary>CyberClock keycap: rounded chip with the return arrow, used on the Done pill.</summary>
     private static void DrawEnterKeyBadge(Graphics g, RectangleF box, Color color)
     {
-        float radius = Math.Max(2f, box.Height * 0.28f);
+        float radius = box.Height * (4f / 17f);
         var old = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;
         using (var fill = new SolidBrush(Color.FromArgb(CyberSnap.UI.Theme.IsDark ? 36 : 22, color)))
-        using (var border = new Pen(Color.FromArgb(140, color), Math.Max(1f, box.Height * 0.08f)))
+        using (var border = new Pen(Color.FromArgb(140, color), Math.Max(1f, box.Height / 17f)))
         using (var chip = WindowsDockRenderer.RoundedRect(box, radius))
         {
             g.FillPath(fill, chip);
             g.DrawPath(border, chip);
         }
 
-        float padX = box.Width * 0.18f;
-        float padY = box.Height * 0.22f;
-        var icon = new RectangleF(box.X + padX, box.Y + padY, box.Width - padX * 2f, box.Height - padY * 2f);
-        using var arrow = new Pen(color, Math.Max(1.15f, icon.Height * 0.14f))
+        // Match Preview's 11px return glyph, 3×2 padding, 1px border and 4px corners.
+        float glyphScale = box.Height / 17f;
+        float glyphBox = 11f * glyphScale;
+        float pathScale = glyphBox / 16f; // natural return-path bounds are 16×15
+        var icon = new RectangleF(box.X + (box.Width - glyphBox) / 2f,
+            box.Y + (box.Height - 15f * pathScale) / 2f, glyphBox, 15f * pathScale);
+        using var arrow = new Pen(color, 2.2f * glyphScale)
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
             LineJoin = LineJoin.Round
         };
-        PointF P(float x, float y) => new(icon.X + icon.Width * (x / 24f), icon.Y + icon.Height * (y / 24f));
+        PointF P(float x, float y) => new(icon.X + (x - 4f) * pathScale, icon.Y + (y - 4f) * pathScale);
         g.DrawLine(arrow, P(20, 4), P(20, 11));
-        g.DrawBezier(arrow, P(20, 11), P(20, 14), P(18, 14), P(17, 14));
-        g.DrawLine(arrow, P(17, 14), P(5, 14));
-        g.DrawLine(arrow, P(5, 14), P(9, 9));
-        g.DrawLine(arrow, P(5, 14), P(9, 19));
+        g.DrawBezier(arrow, P(20, 11), P(20, 12.657f), P(18.657f, 14), P(17, 14));
+        g.DrawLine(arrow, P(17, 14), P(4, 14));
+        g.DrawLine(arrow, P(4, 14), P(9, 9));
+        g.DrawLine(arrow, P(4, 14), P(9, 19));
         g.SmoothingMode = old;
     }
 

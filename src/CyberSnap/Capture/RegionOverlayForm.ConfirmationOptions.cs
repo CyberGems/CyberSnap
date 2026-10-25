@@ -83,8 +83,17 @@ public sealed partial class RegionOverlayForm
     {
         var menu = BuildConfirmationOptionsMenu();
         _toolbarContextMenu = menu;
-        menu.Closed += (_, _) =>
+        menu.Closed += (_, e) =>
         {
+            if (e.CloseReason == ToolStripDropDownCloseReason.AppClicked)
+            {
+                // Same click-away contract as the widget: native close runs before
+                // the underlying mouse event. Clear at background priority after input.
+                _suppressConfirmOptionsMouseDown = true;
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    new Action(() => _suppressConfirmOptionsMouseDown = false));
+            }
             _lastContextMenuClosedTime = DateTime.UtcNow;
             _lastContextMenuBtnIndex = -1;
             if (ReferenceEquals(_toolbarContextMenu, menu)) _toolbarContextMenu = null;

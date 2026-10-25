@@ -127,7 +127,7 @@ public sealed partial class RegionOverlayForm : Form
     private static void DoneKeyBadgeSize(float pillHeight, out float badgeW, out float badgeH)
     {
         badgeH = Math.Clamp(pillHeight * 0.56f, UiChrome.ScaleFloat(12f), UiChrome.ScaleFloat(16f));
-        badgeW = badgeH * 1.62f;
+        badgeW = badgeH * (19f / 17f); // Preview Enter keycap: 11px glyph + padding and border.
     }
 
     private bool _confirmChromeLayoutDirty = true;
@@ -214,6 +214,7 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _confirmOptionsPillRect = Rectangle.Empty;
     private bool _hoveredConfirmOptionsPill;
     private bool _overlayConfirmOpen;
+    private bool _suppressConfirmOptionsMouseDown;
     private Rectangle _centerMoveGripRect = Rectangle.Empty;
     private bool _hoveredCenterMoveGrip;
     private float _centerMoveGripOpacity = 0f;
@@ -1813,9 +1814,9 @@ public sealed partial class RegionOverlayForm : Form
             return;
         }
 
-        // The drag grip on the size pill is always shown in confirm mode — it lets the user
-        // reposition the frame regardless of whether any annotations have been drawn.
-        const bool showGrip = true;
+        // Hidden annotation controls leave the crop interior available for movement.
+        // Keep the dimensions but remove the redundant dedicated grip in that state.
+        bool showGrip = ShowAnnotationChrome;
         var avoid = GetConfirmReadoutAvoidRects();
 
         if (!SelectionSizeReadout.TryGetConfirmDragPillLayout(
@@ -1868,7 +1869,10 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     private bool HitTestConfirmSizeReadout(Point p)
-        => !_confirmSizeReadoutGripRect.IsEmpty && _confirmSizeReadoutGripRect.Contains(p);
+        => !_confirmSizeReadoutRect.IsEmpty && _confirmSizeReadoutRect.Contains(p);
+
+    private bool IsPointInConfirmReadoutChrome(Point p)
+        => HitTestConfirmSizeReadout(p) || (!_confirmOptionsPillRect.IsEmpty && _confirmOptionsPillRect.Contains(p));
 
     private void InvalidateCenterGrip()
     {

@@ -97,6 +97,8 @@ internal static partial class Program
                 Call(overlay, "OnHistoryUtilitiesAnimTick", null!, EventArgs.Empty);
                 Assert((float)Field(overlay, "_historyUtilitiesRevealAmt") == 0f,
                     "history controls also finish hiding on time");
+                CheckSelectionReadoutInteraction(overlay, language, renders, show);
+                CheckConfirmationKeycapShape();
                 if (!show) continue;
 
                 // Real native popup paths: hover cannot open or dismiss this click-owned menu.
@@ -113,9 +115,28 @@ internal static partial class Program
                     OverlayZoomMouse(overlay, "OnMouseMove", 400, 300);
                     Call(overlay, "HoverHoldTimer_Tick", null!, EventArgs.Empty);
                     Assert(menu.Visible, "moving away from More leaves a clicked menu available for reading");
-                    menu.Close();
+                    var selected = overlay.ConfirmRect;
+                    // Native dismissal precedes delivery of that same mouse-down.
+                    menu.Close(Forms.ToolStripDropDownCloseReason.AppClicked);
+                    OverlayZoomMouse(overlay, "OnMouseDown", center.X, center.Y);
+                    OverlayZoomMouse(overlay, "OnMouseUp", center.X, center.Y);
+                    Assert(Field(overlay, "_toolbarContextMenu") is null && overlay.ConfirmRect == selected,
+                        "the click that natively dismisses More cannot immediately reopen it");
+                    Pump();
+                    OverlayZoomMouse(overlay, "OnMouseDown", center.X, center.Y);
+                    using var reopened = (Forms.ContextMenuStrip)Field(overlay, "_toolbarContextMenu");
+                    Assert(reopened.Visible, "a subsequent More click opens the menu normally");
+                    OverlayZoomMouse(overlay, "OnMouseDown", center.X, center.Y);
+                    Assert(Field(overlay, "_toolbarContextMenu") is null, "a second direct More click closes the menu without choosing an item");
+                    OverlayZoomMouse(overlay, "OnMouseDown", center.X, center.Y);
+                    using var outside = (Forms.ContextMenuStrip)Field(overlay, "_toolbarContextMenu");
+                    outside.Close(Forms.ToolStripDropDownCloseReason.AppClicked);
+                    OverlayZoomMouse(overlay, "OnMouseDown", 20, 20);
+                    OverlayZoomMouse(overlay, "OnMouseUp", 20, 20);
+                    Assert((bool)Field(overlay, "_isConfirmingSelection") && !(bool)Field(overlay, "_outsideReselectArmed")
+                        && overlay.ConfirmRect == selected, "click-away only dismisses More and never retries or redraws the selection");
                 }
-                Forms.Application.DoEvents();
+                Forms.Application.DoEvents(); Pump();
                 SetField(overlay, "_toolbarKeyboardFocusId", "confirm:options");
                 Call(overlay, "OnKeyDown", new Forms.KeyEventArgs(Forms.Keys.Space));
                 Assert(Field(overlay, "_toolbarContextMenu") is Forms.ContextMenuStrip { Visible: true },
@@ -155,6 +176,71 @@ internal static partial class Program
             UiScale.Set(previousScale); Theme.SetMode(AppThemeMode.Dark);
             LocalizationService.ApplyCurrentCulture(settings.Settings.InterfaceLanguage);
         }
+    }
+
+    private static void CheckSelectionReadoutInteraction(RegionOverlayForm overlay, string language, string? renders, bool show)
+    {
+        Call(overlay, "SetMode", CaptureMode.Draw, "draw", false);
+        var chip = (Rectangle)Field(overlay, "_confirmSizeReadoutChipRect");
+        var point = new Point(chip.X + chip.Width / 2, chip.Y + chip.Height / 2);
+        Assert((bool)Call(overlay, "HitTestConfirmSizeReadout", point)!, "the dimensions text intercepts clicks just like its drag grip");
+        OverlayZoomMouse(overlay, "OnMouseMove", point.X, point.Y);
+        Assert(overlay.Cursor == Forms.Cursors.Default, "the dimensions pill uses the normal cursor rather than a capture crosshair");
+        var selected = overlay.ConfirmRect;
+        OverlayZoomMouse(overlay, "OnMouseDown", point.X, point.Y);
+        Assert((bool)Field(overlay, "_isConfirmDragging") && !(bool)Field(overlay, "_outsideReselectArmed"),
+            "clicking dimensions starts a frame drag even when a drawing tool is active");
+        OverlayZoomMouse(overlay, "OnMouseMove", point.X + 20, point.Y + 15);
+        OverlayZoomMouse(overlay, "OnMouseUp", point.X + 20, point.Y + 15);
+        Assert(overlay.ConfirmRect == new Rectangle(selected.X + 20, selected.Y + 15, selected.Width, selected.Height)
+            && ((List<Annotation>)Field(overlay, "_undoStack")).Count == 0,
+            "dragging dimensions moves the existing selection without drawing or retrying");
+
+        Call(overlay, "ToggleAnnotationToolbar");
+        Call(overlay, "RefreshConfirmSizeReadoutRect");
+        chip = (Rectangle)Field(overlay, "_confirmSizeReadoutChipRect");
+        Assert(((Rectangle)Field(overlay, "_confirmSizeReadoutGripRect")).IsEmpty && !chip.IsEmpty
+            && !((Rectangle)Field(overlay, "_confirmOptionsPillRect")).IsEmpty,
+            "hiding annotations removes the redundant top grip but retains dimensions and More");
+        point = new Point(chip.X + chip.Width / 2, chip.Y + chip.Height / 2);
+        OverlayZoomMouse(overlay, "OnMouseDown", point.X, point.Y);
+        Assert((bool)Field(overlay, "_isConfirmDragging"), "the dimensions pill remains draggable without the dedicated top grip");
+        OverlayZoomMouse(overlay, "OnMouseUp", point.X, point.Y);
+        if (show && renders is not null)
+        {
+            System.IO.Directory.CreateDirectory(renders);
+            using var picture = new Bitmap(overlay.Width, overlay.Height);
+            overlay.DrawToBitmap(picture, new Rectangle(Point.Empty, picture.Size));
+            picture.Save(System.IO.Path.Combine(renders, "dimensions-hidden-annotations-" + language + ".png"));
+        }
+        Call(overlay, "ToggleAnnotationToolbar");
+        Call(overlay, "RefreshConfirmSizeReadoutRect");
+        Assert(!((Rectangle)Field(overlay, "_confirmSizeReadoutGripRect")).IsEmpty, "showing annotations restores the dedicated top grip");
+
+        var readout = typeof(RegionOverlayForm).Assembly.GetType("CyberSnap.Capture.SelectionSizeReadout")!;
+        var draw = readout.GetMethod("DrawConfirmDragPillCached", BindingFlags.Public | BindingFlags.Static)!;
+        using var font = UiChrome.ChromeFont(11);
+        using var red = new Bitmap(220, 60);
+        using var blue = new Bitmap(220, 60);
+        foreach (var pair in new[] { (red, Color.Red), (blue, Color.Blue) })
+        {
+            using var g = Graphics.FromImage(pair.Item1);
+            g.Clear(pair.Item2);
+            draw.Invoke(null, new object[] { g, new Rectangle(10, 10, 180, 32), Rectangle.Empty, 440, 320, font, false });
+        }
+        Assert(red.GetPixel(25, 14) == UiChrome.SurfaceTier1 && red.GetPixel(25, 14) == blue.GetPixel(25, 14),
+            "the confirmation dimensions pill has a solid surface independent of the screen behind it");
+    }
+
+    private static void CheckConfirmationKeycapShape()
+    {
+        var badge = new CyberSnap.UI.Controls.HotkeyBadge { Kind = CyberSnap.UI.Controls.HotkeyBadgeKind.Enter };
+        badge.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+        var size = typeof(RegionOverlayForm).GetMethod("DoneKeyBadgeSize", BindingFlags.Static | BindingFlags.NonPublic)!;
+        object[] args = { 34f, 0f, 0f };
+        size.Invoke(null, args);
+        Assert(Math.Abs((float)args[1] / (float)args[2] - badge.DesiredSize.Width / badge.DesiredSize.Height) < .01,
+            "confirmation uses the same compact Enter keycap proportions as Preview");
     }
 
     private static void CheckCaptureModalTooltips(RegionOverlayForm overlay, string language, string? renders)

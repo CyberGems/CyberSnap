@@ -10,6 +10,13 @@ public sealed partial class RegionOverlayForm
 {
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        // Native menus dismiss before the overlay receives the same mouse-down.
+        // Consume that press so it cannot reopen More, draw, or retry the selection.
+        if (!_activatingToolbarWithKeyboard && _suppressConfirmOptionsMouseDown)
+        {
+            _suppressConfirmOptionsMouseDown = false;
+            return;
+        }
         if (!_activatingToolbarWithKeyboard) ClearToolbarKeyboardFocus();
         Focus();
 
@@ -50,7 +57,8 @@ public sealed partial class RegionOverlayForm
             {
                 // Prefer an annotation under the cursor: RMB on a shape must offer the
                 // shape menu (duplicate / delete), not the confirm chrome one.
-                int annHit = ShowAnnotationChrome ? HitTestAnnotation(e.Location) : -1;
+                int annHit = ShowAnnotationChrome && !IsPointInConfirmReadoutChrome(e.Location)
+                    ? HitTestAnnotation(e.Location) : -1;
                 if (annHit >= 0)
                 {
                     if (!_multiSelectedIndices.Contains(annHit))
@@ -111,7 +119,8 @@ public sealed partial class RegionOverlayForm
             // points and silently eat the click — e.g. Cancel dead while the
             // annotation flyout is open. Dock chrome never legitimately overlaps
             // toolbar controls, so a dock hit always wins.
-            bool dockPoint = HitTestConfirmHandle(e.Location) >= 0
+            bool readoutPoint = IsPointInConfirmReadoutChrome(e.Location);
+            bool dockPoint = readoutPoint || HitTestConfirmHandle(e.Location) >= 0
                 || HitTestConfirmButton(e.Location) >= 0;
             if (!dockPoint
                 && (_menuActivatorRect.Contains(e.Location)
@@ -129,6 +138,14 @@ public sealed partial class RegionOverlayForm
             }
             else
             {
+                // Readout chrome is painted above the frame and must win even when
+                // a tight layout places it over a resize handle or another control.
+                if (readoutPoint)
+                {
+                    if (_confirmOptionsPillRect.Contains(e.Location)) OpenConfirmOptionsMenu(e.Location);
+                    else BeginConfirmFrameDrag(e.Location);
+                    return;
+                }
                 int ch = HitTestConfirmHandle(e.Location);
                 if (ch >= 0)
                 {
@@ -170,16 +187,8 @@ public sealed partial class RegionOverlayForm
                     CancelConfirmModesCollapse();
                     return;
                 }
-                // Options gear pill (top edge, next to size readout): opens confirmation
-                // preferences. Handled BEFORE the drag
-                // branch so clicking it never starts a frame drag.
-                if (!_confirmOptionsPillRect.IsEmpty && _confirmOptionsPillRect.Contains(e.Location))
-                {
-                    OpenConfirmOptionsMenu(e.Location);
-                    return;
-                }
-                // Permanent size pill drag / center move crossbar drag.
-                if (HitTestConfirmSizeReadout(e.Location) || (!_centerMoveGripRect.IsEmpty && _centerMoveGripRect.Contains(e.Location)))
+                // Center move target complements the interactive dimensions pill.
+                if (!_centerMoveGripRect.IsEmpty && _centerMoveGripRect.Contains(e.Location))
                 {
                     BeginConfirmFrameDrag(e.Location);
                     return;

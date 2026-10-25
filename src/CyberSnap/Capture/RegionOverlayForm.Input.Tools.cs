@@ -12,7 +12,7 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseDoubleClick(MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left) return;
-        if (_isConfirmingSelection && !_showAnnotationToolbar) return;
+        if (_isConfirmingSelection && (!_showAnnotationToolbar || IsPointInConfirmReadoutChrome(e.Location))) return;
 
         // Text under the cursor always wins — including Move/Pick (select-all).
         // Note: often this path never runs after Move starts a drag on the first click;
@@ -299,8 +299,8 @@ public sealed partial class RegionOverlayForm
                 }
 
                 System.Windows.Forms.Cursor confirmTarget = Cursors.Default;
-                int ch = HitTestConfirmHandle(e.Location);
-                int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
+                int ch = IsPointInConfirmReadoutChrome(e.Location) ? -1 : HitTestConfirmHandle(e.Location);
+                int btnHit = ch >= 0 || IsPointInConfirmReadoutChrome(e.Location) ? -1 : HitTestConfirmButton(e.Location);
                 bool sizePillHover = ch < 0 && btnHit < 0 && HitTestConfirmSizeReadout(e.Location);
                 // Options pill: top-edge chrome — lower priority than everything the user is
                 // actively dragging/resizing, but higher priority than the dead zone behind
@@ -406,7 +406,8 @@ public sealed partial class RegionOverlayForm
                 }
                 else if (sizePillHover && !IsDraggingAnyAnnotation())
                 {
-                    confirmTarget = CursorFactory.GrabCursor;
+                    confirmTarget = _confirmSizeReadoutGripRect.Contains(e.Location)
+                        ? CursorFactory.GrabCursor : Cursors.Default;
                     if (!Cursor.Equals(confirmTarget))
                         Cursor = confirmTarget;
                     ClearCursorToolChip();
