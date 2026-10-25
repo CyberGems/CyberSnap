@@ -2549,6 +2549,11 @@
   "Take a new screenshot of the previously selected area.": "Take a new screenshot of the previously selected area.",
   "Choose which sections are visible and enable compact mode.": "Choose which sections are visible and enable compact mode.",
   "This image could not be decoded. It may be damaged or use an unsupported format.": "This image could not be decoded. It may be damaged or use an unsupported format.",
-  "Wheel / + / - / ↑ / ↓: zoom · C: select and annotate · Enter: confirm full view": "Wheel / + / - / ↑ / ↓: zoom · C: select and annotate · Enter: confirm full view",
-  "Ctrl+C: copy full view · Ctrl+S: save full view · Esc / right-click: exit": "Ctrl+C: copy full view · Ctrl+S: save full view · Esc / right-click: exit"
+  "Wheel / + / - / ↑ / ↓": "Wheel / + / - / ↑ / ↓",
+  "Adjust zoom": "Adjust zoom",
+  "Select and annotate": "Select and annotate",
+  "Confirm full view": "Confirm full view",
+  "Copy full view": "Copy full view",
+  "Save full view": "Save full view",
+  "Esc / right-click": "Esc / right-click"
 }

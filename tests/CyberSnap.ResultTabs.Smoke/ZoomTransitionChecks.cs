@@ -30,7 +30,13 @@ internal static partial class Program
             zoom.Show();
             ((Forms.Timer)Field(zoom, "_timer")).Stop();
             zoom.Refresh();
-            using var before = ReadZoomTransitionPatch(bounds);
+            // Ignore only the help card, which intentionally disappears during selection.
+            // Keep the same strict 300x160 image comparison away from its responsive position.
+            var help = (Rectangle)Call(zoom, "HudLayout")!;
+            var sample = new Rectangle(250, help.Top >= 300 ? 60 : 380, 300, 160);
+            Assert(zoom.ClientRectangle.Contains(sample) && !help.IntersectsWith(sample),
+                "the continuity sample excludes only the intentionally hidden Zoom help");
+            using var before = ReadZoomTransitionPatch(bounds, sample);
             Assert(before.GetPixel(100, 80).ToArgb() != Color.Magenta.ToArgb(),
                 "the transition fixture observes the actual magnified window above its sentinel background", false);
             int hides = 0;
@@ -39,7 +45,7 @@ internal static partial class Program
             {
                 Assert(zoom.Visible && IsZoomTransitionWindowVisible(zoom.Handle),
                     "Zoom stays on screen before the capture overlay is even constructed: CPU=" + cpu + ", full=" + fullView);
-                using var during = ReadZoomTransitionPatch(bounds);
+                using var during = ReadZoomTransitionPatch(bounds, sample);
                 Assert(EqualZoomBitmaps(before, during),
                     "composited pixels keep the identical enlarged framing throughout capture preparation");
                 using var clean = zoom.RenderView(includeChrome: true);
@@ -57,20 +63,20 @@ internal static partial class Program
                     "the real capture dialog stays above the frozen backing window");
                 Call(overlay, "HandleEscapeKey");
             });
-            using var after = ReadZoomTransitionPatch(bounds);
+            using var after = ReadZoomTransitionPatch(bounds, sample);
             Assert(output is null && hides == 0 && EqualZoomBitmaps(before, after),
                 "cancel returns to the same composited frame without hiding or recreating Zoom");
         }
     }
 
-    private static Bitmap ReadZoomTransitionPatch(Rectangle bounds)
+    private static Bitmap ReadZoomTransitionPatch(Rectangle bounds, Rectangle sample)
     {
         Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
-        var image = new Bitmap(300, 160, PixelFormat.Format24bppRgb);
+        var image = new Bitmap(sample.Width, sample.Height, PixelFormat.Format24bppRgb);
         try
         {
             using var graphics = Graphics.FromImage(image);
-            graphics.CopyFromScreen(bounds.X + 250, bounds.Y + 180, 0, 0, image.Size, CopyPixelOperation.SourceCopy);
+            graphics.CopyFromScreen(bounds.X + sample.X, bounds.Y + sample.Y, 0, 0, image.Size, CopyPixelOperation.SourceCopy);
             return image;
         }
         catch { image.Dispose(); throw; }

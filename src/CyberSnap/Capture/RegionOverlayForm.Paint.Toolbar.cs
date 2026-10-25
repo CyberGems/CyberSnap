@@ -540,6 +540,7 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     public void PaintToolbarTo(Graphics g)
     {
+        if (HideCaptureToolbar) return;
         ApplyUiGraphics(g);
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
         var state = g.Save();

@@ -13,6 +13,7 @@ internal static partial class Program
     private static void CheckZoom(string temp, string? renderDirectory)
     {
         CheckZoomHelpBar(renderDirectory);
+        CheckZoomHelpNative(renderDirectory);
         var app = (CyberSnap.App)System.Windows.Application.Current;
         var appSettings = (SettingsService)ZoomAppField(app, "_settingsService")!;
         appSettings.Settings.HasSeenQuickStartGuide = true;

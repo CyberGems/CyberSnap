@@ -186,6 +186,38 @@ internal static partial class Program
         public void Dispose() { window.Close(); Pump(); }
     }
 
+    private static void CheckPinCaptureIntegration(string temp, SettingsService settings, string? renders)
+    {
+        var app = (CyberSnap.App)Application.Current;
+        settings.Settings.DisableAnimations = true;
+        settings.Settings.HasSeenQuickStartGuide = true;
+        settings.Save(); settings.FlushPendingWrites();
+        if (renders is not null) Directory.CreateDirectory(renders);
+        CheckPinCaptureBar(temp, renders);
+        var pins = (List<PinImageForm>)ZoomAppField(app, "_pinnedImages")!;
+        try
+        {
+            CheckPinCaptureRoute(app, settings, pins);
+            CheckPinCaptureRoute(app, settings, pins, fromToolbar: true);
+        }
+        finally { CallZoomApp(app, "ClosePinnedImages"); }
+    }
+
+    private static void CheckPinSelectionChrome(RegionOverlayForm overlay)
+    {
+        Call(overlay, "RefreshToolbar");
+        Call(overlay, "EnsureToolbarReady");
+        Assert(Field(overlay, "_toolbarForm") is not Forms.Form { Visible: true }
+            && ((Rectangle)Field(overlay, "_toolbarRect")).IsEmpty
+            && ((Rectangle[])Field(overlay, "_toolbarButtons")).Length == 0
+            && ((Rectangle)Field(overlay, "_logoRect")).IsEmpty
+            && ((Rectangle)Field(overlay, "_brandRect")).IsEmpty
+            && ((Rectangle)Field(overlay, "_captureGripRect")).IsEmpty,
+            "Pin selection and retry keep capture chrome hidden across refreshes");
+        Assert(!((System.Collections.IEnumerable)Call(overlay, "GetToolbarKeyboardTargets")!).Cast<object>().Any(),
+            "the hidden Pin capture bar has no keyboard targets");
+    }
+
     private static void CheckPinCaptureRoute(CyberSnap.App app, SettingsService settings, List<PinImageForm> pins, bool fromToolbar = false)
     {
         using var source = new Bitmap(800, 600);
@@ -208,15 +240,18 @@ internal static partial class Program
                     ClickPinCaptureBar(overlay);
                 }
                 Assert(overlay.PinImageOnConfirm, "region selection uses the Pin capture purpose");
+                CheckPinSelectionChrome(overlay);
                 OverlayZoomMouse(overlay, "OnMouseDown", 180, 100);
                 OverlayZoomMouse(overlay, "OnMouseMove", 620, 420);
                 OverlayZoomMouse(overlay, "OnMouseUp", 620, 420);
                 Assert((bool)Field(overlay, "_isConfirmingSelection") && !(bool)Call(overlay, "IsPreviewToggleVisible")!,
                     "Pin offers normal region confirmation and annotations without a Preview toggle");
                 CheckLockedConfirmDestination(overlay, "Pin app route");
+                Assert(Field(overlay, "_toolbarForm") is Forms.Form { Visible: true }, "Pin confirmation still presents annotation tools");
                 Call(overlay, "RequestRetrySelection");
                 Assert(overlay.PinImageOnConfirm && !(bool)Field(overlay, "_isConfirmingSelection"),
                     "retrying a Pin region keeps its output purpose from both launch paths");
+                CheckPinSelectionChrome(overlay);
                 OverlayZoomMouse(overlay, "OnMouseDown", 180, 100);
                 OverlayZoomMouse(overlay, "OnMouseMove", 620, 420);
                 OverlayZoomMouse(overlay, "OnMouseUp", 620, 420);
@@ -279,11 +314,6 @@ internal static partial class Program
             var toolbar = (Rectangle)Field(overlay, "_toolbarRect");
             Assert(index >= 0 && tools[index].Mode == CaptureMode.Pin && toolbar.Contains(buttons[index]),
                 "Pin is visible inside the capture bar: " + dock + ", " + language);
-            IntPtr handle = overlay.Handle;
-            ClickPinCaptureBar(overlay);
-            Assert(overlay.Visible && overlay.Handle == handle && overlay.PinImageOnConfirm
-                && overlay.CurrentMode == CaptureMode.Rectangle && (string)Field(overlay, "_activeToolId") == "pin",
-                "Pin reuses the current frozen overlay and marks its own toolbar button as active");
             if (renders is not null && dock == CaptureDockSide.Top)
             {
                 using var image = new Bitmap(toolbar.Width + 16, toolbar.Height + 16);
@@ -292,12 +322,20 @@ internal static partial class Program
                 overlay.PaintToolbarTo(graphics);
                 image.Save(Path.Combine(renders, "capture-bar-pin-" + language + ".png"));
             }
+            IntPtr handle = overlay.Handle;
+            ClickPinCaptureBar(overlay);
+            Assert(overlay.Visible && overlay.Handle == handle && overlay.PinImageOnConfirm
+                && overlay.CurrentMode == CaptureMode.Rectangle && (string)Field(overlay, "_activeToolId") == "pin",
+                "Pin reuses the current frozen overlay and retains its selection purpose");
+            CheckPinSelectionChrome(overlay);
             Call(overlay, "SetMode", CaptureMode.Rectangle, "rect", false);
             Assert(!overlay.PinImageOnConfirm, "switching back to Area restores the usual capture output");
             overlay.Close();
         }
         using var initialSource = new Bitmap(800, 600);
         using var initialPin = new RegionOverlayForm(initialSource, new Rectangle(0, 0, 800, 600), CaptureMode.Pin);
+        initialPin.Show(); Forms.Application.DoEvents();
+        CheckPinSelectionChrome(initialPin);
         Assert(initialPin.PinImageOnConfirm && initialPin.CurrentMode == CaptureMode.Rectangle,
             "starting directly in Pin mode uses the normal region-selection engine");
     }

@@ -18,8 +18,8 @@ public sealed class StandaloneZoomForm : Form
     private readonly bool _smooth, _animate, _includeCursor, _showHelpBar;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 16 };
     private readonly Stopwatch _clock = Stopwatch.StartNew();
-    private readonly Font _hudFont;
-    private readonly string _viewHelp;
+    private ZoomHelpPanel? _helpPanel;
+    private (Size Size, int Dpi, double Scale, string Level)? _helpCacheKey;
     private readonly Rectangle _screenBounds;
     private ZoomRenderer? _renderer;
     private bool _rendererUnavailable;
@@ -61,9 +61,6 @@ public sealed class StandaloneZoomForm : Form
         Text = LocalizationService.Translate("Zoom");
         AccessibleName = Text;
         Cursor = Cursors.Default;
-        _hudFont = UiChrome.ChromeFont(10);
-        _viewHelp = LocalizationService.Translate("Wheel / + / - / ↑ / ↓: zoom · C: select and annotate · Enter: confirm full view")
-            + "\n" + LocalizationService.Translate("Ctrl+C: copy full view · Ctrl+S: save full view · Esc / right-click: exit");
         _timer.Tick += (_, _) =>
         {
             double now = _clock.Elapsed.TotalSeconds;
@@ -156,7 +153,7 @@ public sealed class StandaloneZoomForm : Form
     {
         if (_rendererUnavailable) return false;
         if (_renderer is not null) return true;
-        try { _renderer = new ZoomRenderer(Handle, _original, _hudFont.SizeInPoints * DeviceDpi / 72f); }
+        try { _renderer = new ZoomRenderer(Handle, _original); }
         catch (Exception ex) { DiscardRenderer(ex); }
         return _renderer is not null;
     }
@@ -192,41 +189,40 @@ public sealed class StandaloneZoomForm : Form
     private void DrawGpuChrome(ZoomRenderer renderer)
     {
         if (_capturePending || !_showHelpBar) return;
-        var (text, rect, padding) = HudLayout();
-        renderer.Fill(rect, Color.FromArgb(240, Theme.BgSecondary.R, Theme.BgSecondary.G, Theme.BgSecondary.B));
-        renderer.Outline(rect, Accent);
-        rect.Inflate(-padding, -padding);
-        renderer.Text(text, rect, Color.FromArgb(Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B));
+        var bounds = HudLayout();
+        renderer.DrawHelp(_helpPanel!.Image, bounds.Location);
     }
 
-    private static Color Accent => Color.FromArgb(Theme.Accent.R, Theme.Accent.G, Theme.Accent.B);
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr window);
 
-    private (string Text, Rectangle Bounds, int Padding) HudLayout()
+    private Rectangle HudLayout()
     {
-        float scale = DeviceDpi / 96f;
-        string text = $"{_viewport.Zoom:0.##}×   " + _viewHelp;
-        int padding = (int)(12 * scale);
-        var measured = TextRenderer.MeasureText(text, _hudFont,
-            new Size(Math.Max(100, ClientSize.Width - padding * 4), 0), TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
-        var rect = new Rectangle((ClientSize.Width - measured.Width) / 2 - padding,
-            ClientSize.Height - measured.Height - padding * 3, measured.Width + padding * 2, measured.Height + padding * 2);
-        // Move the help out of the way when the pointer approaches it.
-        if (rect.Contains(PointToClient(System.Windows.Forms.Cursor.Position))) rect.Y = padding;
-        return (text, rect, padding);
+        // WinForms can retain system DPI until a visible DPI-change message arrives.
+        // The positioned HWND is authoritative, including the first frame on another monitor.
+        int dpi = (int)GetDpiForWindow(Handle);
+        if (dpi <= 0) dpi = DeviceDpi;
+        var key = (ClientSize, dpi, UiChrome.UiScale, $"{_viewport.Zoom:0.##}×");
+        if (_helpCacheKey != key)
+        {
+            var panel = new ZoomHelpPanel(ClientSize, dpi / 96f * (float)UiChrome.UiScale, key.Item4);
+            _helpPanel?.Dispose();
+            _helpPanel = panel;
+            _helpCacheKey = key;
+        }
+        int margin = Math.Max(8, (int)(12 * dpi / 96f));
+        var size = _helpPanel!.Image.Size;
+        margin = Math.Min(margin, Math.Max(0, (ClientSize.Height - size.Height) / 2));
+        var bounds = new Rectangle((ClientSize.Width - size.Width) / 2, ClientSize.Height - size.Height - margin, size.Width, size.Height);
+        if (bounds.Contains(PointToClient(System.Windows.Forms.Cursor.Position))) bounds.Y = margin;
+        return bounds;
     }
 
     private void DrawHud(Graphics graphics)
     {
         if (_capturePending || !_showHelpBar) return;
-        var (text, rect, padding) = HudLayout();
-        using var background = new SolidBrush(Color.FromArgb(240, Theme.BgSecondary.R, Theme.BgSecondary.G, Theme.BgSecondary.B));
-        using var border = new Pen(Accent);
-        graphics.FillRectangle(background, rect);
-        graphics.DrawRectangle(border, rect);
-        rect.Inflate(-padding, -padding);
-        TextRenderer.DrawText(graphics, text, _hudFont, rect,
-            Color.FromArgb(Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B),
-            TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+        var bounds = HudLayout();
+        graphics.DrawImageUnscaled(_helpPanel!.Image, bounds.Location);
     }
 
     protected override void OnMouseWheel(MouseEventArgs e)
@@ -352,7 +348,7 @@ public sealed class StandaloneZoomForm : Form
             _original.Dispose();
             _renderer?.Dispose();
             Result?.Dispose();
-            _hudFont.Dispose();
+            _helpPanel?.Dispose();
         }
         base.Dispose(disposing);
     }

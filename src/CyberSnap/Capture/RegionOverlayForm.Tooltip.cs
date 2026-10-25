@@ -396,7 +396,7 @@ public sealed partial class RegionOverlayForm
     }
 
     private bool IsToolbarInteractive()
-        => !_isSelecting && _toolbarForm is { IsDisposed: false, Visible: true };
+        => !HideCaptureToolbar && !_isSelecting && _toolbarForm is { IsDisposed: false, Visible: true };
 
     private void ShowConfirmTooltip()
     {

@@ -74,6 +74,7 @@ public sealed partial class RegionOverlayForm : Form
     /// Text-extraction confirm (OCR) has no use for drawing tools, so it skips them too.
     /// </summary>
     private bool ShowAnnotationChrome => _isConfirmingSelection && _modeBeforeConfirm != CaptureMode.Ocr;
+    private bool HideCaptureToolbar => PinImageOnConfirm && !_isConfirmingSelection;
 
     private bool _isConfirmingSelection;
     private Rectangle _confirmRect;
@@ -932,6 +933,15 @@ public sealed partial class RegionOverlayForm : Form
 
         BuildToolbarToolSplit(screenBounds, buttonSize, buttonSpacing, pad);
         _sepAfter = Array.Empty<int>(); // dividers drawn manually inside PaintToolbar
+
+        if (HideCaptureToolbar)
+        {
+            _toolbarRect = Rectangle.Empty;
+            _logoRect = _brandRect = _captureGripRect = Rectangle.Empty;
+            _toolbarButtons = Array.Empty<Rectangle>();
+            _menuActivatorRect = Rectangle.Empty;
+            return;
+        }
 
         // Pre-confirm: capture tools + Move/Close.
         // Confirm: annotation-only dock (no capture tools) — single row/column.

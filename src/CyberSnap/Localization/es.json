@@ -2809,6 +2809,11 @@
   "Take a new screenshot of the previously selected area.": "Vuelve a capturar la zona que seleccionaste anteriormente.",
   "Choose which sections are visible and enable compact mode.": "Elige las secciones visibles y activa el modo compacto.",
   "This image could not be decoded. It may be damaged or use an unsupported format.": "No se pudo decodificar la imagen. Puede estar dañada o usar un formato no compatible.",
-  "Wheel / + / - / ↑ / ↓: zoom · C: select and annotate · Enter: confirm full view": "Rueda / + / - / ↑ / ↓: zoom · C: seleccionar y anotar · Enter: confirmar vista completa",
-  "Ctrl+C: copy full view · Ctrl+S: save full view · Esc / right-click: exit": "Ctrl+C: copiar vista completa · Ctrl+S: guardar vista completa · Esc / clic derecho: salir"
+  "Wheel / + / - / ↑ / ↓": "Rueda / + / - / ↑ / ↓",
+  "Adjust zoom": "Ajustar zoom",
+  "Select and annotate": "Seleccionar y anotar",
+  "Confirm full view": "Confirmar vista completa",
+  "Copy full view": "Copiar vista completa",
+  "Save full view": "Guardar vista completa",
+  "Esc / right-click": "Esc / clic derecho"
 }

@@ -2,7 +2,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using CyberSnap.Native;
 using Vortice.Direct2D1;
-using Vortice.DirectWrite;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using D2DPixelFormat = Vortice.DCommon.PixelFormat;
@@ -18,12 +17,11 @@ internal sealed class ZoomRenderer : IDisposable
     private ID2D1HwndRenderTarget? _target;
     private ID2D1Bitmap? _image;
     private ID2D1GdiInteropRenderTarget? _interop;
-    private IDWriteFactory? _textFactory;
-    private IDWriteTextFormat? _textFormat;
-    private ID2D1SolidColorBrush? _brush;
+    private ID2D1Bitmap? _helpImage;
+    private Bitmap? _helpSource;
     private readonly System.Drawing.Size _size;
 
-    public ZoomRenderer(IntPtr window, Bitmap original, float fontPixels)
+    public ZoomRenderer(IntPtr window, Bitmap original)
     {
         _size = original.Size;
         try
@@ -48,9 +46,6 @@ internal sealed class ZoomRenderer : IDisposable
             }
             finally { upload.UnlockBits(bits); }
             _interop = _target.QueryInterface<ID2D1GdiInteropRenderTarget>();
-            _brush = _target.CreateSolidColorBrush(new Color4(1, 1, 1, 1));
-            _textFactory = DWrite.DWriteCreateFactory<IDWriteFactory>();
-            _textFormat = _textFactory.CreateTextFormat("Segoe UI", fontPixels);
         }
         catch { Dispose(); throw; }
     }
@@ -106,26 +101,28 @@ internal sealed class ZoomRenderer : IDisposable
         }
     }
 
-    private static Color4 ToColor(Color color) => new(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
-    public void Fill(Rectangle rectangle, Color color)
+    public void DrawHelp(Bitmap surface, System.Drawing.Point location)
     {
-        _brush!.Color = ToColor(color);
-        _target!.FillRectangle(new Rect(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height), _brush);
-    }
-    public void Outline(Rectangle rectangle, Color color, float width = 1)
-    {
-        _brush!.Color = ToColor(color);
-        _target!.DrawRectangle(new Rect(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height), _brush, width);
-    }
-    public void Text(string text, Rectangle rectangle, Color color)
-    {
-        _brush!.Color = ToColor(color);
-        _target!.DrawText(text, _textFormat!, new Rect(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height), _brush);
+        if (!ReferenceEquals(surface, _helpSource))
+        {
+            var bits = surface.LockBits(new Rectangle(System.Drawing.Point.Empty, surface.Size), ImageLockMode.ReadOnly, DrawingPixelFormat.Format32bppPArgb);
+            try
+            {
+                var image = _target!.CreateBitmap(new SizeI(surface.Width, surface.Height), bits.Scan0, (uint)bits.Stride,
+                    new BitmapProperties(new D2DPixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied), 96, 96));
+                _helpImage?.Dispose();
+                _helpImage = image;
+                _helpSource = surface;
+            }
+            finally { surface.UnlockBits(bits); }
+        }
+        _target!.DrawBitmap(_helpImage!, new Rect(location.X, location.Y, surface.Width, surface.Height),
+            1f, BitmapInterpolationMode.NearestNeighbor, new Rect(0, 0, surface.Width, surface.Height));
     }
 
     public void Dispose()
     {
-        _textFormat?.Dispose(); _textFactory?.Dispose(); _brush?.Dispose(); _interop?.Dispose();
+        _helpImage?.Dispose(); _interop?.Dispose();
         _image?.Dispose(); _target?.Dispose(); _factory?.Dispose();
     }
 }

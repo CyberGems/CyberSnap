@@ -25,7 +25,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        Application app = args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
+        Application app = args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
@@ -63,6 +63,14 @@ internal static partial class Program
                 CheckPinImageFormats(temp);
                 CheckZoomHelpBar(args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} capture tool regression checks.");
+                return 0;
+            }
+            if (args.Contains("--zoom-help-only"))
+            {
+                string? renders = args.FirstOrDefault(a => !a.StartsWith("--"));
+                CheckZoomHelpBar(renders);
+                CheckZoomHelpNative(renders);
+                Console.WriteLine($"PASS: {_checks} Zoom help checks.");
                 return 0;
             }
             if (args.Contains("--pin-formats-only"))
@@ -120,6 +128,12 @@ internal static partial class Program
             {
                 CheckWidgetCursorPreferences(temp);
                 Console.WriteLine($"PASS: {_checks} widget cursor and Pin integration checks.");
+                return 0;
+            }
+            if (args.Contains("--pin-capture-only"))
+            {
+                CheckPinCaptureIntegration(temp, settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} Pin capture integration checks.");
                 return 0;
             }
             if (args.Contains("--pin-only"))

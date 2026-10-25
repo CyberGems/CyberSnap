@@ -83,6 +83,12 @@ public sealed partial class RegionOverlayForm
 
         try
         {
+            if (HideCaptureToolbar)
+            {
+                HideToolbarImmediately();
+                return;
+            }
+
             // Frame move/resize hides both docks — do not resurrect the annotation bar mid-gesture.
             if (_confirmDocksHiddenForFrameManip)
                 return;
@@ -438,7 +444,9 @@ public sealed partial class RegionOverlayForm
         // Keep the toolbar visible and rebuild layout for the current phase.
         var oldUiBounds = _lastOverlayUiBounds;
         CalcToolbar();
-        if (_toolbarForm is null || _toolbarForm.IsDisposed || !_toolbarForm.Visible)
+        if (HideCaptureToolbar)
+            HideToolbarImmediately();
+        else if (_toolbarForm is null || _toolbarForm.IsDisposed || !_toolbarForm.Visible)
             EnsureToolbarReady();
         else
             PositionToolbarForm();

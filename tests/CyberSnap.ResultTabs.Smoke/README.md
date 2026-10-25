@@ -18,8 +18,9 @@ This targeted suite covers:
   TIFF, and CMYK JPEG/TIFF fixtures. Checks verify colors, alpha, first-frame
   selection, released files, and localized errors for damaged images.
 - **Zoom help:** English and Spanish hints include capture confirmation,
-  direct copy/save, zoom controls, and exit. Layout is checked at multiple
-  viewport sizes, including 320×240.
+  direct copy/save, zoom controls, and exit. The responsive card is checked at
+  multiple viewport sizes (including 320×240), DPI scales, UI scales, and themes.
+  Desktop checks also compare CPU/GPU pixels on every available monitor.
 
 The `Verify capture tool regressions` workflow runs these checks and the strict
 localization audit on relevant pushes and pull requests. It does not publish a
@@ -29,7 +30,9 @@ For broader interactive checks on a Windows desktop:
 
 ```powershell
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --hotkeys-only
+dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-capture-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-only
+dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --zoom-help-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --zoom-only
 ```
 

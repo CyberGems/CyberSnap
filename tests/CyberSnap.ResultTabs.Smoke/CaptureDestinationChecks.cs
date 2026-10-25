@@ -21,6 +21,8 @@ internal static partial class Program
                 if (purpose == "Zoom")
                     typeof(RegionOverlayForm).GetProperty("LockConfirmDestination", BindingFlags.Instance | BindingFlags.NonPublic)!
                         .SetValue(overlay, true);
+                if (purpose == "Pin")
+                    Assert(((Rectangle)Field(overlay, "_toolbarRect")).IsEmpty, "Pin selection has no capture bar before confirmation: " + language);
                 Call(overlay, "EnterConfirmMode", new Rectangle(180, 100, 440, 320), null!);
                 if (purpose != "Image")
                 {
