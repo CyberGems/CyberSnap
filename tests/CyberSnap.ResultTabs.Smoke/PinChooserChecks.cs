@@ -150,16 +150,34 @@ internal static partial class Program
                                 Assert(inspectableFrames >= 2, "the inspectable chooser surface has been presented after changing capture affinity");
                             }
                             finally { CompositionTarget.Rendering -= onInspectableRender; }
-                            Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
                             using var snapshot = new System.Drawing.Bitmap(bounds.Width, bounds.Height);
-                            using (var graphics = System.Drawing.Graphics.FromImage(snapshot))
+                            int gutterX = bounds.Width - (int)(10 * dpi.X), gutterY = (int)(bounds.Height * .65);
+                            int stablePresentations = 0, samples = 0;
+                            var presentationDeadline = DateTime.UtcNow.AddSeconds(2);
+                            do
                             {
-                                graphics.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, snapshot.Size,
-                                    System.Drawing.CopyPixelOperation.SourceCopy);
+                                // WPF Rendering is raised before DWM presents the frame.
+                                // Affinity changes can leave an older or partially faded
+                                // desktop surface visible even after two Rendering events.
+                                Forms.Application.DoEvents(); Pump();
+                                Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
+                                using (var graphics = System.Drawing.Graphics.FromImage(snapshot))
+                                    graphics.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, snapshot.Size,
+                                        System.Drawing.CopyPixelOperation.SourceCopy);
+                                var presented = snapshot.GetPixel(gutterX, gutterY);
+                                bool matches = Math.Abs(presented.R - Theme.BgPrimary.R) <= 2
+                                    && Math.Abs(presented.G - Theme.BgPrimary.G) <= 2
+                                    && Math.Abs(presented.B - Theme.BgPrimary.B) <= 2;
+                                stablePresentations = matches ? stablePresentations + 1 : 0;
+                                samples++;
+                                if (stablePresentations < 2) Thread.Sleep(16);
                             }
+                            while (stablePresentations < 2 && DateTime.UtcNow < presentationDeadline);
+                            if (samples > 2)
+                                Console.WriteLine($"Pin native presentation settled after {samples} samples (stable={stablePresentations}).");
                             if (renders is not null && language == "es" && theme == AppThemeMode.Dark && scale == 1.2)
                                 snapshot.Save(Path.Combine(renders, $"pin-native-{dpi.X:0.0}.png"));
-                            var rightGutter = snapshot.GetPixel(bounds.Width - (int)(10 * dpi.X), (int)(bounds.Height * .65));
+                            var rightGutter = snapshot.GetPixel(gutterX, gutterY);
                             if (renders is not null && (Math.Abs(rightGutter.R - Theme.BgPrimary.R) > 2
                                 || Math.Abs(rightGutter.G - Theme.BgPrimary.G) > 2 || Math.Abs(rightGutter.B - Theme.BgPrimary.B) > 2))
                                 snapshot.Save(Path.Combine(renders, $"pin-native-failure-{language}-{theme}-{dpi.X:0.00}-{scale:0.0}.png"));

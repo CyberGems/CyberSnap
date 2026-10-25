@@ -69,6 +69,8 @@ internal static partial class Program
             foreach (string language in new[] { "en", "es" })
             {
                 settings.Settings.InterfaceLanguage = language;
+                // SettingsWindow reloads persisted preferences when it opens.
+                settings.Save(); settings.FlushPendingWrites();
                 LocalizationService.ApplyCurrentCulture(language);
                 using var history = new HistoryService();
                 using var search = new ImageSearchIndexService();
@@ -97,7 +99,7 @@ internal static partial class Program
                         var options = menu.Items.OfType<Forms.ToolStripMenuItem>()
                             .Single(item => item.Text == LocalizationService.Translate("Pin settings"));
                         Assert(options.Text == (language == "es" ? "Ajustes de Fijar…" : "Pin settings…"),
-                            "the settings command uses the requested localized label");
+                            $"the settings command uses the requested localized label: expected={language}, actual={options.Text}");
                         options.PerformClick(); Forms.Application.DoEvents(); Pump();
                         Assert(ReferenceEquals(window, ZoomAppField(app, "_settingsWindow")),
                             "Pin reuses an existing Settings window");

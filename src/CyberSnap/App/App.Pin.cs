@@ -53,8 +53,7 @@ public partial class App
                 {
                     var dialog = new Microsoft.Win32.OpenFileDialog { Title = LocalizationService.Translate("Select image..."), Filter = LocalizationService.Translate("Image files") + "|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff" };
                     if (dialog.ShowDialog(chooser) != true) return;
-                    using var decoded = new Bitmap(dialog.FileName);
-                    var owned = PinImageForm.CopyPixels(decoded);
+                    var owned = ReadPinImageFile(dialog.FileName);
                     chooser.Close(); PinImage(owned);
                 }
             }
@@ -87,6 +86,35 @@ public partial class App
         stream.Position = 0;
         using var decoded = new Bitmap(stream);
         return PinImageForm.CopyPixels(decoded);
+    }
+
+    internal static Bitmap ReadPinImageFile(string path)
+    {
+        using var stream = File.OpenRead(path);
+        try
+        {
+            // WIC preserves high-depth TIFF alpha that GDI+ drops while decoding.
+            // Decode only the first frame and detach every pixel before releasing the file.
+            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            BitmapSource pixels = decoder.Frames[0];
+            if (pixels.Format != System.Windows.Media.PixelFormats.Bgra32)
+                pixels = new FormatConvertedBitmap(pixels, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+
+            var image = new Bitmap(pixels.PixelWidth, pixels.PixelHeight, PixelFormat.Format32bppArgb);
+            try
+            {
+                var bits = image.LockBits(new Rectangle(Point.Empty, image.Size), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+                try { pixels.CopyPixels(Int32Rect.Empty, bits.Scan0, checked(bits.Stride * bits.Height), bits.Stride); }
+                finally { image.UnlockBits(bits); }
+                return image;
+            }
+            catch { image.Dispose(); throw; }
+        }
+        catch (Exception ex) when (ex is NotSupportedException or FileFormatException or ArgumentException)
+        {
+            throw new InvalidDataException(LocalizationService.Translate(
+                "This image could not be decoded. It may be damaged or use an unsupported format."), ex);
+        }
     }
 
     /// <summary>Transfers ownership of an independent bitmap to a modeless reference window.</summary>
@@ -149,8 +177,7 @@ public partial class App
     {
         try
         {
-            using var image = new Bitmap(path);
-            PinImage(PinImageForm.CopyPixels(image));
+            PinImage(ReadPinImageFile(path));
         }
         catch (Exception ex) { AppDiagnostics.LogError("pin.file", ex); ToastWindow.ShowError("Pin failed", ex.Message); }
     }

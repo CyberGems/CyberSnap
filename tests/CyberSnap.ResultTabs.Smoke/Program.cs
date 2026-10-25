@@ -56,6 +56,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--pin-formats-only"))
+            {
+                CheckPinImageFormats(temp);
+                Console.WriteLine($"PASS: {_checks} Pin image format checks.");
+                return 0;
+            }
             if (args.Contains("--pin-shadow-only"))
             {
                 string? renders = args.FirstOrDefault(a => !a.StartsWith("--"));

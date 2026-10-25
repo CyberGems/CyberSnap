@@ -2809,5 +2809,6 @@
   "Capture the full screen without selecting an area.": "Captura la pantalla completa sin seleccionar un área.",
   "Capture a window without the rest of the desktop.": "Captura una ventana sin incluir el resto del escritorio.",
   "Take a new screenshot of the previously selected area.": "Vuelve a capturar la zona que seleccionaste anteriormente.",
-  "Choose which sections are visible and enable compact mode.": "Elige las secciones visibles y activa el modo compacto."
+  "Choose which sections are visible and enable compact mode.": "Elige las secciones visibles y activa el modo compacto.",
+  "This image could not be decoded. It may be damaged or use an unsupported format.": "No se pudo decodificar la imagen. Puede estar dañada o usar un formato no compatible."
 }

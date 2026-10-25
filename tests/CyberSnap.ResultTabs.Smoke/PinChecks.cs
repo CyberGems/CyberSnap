@@ -21,6 +21,7 @@ internal static partial class Program
         var app = (CyberSnap.App)Application.Current;
         settings.Settings.DisableAnimations = true;
         settings.Settings.HasSeenQuickStartGuide = true;
+        CheckPinImageFormats(temp);
         if (renders is not null) Directory.CreateDirectory(renders);
         CheckPinMenuLifecycle();
         CheckPinImageAppearance(renders);

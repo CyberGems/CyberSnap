@@ -13,5 +13,6 @@
     <Resource Include="../../src/CyberSnap/Assets/Icons/*.ico" Link="Assets/Icons/%(Filename)%(Extension)" />
     <Resource Include="../../src/CyberSnap/Assets/CyberSnap_square.png" Link="Assets/CyberSnap_square.png" />
     <Resource Include="../../src/CyberSnap/Assets/Suite/*.png" Link="Assets/Suite/%(Filename)%(Extension)" />
+    <None Update="Fixtures/Pin/*.bmp;Fixtures/Pin/*.gif;Fixtures/Pin/*.jpg;Fixtures/Pin/*.tiff" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
