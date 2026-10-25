@@ -107,7 +107,33 @@ function assertUnchanged(api, pr) {
   }
 }
 
-export function submitWinget({ api, manifests, author, closeSuperseded = true, makeBranchId = randomUUID }) {
+function verifySubmission(api, pr, sha, version, previousSha, previousVersion, pause) {
+  let observed;
+  // GitHub can briefly serve the pre-update PR head or diff after accepting a
+  // branch update. Retry reads only, and only for the exact prior state; a human
+  // edit, unexpected files, or an API failure must still stop the submission.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const current = api('GET', `repos/${upstream}/pulls/${pr.number}`);
+    if (current.state !== 'open' || ![sha, previousSha].includes(current.head.sha)) {
+      throw new Error(`PR #${pr.number} changed during verification; duplicates were left open.`);
+    }
+    observed = `head ${current.head.sha}`;
+    if (current.head.sha === sha) {
+      const currentFiles = filesFor(api, current);
+      if (currentFiles.version === version) return current;
+      observed += `, version ${currentFiles.version}`;
+      if (currentFiles.version !== previousVersion) {
+        throw new Error(`PR #${pr.number} contains an unexpected version during verification (${observed}).`);
+      }
+    }
+    if (attempt < 7) pause(2000);
+  }
+  throw new Error(`PR #${pr.number} did not converge to head ${sha}, version ${version} after 8 reads (${observed}); duplicates were left open.`);
+}
+
+const pauseForRead = milliseconds => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+
+export function submitWinget({ api, manifests, author, closeSuperseded = true, makeBranchId = randomUUID, pause = pauseForRead }) {
   const user = api('GET', 'user');
   const pending = openSubmissions(api, user.login);
   if (pending.some(pr => compareVersions(pr.version, manifests.version) > 0)) {
@@ -156,11 +182,7 @@ export function submitWinget({ api, manifests, author, closeSuperseded = true, m
       title, body, base: 'master', head: `${user.login}:${branch}`, maintainer_can_modify: true,
     });
   }
-  const verified = api('GET', `repos/${upstream}/pulls/${kept.number}`);
-  const verifiedFiles = filesFor(api, verified);
-  if (verified.state !== 'open' || verified.head.sha !== sha || verifiedFiles.version !== manifests.version) {
-    throw new Error('The maintained PR did not match the submitted manifests; duplicates were left open.');
-  }
+  const verified = verifySubmission(api, kept, sha, manifests.version, parent, pending[0]?.version, pause);
   const closed = [];
   if (closeSuperseded) {
     for (const duplicate of pending.slice(1)) {

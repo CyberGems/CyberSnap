@@ -27,7 +27,7 @@ function fixture(prs = [], options = {}) {
     state.calls.push({ method, path, body: clone(body) });
     options.before?.({ method, path, body, state });
     const result = route(method, path, body);
-    return clone(result);
+    return clone(options.response?.({ method, path, body, result: clone(result), state }) ?? result);
   };
   function route(method, path, body) {
     if (path === 'user') return { login: 'CyberGems', name: 'CyberGems', id: 282432203 };
@@ -119,6 +119,79 @@ test('retrying the same release does not create a commit, update the ref or open
   assert.equal(state.commits.length, 0);
   assert.equal(state.branches.length, 0);
   assert.equal(writes(state).length, 1); // Creating an identical Git tree is harmless and returns its existing SHA.
+});
+
+test('waits for the prior PR head and diff to converge before closing duplicates', () => {
+  let staleHeadReads = 0, staleDiffReads = 0;
+  const pauses = [];
+  const original = pull(1, '1.18.0');
+  const { state, run } = fixture([original, pull(2, '1.19.0')], {
+    response({ method, path, result, state }) {
+      if (method !== 'GET' || state.prs.get(1).head.sha !== 'new-commit') return result;
+      if (path.endsWith('/pulls/1') && staleHeadReads++ < 2) return original;
+      if (path.includes('/pulls/1/files?') && staleDiffReads++ < 2) return files('1.18.0');
+      return result;
+    },
+  });
+  const result = run({ pause: milliseconds => {
+    pauses.push(milliseconds);
+    assert.equal(state.prs.get(2).state, 'open');
+    assert.deepEqual(state.comments, []);
+  } });
+  assert.equal(result.sha, 'new-commit');
+  assert.deepEqual(pauses, [2000, 2000, 2000, 2000]);
+  assert.deepEqual(result.closed, [2]);
+  assert.equal(state.commits.length, 1);
+  assert.equal(state.calls.filter(call => call.path.includes('/git/refs/heads/')).length, 1);
+  assert.equal(state.branches.length, 0);
+});
+
+test('a stale diff that never converges fails without closing duplicates or repeating writes', () => {
+  let staleReads = 0, pauses = 0;
+  const { state, run } = fixture([pull(1, '1.18.0'), pull(2, '1.19.0')], {
+    response({ method, path, result, state }) {
+      if (method === 'GET' && path.includes('/pulls/1/files?') && state.prs.get(1).head.sha === 'new-commit') {
+        staleReads++;
+        return files('1.18.0');
+      }
+      return result;
+    },
+  });
+  assert.throws(() => run({ pause: () => pauses++ }), /did not converge.*after 8 reads/);
+  assert.equal(staleReads, 8);
+  assert.equal(pauses, 7);
+  assert.equal(state.prs.get(2).state, 'open');
+  assert.deepEqual(state.comments, []);
+  assert.equal(state.commits.length, 1);
+  assert.equal(state.branches.length, 0);
+});
+
+test('a human branch edit during verification fails immediately instead of retrying', () => {
+  const { state, run } = fixture([pull(1, '1.18.0'), pull(2, '1.19.0')], {
+    response({ method, path, result, state }) {
+      if (method === 'GET' && path.endsWith('/pulls/1') && state.prs.get(1).head.sha === 'new-commit') {
+        result.head.sha = 'human-edit';
+      }
+      return result;
+    },
+  });
+  assert.throws(() => run({ pause: () => assert.fail('Concurrent edits must not be retried') }), /changed during verification/);
+  assert.equal(state.prs.get(2).state, 'open');
+  assert.deepEqual(state.comments, []);
+});
+
+test('unexpected diff files after an update fail immediately instead of being treated as stale', () => {
+  const { state, run } = fixture([pull(1, '1.18.0'), pull(2, '1.19.0')], {
+    response({ method, path, result, state }) {
+      if (method === 'GET' && path.includes('/pulls/1/files?') && state.prs.get(1).head.sha === 'new-commit') {
+        result.push({ filename: 'README.md', status: 'modified' });
+      }
+      return result;
+    },
+  });
+  assert.throws(() => run({ pause: () => assert.fail('Unexpected files must not be retried') }), /unexpected changes/);
+  assert.equal(state.prs.get(2).state, 'open');
+  assert.deepEqual(state.comments, []);
 });
 
 test('an older release cannot replace any newer pending submission', () => {
