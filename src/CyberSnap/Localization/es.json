@@ -2743,7 +2743,6 @@
   "Enter captures the full view. Press C, then drag to capture a region of the locked view.": "Enter captura la vista completa. Pulsa C y arrastra para capturar una región de la vista bloqueada.",
   "Captures use your usual preview, saving, clipboard, editor, and Gallery preferences.": "Las capturas usan tus preferencias habituales de vista previa, guardado, portapapeles, editor y Galería.",
   "Ctrl+C copies the full view. Ctrl+S saves it. Esc or right-click exits without capturing.": "Ctrl+C copia la vista completa. Ctrl+S la guarda. Esc o clic derecho sale sin capturar.",
-  "Wheel / + / -: zoom · C: select region · Enter: capture view · Esc / right-click: exit": "Rueda / + / -: zoom · C: seleccionar región · Enter: capturar vista · Esc / clic derecho: salir",
   "Drag to capture a region · C: return to Zoom · Esc / right-click: exit": "Arrastra para capturar una región · C: volver a Zoom · Esc / clic derecho: salir",
   "Magnify the frozen screen and capture the view or a region": "Amplía la pantalla congelada y captura la vista o una región",
   "Zoom could not start": "No se pudo iniciar Zoom",
@@ -2752,7 +2751,6 @@
   "Frozen screen magnification and capture.": "Ampliación y captura de la pantalla congelada.",
   "Press C or your capture hotkey to select a region, then adjust and annotate it before confirming. Enter opens confirmation for the full view.": "Pulsa C o tu atajo de captura para seleccionar una región, ajustarla y anotarla antes de confirmar. Enter abre la confirmación de la vista completa.",
   "Canceling selection or confirmation returns to the same Zoom view. Confirmed captures follow your usual output preferences, including optional Preview.": "Al cancelar la selección o la confirmación vuelves al mismo encuadre de Zoom. Las capturas confirmadas siguen tus preferencias habituales, incluida la Vista previa opcional.",
-  "Wheel / + / -: zoom · C: select and annotate · Enter: confirm full view · Esc / right-click: exit": "Rueda / + / -: zoom · C: seleccionar y anotar · Enter: confirmar vista completa · Esc / clic derecho: salir",
   "Show help bar": "Mostrar barra de ayuda",
   "Show the zoom level and keyboard shortcuts while Zoom is active.": "Muestra el nivel de zoom y los atajos de teclado mientras Zoom está activo.",
   "Pin to screen": "Fijar en pantalla",
@@ -2810,5 +2808,7 @@
   "Capture a window without the rest of the desktop.": "Captura una ventana sin incluir el resto del escritorio.",
   "Take a new screenshot of the previously selected area.": "Vuelve a capturar la zona que seleccionaste anteriormente.",
   "Choose which sections are visible and enable compact mode.": "Elige las secciones visibles y activa el modo compacto.",
-  "This image could not be decoded. It may be damaged or use an unsupported format.": "No se pudo decodificar la imagen. Puede estar dañada o usar un formato no compatible."
+  "This image could not be decoded. It may be damaged or use an unsupported format.": "No se pudo decodificar la imagen. Puede estar dañada o usar un formato no compatible.",
+  "Wheel / + / - / ↑ / ↓: zoom · C: select and annotate · Enter: confirm full view": "Rueda / + / - / ↑ / ↓: zoom · C: seleccionar y anotar · Enter: confirmar vista completa",
+  "Ctrl+C: copy full view · Ctrl+S: save full view · Esc / right-click: exit": "Ctrl+C: copiar vista completa · Ctrl+S: guardar vista completa · Esc / clic derecho: salir"
 }

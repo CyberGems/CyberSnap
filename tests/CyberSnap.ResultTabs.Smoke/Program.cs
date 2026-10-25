@@ -56,6 +56,14 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--capture-tool-regressions-only"))
+            {
+                CheckStageHotkeyConflicts();
+                CheckPinImageFormats(temp);
+                CheckZoomHelpBar(args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} capture tool regression checks.");
+                return 0;
+            }
             if (args.Contains("--pin-formats-only"))
             {
                 CheckPinImageFormats(temp);

@@ -1,0 +1,38 @@
+name: Verify capture tool regressions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-capture-tools.yml'
+      - 'src/CyberSnap/UI/ToolListBuilder.cs'
+      - 'src/CyberSnap/App/App.Pin.cs'
+      - 'src/CyberSnap/Capture/PinImageForm.cs'
+      - 'src/CyberSnap/Capture/StandaloneZoomForm.cs'
+      - 'src/CyberSnap/Models/AppSettings.cs'
+      - 'src/CyberSnap/Models/Editor*HotkeyDef.cs'
+      - 'src/CyberSnap/Localization/en.json'
+      - 'src/CyberSnap/Localization/es.json'
+      - 'tests/CyberSnap.ResultTabs.Smoke/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regressions:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Validate English and Spanish localization
+        shell: pwsh
+        run: ./scripts/Test-Localization.ps1 -Strict
+      - name: Build smoke checks
+        run: dotnet build tests/CyberSnap.ResultTabs.Smoke --configuration Release
+      - name: Check hotkey scopes, Pin formats and Zoom help
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --capture-tool-regressions-only

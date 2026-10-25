@@ -62,7 +62,8 @@ public sealed class StandaloneZoomForm : Form
         AccessibleName = Text;
         Cursor = Cursors.Default;
         _hudFont = UiChrome.ChromeFont(10);
-        _viewHelp = LocalizationService.Translate("Wheel / + / -: zoom · C: select and annotate · Enter: confirm full view · Esc / right-click: exit");
+        _viewHelp = LocalizationService.Translate("Wheel / + / - / ↑ / ↓: zoom · C: select and annotate · Enter: confirm full view")
+            + "\n" + LocalizationService.Translate("Ctrl+C: copy full view · Ctrl+S: save full view · Esc / right-click: exit");
         _timer.Tick += (_, _) =>
         {
             double now = _clock.Elapsed.TotalSeconds;
