@@ -342,7 +342,6 @@ namespace CyberSnap.UI
             DeleteBtn.ToolTip = LocalizationService.Translate(
                 "The saved file will be permanently deleted from disk and removed from the Gallery.");
             MoreText.Text = LocalizationService.Translate("More");
-            MoreBtn.ToolTip = LocalizationService.Translate("More");
             NoAutomaticActionsLabel.Text = LocalizationService.Translate("None");
             ZoomOutBtn.ToolTip = LocalizationService.Translate("Zoom out");
             ZoomInBtn.ToolTip = LocalizationService.Translate("Zoom in");
@@ -375,7 +374,6 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(ExtractTextBtn);
             ApplyTooltipPlacement(OpenViewerBtn);
             ApplyTooltipPlacement(PrintBtn);
-            ApplyTooltipPlacement(MoreBtn);
             ApplyTooltipPlacement(DeleteBtn);
             ApplyTooltipPlacement(CancelBtn);
             ApplyTooltipPlacement(ZoomOutBtn);

@@ -487,12 +487,6 @@
                                      </StackPanel>
                                  </Button>
                                  <WrapPanel x:Name="OptionalActionsPanel" Orientation="Horizontal">
-                                    <Button x:Name="PinImageBtn" Click="PinImageBtn_Click" Style="{StaticResource PreviewActionButton}" Margin="0,0,6,4">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Image x:Name="PinImageIcon" Width="13" Height="13" Margin="0,0,6,0"/>
-                                            <TextBlock x:Name="PinImageText" Text="Pin to screen" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Button>
                                     <Button x:Name="SaveBtn" Click="SaveBtn_Click"
                                              Style="{StaticResource PreviewActionButton}"
                                              Margin="0,0,6,4">
@@ -543,6 +537,12 @@
                                              <TextBlock x:Name="OpenViewerText" Text="Open in viewer..." VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                          </StackPanel>
                                      </Button>
+                                    <Button x:Name="PinImageBtn" Click="PinImageBtn_Click" Style="{StaticResource PreviewActionButton}" Margin="0,0,6,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image x:Name="PinImageIcon" Width="13" Height="13" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="PinImageText" Text="Pin to screen" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
                                      <Button x:Name="PrintBtn" Click="PrintBtn_Click"
                                              Style="{StaticResource PreviewActionButton}"
                                              Margin="0,0,6,4">
@@ -566,8 +566,7 @@
                                     </Button>
                                     <Button x:Name="MoreBtn" Click="MoreBtn_Click"
                                             Style="{StaticResource PreviewActionButton}"
-                                            Margin="0,0,6,4"
-                                            ToolTip="More">
+                                            Margin="0,0,6,4">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image x:Name="MoreIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                    VerticalAlignment="Center"
