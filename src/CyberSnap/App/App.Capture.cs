@@ -36,7 +36,11 @@ public partial class App
     /// </summary>
     public event Action? SessionBecameIdle;
 
-    private void BeginStandaloneToolSession() => Interlocked.Increment(ref _activeStandaloneTools);
+    private void BeginStandaloneToolSession()
+    {
+        Interlocked.Increment(ref _activeStandaloneTools);
+        RefreshPinnedImageShadows();
+    }
 
     private void EndStandaloneToolSession()
     {
@@ -52,6 +56,7 @@ public partial class App
 
         void Raise()
         {
+            RefreshPinnedImageShadows();
             try { SessionBecameIdle?.Invoke(); }
             catch (Exception ex) { AppDiagnostics.LogError("session.became-idle", ex); }
         }
@@ -104,6 +109,8 @@ public partial class App
 
     private void LaunchGifRecording(RecordingFormat? formatOverride = null, System.Drawing.Rectangle? initialSelection = null)
     {
+        // Excluded layered shadows must be hidden before the first legacy video frame.
+        RefreshPinnedImageShadows();
         var thread = new Thread(() =>
         {
             try

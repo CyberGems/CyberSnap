@@ -379,6 +379,8 @@ public sealed class AppSettings
     public bool ZoomShowHelpBar { get; set; } = true;
     public double PinInitialScale { get; set; } = 1;
     public bool PinSmoothImage { get; set; } = true;
+    public bool PinShowShadow { get; set; } = true;
+    public bool PinShowBorder { get; set; } = true;
     public bool PinAlwaysOnTop { get; set; } = true;
     public bool PinIncludeInCaptures { get; set; }
 

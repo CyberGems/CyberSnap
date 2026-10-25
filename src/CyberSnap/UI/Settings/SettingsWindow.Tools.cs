@@ -27,6 +27,8 @@ public partial class SettingsWindow
         ToolsRulerIcon.Data = FluentIcons.GetGeometry("ruler");
         ToolsZoomIcon.Data = FluentIcons.GetGeometry("zoom");
         ToolsPinIcon.Data = FluentIcons.GetGeometry("pin");
+        PinShadowIcon.Data = FluentIcons.GetGeometry("activeWindow");
+        PinBorderIcon.Data = FluentIcons.GetGeometry("rectShape");
         ApplyPinControls();
         ApplyZoomControls();
         ApplyColorFormatControls(_settingsService.Settings);
@@ -117,6 +119,8 @@ public partial class SettingsWindow
             foreach (double scale in scales) PinInitialScaleCombo.Items.Add(new ComboBoxItem { Content = $"{scale:P0}", Tag = scale });
             PinInitialScaleCombo.SelectedItem = PinInitialScaleCombo.Items.OfType<ComboBoxItem>().First(item => Math.Abs((double)item.Tag - Capture.PinImageForm.NormalizeScale(settings.PinInitialScale)) < .001);
             PinSmoothImageCheck.IsChecked = settings.PinSmoothImage;
+            PinShowShadowCheck.IsChecked = settings.PinShowShadow;
+            PinShowBorderCheck.IsChecked = settings.PinShowBorder;
             PinAlwaysOnTopCheck.IsChecked = settings.PinAlwaysOnTop;
             PinIncludeInCapturesCheck.IsChecked = settings.PinIncludeInCaptures;
         }
@@ -138,6 +142,12 @@ public partial class SettingsWindow
         else if (ReferenceEquals(check, PinAlwaysOnTopCheck))
             UpdateToolsPreference("Keep pinned images on top", _settingsService.Settings.PinAlwaysOnTop, check.IsChecked == true,
                 value => _settingsService.Settings.PinAlwaysOnTop = value, _ => ApplyPinControls(), () => (Application.Current as App)?.RefreshPinnedImagePreferences());
+        else if (ReferenceEquals(check, PinShowShadowCheck))
+            UpdateToolsPreference("Window shadow", _settingsService.Settings.PinShowShadow, check.IsChecked == true,
+                value => _settingsService.Settings.PinShowShadow = value, _ => ApplyPinControls(), () => (Application.Current as App)?.RefreshPinnedImagePreferences());
+        else if (ReferenceEquals(check, PinShowBorderCheck))
+            UpdateToolsPreference("Image border", _settingsService.Settings.PinShowBorder, check.IsChecked == true,
+                value => _settingsService.Settings.PinShowBorder = value, _ => ApplyPinControls(), () => (Application.Current as App)?.RefreshPinnedImagePreferences());
         else
             UpdateToolsPreference("Include pinned images in captures", _settingsService.Settings.PinIncludeInCaptures, check.IsChecked == true,
                 value => _settingsService.Settings.PinIncludeInCaptures = value, _ => ApplyPinControls(), () => (Application.Current as App)?.RefreshPinnedImagePreferences());

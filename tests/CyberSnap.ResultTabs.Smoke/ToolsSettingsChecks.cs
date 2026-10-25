@@ -21,7 +21,7 @@ internal static partial class Program
         double originalScale = UiScale.Current;
         var toolsPage = SettingsSchemaCatalog.Pages.Single(page => page.Key == "tools");
         var toolBindings = toolsPage.Sections.SelectMany(section => section.Items).Select(item => item.BindingPath).ToArray();
-        Assert(new[] { "OcrLanguageTag", "ColorDetailCopyFormat", "ScanShowResultWindow", "RulerCaptureAllScreens", "ZoomInitialLevel", "ZoomSmoothImage", "ZoomAnimate", "ZoomShowHelpBar", "PinInitialScale", "PinSmoothImage", "PinAlwaysOnTop", "PinIncludeInCaptures", "SaveStandaloneToHistory" }
+        Assert(new[] { "OcrLanguageTag", "ColorDetailCopyFormat", "ScanShowResultWindow", "RulerCaptureAllScreens", "ZoomInitialLevel", "ZoomSmoothImage", "ZoomAnimate", "ZoomShowHelpBar", "PinInitialScale", "PinSmoothImage", "PinShowShadow", "PinShowBorder", "PinAlwaysOnTop", "PinIncludeInCaptures", "SaveStandaloneToHistory" }
             .All(toolBindings.Contains), "the settings catalog routes all six tools and their shared history to Tools");
         Assert(!SettingsSchemaCatalog.Pages.Where(page => page.Key != "tools").SelectMany(page => page.Sections)
             .SelectMany(section => section.Items).Any(item => toolBindings.Contains(item.BindingPath)),
@@ -85,7 +85,7 @@ internal static partial class Program
                             "picker" => new[] { "AutoCopyColorCheck", "ColorCopyFormatCombo", "ColorIncludeHashCheck" },
                             "qr" => new[] { "AutoCopyScanCheck", "ScanShowResultWindowCheck" },
                             "zoom" => new[] { "ZoomInitialLevelCombo", "ZoomSmoothImageCheck", "ZoomAnimateCheck", "ZoomShowHelpBarCheck" },
-                            "pin" => new[] { "PinInitialScaleCombo", "PinSmoothImageCheck", "PinAlwaysOnTopCheck", "PinIncludeInCapturesCheck" },
+                            "pin" => new[] { "PinInitialScaleCombo", "PinSmoothImageCheck", "PinShowShadowCheck", "PinShowBorderCheck", "PinAlwaysOnTopCheck", "PinIncludeInCapturesCheck" },
                             _ => new[] { "RulerCaptureAllScreensCheck", "RulerContextMenuEnabledCheck" }
                         })
                         {
@@ -219,12 +219,15 @@ internal static partial class Program
             var pinScale = Element<ComboBox>(config, "PinInitialScaleCombo");
             pinScale.SelectedItem = pinScale.Items.OfType<ComboBoxItem>().Single(item => (double)item.Tag == 1.5);
             Element<CheckBox>(config, "PinSmoothImageCheck").IsChecked = false;
+            Element<CheckBox>(config, "PinShowShadowCheck").IsChecked = false;
+            Element<CheckBox>(config, "PinShowBorderCheck").IsChecked = false;
             Element<CheckBox>(config, "PinAlwaysOnTopCheck").IsChecked = false;
             Element<CheckBox>(config, "PinIncludeInCapturesCheck").IsChecked = true;
             using (var pinReload = new SettingsService(path))
             {
                 pinReload.Load();
                 Assert(pinReload.Settings.PinInitialScale == 1.5 && !pinReload.Settings.PinSmoothImage
+                    && !pinReload.Settings.PinShowShadow && !pinReload.Settings.PinShowBorder
                     && !pinReload.Settings.PinAlwaysOnTop && pinReload.Settings.PinIncludeInCaptures,
                     "all Pin controls persist their selections from Tools: " + language);
             }
@@ -245,7 +248,7 @@ internal static partial class Program
 
     private static void CheckToolSearchNavigation(SettingsWindow window, string language)
     {
-        foreach (var (label, panel) in new[] { ("Favorite format", "PickerToolPanel"), ("Show the QR & Barcode result window", "QrToolPanel"), ("Capture all screens", "RulerToolPanel"), ("OCR language", "OcrToolPanel"), ("Initial zoom level", "ZoomToolPanel"), ("Show help bar", "ZoomToolPanel"), ("Include pinned images in captures", "PinToolPanel"), ("Save tool results to Gallery", "ToolHistoryRow") })
+        foreach (var (label, panel) in new[] { ("Favorite format", "PickerToolPanel"), ("Show the QR & Barcode result window", "QrToolPanel"), ("Capture all screens", "RulerToolPanel"), ("OCR language", "OcrToolPanel"), ("Initial zoom level", "ZoomToolPanel"), ("Show help bar", "ZoomToolPanel"), ("Window shadow", "PinToolPanel"), ("Image border", "PinToolPanel"), ("Include pinned images in captures", "PinToolPanel"), ("Save tool results to Gallery", "ToolHistoryRow") })
         {
             Call(window, "SelectSettingsTab", "capture");
             Element<TextBox>(window, "SettingsSearchBox").Text = LocalizationService.Translate(label);
@@ -283,7 +286,7 @@ internal static partial class Program
         settings.OcrAutoCopyToClipboard, settings.OcrShowResultWindow, settings.TranslationModel,
         settings.ColorDetailAutoCopy, settings.ShowColorDetailWindow, settings.ColorDetailCopyFormat, settings.ColorDetailIncludeHash,
         settings.ScanAutoCopyToClipboard, settings.ScanShowResultWindow, settings.RulerCaptureAllScreens,
-        settings.RulerContextMenuEnabled, settings.SaveStandaloneToHistory, settings.ZoomInitialLevel, settings.ZoomSmoothImage, settings.ZoomAnimate, settings.ZoomShowHelpBar, settings.PinInitialScale, settings.PinSmoothImage, settings.PinAlwaysOnTop, settings.PinIncludeInCaptures);
+        settings.RulerContextMenuEnabled, settings.SaveStandaloneToHistory, settings.ZoomInitialLevel, settings.ZoomSmoothImage, settings.ZoomAnimate, settings.ZoomShowHelpBar, settings.PinInitialScale, settings.PinSmoothImage, settings.PinShowShadow, settings.PinShowBorder, settings.PinAlwaysOnTop, settings.PinIncludeInCaptures);
 
     private static string TrayDescriptionText(TextBlock text)
         => string.Concat(text.Inlines.Select(inline => inline switch

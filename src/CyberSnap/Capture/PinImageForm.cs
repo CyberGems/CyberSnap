@@ -14,6 +14,12 @@ public sealed class PinImageForm : Form
 {
     private readonly Bitmap _original;
     private bool _smooth;
+    private bool _showShadow;
+    private bool _showBorder;
+    private bool _includeInCaptures;
+    private bool _updatingShadow;
+    private bool _shown;
+    private PinShadowForm? _shadow;
     private readonly Font _font = UiChrome.ChromeFont(10);
     private Point? _dragStart;
     private Point _dragOrigin;
@@ -57,6 +63,9 @@ public sealed class PinImageForm : Form
     {
         _original = ownedImage;
         _smooth = settings.PinSmoothImage;
+        _showShadow = settings.PinShowShadow;
+        _showBorder = settings.PinShowBorder;
+        _includeInCaptures = settings.PinIncludeInCaptures;
         AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
@@ -75,12 +84,12 @@ public sealed class PinImageForm : Form
         Size = ScaledSize(_scale);
         Location = new Point(anchor.X - Width / 2, anchor.Y - Height / 2);
         KeepReachable();
-        Shown += (_, _) => ApplyCapturePreferences(settings.PinIncludeInCaptures, settings.PinAlwaysOnTop);
         _hoverTimer.Tick += (_, _) =>
         {
             if (_disposed) return;
             bool hover = ClientRectangle.Contains(PointToClient(System.Windows.Forms.Cursor.Position));
             if (hover != _hover) { _hover = hover; Invalidate(); }
+            UpdateShadow();
         };
         _hoverTimer.Start();
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += DisplayChanged;
@@ -112,10 +121,45 @@ public sealed class PinImageForm : Form
         catch { copy.Dispose(); throw; }
     }
     public void ApplyRenderingPreference(bool smooth) { _smooth = smooth; Invalidate(); }
+    public void ApplyAppearancePreferences(bool shadow, bool border)
+    {
+        if (_disposed || IsDisposed || Disposing) return;
+        _showShadow = shadow;
+        _showBorder = border;
+        if (!shadow) { _shadow?.Dispose(); _shadow = null; }
+        UpdateShadow();
+        Invalidate();
+    }
+
+    private void UpdateShadow(bool positionChanged = false)
+    {
+        if (_disposed || _updatingShadow) return;
+        _updatingShadow = true;
+        try
+        {
+            // Windows 10 may reject capture affinity for per-pixel layered windows.
+            // Keep excluded shadows hidden throughout live capture/tool sessions,
+            // including legacy recording and live color sampling.
+            bool excludedDuringCapture = !_includeInCaptures
+                && (System.Windows.Application.Current as App)?.IsSessionBusy() == true;
+            if (!_showShadow || excludedDuringCapture || !_shown || !IsHandleCreated || !Native.User32.IsWindowVisible(Handle))
+            {
+                _shadow?.Hide();
+                return;
+            }
+            _shadow ??= new PinShadowForm(_includeInCaptures);
+            _shadow.UpdateFor(this, positionChanged);
+        }
+        finally { _updatingShadow = false; }
+    }
+
+    internal void RefreshShadowVisibility() => UpdateShadow();
 
     public void ApplyCapturePreferences(bool include, bool topmost)
     {
+        _includeInCaptures = include;
         TopMost = topmost;
+        _shadow?.ApplyCapturePreference(include);
         if (!IsHandleCreated) return;
         if (include)
         {
@@ -146,6 +190,21 @@ public sealed class PinImageForm : Form
         // Oversized references can extend off-screen, but leave a draggable portion reachable.
         Left = Math.Clamp(Left, work.Left - Math.Max(0, Width - 48), Math.Max(work.Left, work.Right - Math.Min(Width, 48)));
         Top = Math.Clamp(Top, work.Top, Math.Max(work.Top, work.Bottom - Math.Min(Height, 48)));
+        UpdateShadow(positionChanged: true);
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _shown = true;
+        UpdateShadow(positionChanged: true);
+    }
+
+    protected override void WndProc(ref Message message)
+    {
+        base.WndProc(ref message);
+        if (message.Msg is 0x0047 or 0x0018) // WM_WINDOWPOSCHANGED / WM_SHOWWINDOW
+            UpdateShadow(positionChanged: true);
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -153,6 +212,14 @@ public sealed class PinImageForm : Form
         base.OnHandleCreated(e);
         Native.Dwm.TrySetTransitionsForcedDisabled(Handle, true);
         Native.Dwm.TrySetWindowCornerPreference(Handle, Native.Dwm.DWMWCP_DONOTROUND);
+        ApplyCapturePreferences(_includeInCaptures, TopMost);
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        _shadow?.Hide();
+        CaptureWindowExclusion.Unregister(Handle);
+        base.OnHandleDestroyed(e);
     }
 
     protected override void OnDpiChanged(DpiChangedEventArgs e)
@@ -160,6 +227,7 @@ public sealed class PinImageForm : Form
         // Scale is expressed in physical image pixels, not monitor-dependent logical pixels.
         e.Cancel = true;
         base.OnDpiChanged(e);
+        UpdateShadow(positionChanged: true);
         Invalidate();
     }
 
@@ -182,8 +250,18 @@ public sealed class PinImageForm : Form
             attributes.SetWrapMode(WrapMode.TileFlipXY);
             int imageWidth = Math.Max(1, (int)Math.Round(_original.Width * _scale));
             int imageHeight = Math.Max(1, (int)Math.Round(_original.Height * _scale));
-            g.DrawImage(_original, new Rectangle((Width - imageWidth) / 2, (Height - imageHeight) / 2, imageWidth, imageHeight),
-                0, 0, _original.Width, _original.Height, GraphicsUnit.Pixel, attributes);
+            var imageBounds = new Rectangle((Width - imageWidth) / 2, (Height - imageHeight) / 2, imageWidth, imageHeight);
+            // Extend edge pixels into the frame gutter without rescaling the image.
+            // Hiding the border must not leave a background-colored outline behind.
+            float insetX = 0, insetY = 0;
+            if (!_showBorder)
+            {
+                imageBounds.Inflate(1, 1);
+                insetX = (float)_original.Width / imageWidth;
+                insetY = (float)_original.Height / imageHeight;
+            }
+            g.DrawImage(_original, imageBounds, -insetX, -insetY, _original.Width + 2 * insetX,
+                _original.Height + 2 * insetY, GraphicsUnit.Pixel, attributes);
         }
         finally { g.Restore(imageState); }
         // The image's half-pixel sampling must not shift the one-pixel frame.
@@ -191,7 +269,7 @@ public sealed class PinImageForm : Form
         g.PixelOffsetMode = PixelOffsetMode.None;
         g.SmoothingMode = SmoothingMode.None;
         using var border = new Pen(ToColor(_hover ? Theme.Accent : Theme.Border));
-        g.DrawRectangle(border, 0, 0, Width - 1, Height - 1);
+        if (_showBorder || _hover) g.DrawRectangle(border, 0, 0, Width - 1, Height - 1);
         _buttons = Array.Empty<Rectangle>();
         int S(int value) => Math.Max(1, (int)Math.Round(value * DeviceDpi / 96d * UiChrome.UiScale));
         if (_hover && Width >= S(190) && Height >= S(42))
@@ -257,7 +335,7 @@ public sealed class PinImageForm : Form
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         double steps = e.Delta / 120d;
-        if ((ModifierKeys & Keys.Control) != 0) Opacity = Math.Clamp(Opacity + steps * .1, .1, 1);
+        if ((ModifierKeys & Keys.Control) != 0) SetImageOpacity(Opacity + steps * .1);
         else SetImageScale(_scale + steps * .1);
         base.OnMouseWheel(e);
     }
@@ -271,7 +349,7 @@ public sealed class PinImageForm : Form
         else if (e.KeyCode is Keys.Add or Keys.Oemplus or Keys.Subtract or Keys.OemMinus)
         {
             int direction = e.KeyCode is Keys.Add or Keys.Oemplus ? 1 : -1;
-            if (e.Control) Opacity = Math.Clamp(Opacity + direction * .1, .1, 1);
+            if (e.Control) SetImageOpacity(Opacity + direction * .1);
             else SetImageScale(_scale + direction * .1);
         }
         else if (e.KeyCode is Keys.D0 or Keys.NumPad0) ResetView();
@@ -280,7 +358,8 @@ public sealed class PinImageForm : Form
         base.OnKeyDown(e);
     }
 
-    private void ResetView() { Opacity = 1; SetImageScale(1); }
+    private void SetImageOpacity(double value) { Opacity = Math.Clamp(value, .1, 1); UpdateShadow(); }
+    private void ResetView() { Opacity = 1; SetImageScale(1); UpdateShadow(); }
     private void SendImage(Action<Bitmap>? handler)
     {
         if (handler is null) return;
@@ -382,7 +461,7 @@ public sealed class PinImageForm : Form
             double value = percent / 100d;
             var item = WindowsMenuRenderer.Item($"{value:P0}", iconId: "eye", active: Math.Abs(Opacity - value) < .001);
             if (item.Image is { } image) images.Add(image);
-            item.Click += (_, _) => Opacity = value;
+            item.Click += (_, _) => SetImageOpacity(value);
             opacity.DropDownItems.Add(item);
         }
         WindowsMenuRenderer.NormalizeDropDownWidths(opacity, minWidth: 150);
@@ -402,6 +481,7 @@ public sealed class PinImageForm : Form
         {
             _disposed = true;
             _hoverTimer.Stop();
+            _shadow?.Dispose(); _shadow = null;
             foreach (var menu in _openMenus.ToArray())
             {
                 if (!menu.IsDisposed) menu.Close(ToolStripDropDownCloseReason.CloseCalled);

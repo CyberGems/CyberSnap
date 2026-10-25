@@ -161,7 +161,18 @@ public partial class App
         {
             image.ApplyCapturePreferences(SettingsService.Settings.PinIncludeInCaptures, SettingsService.Settings.PinAlwaysOnTop);
             image.ApplyRenderingPreference(SettingsService.Settings.PinSmoothImage);
+            image.ApplyAppearancePreferences(SettingsService.Settings.PinShowShadow, SettingsService.Settings.PinShowBorder);
         }
+    }
+
+    private void RefreshPinnedImageShadows()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            if (!Dispatcher.HasShutdownStarted) Dispatcher.Invoke(RefreshPinnedImageShadows);
+            return;
+        }
+        foreach (var image in _pinnedImages.ToArray()) image.RefreshShadowVisibility();
     }
 
     private void ClosePinnedImages()

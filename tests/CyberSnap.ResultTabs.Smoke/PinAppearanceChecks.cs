@@ -27,9 +27,11 @@ internal static partial class Program
                 ((Forms.Timer)Field(pin, "_hoverTimer")).Stop();
                 pin.Show(); Forms.Application.DoEvents();
                 foreach (double scale in new[] { .2, 1.0, 1.25 })
+                foreach (bool border in new[] { true, false })
                 foreach (bool hover in new[] { false, true })
                 {
                     pin.SetImageScale(scale);
+                    pin.ApplyAppearancePreferences(true, border);
                     SetField(pin, "_hover", hover);
                     using var frame = new Bitmap(pin.ClientSize.Width, pin.ClientSize.Height);
                     pin.DrawToBitmap(frame, new Rectangle(Point.Empty, frame.Size));
@@ -40,28 +42,40 @@ internal static partial class Program
                     if (hover)
                         Assert(edges[0].R == Theme.Accent.R && edges[0].G == Theme.Accent.G && edges[0].B == Theme.Accent.B,
                             "hover highlights every edge in the current theme's accent");
+                    else if (!border)
+                        Assert(edges[0].ToArgb() == Color.Magenta.ToArgb(), "disabling the border reveals image pixels on all four edges without a gray gutter");
                     if (scale == 1.25)
                     {
                         uint nativeDpi = GetDpiForWindow(pin.Handle);
                         Assert(GetWindowDisplayAffinity(pin.Handle, out uint affinity) && affinity == 0,
                             "the synthetic Pin permits desktop inspection without changing user capture preferences");
-                        pin.BringToFront();
+                        var shadow = (Forms.Form)Field(pin, "_shadow");
+                        Assert(GetWindowDisplayAffinity(shadow.Handle, out uint shadowAffinity) && shadowAffinity == 0
+                            && IsWidgetToolTipAbove(pin.Handle, shadow.Handle),
+                            "an included shadow is below its Pin and also permits capture");
+                        pin.BringToFront(); pin.Activate();
+                        Assert(SetShadowTestWindowPos(pin.Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010),
+                            "the native pixel fixture places its own Pin above other desktop windows without taking input focus");
                         Forms.Application.DoEvents();
                         pin.Refresh();
                         // A rapid series of zooms can leave the compositor on the
                         // previous window size after the synchronous GDI paint.
-                        Thread.Sleep(50);
+                        Thread.Sleep(100);
                         Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
-                        using var desktop = new Bitmap(pin.ClientSize.Width, pin.ClientSize.Height);
-                        using (var graphics = Graphics.FromImage(desktop))
-                        {
-                            var origin = pin.PointToScreen(Point.Empty);
-                            graphics.CopyFromScreen(origin.X, origin.Y, 0, 0, desktop.Size);
-                        }
+                        var origin = pin.PointToScreen(Point.Empty);
+                        using var desktop = ScreenCapture.CaptureRegion(new Rectangle(origin, pin.ClientSize));
                         var presented = new[] { desktop.GetPixel(desktop.Width / 2, 0), desktop.GetPixel(desktop.Width / 2, desktop.Height - 1),
                             desktop.GetPixel(0, desktop.Height / 2), desktop.GetPixel(desktop.Width - 1, desktop.Height / 2) };
                         if (renders is not null)
-                            desktop.Save(Path.Combine(renders, $"pin-frame-{theme}-{nativeDpi}-hover{hover}.png"));
+                            desktop.Save(Path.Combine(renders, $"pin-frame-{theme}-{nativeDpi}-border{border}-hover{hover}.png"));
+                        if (!presented.All(color => color.ToArgb() == edges[0].ToArgb()))
+                        {
+                            Console.WriteLine($"Pin inspection before compositor settlement: form={pin.Bounds}, client={pin.ClientRectangle}, origin={origin}, visible={pin.Visible}, foreground={GetForegroundWindow()}, pin={pin.Handle}, shadow={shadow.Handle}.");
+                            Thread.Sleep(300);
+                            Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
+                            using var settled = ScreenCapture.CaptureRegion(new Rectangle(origin, pin.ClientSize));
+                            Console.WriteLine($"Pin inspection after compositor settlement: top={settled.GetPixel(settled.Width / 2, 0)}, center={settled.GetPixel(settled.Width / 2, settled.Height / 2)}.");
+                        }
                         Assert(presented.All(color => color.ToArgb() == edges[0].ToArgb()),
                             $"the real desktop shows the same frame on all four sides at monitor DPI {nativeDpi}, hover={hover}: {string.Join(",", presented)}");
                     }
@@ -69,6 +83,7 @@ internal static partial class Program
             }
         }
         finally { Theme.SetMode(AppThemeMode.System); }
+        CheckPinWindowShadow(renders);
         CheckPinImageMenus(renders);
         CheckPinMenuPlacement(renders);
     }

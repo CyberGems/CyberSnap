@@ -39,11 +39,12 @@ internal static partial class Program
                     var anchor = new Point(right ? pin.ClientSize.Width - 2 : 2, bottom ? pin.ClientSize.Height - 2 : 2);
                     Call(pin, "OpenMenu", anchor);
                     var menu = ((HashSet<Forms.ContextMenuStrip>)Field(pin, "_openMenus")).Single();
-                    Forms.Application.DoEvents();
+                    // Read the final synchronous Show/Opened placement before
+                    // pumping unrelated desktop focus changes that can close it.
                     Assert(GetWindowRect(menu.Handle, out var rootRect) && work.Contains(rootRect.Rectangle),
                         $"the real root menu stays on its originating monitor at every edge: {language}, {screen.DeviceName}, right={right}, bottom={bottom}, bounds={menu.Bounds}, work={work}");
                     var opacity = menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.HasDropDownItems);
-                    opacity.ShowDropDown(); Forms.Application.DoEvents();
+                    opacity.ShowDropDown();
                     Assert(GetWindowRect(opacity.DropDown.Handle, out var childRect) && work.Contains(childRect.Rectangle),
                         "the opacity submenu also stays on the same monitor, including mixed DPI boundaries");
                     if (renders is not null && right && bottom)
@@ -103,6 +104,19 @@ internal static partial class Program
                         AssertPinSection("existing Settings window with an active search");
                         Assert(string.IsNullOrEmpty(Element<TextBox>(window, "SettingsSearchBox").Text),
                             "direct navigation clears search so Pin preferences are visible");
+                        var bounds = pin.Bounds;
+                        var handle = pin.Handle;
+                        var shadowToggle = Element<CheckBox>(window, "PinShowShadowCheck");
+                        var borderToggle = Element<CheckBox>(window, "PinShowBorderCheck");
+                        Assert(shadowToggle.IsChecked == true && borderToggle.IsChecked == true,
+                            "both localized Pin appearance toggles load enabled by default");
+                        shadowToggle.IsChecked = false; borderToggle.IsChecked = false; Pump();
+                        Assert(!(bool)Field(pin, "_showShadow") && !(bool)Field(pin, "_showBorder")
+                            && pin.Handle == handle && pin.Bounds == bounds,
+                            "changing appearance updates an existing Pin without recreating or resizing it");
+                        shadowToggle.IsChecked = true; borderToggle.IsChecked = true; Pump();
+                        Assert((bool)Field(pin, "_showShadow") && (bool)Field(pin, "_showBorder"),
+                            "both appearance settings can be restored immediately on an existing Pin");
                         Render(window, renders, "pin-settings-route-" + language + ".png");
                     }
                     finally { pin.Close(); }

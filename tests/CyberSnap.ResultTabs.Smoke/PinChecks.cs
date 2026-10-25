@@ -28,8 +28,11 @@ internal static partial class Program
         CheckPinChooserPresentation(renders);
         CheckPinCaptureBar(temp, renders);
         Assert(new AppSettings().PinAlwaysOnTop && new AppSettings().PinSmoothImage
+            && new AppSettings().PinShowShadow && new AppSettings().PinShowBorder
             && !new AppSettings().PinIncludeInCaptures && new AppSettings().PinInitialScale == 1,
             "Pin defaults to a smooth 100% topmost reference excluded from captures");
+        var legacy = System.Text.Json.JsonSerializer.Deserialize<AppSettings>("{\"PinInitialScale\":1.5}")!;
+        Assert(legacy.PinShowShadow && legacy.PinShowBorder, "existing settings without the new appearance preferences keep both enabled");
         using var original = new Bitmap(320, 200, PixelFormat.Format32bppArgb);
         using (var graphics = Graphics.FromImage(original))
         {
@@ -159,10 +162,12 @@ internal static partial class Program
         CallZoomApp(app, "ClosePinnedImages");
         Assert(pins.Count == 0, "closing the Pin session disposes every reference window");
         settings.Settings.PinInitialScale = 1.5; settings.Settings.PinSmoothImage = false;
+        settings.Settings.PinShowShadow = false; settings.Settings.PinShowBorder = false;
         settings.Settings.SetToolHotkey("_standalonePin", 6, 0x50); settings.Save(); settings.FlushPendingWrites();
         using var reload = new SettingsService(Path.Combine(temp, "settings.json"));
         reload.Load();
         Assert(reload.Settings.PinInitialScale == 1.5 && !reload.Settings.PinSmoothImage
+            && !reload.Settings.PinShowShadow && !reload.Settings.PinShowBorder
             && reload.Settings.PinIncludeInCaptures && reload.Settings.GetToolHotkey("_standalonePin") == (6u, 0x50u),
             "Pin preferences and its independent global shortcut survive reload");
         using var hotkeys = new HotkeyService();

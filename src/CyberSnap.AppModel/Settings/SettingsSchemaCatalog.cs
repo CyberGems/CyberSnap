@@ -148,6 +148,8 @@ public static class SettingsSchemaCatalog
                     [
                         new SettingDefinition("pin_scale", "Initial image scale", SettingsValueKind.Number, "Large images are fitted to the monitor when opened.", "PinInitialScale"),
                         new SettingDefinition("pin_smooth", "Smooth pinned images", SettingsValueKind.Toggle, "Soften enlarged edges in pinned images.", "PinSmoothImage"),
+                        new SettingDefinition("pin_shadow", "Window shadow", SettingsValueKind.Toggle, "Add a soft shadow around pinned images.", "PinShowShadow"),
+                        new SettingDefinition("pin_border", "Image border", SettingsValueKind.Toggle, "The border still appears when you hover over the image.", "PinShowBorder"),
                         new SettingDefinition("pin_top", "Keep pinned images on top", SettingsValueKind.Toggle, "Keep reference images above other windows.", "PinAlwaysOnTop"),
                         new SettingDefinition("pin_capture", "Include pinned images in captures", SettingsValueKind.Toggle, "When disabled, CyberSnap hides pinned images from new captures.", "PinIncludeInCaptures"),
                     ]),

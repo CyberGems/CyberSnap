@@ -1004,6 +1004,8 @@ public partial class SettingsWindow
             "zoomshowhelpbar"          => ZoomShowHelpBarCheck,
             "pininitialscale"          => PinInitialScaleCombo,
             "pinsmoothimage"           => PinSmoothImageCheck,
+            "pinshowshadow"            => PinShowShadowCheck,
+            "pinshowborder"            => PinShowBorderCheck,
             "pinalwaysontop"           => PinAlwaysOnTopCheck,
             "pinincludeincaptures"      => PinIncludeInCapturesCheck,
             "colordetailcopyformat"     => ColorCopyFormatCombo,
