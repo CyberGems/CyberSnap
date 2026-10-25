@@ -220,7 +220,7 @@ Before compiling each release, CI refreshes the About icons from the official ap
 
 When preparing a release locally, run `pwsh -NoProfile -File scripts/Sync-SuiteIcons.ps1` before building and tagging. Review the changed PNGs and include them in the release preparation commit. Add `-Check` to detect stale copies without changing files. For offline development, `-Source Local` reads the canonical assets in sibling app checkouts (or `-ProjectsRoot <folder>`).
 
-The reusable Windows action at `.github/actions/sync-suite-icons` supports the other suite apps through a repository-relative JSON configuration (`config` input). Its `destinations` list names the icon folders, and `catalogs` lists source files and regular expressions with the app slug in capture group 1. Optional `start` / `end` markers scope a rule to the About list. The shared source registry must cover every matched app. Callers pin the action to a reviewed commit; all images are validated before any destination changes.
+The reusable Windows action at `.github/actions/sync-suite-icons` supports the other suite apps through a repository-relative JSON configuration (`config` input). Its `destinations` list names the icon folders, and `catalogs` lists source files and regular expressions with the app slug in capture group 1. Optional `start` / `end` markers scope a rule to the About list; `exclude` matches entries filtered out by the UI, such as the current app in a shared catalog. The shared source registry must cover every displayed app. Callers pin the action to a reviewed commit; all images are validated before any destination changes.
 
 ---
 

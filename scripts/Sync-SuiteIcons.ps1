@@ -84,6 +84,12 @@ foreach ($rule in $config.catalogs) {
     }
 }
 $catalogSlugs = @($catalogSlugs | Sort-Object -Unique)
+if ($config.PSObject.Properties.Name -contains 'exclude') {
+    foreach ($excluded in $config.exclude) {
+        if ($excluded -notin $catalogSlugs) { throw "Excluded app is not present in the About catalog: $excluded" }
+    }
+    $catalogSlugs = @($catalogSlugs | Where-Object { $_ -notin $config.exclude })
+}
 $registry = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot 'SuiteIconSources.json') -Raw | ConvertFrom-Json)
 if ($catalogSlugs.Count -eq 0 -or $registry.Count -eq 0) { throw 'The About catalog or icon sources are empty.' }
 if (@($registry.slug | Select-Object -Unique).Count -ne $registry.Count) { throw 'Icon sources must not contain duplicate apps.' }

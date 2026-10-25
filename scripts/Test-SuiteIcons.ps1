@@ -132,6 +132,16 @@ try {
     }
     Sync-Fixture -Check
     Assert-True ($true) 'check mode accepts synchronized web catalogs and multiple destinations'
+    $webConfig.exclude = @('cyberfeeds')
+    [System.IO.File]::WriteAllText($fixtureConfig, ($webConfig | ConvertTo-Json -Depth 4))
+    [System.IO.File]::Delete($second)
+    & $sync -Source Local -RepositoryRoot $fixture -ProjectsRoot $temp -ReportPath $report | Out-Null
+    $filteredReport = @(Get-Content $report -Raw | ConvertFrom-Json)
+    Assert-True ($filteredReport.Count -eq 1 -and $filteredReport[0].slug -eq 'cyberclock') 'an explicitly filtered own-app entry is not fetched or added to the About icon cache'
+    $webConfig.exclude = @('cyberunknown')
+    [System.IO.File]::WriteAllText($fixtureConfig, ($webConfig | ConvertTo-Json -Depth 4))
+    Assert-Rejected { Sync-Fixture } 'Excluded app is not present' 'stale exclusions fail rather than silently changing the synchronization scope'
+    $webConfig.Remove('exclude')
     $webConfig.destinations = @('../outside-icons')
     [System.IO.File]::WriteAllText($fixtureConfig, ($webConfig | ConvertTo-Json -Depth 4))
     Assert-Rejected { Sync-Fixture } 'outside the allowed repository' 'configuration cannot write outside the selected repository'
