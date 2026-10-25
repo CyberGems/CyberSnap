@@ -5,6 +5,7 @@
   { "slug": "cybermanager", "repo": "CyberManager", "ref": "main", "path": "src/CyberManager.UI/Assets/CyberManager.png" },
   { "slug": "cybernotes", "repo": "CyberNotes", "ref": "main", "path": "public/icon.png" },
   { "slug": "cyberpaste", "repo": "CyberPaste", "ref": "main", "path": "src-tauri/icons/icon.png" },
+  { "slug": "cybersnap", "repo": "CyberSnap", "ref": "main", "path": "src/CyberSnap/Assets/CyberSnap_square.png" },
   { "slug": "cybertray", "repo": "CyberTray", "ref": "main", "path": "public/icon.png" },
   { "slug": "cyberviewer", "repo": "CyberViewer", "ref": "main", "path": "assets/icon.png" },
   { "slug": "cyberwall", "repo": "CyberWall", "ref": "master", "path": "src/CyberWall.UI/Assets/CyberWall.png" }

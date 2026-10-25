@@ -1,0 +1,21 @@
+name: Synchronize CyberGems About icons
+description: Refresh the configured About icon caches from validated official app assets before a Windows build.
+inputs:
+  config:
+    description: Repository-relative JSON file defining the About catalogs and icon destinations.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Refresh and validate About icons
+      shell: pwsh
+      env:
+        ABOUT_ICONS_CONFIG: ${{ inputs.config }}
+        ABOUT_ICONS_ACTION_PATH: ${{ github.action_path }}
+      run: |
+        $script = Join-Path $env:ABOUT_ICONS_ACTION_PATH '../../../scripts/Sync-SuiteIcons.ps1'
+        & $script -RepositoryRoot $env:GITHUB_WORKSPACE -ConfigPath $env:ABOUT_ICONS_CONFIG -ReportPath "$env:RUNNER_TEMP/about-icons.json"
+        '### About icon sources and SHA256' >> $env:GITHUB_STEP_SUMMARY
+        '```json' >> $env:GITHUB_STEP_SUMMARY
+        Get-Content "$env:RUNNER_TEMP/about-icons.json" >> $env:GITHUB_STEP_SUMMARY
+        '```' >> $env:GITHUB_STEP_SUMMARY

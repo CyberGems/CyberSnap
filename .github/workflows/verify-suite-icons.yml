@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/*SuiteIcon*'
+      - '.github/about-icons.json'
+      - '.github/actions/sync-suite-icons/**'
       - 'src/CyberSnap/Assets/Suite/**'
       - 'src/CyberSnap/UI/SuiteCatalog.cs'
       - '.github/workflows/release.yml'
@@ -12,6 +14,8 @@ on:
   pull_request:
     paths:
       - 'scripts/*SuiteIcon*'
+      - '.github/about-icons.json'
+      - '.github/actions/sync-suite-icons/**'
       - 'src/CyberSnap/Assets/Suite/**'
       - 'src/CyberSnap/UI/SuiteCatalog.cs'
       - '.github/workflows/release.yml'
@@ -38,13 +42,9 @@ jobs:
         run: ./scripts/Test-SuiteIcons.ps1
 
       - name: Refresh official About icons
-        shell: pwsh
-        run: |
-          ./scripts/Sync-SuiteIcons.ps1 -Source GitHub -ReportPath "$env:RUNNER_TEMP/about-icons.json"
-          '### About icon sources and SHA256' >> $env:GITHUB_STEP_SUMMARY
-          '```json' >> $env:GITHUB_STEP_SUMMARY
-          Get-Content "$env:RUNNER_TEMP/about-icons.json" >> $env:GITHUB_STEP_SUMMARY
-          '```' >> $env:GITHUB_STEP_SUMMARY
+        uses: ./.github/actions/sync-suite-icons
+        with:
+          config: .github/about-icons.json
 
       - name: Build with refreshed icons
         run: dotnet build src/CyberSnap/CyberSnap.csproj --configuration Release

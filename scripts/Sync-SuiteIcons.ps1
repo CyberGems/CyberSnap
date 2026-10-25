@@ -5,6 +5,7 @@ param(
     [ValidateSet('GitHub', 'Local')][string]$Source = 'GitHub',
     [string]$RepositoryRoot = (Split-Path $PSScriptRoot -Parent),
     [string]$ProjectsRoot,
+    [string]$ConfigPath = '.github/about-icons.json',
     [switch]$Check,
     [string]$ReportPath
 )
@@ -48,21 +49,47 @@ function Get-IconMetadata([byte[]]$Bytes, [string]$Label) {
 $RepositoryRoot = [System.IO.Path]::GetFullPath($RepositoryRoot)
 if (!$ProjectsRoot) { $ProjectsRoot = Split-Path $RepositoryRoot -Parent }
 $ProjectsRoot = [System.IO.Path]::GetFullPath($ProjectsRoot)
-$catalogPath = Join-Path $RepositoryRoot 'src/CyberSnap/UI/SuiteCatalog.cs'
-$targetDirectory = Join-Path $RepositoryRoot 'src/CyberSnap/Assets/Suite'
-$sources = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot 'SuiteIconSources.json') -Raw | ConvertFrom-Json)
-$catalog = [System.IO.File]::ReadAllText($catalogPath)
-$catalogSlugs = @([regex]::Matches($catalog, 'new\("([a-z0-9-]+)",\s*"Cyber[A-Za-z0-9]+"') |
-    ForEach-Object { $_.Groups[1].Value })
-if ($catalogSlugs.Count -eq 0 -or $sources.Count -eq 0) { throw 'The About catalog or icon sources are empty.' }
-if (@($catalogSlugs | Select-Object -Unique).Count -ne $catalogSlugs.Count -or
-    @($sources.slug | Select-Object -Unique).Count -ne $sources.Count) {
-    throw 'The About catalog and icon sources must not contain duplicate apps.'
+function Resolve-RepositoryPath([string]$RelativePath) {
+    if ([string]::IsNullOrWhiteSpace($RelativePath) -or [System.IO.Path]::IsPathRooted($RelativePath)) {
+        throw "Expected a repository-relative path: $RelativePath"
+    }
+    $fullPath = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot $RelativePath))
+    $rootPrefix = $RepositoryRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    if (!$fullPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+        @($RelativePath -split '[/\\]' | Where-Object { $_ -in @('artifacts', 'AGENTS.md', '.git', '.agents', '.codex') }).Count -gt 0) {
+        throw "Path is outside the allowed repository files: $RelativePath"
+    }
+    return $fullPath
 }
-if (@(Compare-Object ($catalogSlugs | Sort-Object) ($sources.slug | Sort-Object)).Count -ne 0) {
-    throw 'SuiteIconSources.json must contain exactly the apps in SuiteCatalog.cs. Update both when adding an app.'
+
+$config = Get-Content -LiteralPath (Resolve-RepositoryPath $ConfigPath) -Raw | ConvertFrom-Json
+$targetDirectories = @($config.destinations | ForEach-Object { Resolve-RepositoryPath $_ } | Select-Object -Unique)
+if ($targetDirectories.Count -eq 0) { throw 'No About icon destinations are configured.' }
+$catalogSlugs = @()
+foreach ($rule in $config.catalogs) {
+    $catalog = [System.IO.File]::ReadAllText((Resolve-RepositoryPath $rule.path))
+    if ($rule.PSObject.Properties.Name -contains 'start') {
+        $start = $catalog.IndexOf($rule.start, [System.StringComparison]::Ordinal)
+        if ($start -lt 0) { throw "Catalog start marker is missing in $($rule.path)." }
+        $end = $catalog.IndexOf($rule.end, $start + $rule.start.Length, [System.StringComparison]::Ordinal)
+        if ($end -lt 0) { throw "Catalog end marker is missing in $($rule.path)." }
+        $catalog = $catalog.Substring($start, $end - $start)
+    }
+    $matches = [regex]::Matches($catalog, $rule.pattern, [System.Text.RegularExpressions.RegexOptions]::None, [TimeSpan]::FromSeconds(2))
+    if ($matches.Count -eq 0) { throw "No About apps matched the catalog rule in $($rule.path)." }
+    foreach ($match in $matches) {
+        $slug = $match.Groups[1].Value
+        if ($slug -notmatch '^cyber[a-z0-9-]+$') { throw "Invalid About catalog slug in $($rule.path): $slug" }
+        $catalogSlugs += $slug
+    }
 }
-foreach ($entry in $sources) {
+$catalogSlugs = @($catalogSlugs | Sort-Object -Unique)
+$registry = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot 'SuiteIconSources.json') -Raw | ConvertFrom-Json)
+if ($catalogSlugs.Count -eq 0 -or $registry.Count -eq 0) { throw 'The About catalog or icon sources are empty.' }
+if (@($registry.slug | Select-Object -Unique).Count -ne $registry.Count) { throw 'Icon sources must not contain duplicate apps.' }
+$unmapped = @($catalogSlugs | Where-Object { $_ -notin $registry.slug })
+if ($unmapped.Count -gt 0) { throw "Missing canonical icon sources for About apps: $($unmapped -join ', ')." }
+foreach ($entry in $registry) {
     if ($entry.slug -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$' -or
         $entry.repo -notmatch '^Cyber[A-Za-z0-9]+$' -or
         $entry.ref -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
@@ -72,6 +99,7 @@ foreach ($entry in $sources) {
         throw "Invalid About icon source: $($entry.slug)."
     }
 }
+$sources = @($registry | Where-Object { $_.slug -in $catalogSlugs })
 
 # Keep the complete validated batch in memory. No cached icon is touched until
 # every source has downloaded, decoded, and passed the size/coverage checks.
@@ -94,13 +122,17 @@ try {
             catch { throw "Could not download $($entry.slug) from ${url}: $($_.Exception.Message)" }
         }
         $metadata = Get-IconMetadata $bytes $entry.slug
-        $target = Join-Path $targetDirectory "$($entry.slug).png"
-        $unchanged = (Test-Path -LiteralPath $target -PathType Leaf) -and
-            (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -eq $metadata.Sha256
-        $pending += [pscustomobject]@{ Slug = $entry.slug; Bytes = $bytes; Target = $target; Changed = !$unchanged }
+        $iconChanged = $false
+        foreach ($targetDirectory in $targetDirectories) {
+            $target = Join-Path $targetDirectory "$($entry.slug).png"
+            $unchanged = (Test-Path -LiteralPath $target -PathType Leaf) -and
+                (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -eq $metadata.Sha256
+            $pending += [pscustomobject]@{ Slug = $entry.slug; Bytes = $bytes; Target = $target; Changed = !$unchanged }
+            $iconChanged = $iconChanged -or !$unchanged
+        }
         $report += [pscustomobject]@{
             slug = $entry.slug; source = $origin; sha256 = $metadata.Sha256
-            width = $metadata.Width; height = $metadata.Height; changed = !$unchanged
+            width = $metadata.Width; height = $metadata.Height; changed = $iconChanged
         }
         Write-Output "$($entry.slug): validated $($metadata.Width)x$($metadata.Height), SHA256 $($metadata.Sha256), source $origin"
     }
@@ -112,7 +144,7 @@ if ($Check -and $changed.Count -gt 0) {
     throw "Outdated About icons: $($changed.Slug -join ', '). Run scripts/Sync-SuiteIcons.ps1 before building."
 }
 if (!$Check) {
-    [System.IO.Directory]::CreateDirectory($targetDirectory) | Out-Null
+    foreach ($directory in $targetDirectories) { [System.IO.Directory]::CreateDirectory($directory) | Out-Null }
     foreach ($icon in $changed) { [System.IO.File]::WriteAllBytes($icon.Target, $icon.Bytes) }
 }
 if ($ReportPath) {
@@ -121,4 +153,4 @@ if ($ReportPath) {
     [System.IO.File]::WriteAllText($reportFullPath, (ConvertTo-Json -InputObject $report -Depth 3) + "`n",
         [System.Text.UTF8Encoding]::new($false))
 }
-Write-Output "About icons: $($sources.Count) validated, $($changed.Count) updated, $($sources.Count - $changed.Count) unchanged (check=$Check)."
+Write-Output "About icons: $($sources.Count) apps validated, $($changed.Count) files updated, $($pending.Count - $changed.Count) files unchanged (check=$Check)."

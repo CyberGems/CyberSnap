@@ -1,0 +1,6 @@
+{
+  "destinations": ["src/CyberSnap/Assets/Suite"],
+  "catalogs": [
+    { "path": "src/CyberSnap/UI/SuiteCatalog.cs", "pattern": "new\\(\"(cyber[a-z0-9-]+)\",\\s*\"Cyber[A-Za-z0-9]+\"" }
+  ]
+}

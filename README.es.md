@@ -215,6 +215,8 @@ Antes de compilar cada release, CI actualiza los iconos del About desde los repo
 
 Al preparar un release localmente, ejecuta `pwsh -NoProfile -File scripts/Sync-SuiteIcons.ps1` antes de compilar y crear la etiqueta. Revisa los PNG modificados e inclúyelos en el commit de preparación del release. Añade `-Check` para detectar copias desactualizadas sin modificar archivos. Para trabajar sin conexión, `-Source Local` lee los originales de los repositorios vecinos (o de `-ProjectsRoot <carpeta>`).
 
+La acción reutilizable para Windows de `.github/actions/sync-suite-icons` admite las otras apps mediante una configuración JSON relativa a su repositorio (entrada `config`). `destinations` indica las carpetas de iconos y `catalogs` enumera archivos y expresiones regulares cuyo primer grupo captura el identificador de la app. Los marcadores opcionales `start` / `end` limitan la búsqueda a la lista del About. El registro compartido debe cubrir todas las apps encontradas. Cada proyecto fija la acción a un commit revisado; todas las imágenes se validan antes de modificar los destinos.
+
 ---
 
 ## ⌨️ Atajos de teclado

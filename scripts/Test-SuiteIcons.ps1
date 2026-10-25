@@ -41,11 +41,14 @@ function Get-TargetSnapshot {
 try {
     [System.IO.Directory]::CreateDirectory($targets) | Out-Null
     [System.IO.Directory]::CreateDirectory((Split-Path $catalog -Parent)) | Out-Null
+    [System.IO.Directory]::CreateDirectory((Join-Path $fixture '.github')) | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repo '.github/about-icons.json') -Destination (Join-Path $fixture '.github/about-icons.json')
     Copy-Item -LiteralPath (Join-Path $repo 'src/CyberSnap/UI/SuiteCatalog.cs') -Destination $catalog
     foreach ($entry in $sources) {
         $canonical = Join-Path (Join-Path $temp $entry.repo) $entry.path
         [System.IO.Directory]::CreateDirectory((Split-Path $canonical -Parent)) | Out-Null
         $asset = Join-Path $repo "src/CyberSnap/Assets/Suite/$($entry.slug).png"
+        if ($entry.slug -eq 'cybersnap') { $asset = Join-Path $repo 'src/CyberSnap/Assets/CyberSnap_square.png' }
         Copy-Item -LiteralPath $asset -Destination $canonical
         Copy-Item -LiteralPath $asset -Destination (Join-Path $targets "$($entry.slug).png")
     }
@@ -98,7 +101,7 @@ try {
     $firstTarget = Join-Path $targets "$($sources[0].slug).png"
     Assert-True ((Get-FileHash $firstTarget).Hash -eq (Get-FileHash $first).Hash) 'sync copies a changed canonical PNG byte for byte'
     $entries = @(Get-Content $report -Raw | ConvertFrom-Json)
-    Assert-True ($entries.Count -eq $sources.Count -and @($entries | Where-Object changed).Count -eq 1 -and
+    Assert-True ($entries.Count -eq $sources.Count - 1 -and @($entries | Where-Object changed).Count -eq 1 -and
         @($entries | Where-Object { $_.sha256 -notmatch '^[a-f0-9]{64}$' }).Count -eq 0) 'the report covers every app with hashes and the single updated icon'
     $synced = Get-TargetSnapshot
     Sync-Fixture
@@ -107,10 +110,38 @@ try {
 
     [System.IO.File]::WriteAllBytes($first, $firstOriginal)
     [System.IO.File]::WriteAllText($catalog, ([System.IO.File]::ReadAllText($catalog) -replace
-        [regex]::Escape("new(`"$($sources[0].slug)`""), 'new("unmapped-app"'))
+        [regex]::Escape("new(`"$($sources[0].slug)`""), 'new("cyberunmapped"'))
     $beforeMismatch = Get-TargetSnapshot
-    Assert-Rejected { Sync-Fixture } 'exactly the apps' 'catalog/source mismatches stop the sync'
+    Assert-Rejected { Sync-Fixture } 'Missing canonical icon sources' 'catalog/source mismatches stop the sync'
     Assert-True ((Get-TargetSnapshot) -eq $beforeMismatch) 'a missing source mapping cannot partially update assets'
+
+    $fixtureConfig = Join-Path $fixture '.github/about-icons.json'
+    $jsCatalog = Join-Path $fixture 'src/about.js'
+    [System.IO.File]::WriteAllText($jsCatalog, "const other = { slug: 'cyberunknown' }; const suitePool = [{ slug: 'cyberclock' }, { slug: 'cyberfeeds' }];")
+    $webConfig = @{
+        destinations = @('public/suite', 'public/assets/suite')
+        catalogs = @(@{ path = 'src/about.js'; pattern = "slug:\s*['`"](cyber[a-z0-9-]+)['`"]"; start = 'const suitePool = ['; end = '];' })
+    }
+    [System.IO.File]::WriteAllText($fixtureConfig, ($webConfig | ConvertTo-Json -Depth 4))
+    & $sync -Source Local -RepositoryRoot $fixture -ProjectsRoot $temp -ReportPath $report | Out-Null
+    $webReport = @(Get-Content $report -Raw | ConvertFrom-Json)
+    Assert-True ($webReport.Count -eq 2) 'a scoped JavaScript catalog syncs its displayed apps without unrelated slugs'
+    foreach ($destination in $webConfig.destinations) {
+        $webTarget = Join-Path $fixture "$destination/cyberclock.png"
+        Assert-True ((Get-FileHash $webTarget).Hash -eq (Get-FileHash $first).Hash) "the same canonical image is copied to $destination"
+    }
+    Sync-Fixture -Check
+    Assert-True ($true) 'check mode accepts synchronized web catalogs and multiple destinations'
+    $webConfig.destinations = @('../outside-icons')
+    [System.IO.File]::WriteAllText($fixtureConfig, ($webConfig | ConvertTo-Json -Depth 4))
+    Assert-Rejected { Sync-Fixture } 'outside the allowed repository' 'configuration cannot write outside the selected repository'
+    $webConfig.destinations = @('artifacts')
+    [System.IO.File]::WriteAllText($fixtureConfig, ($webConfig | ConvertTo-Json -Depth 4))
+    Assert-Rejected { Sync-Fixture } 'outside the allowed repository' 'configuration cannot overwrite protected local artifacts'
+    $webConfig.destinations = @('public/suite')
+    $webConfig.catalogs[0].start = 'missing marker'
+    [System.IO.File]::WriteAllText($fixtureConfig, ($webConfig | ConvertTo-Json -Depth 4))
+    Assert-Rejected { Sync-Fixture } 'start marker is missing' 'changed About markup fails explicitly rather than silently skipping icons'
     Write-Output "PASS: $checks About icon synchronization checks."
 }
 finally {
