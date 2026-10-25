@@ -173,9 +173,14 @@ public sealed partial class RegionOverlayForm
             Add(InflateIfNeeded(_annotationToolbarHostRect, Helpers.UiChrome.ScaleInt(12)));
         else
             Add(InflateIfNeeded(_toolbarRect, Helpers.UiChrome.ScaleInt(12)));
-        Add(InflateIfNeeded(GetColorPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
-        Add(InflateIfNeeded(GetStrokePickerBounds(), Helpers.UiChrome.ScaleInt(12)));
-        Add(InflateIfNeeded(GetEmojiPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
+        // Closed annotation popups must not move/resize the host on every history frame.
+        // Capture mode keeps its existing reserved popup space.
+        if (!ShowAnnotationChrome || _colorPickerOpen)
+            Add(InflateIfNeeded(GetColorPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
+        if (!ShowAnnotationChrome || _strokePickerOpen)
+            Add(InflateIfNeeded(GetStrokePickerBounds(), Helpers.UiChrome.ScaleInt(12)));
+        if (!ShowAnnotationChrome || _emojiPickerOpen)
+            Add(InflateIfNeeded(GetEmojiPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         // Font picker is painted on ToolbarForm near the text; expand only while open.
         if (_fontPickerOpen)
             Add(InflateIfNeeded(GetFontPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
@@ -1644,11 +1649,8 @@ public sealed partial class RegionOverlayForm
         float target = shouldShow ? 1f : 0f;
         if (Math.Abs(_historyUtilitiesTargetAmt - target) < 0.001f)
         {
-            if (ShowAnnotationChrome && !IsDisposed && !Disposing)
-            {
-                MarkToolbarRenderDirty();
-                RefreshToolbar();
-            }
+            // Undo availability may change without changing the reveal target.
+            if (ShowAnnotationChrome && !IsDisposed && !Disposing) UpdateToolbarSurfaceOnly();
             return;
         }
 
@@ -1656,16 +1658,13 @@ public sealed partial class RegionOverlayForm
         if (!animate || UI.Motion.Disabled)
         {
             _historyUtilitiesAnimTimer?.Stop();
-            _historyUtilitiesRevealAmt = target;
-            if (ShowAnnotationChrome && !IsDisposed && !Disposing)
-            {
-                MarkToolbarRenderDirty();
-                RefreshToolbar();
-            }
+            ApplyHistoryUtilitiesReveal(target);
             return;
         }
 
-        _historyUtilitiesAnimTimer ??= new System.Windows.Forms.Timer { Interval = 16 };
+        _historyUtilitiesAnimFrom = _historyUtilitiesRevealAmt;
+        _historyUtilitiesAnimStartTick = Environment.TickCount64;
+        _historyUtilitiesAnimTimer ??= new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _historyUtilitiesAnimTimer.Tick -= OnHistoryUtilitiesAnimTick;
         _historyUtilitiesAnimTimer.Tick += OnHistoryUtilitiesAnimTick;
         _historyUtilitiesAnimTimer.Start();
@@ -1679,19 +1678,23 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        float diff = _historyUtilitiesTargetAmt - _historyUtilitiesRevealAmt;
-        if (Math.Abs(diff) < 0.02f)
-        {
-            _historyUtilitiesRevealAmt = _historyUtilitiesTargetAmt;
-            _historyUtilitiesAnimTimer?.Stop();
-        }
-        else
-        {
-            _historyUtilitiesRevealAmt += diff * 0.28f;
-        }
+        float progress = Math.Clamp((Environment.TickCount64 - _historyUtilitiesAnimStartTick) / (float)HistoryUtilitiesAnimMs, 0f, 1f);
+        float eased = 1f - MathF.Pow(1f - progress, 3f);
+        ApplyHistoryUtilitiesReveal(_historyUtilitiesAnimFrom + (_historyUtilitiesTargetAmt - _historyUtilitiesAnimFrom) * eased);
+        if (progress >= 1f) _historyUtilitiesAnimTimer?.Stop();
+    }
 
-        MarkToolbarRenderDirty();
-        RefreshToolbar();
+    private void ApplyHistoryUtilitiesReveal(float amount)
+    {
+        _historyUtilitiesRevealAmt = Math.Clamp(amount, 0f, 1f);
+        if (!ShowAnnotationChrome || IsDisposed || Disposing) return;
+
+        // No settings reload, tool-list rebuild, full overlay invalidation or duplicate
+        // layered presents per frame. Only the annotation dock geometry changes.
+        CalcAnnotationOnlyToolbar(_toolbarAnchorArea.IsEmpty ? _virtualBounds : _toolbarAnchorArea,
+            UiChrome.ScaledToolbarInnerPadding, UiChrome.ScaledToolbarButtonSize, UiChrome.ScaledToolbarButtonSpacing);
+        if (_toolbarForm is null || _toolbarForm.IsDisposed || !_toolbarForm.Visible) EnsureToolbarReady();
+        else PositionToolbarForm();
     }
 
     private void ResetAnnotationToolsExpanded(bool collapsed)
@@ -1963,6 +1966,8 @@ public sealed partial class RegionOverlayForm
     {
         bool prevAllowDeactivation = _allowDeactivation;
         _allowDeactivation = true;
+        _overlayConfirmOpen = true;
+        HideToolbarTooltip();
         try
         {
             var anchorClient = _confirmRect.Width > 0 && _confirmRect.Height > 0
@@ -1990,6 +1995,11 @@ public sealed partial class RegionOverlayForm
         finally
         {
             UI.PopupWindowHelper.ClearMonitorHintPoint();
+            _overlayConfirmOpen = false;
+            _hoveredConfirmButton = -1;
+            _hoveredConfirmOptionsPill = false;
+            _hoverButtonStartTime = DateTime.MinValue;
+            HideToolbarTooltip();
             _allowDeactivation = prevAllowDeactivation;
             if (!_allowDeactivation && Visible && !IsDisposed && !Disposing)
             {

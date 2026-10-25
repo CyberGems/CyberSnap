@@ -99,7 +99,7 @@ public sealed partial class RegionOverlayForm : Form
     private DateTime _pressAnimStart;
 
     // Confirm chrome: Cancel / Retry / modes (built in RebuildConfirmChrome).
-    // Overflow / "More options" lives on the top-edge gear pill, not on this dock.
+    // Overflow / "More options" lives on the top-edge options pill, not on this dock.
     private enum ConfirmChromeKind { Cancel, Retry, Done, TogglePreview, ModeImage, ModeOcr, ModeVideo, ModeGif, ModeScroll, ModeQr }
     private ConfirmChromeKind[] _confirmChromeKinds =
     {
@@ -160,8 +160,6 @@ public sealed partial class RegionOverlayForm : Form
     private const int ExpandHoverDelayMs = 220;
     /// <summary>How snug the alt-capture flyout sits to its owning button (scaled px).</summary>
     private const int AltCapturePopupGapPx = 2;
-    /// <summary>Confirm gear (⚙) is hover-priority: open fast on hover; keep it snappy.</summary>
-    private const int ConfirmGearHoverDelayMs = 55;
     /// <summary>Last drawing tool shown in the sticky trigger slot (never select/eraser).</summary>
     private string? _annotationDrawingToolId;
     /// <summary>Growing clip window for retractable tools above the sticky cluster.</summary>
@@ -169,6 +167,9 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Reveal fraction for undo + eraser utilities (0..1). Slides in when annotations exist.</summary>
     private float _historyUtilitiesRevealAmt;
     private float _historyUtilitiesTargetAmt;
+    private float _historyUtilitiesAnimFrom;
+    private long _historyUtilitiesAnimStartTick;
+    private const int HistoryUtilitiesAnimMs = 160;
     private System.Windows.Forms.Timer? _historyUtilitiesAnimTimer;
     /// <summary>Clip window for sliding undo + eraser utilities.</summary>
     private Rectangle _annotationHistoryRevealRect = Rectangle.Empty;
@@ -209,13 +210,10 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Text chip only (excludes grip) — used to paint from cache mid-drag.</summary>
     private Rectangle _confirmSizeReadoutChipRect = Rectangle.Empty;
     private bool _hoveredConfirmSizeReadout;
-    /// <summary>Gear pill (opens the confirm overflow menu) sitting beside the size chip.</summary>
+    /// <summary>More options pill beside the size chip, opened by click.</summary>
     private Rectangle _confirmOptionsPillRect = Rectangle.Empty;
     private bool _hoveredConfirmOptionsPill;
-    /// <summary>Time when the pointer entered the gear pill — drives the hover-deploy delay.</summary>
-    private DateTime _confirmOptionsHoverStartUtc = DateTime.MinValue;
-    /// <summary>True while the overflow menu was opened from the confirm gear (closes on pointer leave).</summary>
-    private bool _confirmOptionsMenuHoverSession;
+    private bool _overlayConfirmOpen;
     private Rectangle _centerMoveGripRect = Rectangle.Empty;
     private bool _hoveredCenterMoveGrip;
     private float _centerMoveGripOpacity = 0f;
@@ -1100,7 +1098,7 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>
     /// Confirm-phase dock: vertical annotation column anchored to the capture frame
     /// (prefer right edge, flip to left when there is no room). No Position/Close/⋯ —
-    /// overflow options live on the top-edge gear pill beside the size readout.
+    /// overflow options live on the top-edge options pill beside the size readout.
     /// Collapsed: grip, logo, active tool (trigger), color, stroke, eraser, select.
     /// Expanded: remaining tools grow upward above the sticky cluster (bottom-flush / escuadra).
     /// </summary>
@@ -1311,15 +1309,17 @@ public sealed partial class RegionOverlayForm : Form
             }
         }
 
-        // Overflow menu moved to the confirm-frame gear pill — keep activator empty here
+        // Overflow menu moved to the confirm-frame options pill — keep activator empty here
         // so capture-phase CalcCaptureOnlyToolbar remains the only place that paints ⋯.
         _menuActivatorRect = Rectangle.Empty;
 
         // Host covers the fully expanded column (bottom-aligned). Form bounds stay put while
         // _toolbarRect / reveal clip animate or snap — avoids layered-window ghosting at 150% DPI.
+        // Reserve history utilities even while hidden so their reveal never resizes the HWND.
+        int fullStickySpan = stickySpan + fullHistoryContent - dynamicHistorySpan;
         int fullToolsSpan = fullRetractContent
-            + ((fullRetractContent > 0 && stickySpan > 0) ? GroupGap : 0)
-            + stickySpan;
+            + ((fullRetractContent > 0 && fullStickySpan > 0) ? GroupGap : 0)
+            + fullStickySpan;
         int fullH = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools
             + fullToolsSpan + pad;
         int hostBottom = frame.Bottom + _toolbarCustomOffset.Y;
@@ -1807,7 +1807,6 @@ public sealed partial class RegionOverlayForm : Form
             _confirmSizeReadoutChipRect = Rectangle.Empty;
             _confirmOptionsPillRect = Rectangle.Empty;
             _hoveredConfirmOptionsPill = false;
-            _confirmOptionsHoverStartUtc = DateTime.MinValue;
             // Erase any glow ghost before clearing the field.
             InvalidateCenterGripArea(_centerMoveGripRect);
             _centerMoveGripRect = Rectangle.Empty;
@@ -2379,6 +2378,7 @@ public sealed partial class RegionOverlayForm : Form
 
     private void HoverHoldTimer_Tick(object? sender, EventArgs e)
     {
+        if (_overlayConfirmOpen) { HideToolbarTooltip(); return; }
         if (HasToolbarKeyboardFocus()) return;
         bool changed = false;
 
@@ -2498,11 +2498,6 @@ public sealed partial class RegionOverlayForm : Form
                 changed = true;
             }
         }
-
-        // 1c. Confirm gear overflow: dismiss when the pointer leaves gear + menu
-        // (polled here too — ToolStripDropDown doesn't raise overlay MouseMove while over the menu).
-        if (_confirmOptionsMenuHoverSession)
-            CloseConfirmOptionsMenuIfPointerLeft();
 
         // 2. Tooltip delay and auto-hide check
         if (_isConfirmingSelection && _hoveredConfirmOptionsPill)

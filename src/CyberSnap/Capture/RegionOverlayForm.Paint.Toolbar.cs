@@ -324,7 +324,7 @@ public sealed partial class RegionOverlayForm
 
         g.Clip = previousClip;
 
-        // Draw menu activator (⋮) — capture bar only. Confirm-phase overflow is the gear pill.
+        // Draw menu activator (⋮) — capture bar only. Confirm-phase overflow is the options pill.
         if (!_menuActivatorRect.IsEmpty)
         {
             // Soft accent pulse while the quick-start guide is open.
@@ -416,6 +416,10 @@ public sealed partial class RegionOverlayForm
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
+        var state = g.Save();
+        // The layered toolbar uses HighQuality (gamma-corrected) blending while the
+        // overlay uses Default. Keep grip tonality identical on both surfaces.
+        g.CompositingQuality = CompositingQuality.AssumeLinear;
         float cx = rect.X + rect.Width / 2f;
         float cy = rect.Y + rect.Height / 2f;
         float stepX = UiChrome.ScaleFloat(4.2f);
@@ -450,6 +454,7 @@ public sealed partial class RegionOverlayForm
                 }
             }
         }
+        g.Restore(state);
     }
 
     /// <summary>Path tracing the docked edge of the bar including its two corner arcs, so the neon

@@ -194,7 +194,6 @@ public sealed partial class RegionOverlayForm
             _lastContextMenuClosedTime = DateTime.UtcNow;
             _lastContextMenuBtnIndex = buttonIndex;
             _toolbarContextMenu = null;
-            _confirmOptionsMenuHoverSession = false;
         };
 
         // Compute hidden tools early — needed for header separators and Restore item below
@@ -389,66 +388,16 @@ public sealed partial class RegionOverlayForm
         menu.Show(screenPoint);
     }
 
-    /// <summary>
-    /// Opens confirmation preferences from the confirm-frame gear pill. Hover-owned: closes when
-    /// the pointer leaves both the gear and the menu.
-    /// </summary>
+    /// <summary>Click toggles confirmation preferences. The native menu owns dismissal.</summary>
     private void OpenConfirmOptionsMenu(Point clickLocation)
     {
         HideToolbarTooltip();
-        // Note: unlike the capture-bar activator, the gear pill intentionally has no
-        // "recently-closed" guard — the click should always (re)open the options menu.
-
-        Point anchor = clickLocation;
-        if (!_confirmOptionsPillRect.IsEmpty)
-            anchor = new Point(_confirmOptionsPillRect.Right, _confirmOptionsPillRect.Top);
-
-        _confirmOptionsMenuHoverSession = true;
-        ShowToolbarContextMenu(-1, anchor);
-    }
-
-    /// <summary>
-    /// Gear overflow is hover-owned (like merged alt pills): dismiss when the pointer is
-    /// neither over the gear nor the open menu, with a short bridge so travel doesn't flicker.
-    /// </summary>
-    private void CloseConfirmOptionsMenuIfPointerLeft()
-    {
-        if (!_confirmOptionsMenuHoverSession)
-            return;
-
-        var menu = _toolbarContextMenu;
-        if (menu is not { Visible: true })
+        if (_toolbarContextMenu is { Visible: true })
         {
-            _confirmOptionsMenuHoverSession = false;
+            _toolbarContextMenu.Close();
             return;
         }
-
-        Point screen;
-        try { screen = System.Windows.Forms.Cursor.Position; }
-        catch { return; }
-
-        bool overMenu = menu.Bounds.Contains(screen);
-        Point client;
-        try { client = PointToClient(screen); }
-        catch { return; }
-
-        bool overGear = !_confirmOptionsPillRect.IsEmpty && _confirmOptionsPillRect.Contains(client);
-        if (overMenu || overGear)
-            return;
-
-        // Grace pads so the short hop from gear → menu doesn't dismiss mid-travel.
-        if (!_confirmOptionsPillRect.IsEmpty)
-        {
-            var gearGrace = RectangleToScreen(_confirmOptionsPillRect);
-            gearGrace.Inflate(UiChrome.ScaleInt(18), UiChrome.ScaleInt(18));
-            var menuGrace = menu.Bounds;
-            menuGrace.Inflate(UiChrome.ScaleInt(10), UiChrome.ScaleInt(10));
-            if (gearGrace.Contains(screen) || menuGrace.Contains(screen))
-                return;
-        }
-
-        menu.Close();
-        _confirmOptionsMenuHoverSession = false;
+        ShowToolbarContextMenu(-1, clickLocation);
     }
 
     private static void AddMenuSeparatorIfNeeded(ContextMenuStrip menu)

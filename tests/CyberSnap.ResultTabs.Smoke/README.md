@@ -19,6 +19,8 @@ This targeted suite covers:
   the capture purpose. Hiding annotations disables drawing and lets the crop move
   from inside, including over existing artwork. Visibility, custom tools, and the
   remembered tool survive a settings reload. Tab/Space, Enter, and Retry remain usable.
+  Grip colors match across drawing surfaces. History animations reserve their native
+  host, reuse the bitmap, and reach their endpoint even after a delayed frame.
 - **Pin imports:** real indexed BMP/GIF, animated GIF, RGB24 BMP, RGB48/RGBA64
   TIFF, and CMYK JPEG/TIFF fixtures. Checks verify colors, alpha, first-frame
   selection, released files, and localized errors for damaged images.
@@ -35,6 +37,7 @@ For broader interactive checks on a Windows desktop:
 
 ```powershell
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-options-only
+dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-chrome-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --hotkeys-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-capture-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-only
@@ -44,6 +47,9 @@ dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --zoom-only
 
 Append a local output directory to `--confirmation-options-only` to save menu renders.
 This desktop check also opens the quick start guide while annotation controls are hidden.
+`--confirmation-chrome-only` focuses on click-owned More menus, annotation popup bounds,
+modal tooltip suppression, grip pixels, and history animation frames. It accepts the same
+optional render directory.
 
 These fixtures use temporary preferences and synthetic windows. The Pin selector
 checks native presentation and capture exclusion across the available monitors,

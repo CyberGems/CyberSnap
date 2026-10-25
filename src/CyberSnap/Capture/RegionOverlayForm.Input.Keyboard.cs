@@ -12,6 +12,17 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     private void HandleEscapeKey()
     {
+        // A clicked options/context menu owns Escape before capture cancellation.
+        if (_toolbarContextMenu is { Visible: true })
+        {
+            _toolbarContextMenu.Close();
+            return;
+        }
+        if (_confirmContextMenu is { Visible: true })
+        {
+            _confirmContextMenu.Close();
+            return;
+        }
         if (_isTyping)
         {
             // Escape always cancels (never auto-commits). Enter / click-outside commit.

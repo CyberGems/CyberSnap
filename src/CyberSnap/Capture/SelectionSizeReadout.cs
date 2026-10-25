@@ -378,7 +378,7 @@ internal static class SelectionSizeReadout
         return GetConfirmOptionsBounds(chipRect, gripRect, font, clientBounds, avoidRects);
     }
 
-    /// <summary>Paints the gear/options pill. No text — just the gear glyph centered.</summary>
+    /// <summary>Paints the options pill with a centered horizontal ellipsis.</summary>
     public static void DrawConfirmOptions(
         Graphics g,
         Rectangle rect,
@@ -410,7 +410,7 @@ internal static class SelectionSizeReadout
             g.DrawPath(border, path);
         }
 
-        // Centered gear glyph.
+        // Centered More glyph, consistent with other options buttons.
         int iconSz = Math.Min(rect.Width, rect.Height) - UiChrome.ScaleInt(6);
         if (iconSz < 10) iconSz = 10;
         var iconRect = new RectangleF(
@@ -419,7 +419,7 @@ internal static class SelectionSizeReadout
             iconSz, iconSz);
         int iconA = enabled ? (hovered || active ? 255 : 220) : 105;
         using var iconColor = new SolidBrush(Color.FromArgb(iconA, UiChrome.SurfaceTextPrimary));
-        FluentIcons.DrawIcon(g, "gear", iconRect, iconColor.Color, iconInset: 0f);
+        FluentIcons.DrawIcon(g, "more", iconRect, iconColor.Color, iconInset: 0f);
     }
 
     private static bool TryLayoutConfirmDragPill(

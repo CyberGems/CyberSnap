@@ -56,6 +56,7 @@ public sealed partial class RegionOverlayForm
 
     private void ShowToolbarTooltip()
     {
+        if (_overlayConfirmOpen) { HideToolbarTooltip(); return; }
         if (_toolbarContextMenu != null && _toolbarContextMenu.Visible)
         {
             HideToolbarTooltip();
@@ -400,7 +401,7 @@ public sealed partial class RegionOverlayForm
 
     private void ShowConfirmTooltip()
     {
-        if (!_isConfirmingSelection || _hoveredConfirmButton < 0
+        if (_overlayConfirmOpen || !_isConfirmingSelection || _hoveredConfirmButton < 0
             || (_confirmContextMenu != null && _confirmContextMenu.Visible)
             || (_toolbarContextMenu != null && _toolbarContextMenu.Visible))
         {
@@ -475,7 +476,7 @@ public sealed partial class RegionOverlayForm
 
     private void ShowConfirmOptionsTooltip()
     {
-        if (!_isConfirmingSelection || !_hoveredConfirmOptionsPill || _confirmOptionsPillRect.IsEmpty
+        if (_overlayConfirmOpen || !_isConfirmingSelection || !_hoveredConfirmOptionsPill || _confirmOptionsPillRect.IsEmpty
             || (_confirmContextMenu != null && _confirmContextMenu.Visible)
             || (_toolbarContextMenu != null && _toolbarContextMenu.Visible))
         {

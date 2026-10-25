@@ -88,7 +88,6 @@ public sealed partial class RegionOverlayForm
             _lastContextMenuClosedTime = DateTime.UtcNow;
             _lastContextMenuBtnIndex = -1;
             if (ReferenceEquals(_toolbarContextMenu, menu)) _toolbarContextMenu = null;
-            _confirmOptionsMenuHoverSession = false;
         };
         var anchor = _confirmOptionsPillRect.IsEmpty ? clickLocation
             : new Point(_confirmOptionsPillRect.Right, _confirmOptionsPillRect.Top);

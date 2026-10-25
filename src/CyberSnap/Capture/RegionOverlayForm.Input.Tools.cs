@@ -302,7 +302,7 @@ public sealed partial class RegionOverlayForm
                 int ch = HitTestConfirmHandle(e.Location);
                 int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
                 bool sizePillHover = ch < 0 && btnHit < 0 && HitTestConfirmSizeReadout(e.Location);
-                // Gear pill: top-edge chrome — lower priority than everything the user is
+                // Options pill: top-edge chrome — lower priority than everything the user is
                 // actively dragging/resizing, but higher priority than the dead zone behind
                 // the size chip. When the pointer is over it we suppress the size-pill hover
                 // so the readout doesn't flicker under the cursor.
@@ -310,41 +310,17 @@ public sealed partial class RegionOverlayForm
                     && !_confirmOptionsPillRect.IsEmpty
                     && _confirmOptionsPillRect.Contains(e.Location);
 
-                // Track hover-enter timestamp for the delayed menu deploy on the gear.
+                // Hover only highlights the options button; opening requires a click.
                 if (gearHover != _hoveredConfirmOptionsPill)
                 {
                     _hoveredConfirmOptionsPill = gearHover;
-                    _confirmOptionsHoverStartUtc = gearHover ? DateTime.UtcNow : DateTime.MinValue;
                     Invalidate(InflateForRepaint(_confirmOptionsPillRect, 6));
-                    if (gearHover)
-                    {
-                        HideToolbarTooltip();
-                        _tooltipDismissed = false;
-                        _hoverButtonStartTime = DateTime.UtcNow;
-                    }
-                }
-                else if (gearHover && _confirmOptionsHoverStartUtc == DateTime.MinValue)
-                {
-                    _confirmOptionsHoverStartUtc = DateTime.UtcNow;
-                }
-
-                // Suspended hover on the gear opens the overflow menu (faster than the
-                // merged-mode delay — this pill is deliberately hover-prioritized).
-                bool recentlyClosedOptions = (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250;
-                if (gearHover
-                    && !recentlyClosedOptions
-                    && _toolbarContextMenu is null
-                    && _confirmContextMenu is null
-                    && _confirmOptionsHoverStartUtc != DateTime.MinValue
-                    && (DateTime.UtcNow - _confirmOptionsHoverStartUtc).TotalMilliseconds >= ConfirmGearHoverDelayMs)
-                {
-                    _confirmOptionsHoverStartUtc = DateTime.MinValue;
-                    OpenConfirmOptionsMenu(e.Location);
+                    HideToolbarTooltip();
+                    _tooltipDismissed = false;
+                    _hoverButtonStartTime = gearHover ? DateTime.UtcNow : DateTime.MinValue;
                 }
 
                 if (gearHover) sizePillHover = false;
-
-                CloseConfirmOptionsMenuIfPointerLeft();
 
                 bool gripHover = ch < 0 && btnHit < 0 && !sizePillHover && !gearHover
                     && ((ShowAnnotationChrome && HitTestAnnotationDockGrip(e.Location))

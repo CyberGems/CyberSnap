@@ -462,8 +462,13 @@ public sealed partial class RegionOverlayForm
 
     internal void UpdateToolbarSurfaceOnly()
     {
-        MarkToolbarRenderDirty();
-        _toolbarForm?.UpdateSurface();
+        // Annotation popups enlarge the stable host only while open.
+        if (ShowAnnotationChrome) PositionToolbarForm();
+        else
+        {
+            MarkToolbarRenderDirty();
+            _toolbarForm?.UpdateSurface();
+        }
     }
 
     private void RefreshOverlayUiChrome()
