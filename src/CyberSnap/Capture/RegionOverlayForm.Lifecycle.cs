@@ -83,7 +83,7 @@ public sealed partial class RegionOverlayForm
 
         try
         {
-            if (HideCaptureToolbar)
+            if (HideToolbarForCurrentStage)
             {
                 HideToolbarImmediately();
                 return;
@@ -444,7 +444,7 @@ public sealed partial class RegionOverlayForm
         // Keep the toolbar visible and rebuild layout for the current phase.
         var oldUiBounds = _lastOverlayUiBounds;
         CalcToolbar();
-        if (HideCaptureToolbar)
+        if (HideToolbarForCurrentStage)
             HideToolbarImmediately();
         else if (_toolbarForm is null || _toolbarForm.IsDisposed || !_toolbarForm.Visible)
             EnsureToolbarReady();

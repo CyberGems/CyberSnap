@@ -15,6 +15,10 @@ This targeted suite covers:
   Confirmation restores annotations, retains its output purpose, rejects alternate
   destinations and shortcuts, and keeps a compact dock.
   Regular captures retain their destination switcher. Both UI languages are checked.
+- **Confirmation options:** English and Spanish menus show only controls relevant to
+  the capture purpose. Hiding annotations disables drawing and lets the crop move
+  from inside, including over existing artwork. Visibility, custom tools, and the
+  remembered tool survive a settings reload. Tab/Space, Enter, and Retry remain usable.
 - **Pin imports:** real indexed BMP/GIF, animated GIF, RGB24 BMP, RGB48/RGBA64
   TIFF, and CMYK JPEG/TIFF fixtures. Checks verify colors, alpha, first-frame
   selection, released files, and localized errors for damaged images.
@@ -30,12 +34,16 @@ release. To save Zoom help renders, append a local output directory to the comma
 For broader interactive checks on a Windows desktop:
 
 ```powershell
+dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-options-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --hotkeys-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-capture-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --zoom-help-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --zoom-only
 ```
+
+Append a local output directory to `--confirmation-options-only` to save menu renders.
+This desktop check also opens the quick start guide while annotation controls are hidden.
 
 These fixtures use temporary preferences and synthetic windows. The Pin selector
 checks native presentation and capture exclusion across the available monitors,

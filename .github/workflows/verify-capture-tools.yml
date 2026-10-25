@@ -7,6 +7,7 @@ on:
       - '.github/workflows/verify-capture-tools.yml'
       - 'src/CyberSnap/UI/ToolListBuilder.cs'
       - 'src/CyberSnap/App/App.Pin.cs'
+      - 'src/CyberSnap/App/App.Capture.cs'
       - 'src/CyberSnap/Capture/PinImageForm.cs'
       - 'src/CyberSnap/Capture/StandaloneZoomForm.cs'
       - 'src/CyberSnap/Capture/ZoomHelpPanel.cs'
@@ -38,5 +39,5 @@ jobs:
         run: ./scripts/Test-Localization.ps1 -Strict
       - name: Build smoke checks
         run: dotnet build tests/CyberSnap.ResultTabs.Smoke --configuration Release
-      - name: Check hotkey scopes, capture destinations, Pin formats and Zoom help
+      - name: Check hotkey scopes, confirmation behavior, Pin formats and Zoom help
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --capture-tool-regressions-only

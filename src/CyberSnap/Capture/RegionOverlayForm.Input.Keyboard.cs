@@ -203,6 +203,13 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        if (SupportsConfirmAnnotations && !_showAnnotationToolbar)
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            return;
+        }
+
         // Undo must work in all states (emoji placing, typing, etc.)
         if (e.KeyCode == Keys.Z && e.Control && _editUndoStack.Count > 0)
         {
@@ -311,6 +318,7 @@ public sealed partial class RegionOverlayForm
 
     private bool TryHandleAnnotationToolHotkey(Keys keyCode)
     {
+        if (!ShowAnnotationChrome) return false;
         var settings = Services.SettingsService.LoadStatic();
         if (settings is null)
             return false;

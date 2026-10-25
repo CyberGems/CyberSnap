@@ -719,6 +719,7 @@ public partial class App
                         _settingsService!.Settings = latest;
                     _settingsService!.Settings.ConfirmPillShowLabels = showLabels;
                     _settingsService.Save();
+                    _settingsService.FlushPendingWrites();
                     try
                     {
                         if (_settingsWindow is { IsVisible: true })
@@ -733,6 +734,15 @@ public partial class App
                         _settingsService!.Settings = latest;
                     _settingsService!.Settings.ConfirmDoneShowLabel = showLabel;
                     _settingsService.Save();
+                    _settingsService.FlushPendingWrites();
+                };
+                overlay.ShowAnnotationToolbarChanged += show =>
+                {
+                    var latest = Services.SettingsService.LoadStatic();
+                    if (latest != null) _settingsService!.Settings = latest;
+                    _settingsService!.Settings.ShowAnnotationToolbar = show;
+                    _settingsService.Save();
+                    _settingsService.FlushPendingWrites();
                 };
                 overlay.RememberAnnotationToolChanged += remember =>
                 {
@@ -741,6 +751,7 @@ public partial class App
                         _settingsService!.Settings = latest;
                     _settingsService!.Settings.RememberAnnotationTool = remember;
                     _settingsService.Save();
+                    _settingsService.FlushPendingWrites();
                 };
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);
                 overlay.SetToolColor(System.Drawing.Color.FromArgb(_settingsService.Settings.ToolColorArgb));

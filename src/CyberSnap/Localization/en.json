@@ -2555,5 +2555,14 @@
   "Confirm full view": "Confirm full view",
   "Copy full view": "Copy full view",
   "Save full view": "Save full view",
-  "Esc / right-click": "Esc / right-click"
+  "Esc / right-click": "Esc / right-click",
+  "Confirmation options": "Confirmation options",
+  "Show primary button text": "Show primary button text",
+  "Show mode names": "Show mode names",
+  "Show annotation toolbar": "Show annotation toolbar",
+  "Remember last annotation tool": "Remember last annotation tool",
+  "Annotations": "Annotations",
+  "Restore hidden tools": "Restore hidden tools",
+  "Hidden annotation tools:": "Hidden annotation tools:",
+  "Capture quick start guide": "Capture quick start guide"
 }

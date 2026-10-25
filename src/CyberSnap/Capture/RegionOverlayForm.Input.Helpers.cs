@@ -158,6 +158,8 @@ public sealed partial class RegionOverlayForm
 
     private void SetMode(CaptureMode m, string? toolId = null, bool showHelpBanner = true)
     {
+        if (SupportsConfirmAnnotations && !_showAnnotationToolbar
+            && ToolDef.IsAnnotationTool(m) && m != CaptureMode.Move) return;
         if (m == CaptureMode.Pin)
         {
             PinImageOnConfirm = true;
@@ -201,7 +203,7 @@ public sealed partial class RegionOverlayForm
         // Remember annotation tools so the next confirm session can restore them.
         // Skip placement tools — restoring Magnifier auto-selected a live ghost that looked
         // like the capture pixel magnifier and left paint trails while hovering.
-        if (ToolDef.IsAnnotationTool(m)
+        if (!_suppressAnnotationToolMemory && ToolDef.IsAnnotationTool(m)
             && !string.IsNullOrEmpty(_activeToolId)
             && m is not CaptureMode.Magnifier and not CaptureMode.Emoji and not CaptureMode.StepNumber)
             LastAnnotationToolChanged?.Invoke(_activeToolId);

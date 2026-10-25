@@ -207,11 +207,14 @@ public sealed class AppSettings
     public bool ConfirmPillShowLabels { get; set; }
 
     /// <summary>
-    /// When true, the confirm-mode Done pill shows its short text label beside the icon.
+    /// When true, the confirm-mode primary action (Done or Pin) shows its short text label beside the icon.
     /// Independent of <see cref="ConfirmPillShowLabels"/>; toggleable from the confirm-frame
     /// gear (options) menu. Defaults to ON so the primary action stays self-describing.
     /// </summary>
     public bool ConfirmDoneShowLabel { get; set; } = true;
+
+    /// <summary>Whether annotation controls are shown. Hiding them enables frame movement without changing enabled tools.</summary>
+    public bool ShowAnnotationToolbar { get; set; } = true;
 
     /// <summary>
     /// When true, show the preview window after capture instead of executing automatic destinations directly.

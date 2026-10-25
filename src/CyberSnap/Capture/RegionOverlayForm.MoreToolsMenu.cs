@@ -19,9 +19,10 @@ public sealed partial class RegionOverlayForm
     private bool _highlightMenuActivatorForGuide;
     private DateTime _menuActivatorPulseStart;
     private System.Windows.Forms.Timer? _menuActivatorPulseTimer;
-    private static List<string>? _rememberedAnnotationTools;
 
-    private void ShowQuickStartGuide()
+    private void ShowQuickStartGuide() => ShowQuickStartGuideAt(GetQuickStartAnchorLocal());
+
+    private void ShowQuickStartGuideAt(Rectangle anchorLocal)
     {
         if (_quickStartGuide != null && _quickStartGuide.Visible)
         {
@@ -29,7 +30,6 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        var anchorLocal = GetQuickStartAnchorLocal();
         if (anchorLocal.Width <= 0 || anchorLocal.Height <= 0)
             return;
 
@@ -156,6 +156,11 @@ public sealed partial class RegionOverlayForm
     private void ShowToolbarContextMenu(int buttonIndex, Point clickLocation)
     {
         HideToolbarTooltip();
+        if (_isConfirmingSelection && buttonIndex < 0)
+        {
+            ShowConfirmationOptionsMenu(clickLocation);
+            return;
+        }
         ToolDef? tool = null;
         bool isHideable = buttonIndex >= 0 &&
                           buttonIndex != ColorButtonIndex &&
@@ -194,7 +199,8 @@ public sealed partial class RegionOverlayForm
 
         // Compute hidden tools early — needed for header separators and Restore item below
         var allTools = ToolDef.AllTools;
-        var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
+        var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)
+            && (!_isConfirmingSelection || t.Group == 1)).ToList();
         bool isClickOnConfirmDock = _isConfirmingSelection && !_confirmChromeWrapperRect.IsEmpty && _confirmChromeWrapperRect.Contains(clickLocation);
         bool isClickOnCaptureDock = !_isConfirmingSelection;
         if (isClickOnConfirmDock || isClickOnCaptureDock)
@@ -276,55 +282,6 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Bulk show/hide annotation tools — confirm-frame gear only (the annotation dock);
-        // the capture bar has no annotation tools to bulk-toggle at this stage of the flow.
-        if (_isConfirmingSelection)
-        {
-            if (ShowAnnotationChrome)
-            {
-                var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
-                bool toolsVisible = annotationToolsCount > 0;
-                var showAnnotItem = WindowsMenuRenderer.Item(
-                    LocalizationService.Translate("Show annotation tools"),
-                    iconId: toolsVisible ? "check" : null,
-                    iconSize: 24);
-                showAnnotItem.Click += (s, e) => {
-                    if (toolsVisible)
-                        HideAllAnnotationTools();
-                    else
-                        ShowAllAnnotationTools();
-                    _toolbarContextMenu?.Close();
-                };
-                menu.Items.Add(showAnnotItem);
-            }
-        }
-
-        // Confirm-mode label toggles live here (the confirm-frame gear), keeping the
-        // confirm context menu (and annotation context menus) free of chrome options.
-        if (ShowAnnotationChrome)
-        {
-            var rememberAnnotItem = WindowsMenuRenderer.Item(
-                LocalizationService.Translate("Remember annotation tool"),
-                iconId: _rememberAnnotationTool ? "check" : null,
-                iconSize: 24);
-            rememberAnnotItem.Click += (_, _) => ToggleRememberAnnotationTool();
-            menu.Items.Add(rememberAnnotItem);
-
-            var modeLabelsItem = WindowsMenuRenderer.Item(
-                LocalizationService.Translate("Show mode labels"),
-                iconId: _confirmPillShowLabels ? "check" : null,
-                iconSize: 24);
-            modeLabelsItem.Click += (_, _) => ToggleConfirmPillShowLabels();
-            menu.Items.Add(modeLabelsItem);
-
-            var doneLabelItem = WindowsMenuRenderer.Item(
-                LocalizationService.Translate("Show Done button label"),
-                iconId: _confirmDoneShowLabel ? "check" : null,
-                iconSize: 24);
-            doneLabelItem.Click += (_, _) => ToggleConfirmDoneLabel();
-            menu.Items.Add(doneLabelItem);
-        }
-
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu.
         // single window that spans every monitor, so on a multi-monitor setup with mixed DPI the
         // WinForms ToolStripDropDown places a second-level submenu on the wrong monitor and swallows
@@ -332,7 +289,7 @@ public sealed partial class RegionOverlayForm
         // the hidden tools inline sidesteps that entire class of bug.
 
         // When annotation tools are bulk-hidden, don't flood the menu with every
-        // individual annotation tool — the "Show annotation tools" toggle restores them.
+        // individual annotation tool. Confirmation preferences manage toolbar visibility separately.
         // Capture tools hidden one-by-one still appear here.
         var annotationToolsEnabled = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
         if (annotationToolsEnabled == 0)
@@ -370,27 +327,30 @@ public sealed partial class RegionOverlayForm
         if (!ShowAnnotationChrome && buttonIndex < 0)
             AddToolbarDockMenuSection(menu);
 
-        // Help banners toggle
-        AddMenuSeparatorIfNeeded(menu);
-        var bannersEnabled = settings.ShowToolBanners;
-        var bannersText = isSpanish ? "Mostrar banners de ayuda" : "Show help banners";
-        var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null, iconSize: 24);
-        bannersItem.Click += (s, e) =>
+        if (!_isConfirmingSelection)
         {
-            // Toggle the shared app settings instance (a throwaway svc re-loads from disk on
-            // dispose and can overwrite the very value we just wrote, so the toggle "sticks" but
-            // banners never come back). Keep the live master flag in sync.
-            var app = (App)Application.Current;
-            app.SettingsService.Load();
-            var newValue = !app.SettingsService.Settings.ShowToolBanners;
-            app.SettingsService.Settings.ShowToolBanners = newValue;
-            StandaloneToolBanner.Enabled = newValue;
-            app.SettingsService.Save();
-            app.SettingsService.FlushPendingWrites();
+            // Help banners toggle
+            AddMenuSeparatorIfNeeded(menu);
+            var bannersEnabled = settings.ShowToolBanners;
+            var bannersText = isSpanish ? "Mostrar banners de ayuda" : "Show help banners";
+            var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null, iconSize: 24);
+            bannersItem.Click += (s, e) =>
+            {
+                // Toggle the shared app settings instance (a throwaway svc re-loads from disk on
+                // dispose and can overwrite the very value we just wrote, so the toggle "sticks" but
+                // banners never come back). Keep the live master flag in sync.
+                var app = (App)Application.Current;
+                app.SettingsService.Load();
+                var newValue = !app.SettingsService.Settings.ShowToolBanners;
+                app.SettingsService.Settings.ShowToolBanners = newValue;
+                StandaloneToolBanner.Enabled = newValue;
+                app.SettingsService.Save();
+                app.SettingsService.FlushPendingWrites();
 
-            _toolbarContextMenu?.Close();
-        };
-        menu.Items.Add(bannersItem);
+                _toolbarContextMenu?.Close();
+            };
+            menu.Items.Add(bannersItem);
+        }
 
         // Quick-start guide (always available after first run; re-opens the talk bubble)
         var guideText = LocalizationService.Translate("Show quick start guide");
@@ -430,8 +390,7 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Opens the shared overflow menu from the confirm-frame gear pill (same content as the
-    /// capture-bar ⋯ activator / former confirm-dock More button). Hover-owned: closes when
+    /// Opens confirmation preferences from the confirm-frame gear pill. Hover-owned: closes when
     /// the pointer leaves both the gear and the menu.
     /// </summary>
     private void OpenConfirmOptionsMenu(Point clickLocation)
@@ -516,63 +475,11 @@ public sealed partial class RegionOverlayForm
         var restoreItem = WindowsMenuRenderer.Item(restoreText, iconId: "add", iconSize: 24);
         restoreItem.Enabled = hiddenCount > 0;
         restoreItem.Click += (s, e) => {
-            ShowAllTools();
+            if (_isConfirmingSelection) RestoreHiddenAnnotationTools();
+            else ShowAllTools();
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(restoreItem);
-    }
-
-    private void HideAllAnnotationTools()
-    {
-        var settings = Services.SettingsService.LoadStatic();
-        if (settings == null) return;
-        var enabled = (settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
-        var annotationIds = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id).ToList();
-
-        // Remember which annotation tools were actually enabled before hiding
-        var currentlyEnabledAnnotations = enabled.Where(id => annotationIds.Contains(id)).ToList();
-        if (currentlyEnabledAnnotations.Count > 0)
-        {
-            _rememberedAnnotationTools = currentlyEnabledAnnotations;
-        }
-
-        foreach (var id in annotationIds)
-        {
-            enabled.Remove(id);
-        }
-        EnabledToolsChanged?.Invoke(enabled);
-        SetEnabledTools(enabled);
-        if (_isConfirmingSelection)
-            EnsureDefaultAnnotationTool();
-        RefreshToolbar();
-    }
-
-    private void ShowAllAnnotationTools()
-    {
-        var settings = Services.SettingsService.LoadStatic();
-        if (settings == null) return;
-        var enabled = (settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
-
-        List<string> toolsToEnable;
-        if (_rememberedAnnotationTools != null && _rememberedAnnotationTools.Count > 0)
-        {
-            toolsToEnable = _rememberedAnnotationTools;
-        }
-        else
-        {
-            toolsToEnable = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id).ToList();
-        }
-
-        foreach (var id in toolsToEnable)
-        {
-            if (!enabled.Contains(id))
-            {
-                enabled.Add(id);
-            }
-        }
-        EnabledToolsChanged?.Invoke(enabled);
-        SetEnabledTools(enabled);
-        RefreshToolbar();
     }
 
     private void HideTool(string toolId)
@@ -586,7 +493,15 @@ public sealed partial class RegionOverlayForm
             EnabledToolsChanged?.Invoke(enabled);
             SetEnabledTools(enabled);
             if (_isConfirmingSelection)
+            {
+                if (!_visibleTools.Any(t => t.Group == 1))
+                {
+                    _showAnnotationToolbar = false;
+                    ActivateConfirmFrameMove();
+                    ShowAnnotationToolbarChanged?.Invoke(false);
+                }
                 EnsureDefaultAnnotationTool();
+            }
             RefreshToolbar();
 
             var tool = ToolDef.AllTools.FirstOrDefault(t => t.Id == toolId);

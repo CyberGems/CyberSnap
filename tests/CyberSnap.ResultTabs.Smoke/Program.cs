@@ -60,9 +60,16 @@ internal static partial class Program
             {
                 CheckStageHotkeyConflicts();
                 CheckCaptureDestinationPolicy();
+                CheckConfirmationOptions(settings);
                 CheckPinImageFormats(temp);
                 CheckZoomHelpBar(args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} capture tool regression checks.");
+                return 0;
+            }
+            if (args.Contains("--confirmation-options-only"))
+            {
+                CheckConfirmationOptions(settings, args.FirstOrDefault(a => !a.StartsWith("--")), show: true);
+                Console.WriteLine($"PASS: {_checks} confirmation options checks.");
                 return 0;
             }
             if (args.Contains("--zoom-help-only"))

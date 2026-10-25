@@ -56,8 +56,10 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Raised when the user toggles icon+label mode on the confirm bar.</summary>
     public event Action<bool>? ConfirmPillShowLabelsChanged;
 
-    /// <summary>Raised when the user toggles the Done pill's text label on the confirm bar.</summary>
+    /// <summary>Raised when the user toggles the primary action's text label on the confirm bar.</summary>
     public event Action<bool>? ConfirmDoneShowLabelChanged;
+    /// <summary>Raised when annotation controls are shown or hidden without changing enabled tools.</summary>
+    public event Action<bool>? ShowAnnotationToolbarChanged;
 
     /// <summary>Raised when the user toggles remembering the last used annotation tool.</summary>
     public event Action<bool>? RememberAnnotationToolChanged;
@@ -73,7 +75,13 @@ public sealed partial class RegionOverlayForm : Form
     /// Pre-selection dock stays capture-only (no annotation bar, no color/width).
     /// Text-extraction confirm (OCR) has no use for drawing tools, so it skips them too.
     /// </summary>
-    private bool ShowAnnotationChrome => _isConfirmingSelection && _modeBeforeConfirm != CaptureMode.Ocr;
+    private bool SupportsConfirmAnnotations => _isConfirmingSelection && _modeBeforeConfirm != CaptureMode.Ocr;
+    private bool ShowAnnotationChrome => SupportsConfirmAnnotations && _showAnnotationToolbar;
+    private bool _showAnnotationToolbar = true;
+    private bool _suppressAnnotationToolMemory;
+    private bool HideToolbarForCurrentStage => HideCaptureToolbar || (_isConfirmingSelection && !ShowAnnotationChrome);
+    private bool CanDragConfirmInterior => (SupportsConfirmAnnotations && !_showAnnotationToolbar)
+        || (!HasConfirmAnnotations() && (_mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode)));
     private bool HideCaptureToolbar => IsConfirmDestinationLocked && !_isConfirmingSelection;
 
     private bool _isConfirmingSelection;
@@ -934,10 +942,11 @@ public sealed partial class RegionOverlayForm : Form
         BuildToolbarToolSplit(screenBounds, buttonSize, buttonSpacing, pad);
         _sepAfter = Array.Empty<int>(); // dividers drawn manually inside PaintToolbar
 
-        if (HideCaptureToolbar)
+        if (HideToolbarForCurrentStage)
         {
             _toolbarRect = Rectangle.Empty;
-            _logoRect = _brandRect = _captureGripRect = Rectangle.Empty;
+            _logoRect = _brandRect = _captureGripRect = _annotationGripRect = Rectangle.Empty;
+            _annotationToolbarHostRect = Rectangle.Empty;
             _toolbarButtons = Array.Empty<Rectangle>();
             _menuActivatorRect = Rectangle.Empty;
             return;

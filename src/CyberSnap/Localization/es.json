@@ -2815,5 +2815,14 @@
   "Confirm full view": "Confirmar vista completa",
   "Copy full view": "Copiar vista completa",
   "Save full view": "Guardar vista completa",
-  "Esc / right-click": "Esc / clic derecho"
+  "Esc / right-click": "Esc / clic derecho",
+  "Confirmation options": "Opciones de confirmación",
+  "Show primary button text": "Mostrar texto del botón principal",
+  "Show mode names": "Mostrar nombres de los modos",
+  "Show annotation toolbar": "Mostrar barra de anotaciones",
+  "Remember last annotation tool": "Recordar última herramienta de anotación",
+  "Annotations": "Anotaciones",
+  "Restore hidden tools": "Restaurar herramientas ocultas",
+  "Hidden annotation tools:": "Herramientas de anotación ocultas:",
+  "Capture quick start guide": "Guía rápida de captura"
 }

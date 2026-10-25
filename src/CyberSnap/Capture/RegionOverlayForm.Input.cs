@@ -50,7 +50,7 @@ public sealed partial class RegionOverlayForm
             {
                 // Prefer an annotation under the cursor: RMB on a shape must offer the
                 // shape menu (duplicate / delete), not the confirm chrome one.
-                int annHit = HitTestAnnotation(e.Location);
+                int annHit = ShowAnnotationChrome ? HitTestAnnotation(e.Location) : -1;
                 if (annHit >= 0)
                 {
                     if (!_multiSelectedIndices.Contains(annHit))
@@ -170,8 +170,8 @@ public sealed partial class RegionOverlayForm
                     CancelConfirmModesCollapse();
                     return;
                 }
-                // Options gear pill (top edge, next to size readout): opens the same
-                // overflow menu as the capture-bar ⋯ activator. Handled BEFORE the drag
+                // Options gear pill (top edge, next to size readout): opens confirmation
+                // preferences. Handled BEFORE the drag
                 // branch so clicking it never starts a frame drag.
                 if (!_confirmOptionsPillRect.IsEmpty && _confirmOptionsPillRect.Contains(e.Location))
                 {
@@ -186,12 +186,9 @@ public sealed partial class RegionOverlayForm
                 }
                 if (_confirmRect.Contains(e.Location))
                 {
-                    // Entire frame interior is a drag target when the canvas is clean AND
-                    // the active tool is Pick/Move or a non-annotation capture tool.
-                    // Matches the same condition that shows the center badge.
-                    bool cleanCanvas = !HasConfirmAnnotations();
-                    bool isPickOrNonAnnot = _mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode);
-                    if (cleanCanvas && isPickOrNonAnnot)
+                    // Hiding annotations makes the entire interior a frame drag target,
+                    // including existing artwork. Visible tools retain their editing behavior.
+                    if (CanDragConfirmInterior)
                     {
                         if (e.Clicks >= 2)
                         {

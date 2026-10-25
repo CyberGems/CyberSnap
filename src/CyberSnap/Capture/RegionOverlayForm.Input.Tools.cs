@@ -12,6 +12,7 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseDoubleClick(MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left) return;
+        if (_isConfirmingSelection && !_showAnnotationToolbar) return;
 
         // Text under the cursor always wins — including Move/Pick (select-all).
         // Note: often this path never runs after Move starts a drag on the first click;
@@ -288,8 +289,7 @@ public sealed partial class RegionOverlayForm
                 bool insideFrame = _confirmRect.Contains(e.Location);
                 bool shouldShow = insideFrame
                     && _isConfirmingSelection
-                    && !HasConfirmAnnotations()
-                    && (_mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode));
+                    && CanDragConfirmInterior;
 
                 float targetOpacity = shouldShow ? 1f : 0f;
                 if (_centerMoveGripTargetOpacity != targetOpacity)
@@ -452,10 +452,9 @@ public sealed partial class RegionOverlayForm
                     ClearCursorToolChip();
                     return;
                 }
-                else if (!HasConfirmAnnotations() && insideFrame
-                    && (_mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode)))
+                else if (insideFrame && CanDragConfirmInterior)
                 {
-                    // Clean canvas + Pick/non-annotation tool: whole interior is a drag target.
+                    // Hidden annotations or a clean Move canvas: the whole interior moves the crop.
                     confirmTarget = CursorFactory.GrabCursor;
                     if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
                     ClearCursorToolChip();

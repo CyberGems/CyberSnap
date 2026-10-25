@@ -1492,6 +1492,8 @@ public sealed partial class RegionOverlayForm
         _confirmPillShowLabels = settings?.ConfirmPillShowLabels ?? false;
         _confirmDoneShowLabel = settings?.ConfirmDoneShowLabel ?? true;
         _rememberAnnotationTool = settings?.RememberAnnotationTool ?? true;
+        _showAnnotationToolbar = (settings?.ShowAnnotationToolbar ?? true)
+            && _visibleTools.Any(t => t.Group == 1);
         RebuildConfirmChromeKinds();
         RecomputeConfirmButtonWidth();
         _hasSelection = false;
@@ -1503,7 +1505,8 @@ public sealed partial class RegionOverlayForm
         try { CloseCaptureMagnifier(); } catch { }
         // Restore the last annotation tool on the bar, but never flash its help banner here —
         // the user just finished selecting a region and should only see Confirm/Retry chrome.
-        TryRestoreLastAnnotationTool();
+        if (ShowAnnotationChrome) TryRestoreLastAnnotationTool();
+        else if (SupportsConfirmAnnotations) ActivateConfirmFrameMove();
         HideToolBannerImmediate();
         _dockShinePhase = 0f;
         _hoveredConfirmSizeReadout = false;
@@ -1564,7 +1567,7 @@ public sealed partial class RegionOverlayForm
         }
     }
 
-    /// <summary>Applies Settings → Done pill label without re-entering confirm mode.</summary>
+    /// <summary>Applies the primary action label preference without re-entering confirm mode.</summary>
     public void SetConfirmDoneShowLabel(bool show)
     {
         if (_confirmDoneShowLabel == show) return;
@@ -1916,7 +1919,7 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     private void TryRestoreLastAnnotationTool()
     {
-        if (!_rememberAnnotationTool)
+        if (!_rememberAnnotationTool || !ShowAnnotationChrome)
             return;
 
         var settings = Services.SettingsService.LoadStatic();
@@ -2938,13 +2941,6 @@ public sealed partial class RegionOverlayForm
     {
         _rememberAnnotationTool = !_rememberAnnotationTool;
         RememberAnnotationToolChanged?.Invoke(_rememberAnnotationTool);
-        var app = (App)System.Windows.Application.Current;
-        if (app?.SettingsService != null)
-        {
-            app.SettingsService.Settings.RememberAnnotationTool = _rememberAnnotationTool;
-            app.SettingsService.Save();
-            app.SettingsService.FlushPendingWrites();
-        }
         _toolbarContextMenu?.Close();
     }
 

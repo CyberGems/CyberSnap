@@ -16,24 +16,26 @@ public sealed partial class RegionOverlayForm
     private List<ToolbarKeyTarget> GetToolbarKeyboardTargets()
     {
         var targets = new List<ToolbarKeyTarget>();
-        if (!IsToolbarInteractive()) return targets;
-        for (int i = 0; i < _toolbarButtons.Length; i++)
+        if (IsToolbarInteractive())
         {
-            var bounds = _toolbarButtons[i];
-            var center = KeyboardTargetCenter(bounds);
-            if (bounds.Width <= 0 || bounds.Height <= 0 || GetToolbarButtonAt(center) != i) continue;
-            if (IsRetractableAnnotationToolbarButton(i) && !_annotationRetractRevealRect.Contains(center)) continue;
-            if (ShowAnnotationChrome && _toolbarToolIds[i] is "undo" or "eraser"
-                && (_historyUtilitiesRevealAmt < .999f || !_annotationHistoryRevealRect.Contains(center))) continue;
-            if (_toolbarToolIds[i] == "undo" && _editUndoStack.Count == 0) continue;
-            targets.Add(new("bar:" + _toolbarToolIds[i], bounds));
-        }
-        if (!_menuActivatorRect.IsEmpty) targets.Add(new("menu", _menuActivatorRect));
-        if (_altCapturePopupOpen)
-        {
-            EnsureAltPopupSlotsLaidOut();
-            foreach (var slot in _altPopupSlots)
-                if (!slot.Container.IsEmpty) targets.Add(new("alt:" + slot.ToolId, slot.Container));
+            for (int i = 0; i < _toolbarButtons.Length; i++)
+            {
+                var bounds = _toolbarButtons[i];
+                var center = KeyboardTargetCenter(bounds);
+                if (bounds.Width <= 0 || bounds.Height <= 0 || GetToolbarButtonAt(center) != i) continue;
+                if (IsRetractableAnnotationToolbarButton(i) && !_annotationRetractRevealRect.Contains(center)) continue;
+                if (ShowAnnotationChrome && _toolbarToolIds[i] is "undo" or "eraser"
+                    && (_historyUtilitiesRevealAmt < .999f || !_annotationHistoryRevealRect.Contains(center))) continue;
+                if (_toolbarToolIds[i] == "undo" && _editUndoStack.Count == 0) continue;
+                targets.Add(new("bar:" + _toolbarToolIds[i], bounds));
+            }
+            if (!_menuActivatorRect.IsEmpty) targets.Add(new("menu", _menuActivatorRect));
+            if (_altCapturePopupOpen)
+            {
+                EnsureAltPopupSlotsLaidOut();
+                foreach (var slot in _altPopupSlots)
+                    if (!slot.Container.IsEmpty) targets.Add(new("alt:" + slot.ToolId, slot.Container));
+            }
         }
         if (_isConfirmingSelection && !_confirmDocksHiddenForFrameManip)
         {
