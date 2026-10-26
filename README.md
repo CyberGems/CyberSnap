@@ -54,6 +54,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Screen Recording**: Record to MP4 or GIF with a tabbed trimmer: independent trim/playback state, filmstrip, waveform, and precise cut
 - **Precision Tools**: Crosshair guides, capture magnifier, and smart window detection
 - **Scroll Capture**: Automatically stitches long scrollable pages into a single image
+- **Preview Background**: Toggle the checkerboard next to the preview zoom controls or use a solid background that follows the theme. The choice is remembered across tabs and sessions, while image transparency is preserved when saving or copying.
 
 ### ✏️ Annotation Editor
 - **Rich Canvas**: Shapes, text, image paste, rulers, custom colors, and frames

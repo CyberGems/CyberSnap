@@ -56,8 +56,15 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--preview-background-only"))
+            {
+                CheckPreviewBackground(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} preview background checks.");
+                return 0;
+            }
             if (args.Contains("--capture-tool-regressions-only"))
             {
+                CheckPreviewBackground(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
                 CheckStageHotkeyConflicts();
                 CheckCaptureDestinationPolicy();
                 CheckConfirmationOptions(settings);
@@ -241,6 +248,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckPreviewBackground(temp, args.FirstOrDefault());
             CheckZoom(temp, args.FirstOrDefault());
             CheckToolsSettings(temp, args.FirstOrDefault());
             CheckAutomaticBackups(temp, args.FirstOrDefault());

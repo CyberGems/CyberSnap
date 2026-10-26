@@ -68,6 +68,43 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="PreviewBackgroundToggle" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd" CornerRadius="6"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="PreviewZoomPercentButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -264,6 +301,7 @@
 
                 <!-- Image preview -->
                 <Border x:Name="PreviewFrame" Grid.Row="0" Grid.Column="0"
+                        SizeChanged="PreviewControls_SizeChanged"
                         Margin="0,0,12,0" CornerRadius="10" Padding="0"
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
                         ClipToBounds="True"
@@ -290,6 +328,8 @@
 
                         <!-- Zoom controls overlay -->
                         <Border x:Name="ZoomControlsOverlay"
+                                SizeChanged="PreviewControls_SizeChanged"
+                                IsKeyboardFocusWithinChanged="ZoomControlsOverlay_IsKeyboardFocusWithinChanged"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Bottom"
                                 Margin="0,0,10,10"
@@ -346,11 +386,25 @@
                                     <Image x:Name="ZoomFitIcon" Width="12" Height="12"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
+                                <ToggleButton x:Name="PreviewBackgroundBtn"
+                                              Style="{StaticResource PreviewBackgroundToggle}"
+                                              Margin="8,0,0,0"
+                                              Checked="PreviewBackgroundBtn_Changed"
+                                              Unchecked="PreviewBackgroundBtn_Changed"
+                                              AutomationProperties.Name="Checkerboard background">
+                                    <Grid Width="12" Height="12" IsHitTestVisible="False">
+                                        <Rectangle Fill="{Binding Foreground, ElementName=PreviewBackgroundBtn}" Opacity="0.18"/>
+                                        <Path Data="M0,0 H6 V6 H0 Z M6,6 H12 V12 H6 Z"
+                                              Fill="{Binding Foreground, ElementName=PreviewBackgroundBtn}"/>
+                                        <Rectangle Stroke="{Binding Foreground, ElementName=PreviewBackgroundBtn}" StrokeThickness="1"/>
+                                    </Grid>
+                                </ToggleButton>
                             </StackPanel>
                         </Border>
 
-                        <!-- Scale controls overlay — bottom-left, same level as zoom -->
+                        <!-- Scale controls move above zoom when the preview is narrow. -->
                         <Border x:Name="ScaleControlsOverlay"
+                                SizeChanged="PreviewControls_SizeChanged"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Bottom"
                                 Margin="10,0,0,10"

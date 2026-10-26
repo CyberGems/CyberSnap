@@ -224,6 +224,9 @@ public sealed class AppSettings
     /// <summary>Show the preview after a scrolling capture, independently of ordinary images.</summary>
     public bool ShowScrollCapturePreview { get; set; } = true;
 
+    /// <summary>Show a checkerboard behind preview images instead of the theme's solid preview background.</summary>
+    public bool PreviewShowCheckerboard { get; set; } = true;
+
     /// <summary>
     /// When true, the Print Screen advisory banner in Settings → Hotkeys stays hidden
     /// (reopen it anytime with the ? button next to it).

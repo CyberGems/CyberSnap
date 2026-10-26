@@ -380,12 +380,14 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(ZoomInBtn);
             ApplyTooltipPlacement(ZoomFitBtn);
             ApplyTooltipPlacement(ZoomLevelBtn);
+            ApplyTooltipPlacement(PreviewBackgroundBtn);
             ApplyTooltipPlacement(Scale1xBtn);
             ApplyTooltipPlacement(Scale2xBtn);
             ApplyTooltipPlacement(Scale4xBtn);
 
             UpdateContinueOrExitButton();
             UpdateScaleControls();
+            UpdatePreviewBackground();
         }
 
         private void CapturePreviewDialog_ContentRendered(object? sender, EventArgs e)
@@ -602,6 +604,8 @@ namespace CyberSnap.UI
             if (!IsLoaded) return;
 
             _settingsService.RefreshResultDeliveryPreferences();
+            _settingsService.RefreshPreviewPreferences();
+            UpdatePreviewBackground();
             var state = CurrentOutcome;
             int timeoutSeconds = _settingsService.Settings.CapturePreviewTimeoutSeconds;
             if (state == _lastOutcomeState && timeoutSeconds == _lastTimeoutSeconds) return;
@@ -1208,7 +1212,7 @@ namespace CyberSnap.UI
             CancelBtn.BorderBrush = _ctaBorderBrush;
             StartCtaBorderPulse();
 
-            CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
+            UpdatePreviewBackground();
             PreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
             // Countdown ring brushes bind to DynamicResource theme brushes set above.
 
@@ -2047,10 +2051,53 @@ namespace CyberSnap.UI
                 ZoomViewport.Cursor = canPan ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Arrow;
         }
 
+        private void PreviewControls_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (PreviewFrame is null || ZoomControlsOverlay is null || ScaleControlsOverlay is null)
+                return;
+            bool stack = PreviewFrame.ActualWidth
+                < ScaleControlsOverlay.ActualWidth + ZoomControlsOverlay.ActualWidth + 30;
+            ScaleControlsOverlay.Margin = new Thickness(10, 0, 0,
+                stack ? ZoomControlsOverlay.ActualHeight + 18 : 10);
+        }
+
         private void UpdateZoomControlsVisibility()
         {
-            bool shouldShow = _zoomPointerInside && PreviewImage.Source is BitmapSource;
+            bool shouldShow = (_zoomPointerInside || ZoomControlsOverlay.IsKeyboardFocusWithin)
+                && PreviewImage.Source is BitmapSource;
             SetZoomOverlayVisibility(shouldShow);
+        }
+
+        private void ZoomControlsOverlay_IsKeyboardFocusWithinChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            UpdateZoomControlsVisibility();
+        }
+
+        private void PreviewBackgroundBtn_Changed(object sender, RoutedEventArgs e)
+        {
+            bool checkerboard = PreviewBackgroundBtn.IsChecked == true;
+            if (_isClosing || _settingsService.Settings.PreviewShowCheckerboard == checkerboard)
+                return;
+            _settingsService.Settings.PreviewShowCheckerboard = checkerboard;
+            _settingsService.Save();
+            UpdatePreviewBackground();
+            CancelAutoCloseOnInteraction();
+        }
+
+        private void UpdatePreviewBackground()
+        {
+            bool checkerboard = _settingsService.Settings.PreviewShowCheckerboard;
+            CheckerboardHost.Background = checkerboard
+                ? Theme.CreateCheckerboardBrush()
+                : Theme.Brush(Theme.IsDark
+                    ? System.Windows.Media.Color.FromRgb(0x33, 0x33, 0x37)
+                    : System.Windows.Media.Color.FromRgb(0xEA, 0xED, 0xF5));
+            PreviewBackgroundBtn.IsChecked = checkerboard;
+            string language = _settingsService.Settings.InterfaceLanguage;
+            PreviewBackgroundBtn.ToolTip = LocalizationService.Translate(language,
+                checkerboard ? "Switch to solid background" : "Show checkerboard background");
+            System.Windows.Automation.AutomationProperties.SetName(PreviewBackgroundBtn,
+                LocalizationService.Translate(language, "Checkerboard background"));
         }
 
         private void SetZoomOverlayVisibility(bool visible)
@@ -2093,7 +2140,7 @@ namespace CyberSnap.UI
             {
                 _zoomHideTimer!.Stop();
                 _zoomHideTimer = null;
-                SetZoomOverlayVisibility(false);
+                UpdateZoomControlsVisibility();
             };
             _zoomHideTimer.Start();
         }

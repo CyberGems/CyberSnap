@@ -350,6 +350,13 @@ public sealed class SettingsService : IDisposable
             Helpers.WidgetPreferences.FromSettings(current).ApplyTo(Settings);
     }
 
+    internal void RefreshPreviewPreferences()
+    {
+        var current = LoadStatic(_settingsPath);
+        if (current is not null)
+            Settings.PreviewShowCheckerboard = current.PreviewShowCheckerboard;
+    }
+
     internal void RefreshCursorCapturePreferences()
     {
         var current = LoadStatic(_settingsPath);

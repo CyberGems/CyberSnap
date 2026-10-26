@@ -2849,5 +2849,8 @@
   "Help with adjusting, annotating, and confirming the selection.": "Ayuda para ajustar, anotar y confirmar la selección.",
   "Help with adjusting and confirming the selection.": "Ayuda para ajustar y confirmar la selección.",
   "Navigate controls": "Recorrer controles",
-  "Undo / redo": "Deshacer / rehacer"
+  "Undo / redo": "Deshacer / rehacer",
+  "Checkerboard background": "Fondo de damero",
+  "Switch to solid background": "Cambiar a fondo sólido",
+  "Show checkerboard background": "Mostrar fondo de damero"
 }

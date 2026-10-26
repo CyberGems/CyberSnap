@@ -8,6 +8,9 @@ dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --capture-to
 
 This targeted suite covers:
 
+- **Preview backgrounds:** the accessible toggle preserves zoom, pan, source pixels,
+  and PNG transparency. Checks cover both languages, all three themes, capture tabs,
+  window widths, and persistence after a disk reload and a new preview session.
 - **Hotkey scopes:** capture annotations and Editor shortcuts can share a key.
   Duplicates within a stage, Editor tool/view collisions, global collisions,
   restoring F6, aliases, and saved settings are also checked.
@@ -44,6 +47,8 @@ release. To save Zoom help renders, append a local output directory to the comma
 For broader interactive checks on a Windows desktop:
 
 ```powershell
+dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --preview-background-only
+
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-options-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-chrome-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-guide-only
