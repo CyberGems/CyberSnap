@@ -367,8 +367,7 @@ public sealed partial class RegionOverlayForm
                     _confirmSizeReadoutGripRect,
                     _confirmRect.Width,
                     _confirmRect.Height,
-                    _readoutFont,
-                    hovered: _hoveredConfirmSizeReadout || _isConfirmDragging);
+                    _readoutFont);
             }
 
             if (!_confirmOptionsPillRect.IsEmpty)

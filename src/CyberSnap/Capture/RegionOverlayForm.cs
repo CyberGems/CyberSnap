@@ -209,7 +209,6 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _confirmSizeReadoutGripRect = Rectangle.Empty;
     /// <summary>Text chip only (excludes grip) — used to paint from cache mid-drag.</summary>
     private Rectangle _confirmSizeReadoutChipRect = Rectangle.Empty;
-    private bool _hoveredConfirmSizeReadout;
     /// <summary>More options pill beside the size chip, opened by click.</summary>
     private Rectangle _confirmOptionsPillRect = Rectangle.Empty;
     private bool _hoveredConfirmOptionsPill;

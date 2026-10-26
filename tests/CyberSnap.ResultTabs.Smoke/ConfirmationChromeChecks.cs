@@ -52,6 +52,7 @@ internal static partial class Program
                 LocalizationService.ApplyCurrentCulture(language);
                 using var source = new Bitmap(1000, 800);
                 using var overlay = ConfirmationFixture(source, settings, CaptureMode.Rectangle, false, show);
+                CheckAnnotationToolbarReshow(overlay, show);
                 var host = (Rectangle)Field(overlay, "_annotationToolbarHostRect");
                 var toolbar = Field(overlay, "_toolbarForm") as Forms.Form;
                 var nativeBounds = toolbar?.Bounds;
@@ -178,9 +179,79 @@ internal static partial class Program
         }
     }
 
+    private static void CheckAnnotationToolbarReshow(RegionOverlayForm overlay, bool show)
+    {
+        var selection = overlay.ConfirmRect;
+        var nativeToolbar = show ? (ToolbarForm)Field(overlay, "_toolbarForm") : null;
+        uint overlayAffinity = 0, toolbarAffinity = 0;
+        if (show)
+            Assert(GetWindowDisplayAffinity(overlay.Handle, out overlayAffinity)
+                && GetWindowDisplayAffinity(nativeToolbar!.Handle, out toolbarAffinity), "the synthetic confirmation exclusions can be read");
+        try
+        {
+            if (show)
+                Assert(SetWindowDisplayAffinity(overlay.Handle, 0) && SetWindowDisplayAffinity(nativeToolbar!.Handle, 0),
+                    "the synthetic confirmation windows allow inspection of their presented pixels");
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                foreach (bool visible in new[] { false, true })
+                {
+                    if (show)
+                    {
+                        var options = (Rectangle)Field(overlay, "_confirmOptionsPillRect");
+                        Call(overlay, "OpenConfirmOptionsMenu", new Point(options.Right, options.Top));
+                        using var menu = (Forms.ContextMenuStrip)Field(overlay, "_toolbarContextMenu");
+                        ConfirmOption(menu, "annotation-toolbar").PerformClick();
+                        Forms.Application.DoEvents(); Pump();
+                    }
+                    else Call(overlay, "ToggleAnnotationToolbar");
+                    Assert((bool)Field(overlay, "_showAnnotationToolbar") == visible && overlay.ConfirmRect == selection,
+                        "annotation visibility can be toggled repeatedly without moving the selection");
+                    if (show)
+                    {
+                        var toolbar = (ToolbarForm)Field(overlay, "_toolbarForm");
+                        Assert(toolbar.Visible == visible, "the native annotation window follows its visibility setting");
+                        if (visible)
+                        {
+                            var dock = (Rectangle)Field(overlay, "_toolbarRect");
+                            var pixel = new Point(overlay.Left + dock.Left + dock.Width / 2 - toolbar.Left,
+                                overlay.Top + dock.Top + dock.Height / 2 - toolbar.Top);
+                            Assert(toolbar.SurfaceAlpha == 255 && ((Bitmap)Field(toolbar, "_surface")).GetPixel(pixel.X, pixel.Y).A > 0,
+                                "showing annotations immediately restores an opaque, painted toolbar without a frame drag");
+                            var screenPoint = new Point(overlay.Left + dock.Left + 10, overlay.Top + dock.Top + 10);
+                            var expected = ((Bitmap)Field(toolbar, "_surface")).GetPixel(screenPoint.X - toolbar.Left, screenPoint.Y - toolbar.Top);
+                            using var snapshot = new Bitmap(1, 1);
+                            Color actual;
+                            var deadline = DateTime.UtcNow.AddSeconds(1);
+                            do
+                            {
+                                Forms.Application.DoEvents(); Pump();
+                                System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(FlushZoomTransitionComposition());
+                                using (var graphics = Graphics.FromImage(snapshot))
+                                    graphics.CopyFromScreen(screenPoint.X, screenPoint.Y, 0, 0, snapshot.Size);
+                                actual = snapshot.GetPixel(0, 0);
+                                if (Math.Abs(actual.R - expected.R) <= 2 && Math.Abs(actual.G - expected.G) <= 2 && Math.Abs(actual.B - expected.B) <= 2) break;
+                                Thread.Sleep(16);
+                            } while (DateTime.UtcNow < deadline);
+                            Assert(Math.Abs(actual.R - expected.R) <= 2 && Math.Abs(actual.G - expected.G) <= 2 && Math.Abs(actual.B - expected.B) <= 2,
+                                $"the reshown annotation toolbar is actually presented on screen without moving selection: actual={actual}, expected={expected}");
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (show)
+                Assert(SetWindowDisplayAffinity(overlay.Handle, overlayAffinity)
+                    && SetWindowDisplayAffinity(nativeToolbar!.Handle, toolbarAffinity), "synthetic confirmation exclusions are restored after pixel inspection");
+        }
+    }
+
     private static void CheckSelectionReadoutInteraction(RegionOverlayForm overlay, string language, string? renders, bool show)
     {
         Call(overlay, "SetMode", CaptureMode.Draw, "draw", false);
+        CheckSelectionReadoutGripHover(overlay);
         var chip = (Rectangle)Field(overlay, "_confirmSizeReadoutChipRect");
         var point = new Point(chip.X + chip.Width / 2, chip.Y + chip.Height / 2);
         Assert((bool)Call(overlay, "HitTestConfirmSizeReadout", point)!, "the dimensions text intercepts clicks just like its drag grip");
@@ -216,6 +287,10 @@ internal static partial class Program
         Call(overlay, "ToggleAnnotationToolbar");
         Call(overlay, "RefreshConfirmSizeReadoutRect");
         Assert(!((Rectangle)Field(overlay, "_confirmSizeReadoutGripRect")).IsEmpty, "showing annotations restores the dedicated top grip");
+        if (show)
+            Assert(Field(overlay, "_toolbarForm") is ToolbarForm { Visible: true, SurfaceAlpha: 255 },
+                "showing annotations after a hidden frame drag restores the native toolbar opacity");
+        CheckAnnotationToolbarReshow(overlay, show);
 
         var readout = typeof(RegionOverlayForm).Assembly.GetType("CyberSnap.Capture.SelectionSizeReadout")!;
         var draw = readout.GetMethod("DrawConfirmDragPillCached", BindingFlags.Public | BindingFlags.Static)!;
@@ -226,10 +301,34 @@ internal static partial class Program
         {
             using var g = Graphics.FromImage(pair.Item1);
             g.Clear(pair.Item2);
-            draw.Invoke(null, new object[] { g, new Rectangle(10, 10, 180, 32), Rectangle.Empty, 440, 320, font, false });
+            draw.Invoke(null, new object[] { g, new Rectangle(10, 10, 180, 32), Rectangle.Empty, 440, 320, font });
         }
         Assert(red.GetPixel(25, 14) == UiChrome.SurfaceTier1 && red.GetPixel(25, 14) == blue.GetPixel(25, 14),
             "the confirmation dimensions pill has a solid surface independent of the screen behind it");
+    }
+
+    private static void CheckSelectionReadoutGripHover(RegionOverlayForm overlay)
+    {
+        var grip = (Rectangle)Field(overlay, "_confirmSizeReadoutGripRect");
+        var chip = (Rectangle)Field(overlay, "_confirmSizeReadoutChipRect");
+        using var normal = new Bitmap(overlay.Width, overlay.Height);
+        using var hovered = new Bitmap(overlay.Width, overlay.Height);
+        foreach (var theme in new[] { AppThemeMode.Dark, AppThemeMode.Light })
+        {
+            Theme.SetMode(theme);
+            OverlayZoomMouse(overlay, "OnMouseMove", 20, 20);
+            overlay.DrawToBitmap(normal, new Rectangle(Point.Empty, normal.Size));
+            foreach (var target in new[] { chip, grip })
+            {
+                OverlayZoomMouse(overlay, "OnMouseMove", target.X + target.Width / 2, target.Y + target.Height / 2);
+                overlay.DrawToBitmap(hovered, new Rectangle(Point.Empty, hovered.Size));
+                Assert(Enumerable.Range(0, grip.Width * grip.Height).All(i =>
+                        normal.GetPixel(grip.X + i % grip.Width, grip.Y + i / grip.Width)
+                        == hovered.GetPixel(grip.X + i % grip.Width, grip.Y + i / grip.Width)),
+                    "the selection grip never brightens when hovering dimensions or the grip itself: " + theme);
+            }
+        }
+        Theme.SetMode(AppThemeMode.Dark);
     }
 
     private static void CheckConfirmationKeycapShape()

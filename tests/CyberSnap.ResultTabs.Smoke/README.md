@@ -22,8 +22,9 @@ This targeted suite covers:
   Grip colors match across drawing surfaces. History animations reserve their native
   host, reuse the bitmap, and reach their endpoint even after a delayed frame.
   The dimensions pill is opaque and draggable, its separate grip follows annotation
-  visibility, and the Enter keycap matches Preview proportions. Dismissal clicks
-  close More without reopening it or changing the selected area.
+  visibility without brightening on hover, and the Enter keycap matches Preview
+  proportions. Dismissal clicks close More without reopening it or changing the
+  selected area.
 - **Pin imports:** real indexed BMP/GIF, animated GIF, RGB24 BMP, RGB48/RGBA64
   TIFF, and CMYK JPEG/TIFF fixtures. Checks verify colors, alpha, first-frame
   selection, released files, and localized errors for damaged images.
@@ -52,7 +53,10 @@ Append a local output directory to `--confirmation-options-only` to save menu re
 This desktop check also opens the quick start guide while annotation controls are hidden.
 `--confirmation-chrome-only` focuses on click-owned More menus, annotation popup bounds,
 modal tooltip suppression, grip pixels, and history animation frames. It accepts the same
-optional render directory.
+optional render directory. It also checks repeated annotation hide/show without moving
+the selection, including after a frame gesture while annotations are hidden. Native
+pixel inspection confirms the reshown toolbar is visible, not merely an open window
+with zero opacity.
 
 These fixtures use temporary preferences and synthetic windows. The Pin selector
 checks native presentation and capture exclusion across the available monitors,

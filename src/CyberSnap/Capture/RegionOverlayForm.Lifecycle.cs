@@ -134,6 +134,9 @@ public sealed partial class RegionOverlayForm
             }
             else if (!_toolbarForm.Visible)
             {
+                // A frame gesture can leave the hidden layered window at alpha zero.
+                // Every explicit show must restore it, even if no new frame drag occurs.
+                _toolbarForm.SurfaceAlpha = 255;
                 PositionToolbarForm();
                 _toolbarForm.Show(this);
             }

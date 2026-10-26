@@ -302,10 +302,7 @@ public sealed partial class RegionOverlayForm
                 int ch = IsPointInConfirmReadoutChrome(e.Location) ? -1 : HitTestConfirmHandle(e.Location);
                 int btnHit = ch >= 0 || IsPointInConfirmReadoutChrome(e.Location) ? -1 : HitTestConfirmButton(e.Location);
                 bool sizePillHover = ch < 0 && btnHit < 0 && HitTestConfirmSizeReadout(e.Location);
-                // Options pill: top-edge chrome — lower priority than everything the user is
-                // actively dragging/resizing, but higher priority than the dead zone behind
-                // the size chip. When the pointer is over it we suppress the size-pill hover
-                // so the readout doesn't flicker under the cursor.
+                // Options chrome has priority over the size chip's drag cursor.
                 bool gearHover = ch < 0 && btnHit < 0
                     && !_confirmOptionsPillRect.IsEmpty
                     && _confirmOptionsPillRect.Contains(e.Location);
@@ -359,12 +356,6 @@ public sealed partial class RegionOverlayForm
                     return;
                 }
 
-                if (sizePillHover != _hoveredConfirmSizeReadout)
-                {
-                    _hoveredConfirmSizeReadout = sizePillHover;
-                    if (!_confirmSizeReadoutRect.IsEmpty)
-                        Invalidate(InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(8)));
-                }
                 if (centerGripHover != _hoveredCenterMoveGrip)
                 {
                     _hoveredCenterMoveGrip = centerGripHover;

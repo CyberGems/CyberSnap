@@ -1514,7 +1514,6 @@ public sealed partial class RegionOverlayForm
         else if (SupportsConfirmAnnotations) ActivateConfirmFrameMove();
         HideToolBannerImmediate();
         _dockShinePhase = 0f;
-        _hoveredConfirmSizeReadout = false;
         ResetConfirmModesExpanded(collapsed: true);
         ResetAnnotationToolsExpanded(collapsed: true);
         _historyUtilitiesRevealAmt = (HasConfirmAnnotations() || _editUndoStack.Count > 0) ? 1f : 0f;

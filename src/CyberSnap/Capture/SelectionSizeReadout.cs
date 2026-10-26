@@ -146,7 +146,6 @@ internal static class SelectionSizeReadout
         Font font,
         Rectangle clientBounds,
         IReadOnlyList<Rectangle>? avoidRects = null,
-        bool hovered = false,
         bool showGrip = true)
     {
         if (!ShowDimensions)
@@ -162,7 +161,7 @@ internal static class SelectionSizeReadout
 
         DrawPill(g, new Pill { Lines = lines, Rect = pillRect }, font, lineH, iconBox, emphasize: false, opaque: true);
         if (showGrip)
-            DrawDragGrip(g, gripRect, hovered);
+            DrawDragGrip(g, gripRect);
 
         g.SmoothingMode = oldSmoothing;
     }
@@ -176,8 +175,7 @@ internal static class SelectionSizeReadout
         Rectangle gripRect,
         int selectionWidth,
         int selectionHeight,
-        Font font,
-        bool hovered = false)
+        Font font)
     {
         if (!ShowDimensions)
             return;
@@ -203,7 +201,7 @@ internal static class SelectionSizeReadout
         }
 
         if (!gripRect.IsEmpty)
-            DrawDragGrip(g, gripRect, hovered);
+            DrawDragGrip(g, gripRect);
 
         g.SmoothingMode = oldSmoothing;
     }
@@ -549,7 +547,7 @@ internal static class SelectionSizeReadout
         return score;
     }
 
-    private static void DrawDragGrip(Graphics g, Rectangle rect, bool hovered)
+    private static void DrawDragGrip(Graphics g, Rectangle rect)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
@@ -559,27 +557,26 @@ internal static class SelectionSizeReadout
 
         using (var shadowPath = WindowsDockRenderer.RoundedRect(
                    new RectangleF(rect.X, rect.Y + 1.5f, rect.Width, rect.Height), radius))
-        using (var shadowBrush = new SolidBrush(Color.FromArgb(hovered ? 100 : 70, 0, 0, 0)))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(70, 0, 0, 0)))
             g.FillPath(shadowBrush, shadowPath);
 
         using (var path = WindowsDockRenderer.RoundedRect(rect, radius))
         {
-            int bgA = hovered ? 240 : 225;
-            using var bg = new SolidBrush(Color.FromArgb(bgA, UiChrome.SurfaceTier1));
+            using var bg = new SolidBrush(Color.FromArgb(225, UiChrome.SurfaceTier1));
             g.FillPath(bg, path);
-            using var border = new Pen(Color.FromArgb(hovered ? 220 : 150, accent), hovered ? 1.4f : 1f);
+            using var border = new Pen(Color.FromArgb(150, accent), 1f);
             g.DrawPath(border, path);
         }
 
         // 2×3 grip dots — same recipe as the bar/dock grips (primary text, one alpha
-        // per theme) so all flow grips share one tonality; brighter on hover.
+        // per theme) so all flow grips share one tonality, without hover brightening.
         var gripBase = UiChrome.SurfaceTextPrimary;
         float cx = rect.X + rect.Width / 2f;
         float cy = rect.Y + rect.Height / 2f;
         float stepX = UiChrome.ScaleFloat(4.2f);
         float stepY = UiChrome.ScaleFloat(4.2f);
         float r = UiChrome.ScaleFloat(1.35f);
-        int a = hovered ? 190 : (int)((UiChrome.IsDark ? 0.22f : 0.26f) * 255);
+        int a = (int)((UiChrome.IsDark ? 0.22f : 0.26f) * 255);
         using var dot = new SolidBrush(Color.FromArgb(a, gripBase));
         for (int row = -1; row <= 1; row++)
         {
