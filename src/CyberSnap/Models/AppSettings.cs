@@ -227,6 +227,10 @@ public sealed class AppSettings
     /// <summary>Show a checkerboard behind preview images instead of the theme's solid preview background.</summary>
     public bool PreviewShowCheckerboard { get; set; } = true;
 
+    /// <summary>Optional solid preview colors. Dark and grayscale share a color; null follows the theme default.</summary>
+    public int? PreviewBackgroundDarkColorArgb { get; set; }
+    public int? PreviewBackgroundLightColorArgb { get; set; }
+
     /// <summary>
     /// When true, the Print Screen advisory banner in Settings → Hotkeys stays hidden
     /// (reopen it anytime with the ? button next to it).

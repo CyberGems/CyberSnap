@@ -2852,5 +2852,7 @@
   "Undo / redo": "Deshacer / rehacer",
   "Checkerboard background": "Fondo de damero",
   "Switch to solid background": "Cambiar a fondo sólido",
-  "Show checkerboard background": "Mostrar fondo de damero"
+  "Show checkerboard background": "Mostrar fondo de damero",
+  "Choose solid background color": "Elegir color de fondo sólido",
+  "Theme default": "Predeterminado"
 }

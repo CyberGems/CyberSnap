@@ -354,7 +354,11 @@ public sealed class SettingsService : IDisposable
     {
         var current = LoadStatic(_settingsPath);
         if (current is not null)
+        {
             Settings.PreviewShowCheckerboard = current.PreviewShowCheckerboard;
+            Settings.PreviewBackgroundDarkColorArgb = current.PreviewBackgroundDarkColorArgb;
+            Settings.PreviewBackgroundLightColorArgb = current.PreviewBackgroundLightColorArgb;
+        }
     }
 
     internal void RefreshCursorCapturePreferences()

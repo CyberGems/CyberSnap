@@ -213,6 +213,7 @@ namespace CyberSnap.UI
                 ?? System.Windows.Forms.Cursor.Position;
 
             InitializeComponent();
+            InitializePreviewBackgroundControls();
             // Hide until post-layout physical centering runs. Centering at SourceInitialized /
             // with Width alone is wrong at 150% DPI + UiScale: the HWND grows afterward and
             // the window appears to jump right.
@@ -381,6 +382,7 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(ZoomFitBtn);
             ApplyTooltipPlacement(ZoomLevelBtn);
             ApplyTooltipPlacement(PreviewBackgroundBtn);
+            ApplyTooltipPlacement(PreviewBackgroundColorBtn);
             ApplyTooltipPlacement(Scale1xBtn);
             ApplyTooltipPlacement(Scale2xBtn);
             ApplyTooltipPlacement(Scale4xBtn);
@@ -490,6 +492,7 @@ namespace CyberSnap.UI
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
+            ClosePreviewBackgroundColorPicker(restoreFocus: false);
             ApplyLayoutMode(force: false);
         }
 
@@ -1171,6 +1174,7 @@ namespace CyberSnap.UI
                 return;
             }
 
+            ClosePreviewBackgroundColorPicker(restoreFocus: false);
             RootBorder.Background = Theme.Brush(Theme.BgPrimary);
             RootBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
             RootBorder.BorderThickness = new Thickness(1);
@@ -2063,7 +2067,8 @@ namespace CyberSnap.UI
 
         private void UpdateZoomControlsVisibility()
         {
-            bool shouldShow = (_zoomPointerInside || ZoomControlsOverlay.IsKeyboardFocusWithin)
+            bool shouldShow = (_zoomPointerInside || ZoomControlsOverlay.IsKeyboardFocusWithin
+                || _previewBackgroundColorPopup?.IsOpen == true)
                 && PreviewImage.Source is BitmapSource;
             SetZoomOverlayVisibility(shouldShow);
         }
@@ -2071,33 +2076,6 @@ namespace CyberSnap.UI
         private void ZoomControlsOverlay_IsKeyboardFocusWithinChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             UpdateZoomControlsVisibility();
-        }
-
-        private void PreviewBackgroundBtn_Changed(object sender, RoutedEventArgs e)
-        {
-            bool checkerboard = PreviewBackgroundBtn.IsChecked == true;
-            if (_isClosing || _settingsService.Settings.PreviewShowCheckerboard == checkerboard)
-                return;
-            _settingsService.Settings.PreviewShowCheckerboard = checkerboard;
-            _settingsService.Save();
-            UpdatePreviewBackground();
-            CancelAutoCloseOnInteraction();
-        }
-
-        private void UpdatePreviewBackground()
-        {
-            bool checkerboard = _settingsService.Settings.PreviewShowCheckerboard;
-            CheckerboardHost.Background = checkerboard
-                ? Theme.CreateCheckerboardBrush()
-                : Theme.Brush(Theme.IsDark
-                    ? System.Windows.Media.Color.FromRgb(0x33, 0x33, 0x37)
-                    : System.Windows.Media.Color.FromRgb(0xEA, 0xED, 0xF5));
-            PreviewBackgroundBtn.IsChecked = checkerboard;
-            string language = _settingsService.Settings.InterfaceLanguage;
-            PreviewBackgroundBtn.ToolTip = LocalizationService.Translate(language,
-                checkerboard ? "Switch to solid background" : "Show checkerboard background");
-            System.Windows.Automation.AutomationProperties.SetName(PreviewBackgroundBtn,
-                LocalizationService.Translate(language, "Checkerboard background"));
         }
 
         private void SetZoomOverlayVisibility(bool visible)
@@ -2921,6 +2899,8 @@ namespace CyberSnap.UI
 
         private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            if (HandlePreviewBackgroundPickerKey(e))
+                return;
             if (e.Key == Key.Escape)
             {
                 if (_isClosing)

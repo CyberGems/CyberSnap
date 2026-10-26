@@ -2592,5 +2592,7 @@
   "Undo / redo": "Undo / redo",
   "Checkerboard background": "Checkerboard background",
   "Switch to solid background": "Switch to solid background",
-  "Show checkerboard background": "Show checkerboard background"
+  "Show checkerboard background": "Show checkerboard background",
+  "Choose solid background color": "Choose solid background color",
+  "Theme default": "Theme default"
 }

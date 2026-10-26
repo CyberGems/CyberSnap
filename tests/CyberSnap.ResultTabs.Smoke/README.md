@@ -11,6 +11,8 @@ This targeted suite covers:
 - **Preview backgrounds:** the accessible toggle preserves zoom, pan, source pixels,
   and PNG transparency. Checks cover both languages, all three themes, capture tabs,
   window widths, and persistence after a disk reload and a new preview session.
+  Custom-color checks cover live HEX entry, invalid input, independent light/dark
+  colors, theme reset, keyboard dismissal, outside clicks, and repeated swatch clicks.
 - **Hotkey scopes:** capture annotations and Editor shortcuts can share a key.
   Duplicates within a stage, Editor tool/view collisions, global collisions,
   restoring F6, aliases, and saved settings are also checked.

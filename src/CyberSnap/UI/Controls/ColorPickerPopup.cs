@@ -80,10 +80,12 @@ internal sealed class ColorPickerPopup : ContentControl
         WpfColor.FromRgb(0, 0, 0),
     };
 
-    public ColorPickerPopup()
+    public ColorPickerPopup() : this(null) { }
+
+    public ColorPickerPopup(string? clearButtonText)
     {
         Theme.Refresh();
-        BuildUI();
+        BuildUI(clearButtonText);
         Loaded += OnLoaded;
         PreviewKeyDown += (_, e) =>
         {
@@ -168,7 +170,7 @@ internal sealed class ColorPickerPopup : ContentControl
         ColorChanged?.Invoke(null);
     }
 
-    private void BuildUI()
+    private void BuildUI(string? clearButtonText)
     {
         var accent = Theme.Accent;
         var accentBrush = Theme.Brush(WithAlpha(accent, 90));
@@ -432,7 +434,7 @@ internal sealed class ColorPickerPopup : ContentControl
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var clearButton = BuildButton(LocalizationService.Translate("Clear"), isAccent: false, ClearColor);
+        var clearButton = BuildButton(clearButtonText ?? LocalizationService.Translate("Clear"), isAccent: false, ClearColor);
         clearButton.HorizontalAlignment = WpfHorizontalAlignment.Stretch;
         clearButton.MinWidth = 0;
         clearButton.Margin = new Thickness(0);
