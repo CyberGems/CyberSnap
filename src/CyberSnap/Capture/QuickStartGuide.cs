@@ -8,30 +8,35 @@ namespace CyberSnap.Capture;
 
 /// <summary>
 /// Speech-bubble quick-start guide anchored to the toolbar logo.
-/// Explains how to capture, points at the toolbar menu, and lists hotkeys.
+/// Contextual help for capture, selection confirmation, the Editor, and scrolling.
 /// </summary>
 public sealed class QuickStartGuide : Form
 {
-    public enum GuideMode { Capture, Annotation, Scrolling }
+    public enum GuideMode { Capture, Annotation, Scrolling, Confirmation }
+
+    public enum ConfirmationPurpose { Capture, Pin, Zoom }
+
+    public sealed record ConfirmationContext(ConfirmationPurpose Purpose, bool CanAnnotate,
+        bool AnnotationToolbarVisible, bool HasPreview);
 
     public enum TailDirection { Up, Down, Left, Right }
 
     private const int MaxWidth = 540;
     private const int MinWidth = 440;
     private const int PadX = 28;
-    private const int PadY = 24;
+    private int PadY => _guideMode == GuideMode.Confirmation ? 20 : 24;
     private const int HeaderHeight = 40;
-    private const int StepGap = 14;
+    private int StepGap => _guideMode == GuideMode.Confirmation ? 10 : 14;
     private const int StepCircle = 26;
     private const int StepTextGap = 12;
-    private const int SectionGap = 18;
+    private int SectionGap => _guideMode == GuideMode.Confirmation ? 12 : 18;
     private const int SectionLabelHeight = 24;
     private const int ShortcutRowHeight = 34;
     private const int KbdPadH = 8;
     private const int KbdLabelGap = 8;
     private const int ShortcutColGap = 20;
     private const int TipRowMinHeight = 32;
-    private const int TipRowGap = 12;
+    private int TipRowGap => _guideMode == GuideMode.Confirmation ? 8 : 12;
     private const int TipIconSize = 28;
     private const int IconColWidth = 36;
     private const int IconTextGap = 12;
@@ -76,6 +81,7 @@ public sealed class QuickStartGuide : Form
     private float _tailCenterY;
     private RectangleF _bodyRect;
     private GuideMode _guideMode = GuideMode.Capture;
+    private ConfirmationContext? _confirmationContext;
 
     // Soft fade-in only (Form.Opacity). Scale/slide caused a one-frame glitch with Region.
     private DateTime _enterStart;
@@ -173,9 +179,11 @@ public sealed class QuickStartGuide : Form
     /// Shows the guide as a talk bubble pointing at <paramref name="anchorScreenBounds"/>.
     /// The tail direction determines where the bubble appears relative to the anchor.
     /// </summary>
-    public void ShowNear(IWin32Window owner, Rectangle anchorScreenBounds, TailDirection tailDirection, GuideMode mode = GuideMode.Capture)
+    public void ShowNear(IWin32Window owner, Rectangle anchorScreenBounds, TailDirection tailDirection,
+        GuideMode mode = GuideMode.Capture, ConfirmationContext? confirmation = null)
     {
         _guideMode = mode;
+        _confirmationContext = confirmation;
         _tailDirection = tailDirection;
         CyberSnap.UI.Theme.Refresh();
         BackColor = UiChrome.SurfaceTier1;
@@ -183,18 +191,29 @@ public sealed class QuickStartGuide : Form
 
         LoadStrings();
 
+        var screen = Screen.FromRectangle(anchorScreenBounds).WorkingArea;
+        bool horizontalTail = tailDirection == TailDirection.Up || tailDirection == TailDirection.Down;
+        if (_guideMode == GuideMode.Confirmation)
+        {
+            // Measure on the opening monitor before showing the manually painted window.
+            AutoScaleMode = AutoScaleMode.None;
+            Location = anchorScreenBounds.Location;
+        }
+
         using var g = CreateGraphics();
-        MeasureLayout(g);
-
-        int width = Math.Min(MaxWidth, Math.Max(MinWidth, _contentWidth + PadX * 2));
-        _contentWidth = width - PadX * 2;
-
-        // Re-measure tip/step wrap with final content width
-        MeasureLayout(g);
+        int width;
+        if (_guideMode == GuideMode.Confirmation)
+            width = MeasureConfirmationLayout(g, screen.Size, horizontalTail);
+        else
+        {
+            MeasureLayout(g);
+            width = Math.Min(MaxWidth, Math.Max(MinWidth, _contentWidth + PadX * 2));
+            _contentWidth = width - PadX * 2;
+            MeasureLayout(g);
+        }
 
         int bodyH = _bodyHeight;
         int bodyW = width;
-        bool horizontalTail = tailDirection == TailDirection.Up || tailDirection == TailDirection.Down;
         int totalH = bodyH + (horizontalTail ? (int)Math.Ceiling(TailHeight) : 0);
         int totalW = bodyW + (horizontalTail ? 0 : (int)Math.Ceiling(TailHeight));
 
@@ -208,7 +227,6 @@ public sealed class QuickStartGuide : Form
             _ => new RectangleF(0, 0, bodyW, bodyH)
         };
 
-        var screen = Screen.FromRectangle(anchorScreenBounds).WorkingArea;
         int anchorCx = anchorScreenBounds.Left + anchorScreenBounds.Width / 2;
         int anchorCy = anchorScreenBounds.Top + anchorScreenBounds.Height / 2;
         int gap = 2;
@@ -428,6 +446,10 @@ public sealed class QuickStartGuide : Form
         {
             LoadScrollingStrings(T);
         }
+        else if (_guideMode == GuideMode.Confirmation)
+        {
+            LoadConfirmationStrings(T);
+        }
         else
         {
             LoadCaptureStrings(T);
@@ -465,6 +487,62 @@ public sealed class QuickStartGuide : Form
             new ShortcutDef("[ ]", T("Stroke width")),
             new ShortcutDef("Del", T("Delete annotation")),
         ];
+    }
+
+    private void LoadConfirmationStrings(Func<string, string> T)
+    {
+        var context = _confirmationContext ?? new ConfirmationContext(ConfirmationPurpose.Capture, true, true, true);
+        bool pin = context.Purpose == ConfirmationPurpose.Pin;
+        bool zoom = context.Purpose == ConfirmationPurpose.Zoom;
+        _title = T(context.CanAnnotate ? "Annotate and confirm" : "Adjust and confirm");
+        _stepsTitle = T("BEFORE CONFIRMING");
+        _menuTitle = T(pin ? "PIN TO SCREEN" : zoom ? "ZOOM CAPTURE" : "CAPTURE");
+        _shortcutsTitle = T("KEYBOARD SHORTCUTS");
+        _footerText = T("Click or Esc to close");
+
+        var steps = new List<StepDef>
+        {
+            new(T("Drag edges or corners to resize; drag the dimensions to move the area."))
+        };
+        if (context.CanAnnotate)
+        {
+            steps.Add(new(T(context.AnnotationToolbarVisible
+                ? "Choose an annotation tool and adjust its color and stroke width."
+                : "Show the annotation toolbar from More to draw, add text, or use shapes.")));
+            steps.Add(new(T(context.AnnotationToolbarVisible
+                ? "Hide the annotation toolbar from More to drag from inside. Your annotations are kept."
+                : "With the toolbar hidden, drag from inside to move the area. Your annotations are kept.")));
+        }
+        else steps.Add(new(T("Drag inside the selection to move it.")));
+        _steps = steps.ToArray();
+
+        string output = pin
+            ? "Confirm to keep this image above other windows."
+            : zoom ? "Confirm to capture the magnified image with your usual capture actions."
+            : "Confirm to run the selected capture action.";
+        if (context.HasPreview) output = T(output) + " " + T("Preview opens only if enabled.");
+        else output = T(output);
+        _tips =
+        [
+            new TipDef(pin ? "pin" : zoom ? "zoom" : "position", output),
+            new TipDef("redo", T(zoom
+                ? "Retry selects another area in this frozen view. Cancel returns to the same Zoom and framing."
+                : "Retry selects a new area. Cancel exits without creating an image."))
+        ];
+
+        var shortcuts = new List<ShortcutDef>
+        {
+            new("Enter", T(pin ? "Pin to screen" : "Confirm capture")),
+            new("Esc", T(zoom ? "Return to Zoom" : "Cancel capture")),
+            new("R", T("Select a new area")),
+            new("Tab / Shift+Tab", T("Navigate controls")),
+            new(T("Space"), T("Activate focused control"))
+        };
+        if (context.CanAnnotate && context.AnnotationToolbarVisible)
+        {
+            shortcuts.Add(new("Ctrl+Z / Ctrl+Y", T("Undo / redo")));
+        }
+        _shortcuts = shortcuts.ToArray();
     }
 
     private void LoadAnnotationStrings(Func<string, string> T)
@@ -528,6 +606,21 @@ public sealed class QuickStartGuide : Form
             new ShortcutDef("Space", T("Grab frame")),
             new ShortcutDef("Esc", T("Cancel")),
         ];
+    }
+
+    private int MeasureConfirmationLayout(Graphics g, Size workingSize, bool horizontalTail)
+    {
+        int maxWidth = Math.Max(1, workingSize.Width - 16 - (horizontalTail ? 0 : (int)TailHeight));
+        int width = Math.Min(maxWidth, Math.Max(MinWidth,
+            (int)Math.Ceiling(UiChrome.ScaleFloat(500) * g.DpiX / 96f) + PadX * 2));
+        int maxHeight = workingSize.Height - 16 - (horizontalTail ? (int)TailHeight : 0);
+        while (true)
+        {
+            _contentWidth = width - PadX * 2;
+            MeasureLayout(g);
+            if (_bodyHeight <= maxHeight || width >= maxWidth) return width;
+            width = Math.Min(maxWidth, width + UiChrome.ScaleInt(80));
+        }
     }
 
     private void MeasureLayout(Graphics g)
@@ -977,8 +1070,8 @@ public sealed class QuickStartGuide : Form
     private void PaintShortcutCell(Graphics g, ShortcutDef sc, int x, int y, int rowH, Color accent)
     {
         int kbdW = ShortcutKbdWidth(g, sc, _shortcutColWidth);
-        int kbdH = rowH - 8;
-        var kbdRect = new RectangleF(x, y + 4, kbdW, kbdH);
+        int kbdH = _guideMode == GuideMode.Confirmation ? Math.Min(ShortcutRowHeight - 8, rowH - 8) : rowH - 8;
+        var kbdRect = new RectangleF(x, y + (rowH - kbdH) / 2f, kbdW, kbdH);
 
         using (var kbdPath = WindowsDockRenderer.RoundedRect(kbdRect, 6f))
         {
@@ -996,9 +1089,9 @@ public sealed class QuickStartGuide : Form
         int labelX = x + kbdW + KbdLabelGap;
         int labelW = Math.Max(8, _shortcutColWidth - kbdW - KbdLabelGap);
         TextRenderer.DrawText(g, sc.Label, _bodyFont,
-            new Rectangle(labelX, y + 4, labelW, kbdH),
+            new Rectangle(labelX, y + 4, labelW, rowH - 8),
             UiChrome.SurfaceTextSecondary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.WordBreak);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

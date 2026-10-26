@@ -121,8 +121,11 @@ public sealed partial class RegionOverlayForm
 
             _tooltipButton = 997;
             _toolbarToolTip ??= new WindowsToolTip { EmphasizeTitle = true };
-            var brandText = LocalizationService.Translate("Quick Start guide")
-                + "\n" + LocalizationService.Translate("Click to open the capture guide");
+            var brandText = LocalizationService.Translate(_isConfirmingSelection ? ConfirmationGuideTitle : "Quick Start guide")
+                + "\n" + LocalizationService.Translate(_isConfirmingSelection
+                    ? SupportsConfirmAnnotations ? "Help with adjusting, annotating, and confirming the selection."
+                        : "Help with adjusting and confirming the selection."
+                    : "Click to open the capture guide");
             var brandLocal = !_logoRect.IsEmpty ? _logoRect : _brandRect;
             if (brandLocal.IsEmpty)
                 brandLocal = _logoRect;

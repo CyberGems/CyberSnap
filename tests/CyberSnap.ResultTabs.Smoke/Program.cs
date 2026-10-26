@@ -62,6 +62,7 @@ internal static partial class Program
                 CheckCaptureDestinationPolicy();
                 CheckConfirmationOptions(settings);
                 CheckConfirmationChrome(settings);
+                CheckConfirmationGuide(settings);
                 CheckPinImageFormats(temp);
                 CheckZoomHelpBar(args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} capture tool regression checks.");
@@ -77,7 +78,14 @@ internal static partial class Program
             {
                 CheckConfirmationOptions(settings, args.FirstOrDefault(a => !a.StartsWith("--")), show: true);
                 CheckConfirmationChrome(settings, args.FirstOrDefault(a => !a.StartsWith("--")), show: true);
+                CheckConfirmationGuide(settings, args.FirstOrDefault(a => !a.StartsWith("--")), show: true);
                 Console.WriteLine($"PASS: {_checks} confirmation options checks.");
+                return 0;
+            }
+            if (args.Contains("--confirmation-guide-only"))
+            {
+                CheckConfirmationGuide(settings, args.FirstOrDefault(a => !a.StartsWith("--")), show: true);
+                Console.WriteLine($"PASS: {_checks} confirmation guide checks.");
                 return 0;
             }
             if (args.Contains("--zoom-help-only"))

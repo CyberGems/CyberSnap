@@ -16,6 +16,7 @@ public sealed partial class RegionOverlayForm
     private ContextMenuStrip? _toolbarContextMenu;
     private ContextMenuStrip? _confirmContextMenu;
     private QuickStartGuide? _quickStartGuide;
+    private bool _quickStartGuideWasCapture;
     private bool _highlightMenuActivatorForGuide;
     private DateTime _menuActivatorPulseStart;
     private System.Windows.Forms.Timer? _menuActivatorPulseTimer;
@@ -46,7 +47,10 @@ public sealed partial class RegionOverlayForm
             ? QuickStartGuide.TailDirection.Down
             : QuickStartGuide.TailDirection.Up;
 
-        _quickStartGuide.ShowNear(this, anchorScreen, tailDir);
+        _quickStartGuideWasCapture = !_isConfirmingSelection;
+        _quickStartGuide.ShowNear(this, anchorScreen, tailDir,
+            _isConfirmingSelection ? QuickStartGuide.GuideMode.Confirmation : QuickStartGuide.GuideMode.Capture,
+            _isConfirmingSelection ? GetConfirmationGuideContext() : null);
         _quickStartGuide.FormClosed -= OnQuickStartGuideClosed;
         _quickStartGuide.FormClosed += OnQuickStartGuideClosed;
         StartMenuActivatorPulse();
@@ -63,7 +67,7 @@ public sealed partial class RegionOverlayForm
         StopMenuActivatorPulse();
 
         // First dismissal (auto or manual) marks the guide as seen so it does not re-auto-open.
-        QuickStartGuideDismissed?.Invoke();
+        if (_quickStartGuideWasCapture) QuickStartGuideDismissed?.Invoke();
     }
 
     private void StartMenuActivatorPulse()
@@ -352,7 +356,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Quick-start guide (always available after first run; re-opens the talk bubble)
-        var guideText = LocalizationService.Translate("Show quick start guide");
+        var guideText = LocalizationService.Translate(_isConfirmingSelection ? ConfirmationGuideTitle : "Show quick start guide");
         var guideItem = WindowsMenuRenderer.Item(guideText, iconId: "info", iconSize: 24);
         guideItem.Click += (s, e) =>
         {

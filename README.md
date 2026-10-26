@@ -248,6 +248,8 @@ Capture, recording, and tools expose configurable global hotkeys in **Settings â
 
 During capture, `Tab` / `Shift+Tab` moves through visible toolbar buttons; `Space` or `Enter` activates the focused button. Annotation shortcuts and confirmation controls belong to their own stage: for example, `R` retries and `P` toggles Preview during confirmation.
 
+During confirmation, the annotation toolbar logo and More â†’ **Annotate and confirm** open contextual help for capture, Pin, and Zoom. The guide explains crop adjustment, annotations, and finishing the capture, with shortcuts and instructions that follow the current stage and annotation toolbar visibility.
+
 Capture annotations and the Editor can reuse local shortcuts, including their default `F6` for FreeHand. Duplicate assignments are checked within each stage; Editor tools and view shortcuts share one stage. Global assignments are still checked against both stages.
 
 Open the annotation editor directly: `CyberSnap.exe --editor`

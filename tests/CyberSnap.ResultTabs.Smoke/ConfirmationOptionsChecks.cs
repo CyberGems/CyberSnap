@@ -132,10 +132,10 @@ internal static partial class Program
                     canvas.Save(Path.Combine(renders, "confirm-canvas-hidden-" + purpose + "-" + language + ".png"));
                     if (show)
                     {
-                        ConfirmOption(hiddenMenu, "capture-guide").PerformClick();
+                        ConfirmOption(hiddenMenu, "confirmation-guide").PerformClick();
                         Forms.Application.DoEvents();
                         Assert(Field(overlay, "_quickStartGuide") is Forms.Form { Visible: true },
-                            "the quick start guide opens from the gear even with no annotation toolbar");
+                            "the confirmation guide opens from More even with no annotation toolbar");
                         Call(overlay, "DismissQuickStartGuide");
                     }
                 }

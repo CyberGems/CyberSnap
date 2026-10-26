@@ -2155,6 +2155,7 @@ public sealed partial class RegionOverlayForm
 
     private void ExitConfirmMode(bool showToolbar = true)
     {
+        DismissQuickStartGuide();
         _isConfirmingSelection = false;
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;

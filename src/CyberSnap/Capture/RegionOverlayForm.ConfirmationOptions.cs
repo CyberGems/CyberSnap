@@ -8,6 +8,14 @@ namespace CyberSnap.Capture;
 
 public sealed partial class RegionOverlayForm
 {
+    private string ConfirmationGuideTitle => SupportsConfirmAnnotations ? "Annotate and confirm" : "Adjust and confirm";
+
+    private QuickStartGuide.ConfirmationContext GetConfirmationGuideContext() => new(
+        PinImageOnConfirm ? QuickStartGuide.ConfirmationPurpose.Pin
+            : LockConfirmDestination ? QuickStartGuide.ConfirmationPurpose.Zoom
+            : QuickStartGuide.ConfirmationPurpose.Capture,
+        SupportsConfirmAnnotations, ShowAnnotationChrome, IsPreviewToggleVisible());
+
     private ContextMenuStrip BuildConfirmationOptionsMenu()
     {
         var settings = SettingsService.LoadStatic() ?? new AppSettings();
@@ -63,8 +71,8 @@ public sealed partial class RegionOverlayForm
         }
         menu.Items.Add(new ToolStripSeparator());
         Heading("Help");
-        var guide = WindowsMenuRenderer.Item(LocalizationService.Translate("Capture quick start guide"), iconId: "info", iconSize: 24);
-        guide.Name = "capture-guide";
+        var guide = WindowsMenuRenderer.Item(LocalizationService.Translate(ConfirmationGuideTitle), iconId: "info", iconSize: 24);
+        guide.Name = "confirmation-guide";
         guide.Click += (_, _) =>
         {
             menu.Close();

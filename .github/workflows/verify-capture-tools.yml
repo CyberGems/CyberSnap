@@ -11,6 +11,7 @@ on:
       - 'src/CyberSnap/Capture/PinImageForm.cs'
       - 'src/CyberSnap/Capture/StandaloneZoomForm.cs'
       - 'src/CyberSnap/Capture/ZoomHelpPanel.cs'
+      - 'src/CyberSnap/Capture/QuickStartGuide.cs'
       - 'src/CyberSnap/Capture/ZoomRenderer.cs'
       - 'src/CyberSnap/Capture/ZoomCaptureRequest.cs'
       - 'src/CyberSnap/Capture/RegionOverlayForm*.cs'

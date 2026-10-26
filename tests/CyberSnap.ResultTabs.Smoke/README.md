@@ -25,6 +25,10 @@ This targeted suite covers:
   visibility without brightening on hover, and the Enter keycap matches Preview
   proportions. Dismissal clicks close More without reopening it or changing the
   selected area.
+- **Confirmation help:** the toolbar logo and More open English/Spanish help for
+  capture, Pin, and frozen Zoom. Content follows annotation visibility, Preview
+  availability, and the pending destination. Checks cover stage shortcuts, fit at
+  100/150% DPI and both UI scales, safe dismissal, and the original capture guide.
 - **Pin imports:** real indexed BMP/GIF, animated GIF, RGB24 BMP, RGB48/RGBA64
   TIFF, and CMYK JPEG/TIFF fixtures. Checks verify colors, alpha, first-frame
   selection, released files, and localized errors for damaged images.
@@ -42,6 +46,7 @@ For broader interactive checks on a Windows desktop:
 ```powershell
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-options-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-chrome-only
+dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-guide-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --hotkeys-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-capture-only
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --pin-only
@@ -57,6 +62,8 @@ optional render directory. It also checks repeated annotation hide/show without 
 the selection, including after a frame gesture while annotations are hidden. Native
 pixel inspection confirms the reshown toolbar is visible, not merely an open window
 with zero opacity.
+`--confirmation-guide-only` checks the contextual guide, including native placement
+on every available monitor. It also accepts a render directory.
 
 These fixtures use temporary preferences and synthetic windows. The Pin selector
 checks native presentation and capture exclusion across the available monitors,
