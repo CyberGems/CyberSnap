@@ -39,7 +39,7 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="6,6"/>
+            <Setter Property="Padding" Value="4,6"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
