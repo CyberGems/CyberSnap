@@ -476,6 +476,8 @@ internal sealed class ColorPickerPopup : ContentControl
         _bodyScroll = new ScrollViewer
         {
             Content = stack,
+            Style = (Style)Resources["PickerScrollViewerStyle"],
+            Margin = new Thickness(0, 0, -6, 0),
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Focusable = false,

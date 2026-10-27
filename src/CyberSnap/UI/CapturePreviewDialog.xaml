@@ -361,14 +361,13 @@
                             </Grid>
                         </ScrollViewer>
 
-                        <!-- Zoom controls overlay -->
-                        <Border x:Name="ZoomControlsOverlay"
-                                SizeChanged="PreviewControls_SizeChanged"
-                                IsKeyboardFocusWithinChanged="ZoomControlsOverlay_IsKeyboardFocusWithinChanged"
-                                HorizontalAlignment="Right"
+                        <!-- The two compact groups wrap together inside one card. -->
+                        <Border x:Name="PreviewControlsOverlay"
+                                IsKeyboardFocusWithinChanged="PreviewControlsOverlay_IsKeyboardFocusWithinChanged"
+                                HorizontalAlignment="Center"
                                 VerticalAlignment="Bottom"
-                                Margin="0,0,10,10"
-                                Padding="8,5"
+                                Margin="10"
+                                Padding="4,2"
                                 CornerRadius="8"
                                 Background="{DynamicResource ThemeCardBrush}"
                                 BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
@@ -376,154 +375,123 @@
                                 Cursor="Arrow"
                                 Opacity="0"
                                 IsHitTestVisible="False">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="ZoomOutBtn" Style="{StaticResource PreviewIconButton}"
-                                        Click="ZoomOutBtn_Click"
-                                        Width="24" Height="24"
-                                        MinWidth="24" MinHeight="24"
-                                        Padding="0"
-                                        ToolTip="{x:Null}"
-                                        AutomationProperties.Name="Zoom out">
-                                    <Image x:Name="ZoomOutIcon" Width="12" Height="12"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Button>
-                                <Button x:Name="ZoomLevelBtn" Style="{StaticResource PreviewZoomPercentButton}"
-                                        Click="ZoomLevelBtn_Click"
-                                        Margin="4,0"
-                                        ToolTip="{x:Null}"
-                                        AutomationProperties.Name="Reset zoom to actual size">
-                                    <TextBlock x:Name="ZoomLevelText"
-                                               Text="100%"
-                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               VerticalAlignment="Center"
-                                               TextAlignment="Center"/>
-                                </Button>
-                                <Button x:Name="ZoomInBtn" Style="{StaticResource PreviewIconButton}"
-                                        Click="ZoomInBtn_Click"
-                                        Width="24" Height="24"
-                                        MinWidth="24" MinHeight="24"
-                                        Padding="0"
-                                        ToolTip="{x:Null}"
-                                        AutomationProperties.Name="Zoom in">
-                                    <Image x:Name="ZoomInIcon" Width="12" Height="12"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Button>
-                                <Button x:Name="ZoomFitBtn" Style="{StaticResource PreviewIconButton}"
-                                        Click="ZoomFitBtn_Click"
-                                        Width="24" Height="24"
-                                        MinWidth="24" MinHeight="24"
-                                        Padding="0"
-                                        Margin="4,0,0,0"
-                                        ToolTip="{x:Null}"
-                                        AutomationProperties.Name="Fit to window">
-                                    <Image x:Name="ZoomFitIcon" Width="12" Height="12"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Button>
-                                <ToggleButton x:Name="PreviewBackgroundBtn"
-                                              Style="{StaticResource PreviewBackgroundToggle}"
-                                              Margin="8,0,0,0"
-                                              Checked="PreviewBackgroundBtn_Changed"
-                                              Unchecked="PreviewBackgroundBtn_Changed"
-                                              AutomationProperties.Name="Checkerboard background">
-                                    <Grid Width="12" Height="12" IsHitTestVisible="False">
-                                        <Rectangle Fill="{Binding Foreground, ElementName=PreviewBackgroundBtn}" Opacity="0.18"/>
-                                        <Path Data="M0,0 H6 V6 H0 Z M6,6 H12 V12 H6 Z"
-                                              Fill="{Binding Foreground, ElementName=PreviewBackgroundBtn}"/>
-                                        <Rectangle Stroke="{Binding Foreground, ElementName=PreviewBackgroundBtn}" StrokeThickness="1"/>
-                                    </Grid>
-                                </ToggleButton>
-                                <Button x:Name="PreviewBackgroundColorBtn"
-                                        Style="{StaticResource PreviewIconButton}"
-                                        Width="24" Height="24" MinWidth="24" MinHeight="24"
-                                        Margin="4,0,0,0"
-                                        Click="PreviewBackgroundColorBtn_Click"
-                                        AutomationProperties.Name="Choose solid background color">
-                                    <Border x:Name="PreviewBackgroundColorSwatch"
-                                            Width="12" Height="12" CornerRadius="2"
-                                            BorderThickness="1"
-                                            BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"/>
-                                </Button>
-                                <Button x:Name="PreviewOutlineBtn" Style="{StaticResource PreviewScaleButton}"
-                                        Margin="8,0,0,0" Padding="6,0"
-                                        Click="PreviewOutlineBtn_Click"
-                                        AutomationProperties.Name="Outline options">
+                            <WrapPanel HorizontalAlignment="Center">
+                                <Border x:Name="ZoomControlsOverlay" Margin="4,3" Background="Transparent">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="PreviewOutlineIcon" Width="12" Height="12" Margin="0,0,5,0"/>
-                                        <TextBlock x:Name="PreviewOutlineText" Text="Capture outline"/>
+                                        <Button x:Name="ZoomOutBtn" Style="{StaticResource PreviewIconButton}"
+                                                Click="ZoomOutBtn_Click"
+                                                Width="24" Height="24"
+                                                MinWidth="24" MinHeight="24"
+                                                Padding="0"
+                                                ToolTip="{x:Null}"
+                                                AutomationProperties.Name="Zoom out">
+                                            <Image x:Name="ZoomOutIcon" Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <Button x:Name="ZoomLevelBtn" Style="{StaticResource PreviewZoomPercentButton}"
+                                                Click="ZoomLevelBtn_Click"
+                                                Margin="4,0"
+                                                ToolTip="{x:Null}"
+                                                AutomationProperties.Name="Reset zoom to actual size">
+                                            <TextBlock x:Name="ZoomLevelText"
+                                                       Text="100%"
+                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       VerticalAlignment="Center"
+                                                       TextAlignment="Center"/>
+                                        </Button>
+                                        <Button x:Name="ZoomInBtn" Style="{StaticResource PreviewIconButton}"
+                                                Click="ZoomInBtn_Click"
+                                                Width="24" Height="24"
+                                                MinWidth="24" MinHeight="24"
+                                                Padding="0"
+                                                ToolTip="{x:Null}"
+                                                AutomationProperties.Name="Zoom in">
+                                            <Image x:Name="ZoomInIcon" Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <Button x:Name="ZoomFitBtn" Style="{StaticResource PreviewIconButton}"
+                                                Click="ZoomFitBtn_Click"
+                                                Width="24" Height="24"
+                                                MinWidth="24" MinHeight="24"
+                                                Padding="0"
+                                                Margin="4,0,0,0"
+                                                ToolTip="{x:Null}"
+                                                AutomationProperties.Name="Fit to window">
+                                            <Image x:Name="ZoomFitIcon" Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <ToggleButton x:Name="PreviewBackgroundBtn"
+                                                      Style="{StaticResource PreviewBackgroundToggle}"
+                                                      Margin="8,0,0,0"
+                                                      Checked="PreviewBackgroundBtn_Changed"
+                                                      Unchecked="PreviewBackgroundBtn_Changed"
+                                                      AutomationProperties.Name="Checkerboard background">
+                                            <Grid Width="12" Height="12" IsHitTestVisible="False">
+                                                <Rectangle Fill="{Binding Foreground, ElementName=PreviewBackgroundBtn}" Opacity="0.18"/>
+                                                <Path Data="M0,0 H6 V6 H0 Z M6,6 H12 V12 H6 Z"
+                                                      Fill="{Binding Foreground, ElementName=PreviewBackgroundBtn}"/>
+                                                <Rectangle Stroke="{Binding Foreground, ElementName=PreviewBackgroundBtn}" StrokeThickness="1"/>
+                                            </Grid>
+                                        </ToggleButton>
+                                        <Button x:Name="PreviewBackgroundColorBtn"
+                                                Style="{StaticResource PreviewIconButton}"
+                                                Width="24" Height="24" MinWidth="24" MinHeight="24"
+                                                Margin="4,0,0,0"
+                                                Click="PreviewBackgroundColorBtn_Click"
+                                                AutomationProperties.Name="Choose solid background color">
+                                            <Border x:Name="PreviewBackgroundColorSwatch"
+                                                    Width="12" Height="12" CornerRadius="2"
+                                                    BorderThickness="1"
+                                                    BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                        </Button>
+                                        <Button x:Name="PreviewOutlineBtn" Style="{StaticResource PreviewIconButton}"
+                                                Width="24" Height="24" MinWidth="24" MinHeight="24"
+                                                Margin="4,0,0,0" Padding="0"
+                                                Click="PreviewOutlineBtn_Click"
+                                                AutomationProperties.Name="Outline options">
+                                            <Image x:Name="PreviewOutlineIcon" Width="12" Height="12"/>
+                                        </Button>
                                     </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Border>
+                                </Border>
 
-                        <!-- Scale controls move above zoom when the preview is narrow. -->
-                        <Border x:Name="ScaleControlsOverlay"
-                                SizeChanged="PreviewControls_SizeChanged"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Bottom"
-                                Margin="10,0,0,10"
-                                Padding="6,5"
-                                CornerRadius="8"
-                                Background="{DynamicResource ThemeCardBrush}"
-                                BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
-                                BorderThickness="1"
-                                Cursor="Arrow"
-                                Opacity="0"
-                                IsHitTestVisible="False">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="ScaleLabel"
-                                           Text="Scale"
-                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           Margin="2,0,6,0"/>
-                                <Button x:Name="Scale1xBtn" Style="{StaticResource PreviewScaleButton}"
-                                        Click="Scale1xBtn_Click"
-                                        Content="1×"
-                                        AutomationProperties.Name="1x"/>
-                                <Button x:Name="Scale2xBtn" Style="{StaticResource PreviewScaleButton}"
-                                        Click="Scale2xBtn_Click"
-                                        Content="2×"
-                                        Margin="4,0,0,0"
-                                        AutomationProperties.Name="2x"/>
-                                <Button x:Name="Scale4xBtn" Style="{StaticResource PreviewScaleButton}"
-                                        Click="Scale4xBtn_Click"
-                                        Content="4×"
-                                        Margin="4,0,0,0"
-                                        AutomationProperties.Name="4x"/>
-                                <StackPanel x:Name="ScaleDimensionsPanel"
-                                            Orientation="Horizontal"
-                                            VerticalAlignment="Center"
-                                            Margin="8,0,2,0">
-                                    <TextBlock x:Name="ScaleOriginalText"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                               FontSize="10.5"
-                                               FontWeight="SemiBold"
-                                               VerticalAlignment="Center"
-                                               Opacity="0.95"/>
-                                    <TextBlock x:Name="ScaleArrowText"
-                                               Text="→"
-                                               Foreground="{DynamicResource ThemeMutedBrush}"
-                                               FontSize="10"
-                                               FontWeight="SemiBold"
-                                               VerticalAlignment="Center"
-                                               Margin="6,0"/>
-                                    <Border x:Name="ScaleResultBadge"
-                                            CornerRadius="6"
-                                            Background="{DynamicResource ThemeAccentSubtleBrush}"
-                                            BorderBrush="{DynamicResource ThemeAccentBrush}"
-                                            BorderThickness="1"
-                                            Padding="6,2">
-                                        <TextBlock x:Name="ScaleScaledText"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                   FontSize="11"
-                                                   FontWeight="Bold"
-                                                   VerticalAlignment="Center"/>
-                                    </Border>
-                                </StackPanel>
-                            </StackPanel>
+                                <Border x:Name="ScaleControlsOverlay" Margin="4,3" Background="Transparent">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock x:Name="ScaleLabel"
+                                                   Text="Scale"
+                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,6,0"/>
+                                        <Button x:Name="Scale1xBtn" Style="{StaticResource PreviewScaleButton}"
+                                                Click="Scale1xBtn_Click"
+                                                Content="1×"
+                                                AutomationProperties.Name="1x"/>
+                                        <Button x:Name="Scale2xBtn" Style="{StaticResource PreviewScaleButton}"
+                                                Click="Scale2xBtn_Click"
+                                                Content="2×"
+                                                Margin="4,0,0,0"
+                                                AutomationProperties.Name="2x"/>
+                                        <Button x:Name="Scale4xBtn" Style="{StaticResource PreviewScaleButton}"
+                                                Click="Scale4xBtn_Click"
+                                                Content="4×"
+                                                Margin="4,0,0,0"
+                                                AutomationProperties.Name="4x"/>
+                                        <StackPanel x:Name="ScaleDimensionsPanel"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="8,0,2,0">
+                                            <TextBlock x:Name="ScaleScaledText"
+                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </WrapPanel>
                         </Border>
                     </Grid>
                 </Border>

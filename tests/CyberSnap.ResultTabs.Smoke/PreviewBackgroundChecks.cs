@@ -46,7 +46,6 @@ internal static partial class Program
                     var background = Element<Border>(preview, "CheckerboardHost");
                     var image = Element<Image>(preview, "PreviewImage");
                     var viewport = Element<ScrollViewer>(preview, "ZoomViewport");
-                    Rect ControlBounds(FrameworkElement control) => control.TransformToAncestor(preview).TransformBounds(new Rect(control.RenderSize));
                     var provider = (IToggleProvider)new ToggleButtonAutomationPeer(toggle).GetPattern(PatternInterface.Toggle)!;
                     Assert(toggle.IsChecked == true && background.Background is DrawingBrush,
                         $"Preview initially shows the checkerboard in {language}");
@@ -109,14 +108,7 @@ internal static partial class Program
                     Call(preview, "ActivateSessionAt", 0); Pump();
                     Assert(toggle.IsChecked == true && background.Background is DrawingBrush
                         && settings.Settings.PreviewShowCheckerboard, "background changes are shared across capture tabs");
-                    foreach (double width in new[] { 580.0, 730.0, 860.0 })
-                    {
-                        preview.Width = width; preview.UpdateLayout(); Pump();
-                        Call(preview, "SetZoomOverlayVisibility", true); Pump();
-                        var zoom = ControlBounds(Element<Border>(preview, "ZoomControlsOverlay"));
-                        var scale = ControlBounds(Element<Border>(preview, "ScaleControlsOverlay"));
-                        Assert(!zoom.IntersectsWith(scale), $"background and zoom controls avoid the scale controls at width {width}");
-                    }
+                    CheckPreviewControlsLayout(preview, language, renders);
                     Thread.Sleep(220); Pump();
                     Render(preview, renders, "preview-checkerboard-" + language + ".png");
                     settings.FlushPendingWrites(); reloaded.Load();

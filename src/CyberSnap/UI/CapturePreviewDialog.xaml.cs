@@ -2059,23 +2059,20 @@ namespace CyberSnap.UI
 
         private void PreviewControls_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (PreviewFrame is null || ZoomControlsOverlay is null || ScaleControlsOverlay is null)
+            if (PreviewFrame is null || PreviewControlsOverlay is null)
                 return;
-            bool stack = PreviewFrame.ActualWidth
-                < ScaleControlsOverlay.ActualWidth + ZoomControlsOverlay.ActualWidth + 30;
-            ScaleControlsOverlay.Margin = new Thickness(10, 0, 0,
-                stack ? ZoomControlsOverlay.ActualHeight + 18 : 10);
+            PreviewControlsOverlay.MaxWidth = Math.Max(1, PreviewFrame.ActualWidth - 20);
         }
 
         private void UpdateZoomControlsVisibility()
         {
-            bool shouldShow = (_zoomPointerInside || ZoomControlsOverlay.IsKeyboardFocusWithin
+            bool shouldShow = (_zoomPointerInside || PreviewControlsOverlay.IsKeyboardFocusWithin
                 || _previewBackgroundColorPopup?.IsOpen == true)
                 && PreviewImage.Source is BitmapSource;
             SetZoomOverlayVisibility(shouldShow);
         }
 
-        private void ZoomControlsOverlay_IsKeyboardFocusWithinChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void PreviewControlsOverlay_IsKeyboardFocusWithinChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             UpdateZoomControlsVisibility();
         }
@@ -2083,21 +2080,12 @@ namespace CyberSnap.UI
         private void SetZoomOverlayVisibility(bool visible)
         {
             double target = visible ? 1.0 : 0.0;
-            ZoomControlsOverlay.IsHitTestVisible = visible;
-            if (ScaleControlsOverlay != null) ScaleControlsOverlay.IsHitTestVisible = visible;
+            PreviewControlsOverlay.IsHitTestVisible = visible;
             var fade = new DoubleAnimation(target, Motion.Ms(180))
             {
                 EasingFunction = Motion.Ease(visible ? Motion.SmoothOut : Motion.SmoothIn)
             };
-            ZoomControlsOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
-            if (ScaleControlsOverlay != null)
-            {
-                var scaleFade = new DoubleAnimation(target, Motion.Ms(180))
-                {
-                    EasingFunction = Motion.Ease(visible ? Motion.SmoothOut : Motion.SmoothIn)
-                };
-                ScaleControlsOverlay.BeginAnimation(UIElement.OpacityProperty, scaleFade);
-            }
+            PreviewControlsOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
         private void CancelZoomHideTimer()
@@ -2386,37 +2374,14 @@ namespace CyberSnap.UI
             Scale1xBtn.Style = _scaleFactor == 1 ? activeStyle : normalStyle;
             Scale2xBtn.Style = _scaleFactor == 2 ? activeStyle : normalStyle;
             Scale4xBtn.Style = _scaleFactor == 4 ? activeStyle : normalStyle;
-            if (ScaleOriginalText != null && ScaleScaledText != null && ScaleArrowText != null && ScaleResultBadge != null)
+            if (ScaleScaledText != null)
             {
                 int w = EffectiveBitmap.Width;
                 int h = EffectiveBitmap.Height;
                 string dims = $"{w} × {h}px";
                 string original = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px";
-                if (_scaleFactor == 1 && !_active.OutlineEnabled)
-                {
-                    // Sin escalado: medida única, más visible (primaria + semibold).
-                    ScaleOriginalText.Text = original;
-                    ScaleOriginalText.SetResourceReference(TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
-                    ScaleOriginalText.FontWeight = FontWeights.SemiBold;
-                    ScaleOriginalText.FontSize = 11;
-                    ScaleOriginalText.Opacity = 1.0;
-                    ScaleArrowText.Visibility = Visibility.Collapsed;
-                    ScaleResultBadge.Visibility = Visibility.Collapsed;
-                    ScaleDimensionsPanel.ToolTip = dims;
-                }
-                else
-                {
-                    // Escalado: origen legible pero secundario + resultado destacado en pill con acento.
-                    ScaleOriginalText.Text = original;
-                    ScaleOriginalText.SetResourceReference(TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
-                    ScaleOriginalText.FontWeight = FontWeights.SemiBold;
-                    ScaleOriginalText.FontSize = 10.5;
-                    ScaleOriginalText.Opacity = 0.95;
-                    ScaleArrowText.Visibility = Visibility.Visible;
-                    ScaleResultBadge.Visibility = Visibility.Visible;
-                    ScaleScaledText.Text = dims;
-                    ScaleDimensionsPanel.ToolTip = $"{original} → {dims}";
-                }
+                ScaleScaledText.Text = dims;
+                ScaleDimensionsPanel.ToolTip = original == dims ? null : $"{original} → {dims}";
             }
             UpdateOptionalActionsAvailability();
         }

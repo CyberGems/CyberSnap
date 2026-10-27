@@ -48,8 +48,23 @@ internal static partial class Program
                 var bar = (ScrollBar)scroll.Template.FindName("PART_VerticalScrollBar", scroll);
                 var track = (Track)bar.Template.FindName("PART_Track", bar);
                 var thumb = VisualDescendants(track.Thumb).OfType<Border>().Single();
+                var presenter = (FrameworkElement)scroll.Template.FindName("PART_ScrollContentPresenter", scroll);
+                var contentBounds = presenter.TransformToAncestor(picker).TransformBounds(new Rect(presenter.RenderSize));
+                var barBounds = bar.TransformToAncestor(picker).TransformBounds(new Rect(bar.RenderSize));
+                var thumbBounds = thumb.TransformToAncestor(picker).TransformBounds(new Rect(thumb.RenderSize));
+                Assert(contentBounds.Right <= barBounds.Left + .5,
+                    "the scrollbar has a reserved lane and does not cover RGB or HEX fields");
+                Assert(picker.ActualWidth - 6 - thumbBounds.Right <= 10,
+                    "the visible scrollbar stays close to the flyout's inner right edge");
                 Assert(thumb.Background is SolidColorBrush brush && brush.Color == Theme.TextSecondary,
                     "the picker scrollbar uses the same secondary-text color as Settings and Gallery");
+                track.Thumb.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent });
+                track.Thumb.RaiseEvent(new DragDeltaEventArgs(0, track.ActualHeight * 2) { RoutedEvent = Thumb.DragDeltaEvent });
+                track.Thumb.RaiseEvent(new DragCompletedEventArgs(0, track.ActualHeight * 2, false) { RoutedEvent = Thumb.DragCompletedEvent });
+                Pump();
+                Assert(scroll.ScrollableHeight > 0 && Math.Abs(scroll.VerticalOffset - scroll.ScrollableHeight) <= 1,
+                    "dragging the scrollbar reaches the bottom of the picker body");
+                scroll.ScrollToHome(); Pump();
                 if (renders is not null)
                 {
                     Directory.CreateDirectory(renders);

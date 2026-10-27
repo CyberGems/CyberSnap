@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
@@ -99,7 +100,8 @@ internal static partial class Program
                     Assert((bool)Property(session, "ClipboardAlreadyCopied") && (string)Property(session, "CurrentSavedFilePath") == early,
                         "an unedited preview reuses its eager copy and saved file");
                     var button = Element<Button>(preview, "PreviewOutlineBtn");
-                    Assert(Element<TextBlock>(preview, "PreviewOutlineText").Text == LocalizationService.Translate(language, "Capture outline")
+                    Assert(Element<System.Windows.Controls.Image>(preview, "PreviewOutlineIcon").Source is not null
+                        && (string)button.ToolTip == LocalizationService.Translate(language, "Add an outline to saved and copied images.")
                         && AutomationProperties.GetName(button) == LocalizationService.Translate(language, "Outline options"),
                         $"the outline control is localized and accessible in {language}");
                     button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
@@ -109,6 +111,7 @@ internal static partial class Program
                     Assert(VisualDescendants(picker).OfType<TextBlock>().Any(t =>
                         t.Text == LocalizationService.Translate(language, "Capture outline") && t.ActualWidth > 0),
                         "the enable switch has a visible localized label as well as an accessible name");
+                    CheckOutlineWheelDrag(picker);
                     enabled.IsChecked = true; slider.Value = 7;
                     ((TextBox)Field(picker, "_boxHex")).Text = "D21E5A"; Pump();
                     Assert(preview.EffectiveBitmap.Width == 94 && preview.EffectiveBitmap.Height == 64
@@ -176,5 +179,66 @@ internal static partial class Program
             }
         }
         finally { LocalizationService.ApplyCurrentCulture(originalLanguage); }
+    }
+
+    private static void CheckOutlineWheelDrag(FrameworkElement picker)
+    {
+        Call(picker, "SetColor", System.Windows.Media.Colors.Black);
+        var wheel = (FrameworkElement)Field(picker, "_colorWheel");
+        var brightness = (FrameworkElement)Field(picker, "_valueSlider");
+        try
+        {
+            double radius = Math.Min(wheel.ActualWidth, wheel.ActualHeight) / 2;
+            MovePickerPointer(wheel, new Point(wheel.ActualWidth / 2, wheel.ActualHeight / 2 - radius / 2));
+            Call(wheel, "OnMouseDown", new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left));
+            Assert(wheel.IsMouseCaptured, "the outline color wheel captures the pointer for a drag");
+            // Native capture can first synchronize with the desktop cursor. Feed
+            // the next drag move explicitly, keeping the shared cursor untouched.
+            MovePickerPointer(wheel, new Point(wheel.ActualWidth / 2, wheel.ActualHeight / 2 - radius / 2));
+            Assert(Math.Abs((double)Property(wheel, "Hue") - 90) < 1
+                && Math.Abs((double)Property(wheel, "Saturation") - .5) < .02 && wheel.IsMouseCaptured,
+                "dragging away from black retains the wheel's hue, saturation and pointer capture");
+            MovePickerPointer(wheel, new Point(0, wheel.ActualHeight / 2));
+            Assert(Math.Abs((double)Property(wheel, "Hue") - 180) < 1
+                && Math.Abs((double)Property(wheel, "Saturation") - 1) < .02,
+                "successive drag positions move the marker instead of resetting it");
+            Call(brightness, "UpdateFromPoint", new Point(brightness.ActualWidth / 2, 0));
+            var selected = (System.Windows.Media.Color)Property(picker, "SelectedColor");
+            Assert(selected.R <= 3 && selected.G >= 252 && selected.B >= 252,
+                $"raising brightness uses the hue and saturation selected while the color was black: {selected}");
+            Call(wheel, "OnMouseUp", new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left));
+            Assert(!wheel.IsMouseCaptured, "releasing the drag releases pointer capture");
+        }
+        finally { wheel.ReleaseMouseCapture(); }
+    }
+
+    // Activate the popup's WPF mouse source and supply coordinates for GetPosition
+    // without moving the user's cursor on the shared desktop.
+    private static void MovePickerPointer(FrameworkElement target, Point position)
+    {
+        var source = PresentationSource.FromVisual(target)!;
+        var root = (UIElement)source.RootVisual;
+        var pixels = source.CompositionTarget.TransformToDevice.Transform(target.TranslatePoint(position, root));
+        var assembly = typeof(InputManager).Assembly;
+        var reportType = assembly.GetType("System.Windows.Input.RawMouseInputReport")!;
+        var constructor = reportType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Single();
+        var arguments = constructor.GetParameters().Select(parameter => parameter.Name switch
+        {
+            "mode" => Enum.Parse(parameter.ParameterType, "Foreground"),
+            "timestamp" => (object)Environment.TickCount,
+            "inputSource" => source,
+            "actions" => Enum.Parse(parameter.ParameterType, "Activate, AbsoluteMove"),
+            "x" => (object)(int)Math.Round(pixels.X),
+            "y" => (object)(int)Math.Round(pixels.Y),
+            "wheel" => 0,
+            "extraInformation" => IntPtr.Zero,
+            _ => throw new InvalidOperationException("Unexpected WPF input parameter: " + parameter.Name)
+        }).ToArray();
+        var report = constructor.Invoke(arguments);
+        var argsType = assembly.GetType("System.Windows.Input.InputReportEventArgs")!;
+        var input = (InputEventArgs)Activator.CreateInstance(argsType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null, [null, report], null)!;
+        input.RoutedEvent = (RoutedEvent)typeof(InputManager).GetField("PreviewInputReportEvent", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
+        InputManager.Current.ProcessInput(input);
     }
 }

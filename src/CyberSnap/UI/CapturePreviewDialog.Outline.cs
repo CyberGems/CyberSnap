@@ -16,7 +16,6 @@ public partial class CapturePreviewDialog
     private void UpdateOutlineButton()
     {
         string language = _settingsService.Settings.InterfaceLanguage;
-        PreviewOutlineText.Text = LocalizationService.Translate(language, "Capture outline");
         PreviewOutlineBtn.ToolTip = LocalizationService.Translate(language, "Add an outline to saved and copied images.");
         AutomationProperties.SetName(PreviewOutlineBtn, LocalizationService.Translate(language, "Outline options"));
         var color = _active.OutlineEnabled ? Theme.Accent : Theme.TextSecondary;
@@ -121,7 +120,7 @@ public partial class CapturePreviewDialog
             return Color.FromRgb(rgb.R, rgb.G, rgb.B);
         }
         picker.SetColor(CurrentColor());
-        void RefreshHeader()
+        void RefreshHeader(bool syncColor = false)
         {
             updating = true;
             try
@@ -129,7 +128,7 @@ public partial class CapturePreviewDialog
                 enabled.IsChecked = _active.OutlineEnabled;
                 thickness.Value = _active.OutlineThickness;
                 value.Text = $"{_active.OutlineThickness} px";
-                picker.SetColor(CurrentColor());
+                if (syncColor) picker.SetColor(CurrentColor());
             }
             finally { updating = false; }
         }
@@ -154,11 +153,14 @@ public partial class CapturePreviewDialog
         picker.ColorChanged += color =>
         {
             if (updating) return;
+            bool applied;
             if (color is { } c)
-                ApplyOutlineSettings(true, _active.OutlineThickness, System.Drawing.Color.FromArgb(c.R, c.G, c.B).ToArgb());
+                applied = ApplyOutlineSettings(true, _active.OutlineThickness, System.Drawing.Color.FromArgb(c.R, c.G, c.B).ToArgb());
             else
-                ApplyOutlineSettings(false, 2, unchecked((int)0xFF000000));
-            RefreshHeader();
+                applied = ApplyOutlineSettings(false, 2, unchecked((int)0xFF000000));
+            // Keep the wheel's HSV state during live edits, including V=0 (black).
+            // Only a reset or rejected edit needs to replace the picker's color.
+            RefreshHeader(syncColor: color is null || !applied);
         };
         ShowPreviewColorPicker(picker, PreviewOutlineBtn);
     }
