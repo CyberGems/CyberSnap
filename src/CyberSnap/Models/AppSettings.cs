@@ -719,6 +719,7 @@ public sealed class AppSettings
     public bool ShowCaptureWidget { get; set; } = true;
     public bool WidgetAlwaysOnTop { get; set; } = true;
     public CaptureDockSide WidgetDockEdge { get; set; } = CaptureDockSide.Top;
+    // -1 follows the active monitor, -2 follows the cursor, 0+ selects a fixed monitor.
     public int WidgetMonitorIndex { get; set; } = -1;
     public double WidgetDockPositionOffset { get; set; } = 0.5;
     public int WidgetHoverDelayMs { get; set; } = 250;

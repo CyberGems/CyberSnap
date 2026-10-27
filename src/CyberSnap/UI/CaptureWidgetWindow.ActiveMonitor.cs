@@ -1,4 +1,5 @@
 using System.Windows.Threading;
+using CyberSnap.Helpers;
 using Forms = System.Windows.Forms;
 
 namespace CyberSnap.UI;
@@ -55,9 +56,10 @@ public partial class CaptureWidgetWindow
         if (_settings.WidgetMonitorIndex >= 0 && _settings.WidgetMonitorIndex < screens.Length)
             return screens[_settings.WidgetMonitorIndex];
         // Layout, expansion and preference refreshes preserve the current monitor.
-        // Only a foreground change, a deliberate drag or a topology change moves it.
+        // Follow timers, deliberate drags and topology changes handle transitions.
         return screens.FirstOrDefault(screen => screen.DeviceName == _placementMonitorDevice)
-            ?? GetForegroundMonitor(screens)?.Screen
+            ?? (_settings.WidgetMonitorIndex == WidgetPreferences.FollowCursor
+                ? Forms.Screen.FromPoint(Forms.Control.MousePosition) : GetForegroundMonitor(screens)?.Screen)
             ?? ResolveTargetScreen(screens, -1, Forms.Control.MousePosition);
     }
 
@@ -65,7 +67,13 @@ public partial class CaptureWidgetWindow
     {
         CloseMenuOutsideForeground();
         UpdateMonitorPointerObserver();
-        if (_settings.WidgetMonitorIndex != -1 || !IsVisible || !IsLoaded) return;
+        if (!IsVisible || !IsLoaded) return;
+        if (_settings.WidgetMonitorIndex == WidgetPreferences.FollowCursor)
+        {
+            FollowCursorOnMonitor(Forms.Control.MousePosition);
+            return;
+        }
+        if (_settings.WidgetMonitorIndex != -1) return;
         ConsumeMonitorPointerActivation();
         if ((GetAsyncKeyState(0x12 /* VK_MENU */) & 0x8000) != 0)
         {
@@ -156,8 +164,7 @@ public partial class CaptureWidgetWindow
     private void ObserveForegroundMonitor(IntPtr hwnd, Forms.Screen screen, long now)
     {
         if (_settings.WidgetMonitorIndex != -1) return;
-        if (!IsVisible || _mouseInWindow || _isExpanded || _contextMenuOpen || _isDragArmed || _isDragging
-            || _suppressHoverExpand || _awaitingSessionRestore || _sessionRestoreInProgress)
+        if (!CanFollowMonitor())
         {
             CancelPendingForegroundMonitor();
             return;
@@ -172,6 +179,18 @@ public partial class CaptureWidgetWindow
         if (_pendingForegroundMonitor is null || now - _foregroundStableSince < 400) return;
         _pendingForegroundMonitor = null;
         if (_placementMonitorDevice != screen.DeviceName) PositionWindowOnScreen(screen);
+    }
+
+    private bool CanFollowMonitor() => IsVisible && IsLoaded
+        && !_mouseInWindow && !_isExpanded && !_contextMenuOpen && !_isDragArmed && !_isDragging
+        && !_suppressHoverExpand && !_awaitingSessionRestore && !_sessionRestoreInProgress;
+
+    private void FollowCursorOnMonitor(System.Drawing.Point cursor)
+    {
+        if (_settings.WidgetMonitorIndex != WidgetPreferences.FollowCursor || !CanFollowMonitor()) return;
+        var target = Forms.Screen.FromPoint(cursor);
+        if (_placementMonitorDevice != target.DeviceName)
+            PositionWindowOnScreen(target);
     }
 
     private void CancelPendingForegroundMonitor()

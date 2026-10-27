@@ -84,10 +84,12 @@ internal static partial class Program
                 {
                     Assert(screen.DropDownItems[0].Text == LocalizationService.Translate(language, "Follow active monitor"),
                         "the widget exposes the same automatic monitor option as Settings", false);
-                    foreach (int monitor in Enumerable.Range(-1, screenCount + 1))
+                    Assert(screen.DropDownItems[1].Text == LocalizationService.Translate(language, "Follow cursor"),
+                        "the widget and Settings expose the localized cursor-following option", false);
+                    foreach (int monitor in Enumerable.Range(-2, screenCount + 2))
                     {
                         int value = monitor;
-                        int itemIndex = value == -1 ? 0 : value + 2;
+                        int itemIndex = value == -1 ? 0 : value == -2 ? 1 : value + 3;
                         Step(expected with { MonitorIndex = value }, () => screen.DropDownItems[itemIndex].PerformClick(), "widget monitor");
                         int next = value == -1 ? 0 : -1;
                         Step(expected with { MonitorIndex = next }, () => Element<ComboBox>(config, "WidgetMonitorCombo").SelectedItem =
@@ -117,7 +119,7 @@ internal static partial class Program
                 if (expected.AlwaysOnTop)
                     Step(expected with { AlwaysOnTop = false }, () => topmost.PerformClick(), "restart topmost");
                 if (screen is not null)
-                    Step(expected with { MonitorIndex = screenCount - 1 }, () => screen.DropDownItems[screenCount + 1].PerformClick(), "restart monitor");
+                    Step(expected with { MonitorIndex = -2 }, () => screen.DropDownItems[1].PerformClick(), "restart cursor following");
                 Render(config, renderDirectory, "widget-preferences-settings-" + language + ".png");
                 Console.WriteLine("PASS: widget/Settings placement, monitor, delay, topmost, reset and drag synchronize in both directions in " + language + ".");
 
@@ -152,7 +154,7 @@ internal static partial class Program
                         Assert((int)((ComboBoxItem)Element<ComboBox>(config, "WidgetMonitorCombo").SelectedItem).Tag == expected.MonitorIndex,
                             "Settings monitor selection stays synchronized: " + context, false);
                         var selectedMonitor = (ComboBoxItem)Element<ComboBox>(config, "WidgetMonitorCombo").SelectedItem;
-                        Assert((string)selectedMonitor.Content == screen.DropDownItems[expected.MonitorIndex == -1 ? 0 : expected.MonitorIndex + 2].Text,
+                        Assert((string)selectedMonitor.Content == screen.DropDownItems[expected.MonitorIndex == -1 ? 0 : expected.MonitorIndex == -2 ? 1 : expected.MonitorIndex + 3].Text,
                             "Settings and widget monitor labels use the same language: " + context, false);
                     }
                     Assert(widget.Topmost == expected.AlwaysOnTop
@@ -182,9 +184,9 @@ internal static partial class Program
                             && (delay.DropDownItems[index].Image is not null) == (delays[index] == expected.HoverDelayMs),
                             "an existing widget menu reflects external delay changes: " + context, false);
                     if (screen is not null)
-                        foreach (int monitor in Enumerable.Range(-1, screenCount + 1))
-                            Assert((screen.DropDownItems[monitor == -1 ? 0 : monitor + 2].Tag is true) == (monitor == expected.MonitorIndex)
-                                && (screen.DropDownItems[monitor == -1 ? 0 : monitor + 2].Image is not null) == (monitor == expected.MonitorIndex),
+                        foreach (int monitor in Enumerable.Range(-2, screenCount + 2))
+                            Assert((screen.DropDownItems[monitor == -1 ? 0 : monitor == -2 ? 1 : monitor + 3].Tag is true) == (monitor == expected.MonitorIndex)
+                                && (screen.DropDownItems[monitor == -1 ? 0 : monitor == -2 ? 1 : monitor + 3].Image is not null) == (monitor == expected.MonitorIndex),
                                 "an existing widget menu reflects external monitor changes: " + context, false);
                     Assert((topmost.Image is not null) == expected.AlwaysOnTop, "the existing menu's topmost checkmark updates: " + context, false);
                     foreach (var service in new[] { widgetSettings, configSettings })

@@ -1439,6 +1439,7 @@
   "Reset position": "Resetear posición",
   "Return the widget to its default centered position.": "Devuelve el widget a su posición centrada por defecto.",
   "Follow active monitor": "Seguir monitor activo",
+  "Follow cursor": "Seguir cursor",
   "Follows the focused window or the desktop you click. Paused while using the widget.": "Sigue la ventana con el foco o el escritorio donde haces clic. Se pausa al usar el widget.",
   "Only one monitor detected": "Solo se detecta un monitor",
   "Disable Widget": "Desactivar Widget",

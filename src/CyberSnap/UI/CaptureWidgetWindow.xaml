@@ -33,6 +33,7 @@
         <SolidColorBrush x:Key="WidgetSeparator" Color="#10FFFFFF"/>
         <SolidColorBrush x:Key="WidgetPeekGripBg" Color="#2600FFFF"/>
         <SolidColorBrush x:Key="WidgetButtonHoverBg" Color="#1500FFFF"/>
+        <SolidColorBrush x:Key="WidgetCaptureHoverBg" Color="#171B2C"/>
         <SolidColorBrush x:Key="WidgetButtonPressedBg" Color="#3000FFFF"/>
         <Color x:Key="WidgetAccentColor">#00FFFF</Color>
         <sys:Double x:Key="WidgetGlowOpacity">0.6</sys:Double>
@@ -180,17 +181,19 @@
                     </Grid>
 
                     <!-- Big Circular Capture Button -->
-                    <Grid Grid.Row="1" Margin="0,0,0,12" HorizontalAlignment="Center">
-                        <Button x:Name="CaptureButton" Click="CaptureButton_Click" Cursor="Hand" Width="54" Height="54" FocusVisualStyle="{x:Null}"
+                    <Grid Grid.Row="1" Margin="0,0,0,6">
+                        <Button x:Name="CaptureButton" Click="CaptureButton_Click" Cursor="Hand" Height="60" Background="Transparent" FocusVisualStyle="{x:Null}"
                                 MouseEnter="CaptureButton_MouseEnter" MouseLeave="CaptureButton_MouseLeave"
                                 AutomationProperties.Name="Quick screenshot"
                                 AutomationProperties.HelpText="Start a quick screenshot using the default capture mode.">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Grid Background="Transparent">
+                                    <Border x:Name="CaptureTile" Background="{TemplateBinding Background}" CornerRadius="8">
+                                    <Grid>
                                         <!-- Outer Ring with scaling + glow on hover -->
                                         <Path x:Name="OuterRing" Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2"
                                               Fill="{DynamicResource WidgetAccent}" Stretch="Uniform" Width="54" Height="54"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"
                                               RenderTransformOrigin="0.5,0.5">
                                             <Path.RenderTransform>
                                                 <ScaleTransform x:Name="RingScale" ScaleX="1" ScaleY="1"/>
@@ -207,16 +210,19 @@
                                             </ContentPresenter.Effect>
                                         </ContentPresenter>
                                     </Grid>
+                                    </Border>
                                     <ControlTemplate.Triggers>
                                         <!-- Hover pop (scale + glow) is animated in code-behind
                                              (CaptureButton_MouseEnter/Leave with Motion) so
                                              Disable-animations snaps instantly. Template keeps
                                              the end-state setters for the no-animation path. -->
                                         <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="CaptureTile" Property="Background" Value="{DynamicResource WidgetCaptureHoverBg}"/>
                                             <Setter TargetName="OuterRing" Property="Effect" Value="{DynamicResource CyanGlow}"/>
                                             <Setter TargetName="OuterRing" Property="Fill" Value="{DynamicResource WidgetAccentHover}"/>
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="CaptureTile" Property="Background" Value="{DynamicResource WidgetButtonPressedBg}"/>
                                             <Setter TargetName="OuterRing" Property="Opacity" Value="0.7"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>

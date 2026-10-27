@@ -7,6 +7,10 @@ on:
       - '.github/workflows/verify-capture-tools.yml'
       - 'src/CyberSnap/UI/ToolListBuilder.cs'
       - 'src/CyberSnap/UI/CapturePreviewDialog*'
+      - 'src/CyberSnap/UI/CaptureWidgetWindow*'
+      - 'src/CyberSnap/UI/Settings/SettingsWindow.Preferences.cs'
+      - 'src/CyberSnap/UI/Settings/SettingsWindow.Widget.cs'
+      - 'src/CyberSnap/Helpers/WidgetPreferences.cs'
       - 'src/CyberSnap/UI/Controls/ColorPicker*'
       - 'src/CyberSnap/App/App.Pin.cs'
       - 'src/CyberSnap/App/App.Capture.cs'
@@ -56,3 +60,11 @@ jobs:
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-margin-only
       - name: Check preview actions, Paint snapshots and maximize/restore centering
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-actions-only
+      - name: Check widget cursor following and capture hit target
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --widget-follow-cursor-only
+      - name: Check widget preference synchronization and restart
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --widget-preferences-only
+      - name: Check widget monitor placement and mixed DPI
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --widget-monitors-only
+      - name: Check existing widget foreground following
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --widget-active-only

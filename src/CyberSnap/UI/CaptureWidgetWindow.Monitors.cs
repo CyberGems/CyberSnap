@@ -33,7 +33,7 @@ public partial class CaptureWidgetWindow
     // Keep the selected physical monitor when Windows reorders the list. If that
     // monitor disappears, return to following the active window instead of choosing another device.
     private static int ResolveMonitorIndexAfterDisplayChange(int index, string? previousDevice, string[] available)
-        => index < 0 ? -1 : previousDevice is not null
+        => index == WidgetPreferences.FollowCursor ? WidgetPreferences.FollowCursor : index < 0 ? -1 : previousDevice is not null
             ? Array.FindIndex(available, device => string.Equals(device, previousDevice, StringComparison.OrdinalIgnoreCase))
             : index < available.Length ? index : -1;
 

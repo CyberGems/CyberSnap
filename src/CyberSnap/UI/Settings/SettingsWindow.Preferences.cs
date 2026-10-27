@@ -1509,6 +1509,11 @@ public partial class SettingsWindow
             Content = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "Follow active monitor"),
             Tag = -1
         });
+        WidgetMonitorCombo.Items.Add(new ComboBoxItem
+        {
+            Content = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "Follow cursor"),
+            Tag = WidgetPreferences.FollowCursor
+        });
         for (int i = 0; i < screens.Length; i++)
         {
             WidgetMonitorCombo.Items.Add(new ComboBoxItem

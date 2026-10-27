@@ -56,6 +56,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--widget-follow-cursor-only"))
+            {
+                CheckWidgetCursorFollowing(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} widget cursor following and capture tile checks.");
+                return 0;
+            }
             if (args.Contains("--preview-actions-only"))
             {
                 CheckPreviewActions(temp, args.FirstOrDefault(a => !a.StartsWith("--")), args.Contains("--open-paint"));

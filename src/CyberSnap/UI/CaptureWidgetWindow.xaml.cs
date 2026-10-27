@@ -316,6 +316,7 @@ public partial class CaptureWidgetWindow : Window
         Resources["WidgetSeparator"] = Theme.Brush(Theme.Separator);
         Resources["WidgetPeekGripBg"] = new SolidColorBrush(peekGripBg);
         Resources["WidgetButtonHoverBg"] = new SolidColorBrush(hoverBg);
+        Resources["WidgetCaptureHoverBg"] = Theme.Brush(Theme.BgCard);
         Resources["WidgetButtonPressedBg"] = new SolidColorBrush(pressedBg);
         Resources["WidgetAccentColor"] = accent;
         Resources["WidgetGlowOpacity"] = Theme.IsDark ? 0.6 : 0.35;
@@ -1387,6 +1388,8 @@ public partial class CaptureWidgetWindow : Window
         var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"), showImages: true, iconId: "fullscreen");
         monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow active monitor", settings => settings.WidgetMonitorIndex == -1,
             settings => settings.WidgetMonitorIndex = -1));
+        monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow cursor", settings => settings.WidgetMonitorIndex == WidgetPreferences.FollowCursor,
+            settings => settings.WidgetMonitorIndex = WidgetPreferences.FollowCursor));
         monitorMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         for (int i = 0; i < screens.Length; i++)
         {
