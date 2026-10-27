@@ -10,7 +10,8 @@ using CyberSnap.UI;
 
 internal static partial class Program
 {
-    private static void CheckPreviewPickerLayout(CapturePreviewDialog preview, string language, string? renders)
+    private static void CheckPreviewPickerLayout(CapturePreviewDialog preview, string language, string? renders,
+        string buttonName = "PreviewBackgroundColorBtn")
     {
         var helper = typeof(CapturePreviewDialog).Assembly.GetType("CyberSnap.UI.PopupWindowHelper")!;
         var nativeInfo = helper.GetMethod("TryGetNativeMonitorInfo", BindingFlags.Static | BindingFlags.NonPublic)!;
@@ -29,7 +30,7 @@ internal static partial class Program
                 Theme.SetMode(theme); preview.ApplyTheme(); Pump();
                 center.Invoke(null, [preview, new System.Drawing.Point(work.X + work.Width / 2, work.Y + work.Height / 2)]);
                 Thread.Sleep(80); Pump(); Pump();
-                Element<Button>(preview, "PreviewBackgroundColorBtn").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Element<Button>(preview, buttonName).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Pump();
                 var popup = (Popup)Field(preview, "_previewBackgroundColorPopup");
                 var picker = (FrameworkElement)Field(preview, "_previewBackgroundColorPicker");
@@ -55,7 +56,7 @@ internal static partial class Program
                     var image = new RenderTargetBitmap((int)Math.Ceiling(picker.ActualWidth * scale),
                         (int)Math.Ceiling(picker.ActualHeight * scale), 96, 96, PixelFormats.Pbgra32);
                     image.Render(picker);
-                    using var output = File.Create(Path.Combine(renders, $"picker-fit-{monitor}-{scale}-{theme}-{language}.png"));
+                    using var output = File.Create(Path.Combine(renders, $"picker-fit-{buttonName}-{monitor}-{scale}-{theme}-{language}.png"));
                     var encoder = new PngBitmapEncoder();
                     encoder.Frames.Add(BitmapFrame.Create(image));
                     encoder.Save(output);

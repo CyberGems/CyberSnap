@@ -55,6 +55,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Precision Tools**: Crosshair guides, capture magnifier, and smart window detection
 - **Scroll Capture**: Automatically stitches long scrollable pages into a single image
 - **Preview Background**: Toggle the checkerboard next to the preview zoom controls or choose a solid color from the adjacent swatch. The color picker supports HEX, RGB, HSV, palettes, and screen sampling, with an option to restore the theme default. Custom colors are remembered separately for light and dark themes (including grayscale), shared across tabs and sessions. Saving and copying preserve the image's transparency.
+- **Capture Outline**: Add an outline from Preview with a custom color and a thickness of 1–32 output pixels. It grows outside the capture, preserving its pixels and transparency, and is included in copied and saved images. Each tab keeps its own settings; the last choice is remembered for new captures. The color picker keeps Reset and Accept visible when scrolling at higher DPI.
 
 ### ✏️ Annotation Editor
 - **Rich Canvas**: Shapes, text, image paste, rulers, custom colors, and frames

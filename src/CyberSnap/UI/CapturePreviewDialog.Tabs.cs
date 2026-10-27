@@ -37,16 +37,9 @@ namespace CyberSnap.UI
             set => _active.SavedFilePath = value;
         }
 
-        private Bitmap? _scaledBitmap
-        {
-            get => _active.ScaledBitmap;
-            set => _active.ScaledBitmap = value;
-        }
-
         private int _scaleFactor
         {
             get => _active.ScaleFactor;
-            set => _active.ScaleFactor = value;
         }
 
         private double _currentZoom
@@ -77,12 +70,20 @@ namespace CyberSnap.UI
             bool clipboardAlreadyCopied,
             CaptureKind captureKind)
         {
-            return new PreviewSession(
+            var session = new PreviewSession(
                 bitmap,
                 savedFilePath,
                 clipboardAlreadyCopied,
                 captureKind,
                 _nextCaptureOrdinal++);
+            var settings = _settingsService.Settings;
+            try { session.SetOutline(settings.PreviewOutlineEnabled, settings.PreviewOutlineThickness, settings.PreviewOutlineColorArgb); }
+            catch (InvalidOperationException ex)
+            {
+                AppDiagnostics.LogWarning("preview.outline.initial", ex.Message, ex);
+                ToastWindow.ShowError(LocalizationService.Translate("Outline not available"), LocalizationService.Translate(ex.Message));
+            }
+            return session;
         }
 
         private void InitTabStrip()
@@ -111,7 +112,7 @@ namespace CyberSnap.UI
             CaptureViewState();
             WarnIfManyTabs();
             var session = CreateSession(bitmap, savedFilePath, clipboardAlreadyCopied, captureKind);
-            session.PreviewSource = BitmapPerf.ToBitmapSource(bitmap);
+            session.PreviewSource = BitmapPerf.ToBitmapSource(session.EffectiveBitmap);
             _sessions.Add(session);
             _active = session;
             ApplySessionVisuals();
@@ -202,6 +203,7 @@ namespace CyberSnap.UI
                 ?? BitmapPerf.ToBitmapSource(_active.EffectiveBitmap);
             _active.PreviewSource = source;
             PreviewImage.Source = source;
+            UpdateOutlineButton();
             UpdateScaleControls();
             ApplyZoom();
             if (!_active.DidInitialContain)
@@ -525,7 +527,7 @@ namespace CyberSnap.UI
 
         private void RaiseSessionCompleted(PreviewSession session, bool committed)
         {
-            session.DetachOwnedBitmaps();
+            if (SessionCompleted is not null) session.DetachOwnedBitmaps();
             try
             {
                 SessionCompleted?.Invoke(session, committed);

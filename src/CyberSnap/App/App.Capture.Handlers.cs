@@ -66,11 +66,10 @@ public partial class App
     private void CompletePreviewSession(PreviewSession session, bool committed)
     {
         bool isScaled = session.IsScaled;
-        var original = session.Bitmap;
         var effective = session.EffectiveBitmap;
         string? effectiveSavePath = ResolvePreviewCommitSavePath(
             session.SavedFilePath, session.EarlySavePath, isScaled);
-        bool effectiveCopied = isScaled ? false : session.ClipboardAlreadyCopied;
+        bool effectiveCopied = session.ClipboardAlreadyCopied;
         var kind = session.CaptureKind;
 
         if (committed)
@@ -85,13 +84,8 @@ public partial class App
                 session.SelectedAction,
                 effectiveSavePath,
                 effectiveCopied,
-                isExplicitScaled: isScaled,
+                preservePreviewPixels: isScaled || session.OutlineEnabled,
                 captureKind: kind);
-
-            if (isScaled)
-            {
-                try { original.Dispose(); } catch { }
-            }
 
             if (kind == CaptureKind.ScrollCapture)
             {
@@ -107,10 +101,6 @@ public partial class App
         else
         {
             try { effective.Dispose(); } catch { }
-            if (isScaled)
-            {
-                try { original.Dispose(); } catch { }
-            }
         }
     }
 
@@ -177,7 +167,7 @@ public partial class App
         RegionOverlayForm.ConfirmCommitAction commitAction = RegionOverlayForm.ConfirmCommitAction.Default,
         string? alreadySavedPath = null,
         bool clipboardAlreadyCopied = false,
-        bool isExplicitScaled = false,
+        bool preservePreviewPixels = false,
         CaptureKind captureKind = CaptureKind.Screenshot)
     {
         var settings = _settingsService!.Settings;
@@ -224,7 +214,7 @@ public partial class App
             }
         }
 
-        _ = PersistCaptureAsync(result, requestedPath, saveHistory: settings.SaveHistory, isExplicitScaled: isExplicitScaled)
+        _ = PersistCaptureAsync(result, requestedPath, saveHistory: settings.SaveHistory, preservePreviewPixels: preservePreviewPixels)
             .ContinueWith(task =>
             {
                 if (task.IsFaulted)
@@ -754,11 +744,11 @@ public partial class App
         Bitmap source,
         string? requestedPath,
         bool saveHistory,
-        bool isExplicitScaled = false)
+        bool preservePreviewPixels = false)
     {
         var settings = _settingsService!.Settings;
-        int maxLongEdge = isExplicitScaled ? 0 : settings.CaptureMaxLongEdge;
-        var captureFormat = settings.CaptureImageFormat;
+        int maxLongEdge = preservePreviewPixels ? 0 : settings.CaptureMaxLongEdge;
+        var captureFormat = CaptureOutputService.GetFormatForPath(requestedPath, settings.CaptureImageFormat);
         int jpegQuality = settings.JpegQuality;
 
         return Task.Run(() =>

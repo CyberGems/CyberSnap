@@ -3,7 +3,10 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
+using CyberSnap.Native;
 using CyberSnap.Services;
 using CyberSnap.UI.Controls;
 using Color = System.Windows.Media.Color;
@@ -21,8 +24,9 @@ public partial class CapturePreviewDialog
     {
         PreviewMouseDown += (_, e) =>
         {
-            if (e.OriginalSource is Visual source && (ReferenceEquals(source, PreviewBackgroundColorBtn)
-                || PreviewBackgroundColorBtn.IsAncestorOf(source))) return;
+            if (_previewBackgroundColorPopup?.PlacementTarget is Visual target
+                && e.OriginalSource is Visual source && (ReferenceEquals(source, target)
+                || target.IsAncestorOf(source))) return;
             ClosePreviewBackgroundColorPicker(restoreFocus: false);
         };
         Deactivated += (_, _) => ClosePreviewBackgroundColorPicker(restoreFocus: false);
@@ -89,8 +93,9 @@ public partial class CapturePreviewDialog
         CancelAutoCloseOnInteraction();
         if (_previewBackgroundColorPopup?.IsOpen == true)
         {
+            bool same = ReferenceEquals(_previewBackgroundColorPopup.PlacementTarget, PreviewBackgroundColorBtn);
             ClosePreviewBackgroundColorPicker();
-            return;
+            if (same) return;
         }
 
         // Keep the original theme when a screen pick completes after the flyout closes.
@@ -110,6 +115,11 @@ public partial class CapturePreviewDialog
                 finally { resetting = false; }
             }
         };
+        ShowPreviewColorPicker(picker, PreviewBackgroundColorBtn);
+    }
+
+    private void ShowPreviewColorPicker(ColorPickerPopup picker, FrameworkElement button)
+    {
         picker.CloseRequested += () => ClosePreviewBackgroundColorPicker();
         picker.PreviewKeyDown += (_, key) =>
         {
@@ -118,7 +128,7 @@ public partial class CapturePreviewDialog
             ClosePreviewBackgroundColorPicker();
         };
 
-        var anchor = PreviewBackgroundColorBtn.PointToScreen(new Point(0, 0));
+        var anchor = button.PointToScreen(new Point(0, 0));
         var physicalPoint = new System.Drawing.Point((int)anchor.X, (int)anchor.Y);
         var screen = System.Windows.Forms.Screen.FromPoint(physicalPoint);
         var workArea = PopupWindowHelper.TryGetNativeMonitorInfo(screen, out _, out var nativeWork)
@@ -128,15 +138,34 @@ public partial class CapturePreviewDialog
         picker.MaxHeight = Math.Max(160, (workArea.Height / dpiY - 24) / UiScale.Current);
         var popup = new Popup
         {
-            PlacementTarget = PreviewBackgroundColorBtn,
+            PlacementTarget = button,
             Placement = PlacementMode.Top,
-            HorizontalOffset = 24 - (ColorPickerPopup.FlyoutWidth + 12) * UiScale.Current,
+            HorizontalOffset = button.ActualWidth - (ColorPickerPopup.FlyoutWidth + 12) * UiScale.Current,
             VerticalOffset = -4,
             AllowsTransparency = true,
             // Owner clicks dismiss explicitly, so clicking the swatch can reliably toggle it.
             StaysOpen = true,
             Child = picker
         };
+        // WPF may clamp a Popup to the screen bounds instead of the working area,
+        // notably with a side taskbar. Move its native window after placement settles.
+        void KeepInsideWorkingArea()
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (!popup.IsOpen || PresentationSource.FromVisual(picker) is not HwndSource source
+                    || !User32.GetWindowRect(source.Handle, out var rect)) return;
+                int width = rect.Right - rect.Left, height = rect.Bottom - rect.Top;
+                int x = Math.Clamp(rect.Left, workArea.Left, Math.Max(workArea.Left, workArea.Right - width));
+                int y = Math.Clamp(rect.Top, workArea.Top, Math.Max(workArea.Top, workArea.Bottom - height));
+                if (x == rect.Left && y == rect.Top) return;
+                if (!User32.SetWindowPos(source.Handle, IntPtr.Zero, x, y, 0, 0,
+                    User32.SWP_NOSIZE | User32.SWP_NOZORDER | User32.SWP_NOACTIVATE))
+                    AppDiagnostics.LogWarning("preview.picker.placement", "Could not keep the color picker within the monitor working area.");
+            }, DispatcherPriority.ContextIdle);
+        }
+        popup.Opened += (_, _) => KeepInsideWorkingArea();
+        picker.SizeChanged += (_, _) => KeepInsideWorkingArea();
         popup.Closed += (_, _) =>
         {
             if (!ReferenceEquals(_previewBackgroundColorPopup, popup)) return;
@@ -154,9 +183,10 @@ public partial class CapturePreviewDialog
     private void ClosePreviewBackgroundColorPicker(bool restoreFocus = true)
     {
         if (_previewBackgroundColorPopup?.IsOpen != true) return;
+        var anchor = _previewBackgroundColorPopup.PlacementTarget;
         _previewBackgroundColorPopup.IsOpen = false;
         if (restoreFocus && IsActive && !_isClosing)
-            PreviewBackgroundColorBtn.Focus();
+            anchor?.Focus();
     }
 
     private bool HandlePreviewBackgroundPickerKey(KeyEventArgs e)

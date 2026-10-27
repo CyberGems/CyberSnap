@@ -2594,5 +2594,12 @@
   "Switch to solid background": "Switch to solid background",
   "Show checkerboard background": "Show checkerboard background",
   "Choose solid background color": "Choose solid background color",
-  "Theme default": "Theme default"
+  "Theme default": "Theme default",
+  "Capture outline": "Outline",
+  "Outline options": "Outline options",
+  "Outline thickness": "Outline thickness",
+  "Add an outline to saved and copied images.": "Add an outline to saved and copied images.",
+  "Outline not available": "Outline not available",
+  "The outline would exceed the image size limit.": "The outline would exceed the image size limit.",
+  "Not enough memory to add the outline.": "Not enough memory to add the outline."
 }

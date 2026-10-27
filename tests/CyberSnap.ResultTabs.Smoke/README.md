@@ -8,6 +8,10 @@ dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --capture-to
 
 This targeted suite covers:
 
+- **Preview outlines:** exact border/source pixels, transparency, image-size limits,
+  per-tab settings, scaling, remembered preferences, and stale clipboard/file state.
+  The separate outline run exercises the real completion handler against temporary
+  PNG and JPEG files, including eager saves and manual named copies.
 - **Preview backgrounds:** the accessible toggle preserves zoom, pan, source pixels,
   and PNG transparency. Checks cover both languages, all three themes, capture tabs,
   window widths, and persistence after a disk reload and a new preview session.
@@ -51,6 +55,8 @@ release. To save Zoom help renders, append a local output directory to the comma
 For broader interactive checks on a Windows desktop:
 
 ```powershell
+dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --preview-outline-only
+
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --preview-background-only
 
 dotnet run --project tests/CyberSnap.ResultTabs.Smoke -c Release -- --confirmation-options-only

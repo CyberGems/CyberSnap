@@ -25,7 +25,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        Application app = args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
+        Application app = args.Contains("--preview-outline-only") || args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
@@ -56,6 +56,13 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--preview-outline-only"))
+            {
+                CheckPreviewOutline(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                CheckPreviewOutlineCommit((CyberSnap.App)app, settings, temp);
+                Console.WriteLine($"PASS: {_checks} preview outline checks.");
+                return 0;
+            }
             if (args.Contains("--preview-background-only"))
             {
                 CheckPreviewBackground(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -65,6 +72,7 @@ internal static partial class Program
             if (args.Contains("--capture-tool-regressions-only"))
             {
                 CheckPreviewBackground(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                CheckPreviewOutline(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
                 CheckStageHotkeyConflicts();
                 CheckCaptureDestinationPolicy();
                 CheckConfirmationOptions(settings);
@@ -248,6 +256,7 @@ internal static partial class Program
                 return 0;
             }
             CheckIndependentAutoCopy(temp);
+            CheckPreviewOutline(temp, args.FirstOrDefault());
             CheckPreviewBackground(temp, args.FirstOrDefault());
             CheckZoom(temp, args.FirstOrDefault());
             CheckToolsSettings(temp, args.FirstOrDefault());

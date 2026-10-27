@@ -100,6 +100,46 @@
             </Setter>
         </Style>
 
+        <Style x:Key="PreviewOutlineSlider" TargetType="Slider">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Track x:Name="PART_Track" Height="18"
+                               Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                               Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource ThemeAccentBrush}"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Width="12" Height="12">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Ellipse Fill="{DynamicResource ThemeTextPrimaryBrush}" Stroke="{DynamicResource ThemeAccentBrush}" StrokeThickness="1"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource ThemeInputBorderBrush}"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="PreviewZoomPercentButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -404,6 +444,15 @@
                                             Width="12" Height="12" CornerRadius="2"
                                             BorderThickness="1"
                                             BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                </Button>
+                                <Button x:Name="PreviewOutlineBtn" Style="{StaticResource PreviewScaleButton}"
+                                        Margin="8,0,0,0" Padding="6,0"
+                                        Click="PreviewOutlineBtn_Click"
+                                        AutomationProperties.Name="Outline options">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Image x:Name="PreviewOutlineIcon" Width="12" Height="12" Margin="0,0,5,0"/>
+                                        <TextBlock x:Name="PreviewOutlineText" Text="Capture outline"/>
+                                    </StackPanel>
                                 </Button>
                             </StackPanel>
                         </Border>

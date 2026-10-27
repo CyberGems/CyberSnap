@@ -265,7 +265,7 @@ namespace CyberSnap.UI
             ApplyLocalizedLabels();
             UpdateIcons();
 
-            _active.PreviewSource = BitmapPerf.ToBitmapSource(bitmap);
+            _active.PreviewSource = BitmapPerf.ToBitmapSource(EffectiveBitmap);
             PreviewImage.Source = _active.PreviewSource;
             UpdateScaleControls();
             ApplyZoom();
@@ -383,6 +383,7 @@ namespace CyberSnap.UI
             ApplyTooltipPlacement(ZoomLevelBtn);
             ApplyTooltipPlacement(PreviewBackgroundBtn);
             ApplyTooltipPlacement(PreviewBackgroundColorBtn);
+            ApplyTooltipPlacement(PreviewOutlineBtn);
             ApplyTooltipPlacement(Scale1xBtn);
             ApplyTooltipPlacement(Scale2xBtn);
             ApplyTooltipPlacement(Scale4xBtn);
@@ -566,6 +567,7 @@ namespace CyberSnap.UI
             SetPreviewIcon(EditSettingsBtnIcon, "gear", secondaryIconColor, 14);
             SetPreviewIcon(ZoomOutIcon, "zoomOut", secondaryIconColor, 12);
             SetPreviewIcon(ZoomInIcon, "zoomIn", secondaryIconColor, 12);
+            UpdateOutlineButton();
             UpdateZoomViewButton();
         }
 
@@ -2343,32 +2345,9 @@ namespace CyberSnap.UI
 
         private void ApplyScaleFactor(int factor)
         {
-            if (factor == _scaleFactor && factor == 1 && _scaledBitmap == null) { UpdateScaleControls(); return; }
-            if (factor == 1)
-            {
-                if (_scaledBitmap != null)
-                {
-                    try { _scaledBitmap.Dispose(); } catch { }
-                    _scaledBitmap = null;
-                }
-                _scaleFactor = 1;
-                PreviewImage.Source = BitmapPerf.ToBitmapSource(_capturedBitmap);
-                _active.PreviewSource = PreviewImage.Source;
-            }
-            else
-            {
-                Bitmap scaled;
-                try { scaled = ImageScaleService.Scale(_capturedBitmap, factor); }
-                catch { throw; }
-                if (_scaledBitmap != null)
-                {
-                    try { _scaledBitmap.Dispose(); } catch { }
-                }
-                _scaledBitmap = scaled;
-                _scaleFactor = factor;
-                PreviewImage.Source = BitmapPerf.ToBitmapSource(scaled);
-                _active.PreviewSource = PreviewImage.Source;
-            }
+            _active.SetScaleFactor(factor);
+            PreviewImage.Source = BitmapPerf.ToBitmapSource(EffectiveBitmap);
+            _active.PreviewSource = PreviewImage.Source;
             UpdateScaleControls();
             if (factor != 1)
             {
@@ -2413,7 +2392,7 @@ namespace CyberSnap.UI
                 int h = EffectiveBitmap.Height;
                 string dims = $"{w} × {h}px";
                 string original = $"{_capturedBitmap.Width} × {_capturedBitmap.Height}px";
-                if (_scaleFactor == 1)
+                if (_scaleFactor == 1 && !_active.OutlineEnabled)
                 {
                     // Sin escalado: medida única, más visible (primaria + semibold).
                     ScaleOriginalText.Text = original;
@@ -2657,7 +2636,8 @@ namespace CyberSnap.UI
             CancelAutoCloseOnInteraction();
             try
             {
-                Services.ClipboardService.CopyToClipboard(EffectiveBitmap, _savedFilePath);
+                Services.ClipboardService.CopyToClipboard(EffectiveBitmap, _active.CurrentSavedFilePath);
+                _active.MarkCopied();
                 ToastWindow.Show(
                     LocalizationService.Translate("Copied to clipboard"),
                     LocalizationService.Translate("Image copied to clipboard."));

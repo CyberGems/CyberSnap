@@ -10,6 +10,10 @@ on:
       - 'src/CyberSnap/UI/Controls/ColorPicker*'
       - 'src/CyberSnap/App/App.Pin.cs'
       - 'src/CyberSnap/App/App.Capture.cs'
+      - 'src/CyberSnap/App/App.Capture.Handlers.cs'
+      - 'src/CyberSnap/UI/PreviewSession.cs'
+      - 'src/CyberSnap/Services/CaptureOutlineRenderer.cs'
+      - 'src/CyberSnap/Services/CaptureOutputService.cs'
       - 'src/CyberSnap/Capture/PinImageForm.cs'
       - 'src/CyberSnap/Capture/StandaloneZoomForm.cs'
       - 'src/CyberSnap/Capture/ZoomHelpPanel.cs'
@@ -45,3 +49,5 @@ jobs:
         run: dotnet build tests/CyberSnap.ResultTabs.Smoke --configuration Release
       - name: Check preview backgrounds, hotkey scopes, confirmation, Pin formats and Zoom help
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --capture-tool-regressions-only
+      - name: Check outline output through real preview completion
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-outline-only

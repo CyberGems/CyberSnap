@@ -230,6 +230,9 @@ public sealed class AppSettings
     /// <summary>Optional solid preview colors. Dark and grayscale share a color; null follows the theme default.</summary>
     public int? PreviewBackgroundDarkColorArgb { get; set; }
     public int? PreviewBackgroundLightColorArgb { get; set; }
+    public bool PreviewOutlineEnabled { get; set; }
+    public int PreviewOutlineThickness { get; set; } = 2;
+    public int PreviewOutlineColorArgb { get; set; } = unchecked((int)0xFF000000);
 
     /// <summary>
     /// When true, the Print Screen advisory banner in Settings → Hotkeys stays hidden

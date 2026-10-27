@@ -42,6 +42,15 @@ public static class CaptureOutputService
         _ => "png"
     };
 
+    public static CaptureImageFormat GetFormatForPath(string? path, CaptureImageFormat fallback) =>
+        Path.GetExtension(path)?.ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => CaptureImageFormat.Jpeg,
+            ".bmp" => CaptureImageFormat.Bmp,
+            ".png" => CaptureImageFormat.Png,
+            _ => fallback
+        };
+
     public static void SaveBitmap(Bitmap bitmap, string filePath, CaptureImageFormat format, int jpegQuality)
     {
         var dir = Path.GetDirectoryName(filePath);

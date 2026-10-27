@@ -59,12 +59,28 @@ internal sealed class ColorPickerPopup : ContentControl
     private WrapPanel _recentColorsPanel = null!;
     private ScrollViewer _bodyScroll = null!;
     private Grid _actionRow = null!;
+    private Grid _layout = null!;
+    private FrameworkElement? _header;
     private bool _suppress;
 
     public event Action<WpfColor?>? ColorChanged;
     public event Action? CloseRequested;
 
     public WpfColor? SelectedColor => _hasColor ? _currentColor : null;
+
+    public void SetHeader(FrameworkElement header)
+    {
+        if (_header is not null) _layout.Children.Remove(_header);
+        else
+        {
+            _layout.RowDefinitions.Insert(0, new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(_bodyScroll, 1);
+            Grid.SetRow(_actionRow, 2);
+        }
+        _header = header;
+        Grid.SetRow(header, 0);
+        _layout.Children.Add(header);
+    }
 
     private static readonly WpfColor[] PaletteColors =
     {
@@ -466,6 +482,7 @@ internal sealed class ColorPickerPopup : ContentControl
             ClipToBounds = true
         };
         var layout = new Grid();
+        _layout = layout;
         layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.Children.Add(_bodyScroll);
