@@ -12,6 +12,13 @@ namespace CyberSnap.UI;
 
 public partial class CapturePreviewDialog
 {
+    private void UpdateMarginButton()
+    {
+        PreviewBackgroundColorBtn.Tag = _active.MarginEnabled;
+        AutomationProperties.SetItemStatus(PreviewBackgroundColorBtn, LocalizationService.Translate(
+            _settingsService.Settings.InterfaceLanguage, _active.MarginEnabled ? "Active" : "Inactive"));
+    }
+
     private static void ShowMarginError(Exception exception) => ToastWindow.ShowError(
         LocalizationService.Translate("Margin not available"),
         LocalizationService.Translate(exception is OutOfMemoryException
@@ -38,6 +45,7 @@ public partial class CapturePreviewDialog
             settings.PreviewMarginSize = _active.MarginSize;
             _settingsService.Save();
             if (!ReferenceEquals(previous, EffectiveBitmap)) RefreshFramedPreview();
+            UpdateMarginButton();
             CancelAutoCloseOnInteraction();
             return true;
         }

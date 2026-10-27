@@ -2609,5 +2609,7 @@
   "Margin not available": "Margin not available",
   "Not enough memory to add the margin.": "Not enough memory to add the margin.",
   "The margin and outline would exceed the image size limit.": "The margin and outline would exceed the image size limit.",
-  "The scaled image, margin and outline would exceed the image size limit.": "The scaled image, margin and outline would exceed the image size limit."
+  "The scaled image, margin and outline would exceed the image size limit.": "The scaled image, margin and outline would exceed the image size limit.",
+  "Active": "Active",
+  "Inactive": "Inactive"
 }

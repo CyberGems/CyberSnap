@@ -193,6 +193,7 @@ internal sealed class ColorPickerPopup : ContentControl
     private void BuildUI(string? clearButtonText)
     {
         Resources["PickerScrollBrush"] = Theme.Brush(Theme.TextSecondary);
+        Resources["PickerAccentBrush"] = Theme.Brush(Theme.Accent);
         Resources.MergedDictionaries.Add(new ResourceDictionary
         {
             Source = new Uri("/CyberSnap;component/UI/Controls/ColorPickerScrollStyles.xaml", UriKind.Relative)
@@ -315,6 +316,7 @@ internal sealed class ColorPickerPopup : ContentControl
         
         _boxHex = new WpfTextBox
         {
+            Style = (Style)Resources["PickerValueInput"],
             FontSize = 12,
             Height = 28,
             Padding = new Thickness(6, 0, 6, 0),
@@ -535,6 +537,8 @@ internal sealed class ColorPickerPopup : ContentControl
 
         var box = new WpfTextBox
         {
+            Style = (Style)Resources["PickerValueInput"],
+            TextAlignment = TextAlignment.Center,
             FontSize = 10.5,
             Height = 22,
             Padding = new Thickness(2, 0, 2, 0),

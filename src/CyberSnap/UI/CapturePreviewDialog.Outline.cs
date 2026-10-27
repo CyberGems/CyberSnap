@@ -19,8 +19,11 @@ public partial class CapturePreviewDialog
         string language = _settingsService.Settings.InterfaceLanguage;
         PreviewOutlineBtn.ToolTip = LocalizationService.Translate(language, "Add an outline to saved and copied images.");
         AutomationProperties.SetName(PreviewOutlineBtn, LocalizationService.Translate(language, "Outline options"));
+        PreviewOutlineBtn.Tag = _active.OutlineEnabled;
+        AutomationProperties.SetItemStatus(PreviewOutlineBtn, LocalizationService.Translate(language,
+            _active.OutlineEnabled ? "Active" : "Inactive"));
         var color = _active.OutlineEnabled ? Theme.Accent : Theme.TextSecondary;
-        SetPreviewIcon(PreviewOutlineIcon, "rect", System.Drawing.Color.FromArgb(color.R, color.G, color.B), 12);
+        SetPreviewIcon(PreviewOutlineIcon, "rectShape", System.Drawing.Color.FromArgb(color.R, color.G, color.B), 16);
     }
 
     private bool ApplyOutlineSettings(bool enabled, int thickness, int color)

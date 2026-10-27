@@ -2869,5 +2869,7 @@
   "Margin not available": "Margen no disponible",
   "Not enough memory to add the margin.": "No hay suficiente memoria para añadir el margen.",
   "The margin and outline would exceed the image size limit.": "El margen y el delineado superarían el límite de tamaño de la imagen.",
-  "The scaled image, margin and outline would exceed the image size limit.": "La imagen escalada, el margen y el delineado superarían el límite de tamaño de la imagen."
+  "The scaled image, margin and outline would exceed the image size limit.": "La imagen escalada, el margen y el delineado superarían el límite de tamaño de la imagen.",
+  "Active": "Activo",
+  "Inactive": "Inactivo"
 }

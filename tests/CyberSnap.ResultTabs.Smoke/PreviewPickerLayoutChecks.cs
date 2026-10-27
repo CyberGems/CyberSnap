@@ -34,12 +34,33 @@ internal static partial class Program
                 // activation that precedes a real click on the picker button.
                 Assert(preview.Activate() || preview.IsActive, "the picker owner accepts activation after changing monitors");
                 Pump();
-                Element<Button>(preview, buttonName).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                Pump();
-                var popup = (Popup)Field(preview, "_previewBackgroundColorPopup");
+                var ownerEvents = new List<string>();
+                EventHandler deactivated = (_, _) =>
+                {
+                    GetWindowThreadProcessId(GetForegroundWindow(), out uint foregroundProcess);
+                    ownerEvents.Add($"deactivated (foreground process={foregroundProcess}, test process={Environment.ProcessId})");
+                };
+                EventHandler moved = (_, _) => ownerEvents.Add("moved");
+                SizeChangedEventHandler resized = (_, _) => ownerEvents.Add("resized");
+                preview.Deactivated += deactivated;
+                preview.LocationChanged += moved;
+                preview.SizeChanged += resized;
+                try
+                {
+                    Element<Button>(preview, buttonName).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Pump();
+                }
+                finally
+                {
+                    preview.Deactivated -= deactivated;
+                    preview.LocationChanged -= moved;
+                    preview.SizeChanged -= resized;
+                }
+                Assert(Field(preview, "_previewBackgroundColorPopup") is Popup { IsOpen: true },
+                    $"the picker opens after changing monitor DPI and UI scale (active={preview.IsActive}, events={string.Join(',', ownerEvents)})");
                 var picker = (FrameworkElement)Field(preview, "_previewBackgroundColorPicker");
-                Assert(popup.IsOpen, "the picker opens after changing monitor DPI and UI scale");
                 CheckBounds("natural");
+                CheckPickerColorInputs(picker);
                 CheckPickerHeaderRendering(picker);
                 CheckPickerPaletteLayout(picker);
                 picker.MaxHeight = Math.Min(picker.MaxHeight, 260);

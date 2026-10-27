@@ -68,7 +68,9 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="PreviewBackgroundToggle" TargetType="ToggleButton">
+        <Style x:Key="PreviewStateButton" TargetType="ButtonBase">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
@@ -78,7 +80,7 @@
             <Setter Property="Height" Value="24"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
+                    <ControlTemplate TargetType="ButtonBase">
                         <Border x:Name="Bd" CornerRadius="6"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
@@ -86,19 +88,41 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
+                            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
-                            </Trigger>
+                            </DataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeBgHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+                            </Trigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-                            </Trigger>
+                            </MultiDataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                    <Condition Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </MultiDataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="PreviewBackgroundToggle" TargetType="ToggleButton" BasedOn="{StaticResource PreviewStateButton}">
+            <Setter Property="Tag" Value="{Binding IsChecked, RelativeSource={RelativeSource Self}}"/>
+        </Style>
+        <Style x:Key="PreviewEffectButton" TargetType="Button" BasedOn="{StaticResource PreviewStateButton}"/>
 
         <Style x:Key="PreviewPixelInput" TargetType="TextBox">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
@@ -489,22 +513,24 @@
                                             </Grid>
                                         </ToggleButton>
                                         <Button x:Name="PreviewBackgroundColorBtn"
-                                                Style="{StaticResource PreviewIconButton}"
+                                                Style="{StaticResource PreviewEffectButton}"
                                                 Width="24" Height="24" MinWidth="24" MinHeight="24"
                                                 Margin="4,0,0,0"
                                                 Click="PreviewBackgroundColorBtn_Click"
                                                 AutomationProperties.Name="Solid background and margin">
-                                            <Border x:Name="PreviewBackgroundColorSwatch"
-                                                    Width="12" Height="12" CornerRadius="2"
-                                                    BorderThickness="1"
-                                                    BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                            <Grid x:Name="PreviewMarginIcon" Width="12" Height="12" IsHitTestVisible="False">
+                                                <Path Data="F0 M0,0 H12 V12 H0 Z M3,3 H9 V9 H3 Z"
+                                                      Fill="{Binding Foreground, ElementName=PreviewBackgroundColorBtn}" Opacity="0.18"/>
+                                                <Rectangle Stroke="{Binding Foreground, ElementName=PreviewBackgroundColorBtn}" StrokeThickness="1" RadiusX="1.5" RadiusY="1.5"/>
+                                                <Rectangle Margin="3" Stroke="{Binding Foreground, ElementName=PreviewBackgroundColorBtn}" StrokeThickness="1"/>
+                                            </Grid>
                                         </Button>
-                                        <Button x:Name="PreviewOutlineBtn" Style="{StaticResource PreviewIconButton}"
+                                        <Button x:Name="PreviewOutlineBtn" Style="{StaticResource PreviewEffectButton}"
                                                 Width="24" Height="24" MinWidth="24" MinHeight="24"
                                                 Margin="4,0,0,0" Padding="0"
                                                 Click="PreviewOutlineBtn_Click"
                                                 AutomationProperties.Name="Outline options">
-                                            <Image x:Name="PreviewOutlineIcon" Width="12" Height="12"/>
+                                            <Image x:Name="PreviewOutlineIcon" Width="16" Height="16"/>
                                         </Button>
                                     </StackPanel>
                                 </Border>

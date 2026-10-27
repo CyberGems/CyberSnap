@@ -92,7 +92,6 @@ public partial class CapturePreviewDialog
             return false;
         }
         CheckerboardHost.Background = checkerboard ? Theme.CreateCheckerboardBrush() : Theme.Brush(solid);
-        PreviewBackgroundColorSwatch.Background = Theme.Brush(solid);
         PreviewBackgroundBtn.IsChecked = checkerboard;
         string language = _settingsService.Settings.InterfaceLanguage;
         PreviewBackgroundBtn.ToolTip = LocalizationService.Translate(language,
@@ -101,6 +100,7 @@ public partial class CapturePreviewDialog
         string colorLabel = LocalizationService.Translate(language, "Solid background and margin");
         PreviewBackgroundColorBtn.ToolTip = colorLabel;
         AutomationProperties.SetName(PreviewBackgroundColorBtn, colorLabel);
+        UpdateMarginButton();
         if (!ReferenceEquals(previous, EffectiveBitmap) && PreviewImage.Source is not null) RefreshFramedPreview();
         return true;
     }

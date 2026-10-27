@@ -109,6 +109,7 @@ internal static partial class Program
                     Assert(toggle.IsChecked == true && background.Background is DrawingBrush
                         && settings.Settings.PreviewShowCheckerboard, "background changes are shared across capture tabs");
                     CheckPreviewControlsLayout(preview, language, renders);
+                    CheckPreviewEffectStates(preview, language, renders);
                     Thread.Sleep(220); Pump();
                     Render(preview, renders, "preview-checkerboard-" + language + ".png");
                     settings.FlushPendingWrites(); reloaded.Load();
@@ -169,8 +170,8 @@ internal static partial class Program
         Assert(CurrentColor() == Colors.Black, "an invalid HEX value preserves the current background");
         hex.Text = "12AB34"; Pump();
         var light = Color.FromRgb(0x12, 0xAB, 0x34);
-        Assert(CurrentColor() == light && ((SolidColorBrush)Element<Border>(preview, "PreviewBackgroundColorSwatch").Background).Color == light,
-            "valid HEX input immediately updates the background and its swatch");
+        Assert(CurrentColor() == light && (Color)Property(picker, "SelectedColor") == light,
+            "valid HEX input immediately updates the background and the selected picker color");
         Render((FrameworkElement)picker, renders, "preview-color-picker-" + language + ".png");
         PressKey(Key.Enter);
         Assert(Field(preview, "_previewBackgroundColorPopup") is null && CurrentColor() == light,

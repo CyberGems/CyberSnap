@@ -88,4 +88,23 @@ internal static partial class Program
             && ((Border)swatches[^1]).Background is SolidColorBrush brush && brush.Color == Colors.Black,
             "all twelve standard colors, including black, fit one unclipped row");
     }
+
+    private static void CheckPickerColorInputs(FrameworkElement picker)
+    {
+        foreach (string name in new[] { "_boxHex", "_boxR", "_boxG", "_boxB", "_boxH", "_boxS", "_boxV" })
+        {
+            var input = (TextBox)Field(picker, name);
+            var normal = ((SolidColorBrush)input.Background).Color;
+            input.BringIntoView(); Pump();
+            Assert(input.Focus(), $"{name} remains editable by keyboard");
+            Pump();
+            MovePickerPointer(input, new Point(input.ActualWidth / 2, input.ActualHeight / 2)); input.UpdateLayout();
+            var border = (Border)input.Template.FindName("InputBorder", input);
+            Assert(input.IsMouseOver && input.IsKeyboardFocusWithin
+                && ((SolidColorBrush)border.Background).Color == normal
+                && ((SolidColorBrush)border.BorderBrush).Color == CyberSnap.UI.Theme.Accent
+                && !VisualDescendants(input).OfType<Button>().Any(button => button.IsVisible),
+                $"{name} keeps its input background under hover and focus, with an accent border and no clear overlay");
+        }
+    }
 }
