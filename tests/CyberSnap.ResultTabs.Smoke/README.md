@@ -13,6 +13,8 @@ This targeted suite covers:
   window widths, and persistence after a disk reload and a new preview session.
   Custom-color checks cover live HEX entry, invalid input, independent light/dark
   colors, theme reset, keyboard dismissal, outside clicks, and repeated swatch clicks.
+  Native monitor checks verify fit at each monitor's DPI and both UI scales.
+  Reset and Accept remain pinned below the scrolling body, whose scrollbar matches the app.
 - **Hotkey scopes:** capture annotations and Editor shortcuts can share a key.
   Duplicates within a stage, Editor tool/view collisions, global collisions,
   restoring F6, aliases, and saved settings are also checked.

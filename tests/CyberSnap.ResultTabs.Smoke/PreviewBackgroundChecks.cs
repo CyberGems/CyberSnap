@@ -122,6 +122,7 @@ internal static partial class Program
                     settings.FlushPendingWrites(); reloaded.Load();
                     Assert(reloaded.Settings.PreviewShowCheckerboard, "reenabling the checkerboard survives a disk reload");
                     CheckPreviewCustomBackground(preview, settings, settingsPath, language, renders);
+                    CheckPreviewPickerLayout(preview, language, renders);
                 }
                 finally { preview.CloseFromReplace(); Pump(); }
             }

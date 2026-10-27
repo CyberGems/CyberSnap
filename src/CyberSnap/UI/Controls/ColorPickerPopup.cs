@@ -57,6 +57,8 @@ internal sealed class ColorPickerPopup : ContentControl
     private WpfTextBox _boxS = null!;
     private WpfTextBox _boxV = null!;
     private WrapPanel _recentColorsPanel = null!;
+    private ScrollViewer _bodyScroll = null!;
+    private Grid _actionRow = null!;
     private bool _suppress;
 
     public event Action<WpfColor?>? ColorChanged;
@@ -172,6 +174,11 @@ internal sealed class ColorPickerPopup : ContentControl
 
     private void BuildUI(string? clearButtonText)
     {
+        Resources["PickerScrollBrush"] = Theme.Brush(Theme.TextSecondary);
+        Resources.MergedDictionaries.Add(new ResourceDictionary
+        {
+            Source = new Uri("/CyberSnap;component/UI/Controls/ColorPickerScrollStyles.xaml", UriKind.Relative)
+        });
         var accent = Theme.Accent;
         var accentBrush = Theme.Brush(WithAlpha(accent, 90));
 
@@ -430,6 +437,8 @@ internal sealed class ColorPickerPopup : ContentControl
 
         // 6. Action Row
         var actionRow = new Grid();
+        _actionRow = actionRow;
+        actionRow.Margin = new Thickness(0, 8, 0, 0);
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -448,7 +457,20 @@ internal sealed class ColorPickerPopup : ContentControl
         Grid.SetColumn(acceptButton, 2);
         actionRow.Children.Add(acceptButton);
 
-        stack.Children.Add(actionRow);
+        _bodyScroll = new ScrollViewer
+        {
+            Content = stack,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Focusable = false,
+            ClipToBounds = true
+        };
+        var layout = new Grid();
+        layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        layout.Children.Add(_bodyScroll);
+        Grid.SetRow(actionRow, 1);
+        layout.Children.Add(actionRow);
 
         var card = new Border
         {
@@ -466,7 +488,7 @@ internal sealed class ColorPickerPopup : ContentControl
                 ShadowDepth = 3,
                 Opacity = Theme.IsDark ? 0.55 : 0.30,
             },
-            Child = stack,
+            Child = layout,
         };
 
         Content = card;

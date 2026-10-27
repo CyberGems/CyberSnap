@@ -120,16 +120,12 @@ public partial class CapturePreviewDialog
 
         var anchor = PreviewBackgroundColorBtn.PointToScreen(new Point(0, 0));
         var physicalPoint = new System.Drawing.Point((int)anchor.X, (int)anchor.Y);
-        var workArea = System.Windows.Forms.Screen.FromPoint(physicalPoint).WorkingArea;
+        var screen = System.Windows.Forms.Screen.FromPoint(physicalPoint);
+        var workArea = PopupWindowHelper.TryGetNativeMonitorInfo(screen, out _, out var nativeWork)
+            ? nativeWork : screen.WorkingArea;
         var (_, dpiY) = PopupWindowHelper.GetScaleForPoint(physicalPoint);
         picker.LayoutTransform = new ScaleTransform(UiScale.Current, UiScale.Current);
-        var host = new ScrollViewer
-        {
-            Content = picker,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            MaxHeight = Math.Max(160, workArea.Height / dpiY - 24)
-        };
+        picker.MaxHeight = Math.Max(160, (workArea.Height / dpiY - 24) / UiScale.Current);
         var popup = new Popup
         {
             PlacementTarget = PreviewBackgroundColorBtn,
@@ -139,7 +135,7 @@ public partial class CapturePreviewDialog
             AllowsTransparency = true,
             // Owner clicks dismiss explicitly, so clicking the swatch can reliably toggle it.
             StaysOpen = true,
-            Child = host
+            Child = picker
         };
         popup.Closed += (_, _) =>
         {
