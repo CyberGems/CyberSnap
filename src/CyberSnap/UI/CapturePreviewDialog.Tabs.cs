@@ -83,6 +83,14 @@ namespace CyberSnap.UI
                 AppDiagnostics.LogWarning("preview.outline.initial", ex.Message, ex);
                 ToastWindow.ShowError(LocalizationService.Translate("Outline not available"), LocalizationService.Translate(ex.Message));
             }
+            var solid = GetPreviewBackgroundColor(Theme.IsDark);
+            try { session.SetMargin(settings.PreviewMarginEnabled, settings.PreviewMarginSize,
+                System.Drawing.Color.FromArgb(solid.R, solid.G, solid.B).ToArgb()); }
+            catch (Exception ex) when (ex is InvalidOperationException or OutOfMemoryException)
+            {
+                AppDiagnostics.LogWarning("preview.margin.initial", ex.Message, ex);
+                ShowMarginError(ex);
+            }
             return session;
         }
 

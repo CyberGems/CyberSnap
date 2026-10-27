@@ -233,6 +233,8 @@ public sealed class AppSettings
     public bool PreviewOutlineEnabled { get; set; }
     public int PreviewOutlineThickness { get; set; } = 2;
     public int PreviewOutlineColorArgb { get; set; } = unchecked((int)0xFF000000);
+    public bool PreviewMarginEnabled { get; set; }
+    public int PreviewMarginSize { get; set; } = 16;
 
     /// <summary>
     /// When true, the Print Screen advisory banner in Settings → Hotkeys stays hidden

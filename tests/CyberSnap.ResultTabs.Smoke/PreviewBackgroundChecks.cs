@@ -136,9 +136,14 @@ internal static partial class Program
         Color CurrentColor() => ((SolidColorBrush)background.Background).Color;
         object OpenPicker()
         {
+            // A real click activates the owner before opening its popup. A
+            // synthetic Click event needs that activation explicitly.
+            Assert(preview.Activate() || preview.IsActive, "Preview can activate before opening its color picker");
+            Pump();
+            bool wasActive = preview.IsActive;
             button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Assert(Field(preview, "_previewBackgroundColorPopup") is Popup { IsOpen: true },
-                "the preview swatch opens the existing color picker");
+                $"the preview swatch opens the existing color picker (active before={wasActive}, after={preview.IsActive})");
             return Field(preview, "_previewBackgroundColorPicker");
         }
         void PressKey(Key key)
@@ -148,8 +153,8 @@ internal static partial class Program
             Call(preview, "Window_PreviewKeyDown", preview, args); Pump();
             Assert(args.Handled && preview.IsVisible, "picker keys close the flyout while keeping Preview open");
         }
-        Assert(AutomationProperties.GetName(button) == LocalizationService.Translate(language, "Choose solid background color")
-            && (string)button.ToolTip == LocalizationService.Translate(language, "Choose solid background color"),
+        Assert(AutomationProperties.GetName(button) == LocalizationService.Translate(language, "Solid background and margin")
+            && (string)button.ToolTip == LocalizationService.Translate(language, "Solid background and margin"),
             $"the custom background swatch has localized help and an accessible name in {language}");
         Theme.SetMode(AppThemeMode.Light); preview.ApplyTheme(); Pump();
         var picker = OpenPicker();

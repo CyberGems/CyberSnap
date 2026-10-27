@@ -13,6 +13,7 @@ on:
       - 'src/CyberSnap/App/App.Capture.Handlers.cs'
       - 'src/CyberSnap/UI/PreviewSession.cs'
       - 'src/CyberSnap/Services/CaptureOutlineRenderer.cs'
+      - 'src/CyberSnap/Services/CaptureFrameRenderer.cs'
       - 'src/CyberSnap/Services/CaptureOutputService.cs'
       - 'src/CyberSnap/Capture/PinImageForm.cs'
       - 'src/CyberSnap/Capture/StandaloneZoomForm.cs'
@@ -51,3 +52,5 @@ jobs:
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --capture-tool-regressions-only
       - name: Check outline output through real preview completion
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-outline-only
+      - name: Check margins, shared colors and final image output
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-margin-only

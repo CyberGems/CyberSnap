@@ -2601,5 +2601,13 @@
   "Add an outline to saved and copied images.": "Add an outline to saved and copied images.",
   "Outline not available": "Outline not available",
   "The outline would exceed the image size limit.": "The outline would exceed the image size limit.",
-  "Not enough memory to add the outline.": "Not enough memory to add the outline."
+  "Not enough memory to add the outline.": "Not enough memory to add the outline.",
+  "Solid background and margin": "Solid background and margin",
+  "Capture margin": "Margin",
+  "Margin size (px)": "Margin size (px)",
+  "Outside the outline, in final-image pixels.": "Outside the outline, in final-image pixels.",
+  "Margin not available": "Margin not available",
+  "Not enough memory to add the margin.": "Not enough memory to add the margin.",
+  "The margin and outline would exceed the image size limit.": "The margin and outline would exceed the image size limit.",
+  "The scaled image, margin and outline would exceed the image size limit.": "The scaled image, margin and outline would exceed the image size limit."
 }

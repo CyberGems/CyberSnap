@@ -25,7 +25,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        Application app = args.Contains("--preview-outline-only") || args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
+        Application app = args.Contains("--preview-margin-only") || args.Contains("--preview-outline-only") || args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
@@ -56,6 +56,13 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--preview-margin-only"))
+            {
+                CheckPreviewMargin(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
+                CheckPreviewFrameCommit((CyberSnap.App)app, settings, temp, withMargin: true);
+                Console.WriteLine($"PASS: {_checks} preview margin checks.");
+                return 0;
+            }
             if (args.Contains("--preview-outline-only"))
             {
                 CheckPreviewOutline(temp, args.FirstOrDefault(a => !a.StartsWith("--")));

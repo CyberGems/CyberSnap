@@ -58,23 +58,39 @@ public partial class CapturePreviewDialog
             : DefaultPreviewBackgroundColor(dark);
     }
 
-    private void SetPreviewBackgroundColor(Color? color, bool dark)
+    private bool SetPreviewBackgroundColor(Color? color, bool dark)
     {
-        if (_isClosing) return;
+        if (_isClosing) return false;
         int? argb = color is { } c ? System.Drawing.Color.FromArgb(c.R, c.G, c.B).ToArgb() : null;
         var settings = _settingsService.Settings;
+        int? previousColor = dark ? settings.PreviewBackgroundDarkColorArgb : settings.PreviewBackgroundLightColorArgb;
+        bool previousCheckerboard = settings.PreviewShowCheckerboard;
         if (dark) settings.PreviewBackgroundDarkColorArgb = argb;
         else settings.PreviewBackgroundLightColorArgb = argb;
         settings.PreviewShowCheckerboard = false;
+        if (!UpdatePreviewBackground())
+        {
+            if (dark) settings.PreviewBackgroundDarkColorArgb = previousColor;
+            else settings.PreviewBackgroundLightColorArgb = previousColor;
+            settings.PreviewShowCheckerboard = previousCheckerboard;
+            return false;
+        }
         _settingsService.Save();
-        UpdatePreviewBackground();
         CancelAutoCloseOnInteraction();
+        return true;
     }
 
-    private void UpdatePreviewBackground()
+    private bool UpdatePreviewBackground()
     {
         bool checkerboard = _settingsService.Settings.PreviewShowCheckerboard;
         var solid = GetPreviewBackgroundColor(Theme.IsDark);
+        var previous = EffectiveBitmap;
+        try { PreviewSession.SynchronizeMarginColor(_sessions, System.Drawing.Color.FromArgb(solid.R, solid.G, solid.B).ToArgb()); }
+        catch (Exception ex) when (ex is InvalidOperationException or OutOfMemoryException)
+        {
+            ShowMarginError(ex);
+            return false;
+        }
         CheckerboardHost.Background = checkerboard ? Theme.CreateCheckerboardBrush() : Theme.Brush(solid);
         PreviewBackgroundColorSwatch.Background = Theme.Brush(solid);
         PreviewBackgroundBtn.IsChecked = checkerboard;
@@ -82,9 +98,11 @@ public partial class CapturePreviewDialog
         PreviewBackgroundBtn.ToolTip = LocalizationService.Translate(language,
             checkerboard ? "Switch to solid background" : "Show checkerboard background");
         AutomationProperties.SetName(PreviewBackgroundBtn, LocalizationService.Translate(language, "Checkerboard background"));
-        string colorLabel = LocalizationService.Translate(language, "Choose solid background color");
+        string colorLabel = LocalizationService.Translate(language, "Solid background and margin");
         PreviewBackgroundColorBtn.ToolTip = colorLabel;
         AutomationProperties.SetName(PreviewBackgroundColorBtn, colorLabel);
+        if (!ReferenceEquals(previous, EffectiveBitmap) && PreviewImage.Source is not null) RefreshFramedPreview();
+        return true;
     }
 
     private void PreviewBackgroundColorBtn_Click(object sender, RoutedEventArgs e)
@@ -103,15 +121,16 @@ public partial class CapturePreviewDialog
         bool resetting = false;
         var picker = new ColorPickerPopup(LocalizationService.Translate(
             _settingsService.Settings.InterfaceLanguage, "Theme default"));
+        AddPreviewMarginControls(picker);
         picker.SetColor(GetPreviewBackgroundColor(dark));
         picker.ColorChanged += color =>
         {
             if (resetting || _isClosing) return;
-            SetPreviewBackgroundColor(color, dark);
-            if (color is null)
+            bool applied = SetPreviewBackgroundColor(color, dark);
+            if (color is null || !applied)
             {
                 resetting = true;
-                try { picker.SetColor(DefaultPreviewBackgroundColor(dark)); }
+                try { picker.SetColor(GetPreviewBackgroundColor(dark)); }
                 finally { resetting = false; }
             }
         };

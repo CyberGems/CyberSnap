@@ -84,7 +84,7 @@ public partial class App
                 session.SelectedAction,
                 effectiveSavePath,
                 effectiveCopied,
-                preservePreviewPixels: isScaled || session.OutlineEnabled,
+                preservePreviewPixels: isScaled || session.OutlineEnabled || session.MarginEnabled,
                 captureKind: kind);
 
             if (kind == CaptureKind.ScrollCapture)

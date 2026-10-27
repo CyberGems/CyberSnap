@@ -440,7 +440,7 @@
                                                 Width="24" Height="24" MinWidth="24" MinHeight="24"
                                                 Margin="4,0,0,0"
                                                 Click="PreviewBackgroundColorBtn_Click"
-                                                AutomationProperties.Name="Choose solid background color">
+                                                AutomationProperties.Name="Solid background and margin">
                                             <Border x:Name="PreviewBackgroundColorSwatch"
                                                     Width="12" Height="12" CornerRadius="2"
                                                     BorderThickness="1"

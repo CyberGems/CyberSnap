@@ -2327,7 +2327,7 @@ namespace CyberSnap.UI
             }
             catch (Exception ex)
             {
-                ToastWindow.ShowError(LocalizationService.Translate("Scaling failed"), ex.Message);
+                ToastWindow.ShowError(LocalizationService.Translate("Scaling failed"), LocalizationService.Translate(ex.Message));
             }
         }
 
@@ -2360,8 +2360,8 @@ namespace CyberSnap.UI
         private void UpdateScaleControls()
         {
             if (Scale1xBtn == null || Scale2xBtn == null || Scale4xBtn == null) return;
-            bool can2 = ImageScaleService.IsFactorAvailable(_capturedBitmap.Width, _capturedBitmap.Height, 2);
-            bool can4 = ImageScaleService.IsFactorAvailable(_capturedBitmap.Width, _capturedBitmap.Height, 4);
+            bool can2 = _active.CanScaleFactor(2);
+            bool can4 = _active.CanScaleFactor(4);
             Scale2xBtn.IsEnabled = can2;
             Scale4xBtn.IsEnabled = can4;
             if (!can2) Scale2xBtn.ToolTip = string.Format(LocalizationService.Translate("Scaling to 2× would exceed limit ({0}px / {1} MP)"), ImageScaleService.MaxDimension, ImageScaleService.MaxPixels / 1_000_000);

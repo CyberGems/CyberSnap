@@ -14,7 +14,7 @@ namespace CyberSnap.UI;
 internal sealed class PreviewSession : IDisposable
 {
     private bool _disposed;
-    private Bitmap? _outlinedBitmap;
+    private Bitmap? _framedBitmap;
     private Bitmap? _detachedBitmap;
     private int _revision;
     private int _copiedRevision;
@@ -42,6 +42,9 @@ internal sealed class PreviewSession : IDisposable
     public bool OutlineEnabled { get; private set; }
     public int OutlineThickness { get; private set; } = 2;
     public int OutlineColorArgb { get; private set; } = unchecked((int)0xFF000000);
+    public bool MarginEnabled { get; private set; }
+    public int MarginSize { get; private set; } = 16;
+    public int MarginColorArgb { get; private set; }
     public string? SavedFilePath
     {
         get => _savedFilePath;
@@ -67,7 +70,7 @@ internal sealed class PreviewSession : IDisposable
     public double PanHorizontal { get; set; }
     public double PanVertical { get; set; }
 
-    public Bitmap EffectiveBitmap => _outlinedBitmap ?? ScaledBitmap ?? Bitmap;
+    public Bitmap EffectiveBitmap => _framedBitmap ?? ScaledBitmap ?? Bitmap;
     public bool IsScaled => ScaleFactor != 1;
     public void MarkCopied() => _copiedRevision = _revision;
 
@@ -76,41 +79,99 @@ internal sealed class PreviewSession : IDisposable
         thickness = Math.Clamp(thickness, 1, CaptureOutlineRenderer.MaxThickness);
         colorArgb = System.Drawing.Color.FromArgb(255, System.Drawing.Color.FromArgb(colorArgb)).ToArgb();
         if (enabled == OutlineEnabled && thickness == OutlineThickness && colorArgb == OutlineColorArgb) return;
-        var next = enabled
-            ? CaptureOutlineRenderer.Render(ScaledBitmap ?? Bitmap, thickness, System.Drawing.Color.FromArgb(colorArgb))
-            : null;
         bool pixelsChanged = enabled || OutlineEnabled;
-        _outlinedBitmap?.Dispose();
-        _outlinedBitmap = next;
+        if (pixelsChanged)
+            ReplaceFrame(RenderFrame(ScaledBitmap ?? Bitmap, enabled, thickness, colorArgb, MarginEnabled, MarginSize, MarginColorArgb), true);
         OutlineEnabled = enabled;
         OutlineThickness = thickness;
         OutlineColorArgb = colorArgb;
-        if (pixelsChanged)
+    }
+
+    public void SetMargin(bool enabled, int size, int colorArgb)
+    {
+        size = Math.Clamp(size, 1, CaptureFrameRenderer.MaxMargin);
+        colorArgb = System.Drawing.Color.FromArgb(255, System.Drawing.Color.FromArgb(colorArgb)).ToArgb();
+        if (enabled == MarginEnabled && size == MarginSize && colorArgb == MarginColorArgb) return;
+        if (enabled || MarginEnabled)
+            ReplaceFrame(RenderFrame(ScaledBitmap ?? Bitmap, OutlineEnabled, OutlineThickness, OutlineColorArgb, enabled, size, colorArgb), true);
+        MarginEnabled = enabled;
+        MarginSize = size;
+        MarginColorArgb = colorArgb;
+    }
+
+    // The preview background is shared by tabs. Prepare all new frames before
+    // replacing any, so an allocation failure cannot leave mixed margin colors.
+    public static void SynchronizeMarginColor(IEnumerable<PreviewSession> sessions, int colorArgb)
+    {
+        colorArgb = System.Drawing.Color.FromArgb(255, System.Drawing.Color.FromArgb(colorArgb)).ToArgb();
+        var pending = new List<(PreviewSession Session, Bitmap? Frame)>();
+        try
         {
-            _revision++;
-            PreviewSource = null;
+            foreach (var session in sessions)
+            {
+                if (session.MarginColorArgb == colorArgb) continue;
+                var frame = session.MarginEnabled
+                    ? RenderFrame(session.ScaledBitmap ?? session.Bitmap, session.OutlineEnabled, session.OutlineThickness,
+                        session.OutlineColorArgb, true, session.MarginSize, colorArgb)
+                    : null;
+                pending.Add((session, frame));
+            }
         }
+        catch
+        {
+            foreach (var item in pending) item.Frame?.Dispose();
+            throw;
+        }
+        foreach (var item in pending)
+        {
+            if (item.Session.MarginEnabled) item.Session.ReplaceFrame(item.Frame, true);
+            item.Session.MarginColorArgb = colorArgb;
+        }
+    }
+
+    private static Bitmap? RenderFrame(Bitmap source, bool outlineEnabled, int outline, int outlineColor,
+        bool marginEnabled, int margin, int marginColor) => marginEnabled
+            ? CaptureFrameRenderer.Render(source, outlineEnabled ? outline : 0, System.Drawing.Color.FromArgb(outlineColor),
+                margin, System.Drawing.Color.FromArgb(marginColor))
+            : outlineEnabled ? CaptureOutlineRenderer.Render(source, outline, System.Drawing.Color.FromArgb(outlineColor)) : null;
+
+    private void ReplaceFrame(Bitmap? frame, bool pixelsChanged)
+    {
+        _framedBitmap?.Dispose();
+        _framedBitmap = frame;
+        if (!pixelsChanged) return;
+        _revision++;
+        PreviewSource = null;
     }
 
     public void SetScaleFactor(int factor)
     {
         if (factor == ScaleFactor) return;
+        if (!CanScaleFactor(factor))
+            throw new InvalidOperationException("The scaled image, margin and outline would exceed the image size limit.");
         Bitmap? scaled = factor == 1 ? null : ImageScaleService.Scale(Bitmap, factor);
         Bitmap? outlined;
         try
         {
-            outlined = OutlineEnabled
-                ? CaptureOutlineRenderer.Render(scaled ?? Bitmap, OutlineThickness, System.Drawing.Color.FromArgb(OutlineColorArgb))
-                : null;
+            outlined = RenderFrame(scaled ?? Bitmap, OutlineEnabled, OutlineThickness, OutlineColorArgb,
+                MarginEnabled, MarginSize, MarginColorArgb);
         }
         catch { scaled?.Dispose(); throw; }
-        _outlinedBitmap?.Dispose();
+        _framedBitmap?.Dispose();
         ScaledBitmap?.Dispose();
         ScaledBitmap = scaled;
-        _outlinedBitmap = outlined;
+        _framedBitmap = outlined;
         ScaleFactor = factor;
         _revision++;
         PreviewSource = null;
+    }
+
+    public bool CanScaleFactor(int factor)
+    {
+        if (!ImageScaleService.TryGetScaledSize(Bitmap.Width, Bitmap.Height, factor, out int width, out int height, out _))
+            return factor == 1 && !OutlineEnabled && !MarginEnabled;
+        return (!OutlineEnabled && !MarginEnabled) || CaptureFrameRenderer.TryGetSize(width, height,
+            OutlineEnabled ? OutlineThickness : 0, MarginEnabled ? MarginSize : 0, out _);
     }
 
     public string TabTitle
@@ -133,10 +194,10 @@ internal sealed class PreviewSession : IDisposable
         PreviewSource = null;
         if (_disposed) return;
         _disposed = true;
-        if (_outlinedBitmap != _detachedBitmap) _outlinedBitmap?.Dispose();
+        if (_framedBitmap != _detachedBitmap) _framedBitmap?.Dispose();
         if (ScaledBitmap != _detachedBitmap) ScaledBitmap?.Dispose();
         if (Bitmap != _detachedBitmap) Bitmap.Dispose();
-        _outlinedBitmap = null;
+        _framedBitmap = null;
         ScaledBitmap = null;
     }
 }

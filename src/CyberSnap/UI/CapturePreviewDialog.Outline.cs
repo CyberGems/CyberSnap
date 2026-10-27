@@ -36,10 +36,7 @@ public partial class CapturePreviewDialog
             _settingsService.Save();
             if (!ReferenceEquals(previous, EffectiveBitmap))
             {
-                PreviewImage.Source = BitmapPerf.ToBitmapSource(EffectiveBitmap);
-                _active.PreviewSource = PreviewImage.Source;
-                UpdateScaleControls();
-                ApplyZoom();
+                RefreshFramedPreview();
             }
             UpdateOutlineButton();
             CancelAutoCloseOnInteraction();

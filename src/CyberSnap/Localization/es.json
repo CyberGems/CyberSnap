@@ -2861,5 +2861,13 @@
   "Add an outline to saved and copied images.": "Añade un delineado a las imágenes guardadas y copiadas.",
   "Outline not available": "Delineado no disponible",
   "The outline would exceed the image size limit.": "El delineado superaría el límite de tamaño de la imagen.",
-  "Not enough memory to add the outline.": "No hay suficiente memoria para añadir el delineado."
+  "Not enough memory to add the outline.": "No hay suficiente memoria para añadir el delineado.",
+  "Solid background and margin": "Fondo sólido y margen",
+  "Capture margin": "Margen",
+  "Margin size (px)": "Tamaño del margen (px)",
+  "Outside the outline, in final-image pixels.": "Por fuera del delineado, en píxeles de la imagen final.",
+  "Margin not available": "Margen no disponible",
+  "Not enough memory to add the margin.": "No hay suficiente memoria para añadir el margen.",
+  "The margin and outline would exceed the image size limit.": "El margen y el delineado superarían el límite de tamaño de la imagen.",
+  "The scaled image, margin and outline would exceed the image size limit.": "La imagen escalada, el margen y el delineado superarían el límite de tamaño de la imagen."
 }
