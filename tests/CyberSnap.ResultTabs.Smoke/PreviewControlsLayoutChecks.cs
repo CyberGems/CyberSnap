@@ -31,8 +31,13 @@ internal static partial class Program
                 CheckFit();
                 var zoomBounds = Bounds(zoom, host);
                 var scaleBounds = Bounds(scale, host);
-                Assert(Math.Abs(zoomBounds.Top - scaleBounds.Top) <= 1,
-                    $"all controls fit one row at the default window size in {language}, UI={uiScale}, {theme}");
+                bool sameRow = Math.Abs(zoomBounds.Top - scaleBounds.Top) <= 1;
+                // Windows can limit the requested default bounds to the monitor,
+                // particularly on small desktops with the maximum UI scale.
+                bool monitorConstrained = preview.ActualWidth < 860 * uiScale - 1;
+                Assert(sameRow || (monitorConstrained && scaleBounds.Top >= zoomBounds.Bottom),
+                    $"default controls share a row or wrap on a constrained monitor in {language}, UI={uiScale}, {theme}: "
+                    + $"requested={860 * uiScale:0}, actual={preview.ActualWidth:0}, frame={frame.ActualWidth:0}, zoom={zoomBounds}, scale={scaleBounds}");
                 Call(preview, "SetZoomOverlayVisibility", true); Pump();
                 Render(preview, renders, $"preview-controls-{language}-{uiScale}-{theme}.png");
                 foreach (double width in new[] { 580.0, 730.0 })
