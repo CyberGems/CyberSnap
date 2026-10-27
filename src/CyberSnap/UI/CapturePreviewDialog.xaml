@@ -100,24 +100,80 @@
             </Setter>
         </Style>
 
+        <Style x:Key="PreviewPixelInput" TargetType="TextBox">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="InputBorder" CornerRadius="4"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
+                                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="InputBorder" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PreviewSliderTrackButton" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Grid Background="Transparent">
+                            <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{TemplateBinding Background}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="PreviewOutlineSlider" TargetType="Slider">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
-                        <Track x:Name="PART_Track" Height="18"
+                      <Grid Background="Transparent">
+                        <Border x:Name="SliderRail" Height="4" Margin="6,0" CornerRadius="2" VerticalAlignment="Center"
+                                Background="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.5"/>
+                        <Track x:Name="PART_Track" Height="26"
                                Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
                                Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                             <Track.DecreaseRepeatButton>
-                                <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
-                                    <RepeatButton.Template>
-                                        <ControlTemplate TargetType="RepeatButton">
-                                            <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource ThemeAccentBrush}"/>
-                                        </ControlTemplate>
-                                    </RepeatButton.Template>
-                                </RepeatButton>
+                                <RepeatButton Style="{StaticResource PreviewSliderTrackButton}"
+                                              Background="{DynamicResource ThemeAccentBrush}"
+                                              Command="{x:Static Slider.DecreaseLarge}"
+                                              CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"/>
                             </Track.DecreaseRepeatButton>
                             <Track.Thumb>
-                                <Thumb Width="12" Height="12">
+                                <Thumb Width="12" Height="12" OverridesDefaultStyle="True" VerticalAlignment="Center">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Ellipse Fill="{DynamicResource ThemeTextPrimaryBrush}" Stroke="{DynamicResource ThemeAccentBrush}" StrokeThickness="1"/>
@@ -126,15 +182,12 @@
                                 </Thumb>
                             </Track.Thumb>
                             <Track.IncreaseRepeatButton>
-                                <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
-                                    <RepeatButton.Template>
-                                        <ControlTemplate TargetType="RepeatButton">
-                                            <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource ThemeInputBorderBrush}"/>
-                                        </ControlTemplate>
-                                    </RepeatButton.Template>
-                                </RepeatButton>
+                                <RepeatButton Style="{StaticResource PreviewSliderTrackButton}" Background="Transparent"
+                                              Command="{x:Static Slider.IncreaseLarge}"
+                                              CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"/>
                             </Track.IncreaseRepeatButton>
                         </Track>
+                      </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

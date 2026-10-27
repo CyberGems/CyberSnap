@@ -30,12 +30,18 @@ internal static partial class Program
                 Theme.SetMode(theme); preview.ApplyTheme(); Pump();
                 center.Invoke(null, [preview, new System.Drawing.Point(work.X + work.Width / 2, work.Y + work.Height / 2)]);
                 Thread.Sleep(80); Pump(); Pump();
+                // Moving a window does not activate it. Simulate the owner
+                // activation that precedes a real click on the picker button.
+                Assert(preview.Activate() || preview.IsActive, "the picker owner accepts activation after changing monitors");
+                Pump();
                 Element<Button>(preview, buttonName).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Pump();
                 var popup = (Popup)Field(preview, "_previewBackgroundColorPopup");
                 var picker = (FrameworkElement)Field(preview, "_previewBackgroundColorPicker");
                 Assert(popup.IsOpen, "the picker opens after changing monitor DPI and UI scale");
                 CheckBounds("natural");
+                CheckPickerHeaderRendering(picker);
+                CheckPickerPaletteLayout(picker);
                 picker.MaxHeight = Math.Min(picker.MaxHeight, 260);
                 Pump(); preview.UpdateLayout(); Pump();
                 CheckBounds("constrained");

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
@@ -57,6 +58,7 @@ internal sealed class ColorPickerPopup : ContentControl
     private WpfTextBox _boxS = null!;
     private WpfTextBox _boxV = null!;
     private WrapPanel _recentColorsPanel = null!;
+    private UniformGrid _standardColorsPanel = null!;
     private ScrollViewer _bodyScroll = null!;
     private Grid _actionRow = null!;
     private Grid _layout = null!;
@@ -444,10 +446,14 @@ internal sealed class ColorPickerPopup : ContentControl
         };
         stack.Children.Add(standardHeader);
 
-        var standardPanel = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+        var standardPanel = new UniformGrid { Rows = 1, Columns = PaletteColors.Length, Margin = new Thickness(0, 0, 0, 8) };
+        _standardColorsPanel = standardPanel;
         foreach (var col in PaletteColors)
         {
-            standardPanel.Children.Add(BuildPaletteSwatch(col));
+            var swatch = BuildPaletteSwatch(col);
+            swatch.Margin = new Thickness(0, 0, 0, 4);
+            swatch.HorizontalAlignment = WpfHorizontalAlignment.Center;
+            standardPanel.Children.Add(swatch);
         }
         stack.Children.Add(standardPanel);
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -69,6 +70,8 @@ public partial class CapturePreviewDialog
         string language = _settingsService.Settings.InterfaceLanguage;
         var picker = new ColorPickerPopup(LocalizationService.Translate(language, "Reset"));
         picker.Resources["ThemeTextPrimaryBrush"] = Theme.Brush(Theme.TextPrimary);
+        picker.Resources["ThemeTextSecondaryBrush"] = Theme.Brush(Theme.TextSecondary);
+        picker.Resources["ThemeInputBackgroundBrush"] = Theme.Brush(Theme.BgSecondary);
         picker.Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
         picker.Resources["ThemeInputBorderBrush"] = Theme.Brush(Theme.BorderSubtle);
         var enabled = new CheckBox
@@ -93,17 +96,15 @@ public partial class CapturePreviewDialog
             TickFrequency = 1, IsSnapToTickEnabled = true,
             SmallChange = 1, LargeChange = 4,
             Value = _active.OutlineThickness,
-            Style = (Style)Resources["PreviewOutlineSlider"],
-            Margin = new Thickness(0, 0, 8, 0)
+            Style = (Style)Resources["PreviewOutlineSlider"]
         };
-        AutomationProperties.SetName(thickness, LocalizationService.Translate(language, "Outline thickness"));
-        var value = new TextBlock
-        {
-            Foreground = Theme.Brush(Theme.TextSecondary),
-            Text = $"{_active.OutlineThickness} px", Width = 36,
-            VerticalAlignment = VerticalAlignment.Center
-        };
+        string thicknessLabel = LocalizationService.Translate(language, "Outline thickness");
+        AutomationProperties.SetName(thickness, thicknessLabel);
+        var value = CreatePreviewPixelInput(thicknessLabel, _active.OutlineThickness);
+        var units = new TextBlock { Text = "px", Foreground = Theme.Brush(Theme.TextSecondary), VerticalAlignment = VerticalAlignment.Center };
         var row = new DockPanel();
+        DockPanel.SetDock(units, Dock.Right);
+        row.Children.Add(units);
         DockPanel.SetDock(value, Dock.Right);
         row.Children.Add(value);
         row.Children.Add(thickness);
@@ -124,7 +125,7 @@ public partial class CapturePreviewDialog
             {
                 enabled.IsChecked = _active.OutlineEnabled;
                 thickness.Value = _active.OutlineThickness;
-                value.Text = $"{_active.OutlineThickness} px";
+                value.Text = _active.OutlineThickness.ToString(CultureInfo.InvariantCulture);
                 if (syncColor) picker.SetColor(CurrentColor());
             }
             finally { updating = false; }
@@ -147,6 +148,14 @@ public partial class CapturePreviewDialog
             ApplyOutlineSettings(true, (int)thickness.Value, _active.OutlineColorArgb);
             RefreshHeader();
         };
+        value.TextChanged += (_, _) =>
+        {
+            if (updating || !int.TryParse(value.Text, NumberStyles.None, CultureInfo.InvariantCulture, out int pixels)
+                || pixels < 1 || pixels > CaptureOutlineRenderer.MaxThickness) return;
+            ApplyOutlineSettings(true, pixels, _active.OutlineColorArgb);
+            RefreshHeader();
+        };
+        value.LostKeyboardFocus += (_, _) => { if (!updating) RefreshHeader(); };
         picker.ColorChanged += color =>
         {
             if (updating) return;

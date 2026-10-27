@@ -112,6 +112,7 @@ internal static partial class Program
                         t.Text == LocalizationService.Translate(language, "Capture outline") && t.ActualWidth > 0),
                         "the enable switch has a visible localized label as well as an accessible name");
                     CheckOutlineWheelDrag(picker);
+                    CheckPickerSizeInteraction(picker, CaptureOutlineRenderer.MaxThickness);
                     enabled.IsChecked = true; slider.Value = 7;
                     ((TextBox)Field(picker, "_boxHex")).Text = "D21E5A"; Pump();
                     Assert(preview.EffectiveBitmap.Width == 94 && preview.EffectiveBitmap.Height == 64

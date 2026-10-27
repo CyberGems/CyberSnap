@@ -48,6 +48,18 @@ public partial class CapturePreviewDialog
         }
     }
 
+    private WpfTextBox CreatePreviewPixelInput(string accessibleName, int value)
+    {
+        var input = new WpfTextBox
+        {
+            Style = (Style)Resources["PreviewPixelInput"],
+            Text = value.ToString(CultureInfo.InvariantCulture),
+            Margin = new Thickness(8, 0, 4, 0), MaxLength = 3
+        };
+        AutomationProperties.SetName(input, accessibleName);
+        return input;
+    }
+
     private void AddPreviewMarginControls(ColorPickerPopup picker)
     {
         string language = _settingsService.Settings.InterfaceLanguage;
@@ -74,17 +86,7 @@ public partial class CapturePreviewDialog
             SmallChange = 1, LargeChange = 8, Style = (Style)Resources["PreviewOutlineSlider"]
         };
         AutomationProperties.SetName(size, sizeLabel);
-        var value = new WpfTextBox
-        {
-            Text = _active.MarginSize.ToString(CultureInfo.InvariantCulture),
-            Width = 44, Height = 26, MinWidth = 0, Padding = new Thickness(4, 2, 4, 2),
-            Margin = new Thickness(8, 0, 4, 0), MaxLength = 3,
-            FontSize = 11, TextAlignment = TextAlignment.Right,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            Foreground = Theme.Brush(Theme.TextPrimary), Background = Theme.Brush(Theme.BgSecondary),
-            BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(1)
-        };
-        AutomationProperties.SetName(value, sizeLabel);
+        var value = CreatePreviewPixelInput(sizeLabel, _active.MarginSize);
         var units = new TextBlock { Text = "px", Foreground = Theme.Brush(Theme.TextSecondary), VerticalAlignment = VerticalAlignment.Center };
         var sizeRow = new DockPanel();
         DockPanel.SetDock(units, Dock.Right); sizeRow.Children.Add(units);

@@ -106,6 +106,7 @@ internal static partial class Program
                     Assert(AutomationProperties.GetName(toggle) == LocalizationService.Translate(language, "Capture margin")
                         && VisualDescendants(picker).OfType<TextBlock>().Any(text => text.Text == LocalizationService.Translate(language, "Capture margin")),
                         $"the margin has a visible localized label and accessible numeric input in {language}");
+                    CheckPickerSizeInteraction(picker, CaptureFrameRenderer.MaxMargin);
                     toggle.IsChecked = true; slider.Value = 12; Pump();
                     Assert(preview.EffectiveBitmap.Width == 104 && number.Text == "12"
                         && preview.EffectiveBitmap.GetPixel(0, 0).ToArgb() == marginColor.ToArgb()
