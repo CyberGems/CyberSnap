@@ -462,6 +462,7 @@ namespace CyberSnap.UI
         {
             var menu = new ContextMenu
             {
+                Style = (Style)FindResource("PreviewContextMenu"),
                 Background = Theme.Brush(Theme.BgElevated),
                 BorderBrush = Theme.Brush(Theme.BorderSubtle),
                 BorderThickness = new Thickness(1),

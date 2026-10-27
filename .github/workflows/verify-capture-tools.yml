@@ -54,3 +54,5 @@ jobs:
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-outline-only
       - name: Check margins, shared colors and final image output
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-margin-only
+      - name: Check preview actions, Paint snapshots and maximize/restore centering
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-actions-only

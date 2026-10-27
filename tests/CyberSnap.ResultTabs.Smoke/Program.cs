@@ -56,6 +56,12 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--preview-actions-only"))
+            {
+                CheckPreviewActions(temp, args.FirstOrDefault(a => !a.StartsWith("--")), args.Contains("--open-paint"));
+                Console.WriteLine($"PASS: {_checks} preview action and viewport checks.");
+                return 0;
+            }
             if (args.Contains("--preview-margin-only"))
             {
                 CheckPreviewMargin(temp, args.FirstOrDefault(a => !a.StartsWith("--")));

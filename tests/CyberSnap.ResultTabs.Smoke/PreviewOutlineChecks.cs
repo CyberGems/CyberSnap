@@ -104,7 +104,20 @@ internal static partial class Program
                         && (string)button.ToolTip == LocalizationService.Translate(language, "Add an outline to saved and copied images.")
                         && AutomationProperties.GetName(button) == LocalizationService.Translate(language, "Outline options"),
                         $"the outline control is localized and accessible in {language}");
-                    button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                    // A real click activates the owner before opening its popup.
+                    // Let native centering/DPI messages settle after showing it.
+                    Thread.Sleep(80); Pump();
+                    Assert(preview.Activate() || preview.IsActive, "the outline picker owner accepts activation before the click");
+                    Pump();
+                    var ownerEvents = new List<string>();
+                    EventHandler moved = (_, _) => ownerEvents.Add("moved");
+                    SizeChangedEventHandler resized = (_, _) => ownerEvents.Add("resized");
+                    EventHandler deactivated = (_, _) => ownerEvents.Add("deactivated");
+                    preview.LocationChanged += moved; preview.SizeChanged += resized; preview.Deactivated += deactivated;
+                    try { button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(); }
+                    finally { preview.LocationChanged -= moved; preview.SizeChanged -= resized; preview.Deactivated -= deactivated; }
+                    Assert(Field(preview, "_previewBackgroundColorPicker") is FrameworkElement,
+                        $"the outline picker remains open after the click (owner active={preview.IsActive}, events={string.Join(',', ownerEvents)})");
                     var picker = (FrameworkElement)Field(preview, "_previewBackgroundColorPicker");
                     var enabled = VisualDescendants(picker).OfType<CheckBox>().Single();
                     var slider = VisualDescendants(picker).OfType<Slider>().Single();

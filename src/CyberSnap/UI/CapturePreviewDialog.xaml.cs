@@ -270,11 +270,16 @@ namespace CyberSnap.UI
             UpdateScaleControls();
             ApplyZoom();
             TryApplyInitialContain();
-            ZoomViewport.SizeChanged += (_, _) =>
+            // ScrollChanged observes the updated viewport metrics; SizeChanged can
+            // still report the previous viewport during maximize/restore.
+            ZoomViewport.ScrollChanged += (_, e) =>
             {
+                if (e.ViewportWidthChange == 0 && e.ViewportHeightChange == 0)
+                    return;
                 ApplyZoom();
                 TryApplyInitialContain();
             };
+            StateChanged += (_, _) => RecenterPreviewOnStateChange();
             Loaded += (_, _) =>
             {
                 // The first SizeChanged can occur before the preview is fully arranged (and
@@ -509,6 +514,9 @@ namespace CyberSnap.UI
                 return;
 
             _isSideBySide = sideBySide;
+            // The stacked actions card spans the window. Reuse that width so
+            // its rows leave room for the capture and the preview toolbar.
+            OptionalActionsPanel.Columns = sideBySide ? 2 : 4;
 
             if (sideBySide)
             {
@@ -1067,23 +1075,29 @@ namespace CyberSnap.UI
         {
             var menu = new ContextMenu
             {
+                Style = (Style)FindResource("PreviewContextMenu"),
                 Background = Theme.Brush(Theme.BgElevated),
                 BorderBrush = Theme.Brush(Theme.BorderSubtle),
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(4)
             };
 
+            var session = _active;
             var state = CurrentOutcome;
-            if (CanOpenSavedFileInFolder())
+            var savedPath = SavedPathIfExists(session);
+            if (savedPath is not null)
             {
                 var cPrimary = Theme.TextPrimary;
                 var folderIconColor = System.Drawing.Color.FromArgb(cPrimary.A, cPrimary.R, cPrimary.G, cPrimary.B);
                 menu.Items.Add(CreateMoreMenuItem(
                     LocalizationService.Translate("Open in folder"),
                     FluentIcons.RenderWpf("folder", folderIconColor, 28, active: false),
-                    OpenSavedFileInFolder,
+                    () => OpenPathInFolder(savedPath),
                     LocalizationService.Translate("Show this file in File Explorer.")));
+                menu.Items.Add(CreateTabMenuItem("Copy image path", "copy", () => CopyImagePath(session)));
             }
+
+            menu.Items.Add(CreateTabMenuItem("Send to Paint", "draw", () => SendToPaint(session)));
 
             if (!state.Share)
             {
@@ -1103,42 +1117,8 @@ namespace CyberSnap.UI
             return menu;
         }
 
-        private bool CanOpenSavedFileInFolder()
-        {
-            var state = CurrentOutcome;
-            return state.EffectiveSave
-                && !string.IsNullOrWhiteSpace(_savedFilePath)
-                && File.Exists(_savedFilePath);
-        }
-
         private bool CanDeleteSavedCapture() =>
             !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
-
-        private void OpenSavedFileInFolder()
-        {
-            if (!CanOpenSavedFileInFolder() || _savedFilePath is null)
-                return;
-
-            CancelAutoCloseOnInteraction();
-
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"/select,\"{Path.GetFullPath(_savedFilePath)}\"",
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                ToastWindow.ShowError(
-                    "Open failed",
-                    "CyberSnap could not open the saved file location. The file is still saved; open it from History or try again.\n"
-                    + ex.Message,
-                    _savedFilePath);
-            }
-        }
 
         private MenuItem CreateMoreMenuItem(string label, ImageSource? icon, Action onClick, string? toolTip = null)
         {
@@ -1147,10 +1127,11 @@ namespace CyberSnap.UI
                 Header = label,
                 Foreground = Theme.Brush(Theme.TextPrimary),
                 Background = System.Windows.Media.Brushes.Transparent,
-                Padding = new Thickness(10, 6, 14, 6),
+                Style = (Style)FindResource("PreviewMenuItem"),
                 FontSize = 12,
                 ToolTip = toolTip
             };
+            item.Resources["PreviewMenuHoverBrush"] = Theme.Brush(Theme.AccentSubtle);
 
             if (icon != null)
             {

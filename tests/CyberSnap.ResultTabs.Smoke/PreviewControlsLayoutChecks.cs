@@ -72,7 +72,7 @@ internal static partial class Program
             var frameBounds = Bounds(host, frame);
             Assert(frameBounds.Left >= 0 && frameBounds.Top >= 0
                 && frameBounds.Right <= frame.ActualWidth + 1 && frameBounds.Bottom <= frame.ActualHeight + 1,
-                "the complete toolbar stays inside the preview area");
+                $"the complete toolbar stays inside the preview area at width {preview.Width:0}: toolbar={frameBounds}, frame={frame.ActualWidth:0} x {frame.ActualHeight:0}");
             foreach (string name in new[] { "ZoomOutBtn", "ZoomLevelBtn", "ZoomInBtn", "ZoomFitBtn",
                 "PreviewBackgroundBtn", "PreviewBackgroundColorBtn", "PreviewOutlineBtn", "Scale1xBtn", "Scale2xBtn", "Scale4xBtn", "ScaleScaledText" })
             {
