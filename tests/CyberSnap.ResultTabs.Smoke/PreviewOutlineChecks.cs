@@ -223,23 +223,31 @@ internal static partial class Program
         var assembly = typeof(InputManager).Assembly;
         var reportType = assembly.GetType("System.Windows.Input.RawMouseInputReport")!;
         var constructor = reportType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Single();
-        var arguments = constructor.GetParameters().Select(parameter => parameter.Name switch
+        void Report(string actions, int x, int y)
         {
-            "mode" => Enum.Parse(parameter.ParameterType, "Foreground"),
-            "timestamp" => (object)Environment.TickCount,
-            "inputSource" => source,
-            "actions" => Enum.Parse(parameter.ParameterType, "Activate, AbsoluteMove"),
-            "x" => (object)(int)Math.Round(pixels.X),
-            "y" => (object)(int)Math.Round(pixels.Y),
-            "wheel" => 0,
-            "extraInformation" => IntPtr.Zero,
-            _ => throw new InvalidOperationException("Unexpected WPF input parameter: " + parameter.Name)
-        }).ToArray();
-        var report = constructor.Invoke(arguments);
-        var argsType = assembly.GetType("System.Windows.Input.InputReportEventArgs")!;
-        var input = (InputEventArgs)Activator.CreateInstance(argsType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null, [null, report], null)!;
-        input.RoutedEvent = (RoutedEvent)typeof(InputManager).GetField("PreviewInputReportEvent", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
-        InputManager.Current.ProcessInput(input);
+            var arguments = constructor.GetParameters().Select(parameter => parameter.Name switch
+            {
+                "mode" => Enum.Parse(parameter.ParameterType, "Foreground"),
+                "timestamp" => (object)Environment.TickCount,
+                "inputSource" => source,
+                "actions" => Enum.Parse(parameter.ParameterType, actions),
+                "x" => (object)x,
+                "y" => (object)y,
+                "wheel" => 0,
+                "extraInformation" => IntPtr.Zero,
+                _ => throw new InvalidOperationException("Unexpected WPF input parameter: " + parameter.Name)
+            }).ToArray();
+            var report = constructor.Invoke(arguments);
+            var argsType = assembly.GetType("System.Windows.Input.InputReportEventArgs")!;
+            var input = (InputEventArgs)Activator.CreateInstance(argsType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                null, [null, report], null)!;
+            input.RoutedEvent = (RoutedEvent)typeof(InputManager).GetField("PreviewInputReportEvent", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
+            InputManager.Current.ProcessInput(input);
+        }
+        int x = (int)Math.Round(pixels.X), y = (int)Math.Round(pixels.Y);
+        // Activation seeds WPF's cached position. A separate, nonzero move must
+        // follow it to hit-test newly opened popups at the same screen position.
+        Report("Activate", x - 1, y);
+        Report("AbsoluteMove", x, y);
     }
 }
