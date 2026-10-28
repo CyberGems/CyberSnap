@@ -77,13 +77,21 @@ internal static partial class Program
             var button = Element<Button>(widget, "CaptureButton");
             button.ApplyTemplate();
             var tile = (Border)button.Template.FindName("CaptureTile", button);
-            Assert(button.ActualWidth >= 160 && button.ActualHeight >= 60,
-                "the capture button spans the panel and has a larger vertical hit target");
+            var ring = (FrameworkElement)button.Template.FindName("OuterRing", button);
+            var ringBounds = ring.TransformToAncestor(button).TransformBounds(new Rect(ring.RenderSize));
+            Assert(button.ActualWidth >= 160 && ringBounds.Top >= 24 && button.ActualHeight - ringBounds.Bottom >= 24,
+                "the capture tile leaves generous clickable space above and below the capture mark");
             foreach (double x in new[] { 6.0, button.ActualWidth - 6 })
             {
                 var hit = widget.InputHitTest(button.TranslatePoint(new Point(x, button.ActualHeight / 2), widget)) as DependencyObject;
                 while (hit is not null && hit is not Button) hit = VisualTreeHelper.GetParent(hit);
                 Assert(ReferenceEquals(hit, button), "the widened capture area hits the capture button outside the ring");
+            }
+            foreach (double y in new[] { 6.0, button.ActualHeight - 6 })
+            {
+                var hit = widget.InputHitTest(button.TranslatePoint(new Point(button.ActualWidth / 2, y), widget)) as DependencyObject;
+                while (hit is not null && hit is not Button) hit = VisualTreeHelper.GetParent(hit);
+                Assert(ReferenceEquals(hit, button), "the added space above and below the icon activates the capture button");
             }
             foreach (var theme in new[] { AppThemeMode.Dark, AppThemeMode.Light, AppThemeMode.Grayscale })
             {

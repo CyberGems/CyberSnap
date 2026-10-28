@@ -51,7 +51,7 @@ public partial class CaptureWidgetWindow : Window
 
     // Layout constants
     private const double PanelWidth = 196;
-    private const double PanelHeight = 280; // keep both panel dimensions aligned at common fractional display DPIs
+    private const double PanelHeight = 332; // keep both panel dimensions aligned at common fractional display DPIs
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow

@@ -59,7 +59,7 @@ internal static partial class Program
                 motion.SetValue(null, false);
                 Call(widget, "CollapseWidget");
                 Call(widget, "ExpandWidget");
-                WaitForWidgetAnimation(() => Math.Abs(panel.ActualWidth - 196) < 1 && Math.Abs(panel.ActualHeight - 280) < 1);
+                WaitForWidgetAnimation(() => Math.Abs(panel.ActualWidth - 196) < 1 && Math.Abs(panel.ActualHeight - 332) < 1);
                 WaitForWidgetAnimation(() => !widget.HasAnimatedProperties);
                 Assert(peek.Visibility == Visibility.Collapsed && controls.Visibility == Visibility.Visible,
                     "interrupting collapse keeps the cyan peek out of the expanded panel: " + context, false);

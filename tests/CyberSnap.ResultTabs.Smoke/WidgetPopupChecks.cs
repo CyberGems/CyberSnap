@@ -57,7 +57,7 @@ internal static partial class Program
                 var panel = Element<Border>(widget, "MainPanelBorder");
                 bool horizontal = edge is CaptureDockSide.Top or CaptureDockSide.Bottom;
                 Assert(Math.Abs(panel.ActualWidth - (horizontal ? 196 : 9)) < 1
-                    && Math.Abs(panel.ActualHeight - (horizontal ? 9 : 280)) < 1,
+                    && Math.Abs(panel.ActualHeight - (horizontal ? 9 : 332)) < 1,
                     "the peek draws its own complete outline, without clipping a full-size panel", false);
                 var clip = LayoutInformation.GetLayoutClip(panel);
                 Assert(clip is null || clip.Bounds.Contains(new Rect(panel.RenderSize)), "the peek outline fits its layout clip", false);
