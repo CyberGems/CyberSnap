@@ -49,11 +49,16 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 
 ### 📷 Captura
 - **Widget de captura flotante**: acceso con un clic y nueve botones en una cuadrícula 3×3, con separación entre capturas y herramientas, incluido Pin. Su menú Más agrupa las preferencias por modo, con ajustes independientes de cursor para imágenes, MP4 y GIF, y de Recortador para MP4 y GIF.
+- **Monitores del widget**: elige **Seguir monitor activo** (predeterminado), **Seguir cursor** para cambiar de pantalla sin clic o un monitor fijo. La elección se sincroniza con Configuración y se guarda entre sesiones. El botón principal tiene un área de clic más amplia, fondo al pasar el mouse como el del tray y más espacio vertical.
 - **Autocopia independiente**: elige por separado qué enviar al portapapeles para capturas normales, capturas con desplazamiento, OCR, QR/códigos de barras, MP4, GIF y colores. Las capturas normales y con desplazamiento tienen preferencias de vista previa independientes. Los presets de imágenes conservan las preferencias de portapapeles y vista previa de las capturas con desplazamiento. OCR, QR y el selector de color mantienen su ventana de resultados habilitada al desactivar la autocopia.
 - **Modos de captura flexibles**: área, ventana activa, pantalla completa y captura con desplazamiento (páginas largas cosidas en una sola imagen)
 - **Grabación de pantalla**: graba en MP4 o GIF con un recortador con pestañas: recorte y reproducción independientes, tira de fotogramas, forma de onda y corte preciso
 - **Herramientas de precisión**: guías de cruz, lupa de captura y detección inteligente de ventanas
 - **Captura con desplazamiento**: cose automáticamente páginas largas con desplazamiento en una sola imagen
+- **Fondo de Vista previa**: alterna el damero junto al zoom o abre el botón adyacente **Fondo sólido y margen** para elegir un color. El picker admite HEX, RGB, HSV, paletas y cuentagotas, con la acción **Predeterminado** para recuperar el color del tema. Los colores se recuerdan por separado para temas claros y oscuros (incluida la escala de grises) y se comparten entre pestañas y sesiones. Cambiar solo el fondo conserva la transparencia de la imagen.
+- **Delineado de captura**: añade desde Vista previa un delineado de color y grosor configurable, de 1–32 píxeles de salida. Crece por fuera de la captura y se conserva al copiar y guardar. Cada pestaña mantiene sus ajustes; las nuevas capturas recuperan la última elección guardada. Restablecer y Aceptar permanecen visibles en el picker al desplazar el contenido con DPI alto.
+- **Margen de captura**: añade 1–256 píxeles de salida por lado con el color del fondo sólido. El margen queda por fuera del delineado y se incluye al copiar y guardar. Cada pestaña mantiene su tamaño de margen; las dimensiones finales incluyen escala de salida, delineado y margen.
+- **Acciones de Vista previa**: el menú Más permite copiar la ruta del archivo existente de la pestaña activa o enviar una copia a Paint con su escala, delineado y margen. La captura conserva el centro al maximizar y restaurar, respetando el zoom manual.
 
 ### ✏️ Editor de anotaciones
 - **Lienzo enriquecido**: formas, texto, pegado de imágenes, reglas, colores personalizados y marcos
@@ -242,6 +247,8 @@ Las capturas, la grabación y las herramientas exponen atajos globales configura
 | Fijar en pantalla | Sin asignar |
 
 Durante la captura, `Tab` / `Shift+Tab` recorre los botones visibles de la barra; `Espacio` o `Enter` activa el botón enfocado. Los atajos de anotación y los controles de confirmación actúan en su propia etapa: por ejemplo, `R` reintenta y `P` alterna Vista previa durante la confirmación.
+
+Durante la confirmación, el logo de la barra de anotaciones y Más → **Anotar y confirmar** abren ayuda contextual para captura, Pin y Zoom. La guía explica cómo ajustar el recorte, anotar y finalizar, con atajos e instrucciones que corresponden a la etapa actual y a la visibilidad de la barra de anotaciones.
 
 Las anotaciones de captura y el Editor pueden compartir atajos locales, incluido `F6` para Dibujo libre. Se detectan asignaciones duplicadas dentro de cada etapa; las herramientas y los atajos de vista del Editor comparten una etapa. Los atajos globales se siguen comprobando contra ambas etapas.
 
