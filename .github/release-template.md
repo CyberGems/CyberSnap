@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="https://raw.githubusercontent.com/CyberGems/CyberSnap/main/services/cybersnap-share/public/logo.png" width="120" alt="CyberSnap">
 </p>
 
@@ -6,54 +6,53 @@
 
 ### 🚀 What's new in this release
 
-<!-- Maintainer: Rewrite the marked paragraph for every release. Use 25-45 words, lead with user-facing changes, and do not repeat the app name or version. -->
+<!-- IMPORTANT FOR AGENTS & MAINTAINERS: Always rewrite this entire section and highlights with the ACTUAL release notes for this specific new version before tagging. NEVER leave or copy previous version notes! Use 25-45 words for the summary, lead with user-facing changes, and do not repeat the app name or version. -->
 <!-- changelog-summary:start -->
-Zoom freezes and magnifies your screen with seamless region or full-view capture, confirmation, and annotations. Pin keeps image references floating across monitors with zoom, opacity, shadows, and borders. A reorganized widget, clearer tooltips, and unified tool shortcuts streamline everyday capture.
+Customize capture previews with solid colors, then add outlines and margins to copied or saved images. The widget can follow your cursor between monitors, while clearer confirmation controls, steadier annotations and improved Pin imports smooth everyday capture.
 <!-- changelog-summary:end -->
 
 ### ✨ Key Features & Highlights
 
-- 🔍 **Zoom, integrated with the capture workflow**:
-  - Freeze the monitor under the pointer at 2× by default, pan with the mouse, and zoom from 1.25× to 4× with the wheel or `+` / `-`.
-  - Press `C` or your capture hotkey for a region, or `Enter` for the full view. Refine the selection and annotate in the usual confirmation stage, then follow your normal clipboard, save, Editor, Gallery, and optional Preview preferences.
-  - Canceling returns to the same Zoom view. Entering capture preserves the enlarged image without a distracting transition.
-  - Configure initial zoom, smoothing, animation, and the help bar, enabled by default, under Settings → Tools → Zoom.
+- 🎨 **Capture Preview backgrounds, outlines and margins**:
+  - Switch between the checkerboard and a solid preview background next to the zoom controls. Choose custom colors with HEX, RGB, HSV, palettes or screen sampling, and reset to the theme default when needed.
+  - Background colors are remembered separately for light and dark themes (including grayscale), shared across capture tabs and sessions. Changing the preview background alone preserves the image's transparency.
+  - Add an outline with a custom color and a thickness of 1–32 output pixels. Add a margin of 1–256 pixels per side using the chosen solid background color.
+  - Outlines and margins grow outside the capture, preserving its content, and are included in saved and copied images. Tabs keep their individual effect settings, and new captures inherit the last saved choices.
 
-- 📌 **Pin to Screen for temporary image references**:
-  - Pin a selected region, clipboard image, or image file; also available from Preview, Gallery, widget, and capture bar. Regions support confirmation and annotations before pinning.
-  - Move references between monitors, zoom with the wheel or `+` / `-`, change opacity with `Ctrl` + wheel or the Opacity menu, copy with `Ctrl+C`, save with `Ctrl+S`, or send to the Editor.
-  - Middle-click or `0` resets zoom and opacity. Hover for copy, More, and close controls; right-click for the full menu, with icons and monitor-aware placement.
-  - Settings control initial scale, smoothing, always-on-top behavior, capture visibility, shadow, and border. Shadow and border default to on; the hover outline stays visible when the normal border is disabled.
-  - The source chooser uses a 40% dimmed backdrop, mixed-DPI centering, and subtle outside-click feedback. Clipboard import is disabled when no image is available, with a contextual tooltip.
-  - References are temporary and do not automatically save to Gallery. Menu and close lifecycle fixes prevent disposed-menu crashes.
+- 🖼️ **Clearer Preview controls and export actions**:
+  - Action buttons use aligned columns and larger labels. The compact bottom toolbar wraps when needed and shows final output dimensions, with the original dimensions available in contextual help.
+  - The denser More menu adds **Copy image path** when the active tab has an existing file, and **Send to Paint** for a snapshot including the current image scale, outline and margin.
+  - Maximizing and restoring Preview keeps the capture centered while preserving manual zoom.
+  - Color pickers retain visible Reset and Accept actions when scrolling at high DPI. Slider tracks, editable pixel values, themed numeric inputs and a single-row standard palette make adjustments easier.
 
-- ⌨️ **Consistent tools and keyboard controls**:
-  - One configurable global shortcut per tool, also shown in capture-bar tooltips. Existing assignments and stage-specific annotation/confirmation controls are preserved; tools remain unassigned by default.
-  - `Tab` / `Shift+Tab` navigates visible capture-toolbar buttons; `Space` or `Enter` activates the focused button.
-  - Settings groups OCR, Color Picker, QR, Ruler, Zoom, and Pin under Tools, removes obsolete standalone terminology, and keeps Editor shortcut cards at a readable width.
+- 🧩 **A widget that can follow the cursor**:
+  - Choose **Follow cursor** under the widget's Screen menu or in Settings to move it between monitors without an extra click. The choice persists across sessions and synchronizes between both places.
+  - Monitor changes preserve the docked edge and position, with mixed-DPI placement. Following pauses while the panel is expanded, a menu is open, the widget is being dragged or a capture session is restoring.
+  - **Follow active monitor** remains the default, and fixed-monitor choices remain available.
+  - The primary capture button has a larger clickable tile, a tray-style hover background and more space above and below the capture mark.
 
-- 🧩 **A clearer widget, tray, and Settings**:
-  - Nine widget actions form a 3×3 grid with a subtle tool separator; the tray pairs Zoom and Pin in aligned columns.
-  - Image, MP4, and GIF cursor preferences move into their respective widget submenus and remain independent.
-  - Useful two-line English/Spanish tooltips cover the widget, tray, and capture bar. Widget tips stay above the panel, and collapsing no longer flashes cyan.
-  - Settings navigation, subtabs, hover states, sound toggles, and footer scrolling are refined. Capture Preview gets its own distinct, softer default sound, and the installer uses the app artwork.
+- ✏️ **Steadier capture confirmation and annotations**:
+  - Contextual confirmation guides explain the screenshot, Pin and Zoom flows. Pin and Zoom region selection keep the capture toolbar out of the way until confirmation, and retain their own capture destination.
+  - Confirmation options open on click, with clearer state and menu dismissal. Selection tools stay visible, resizing grips remain steady and annotation history transitions are smoother.
+  - Drag the dimension readout away from important content. Shortcut conflict checks respect the active stage instead of treating separate tool contexts as one set.
 
-- 📦 **Packages and winget**:
-  - Installer and portable packages include the .NET 10 runtime and FFmpeg. Installation remains per-user without administrator prompts.
-  - Release automation updates the oldest pending CyberSnap winget PR and closes duplicates instead of accumulating submissions. Availability in winget still depends on upstream review.
+- 🔧 **Compatibility and reliability**:
+  - Pin imports handle more image-format variations, including transparency, the first frame of animated GIFs, and high-bit-depth or CMYK sources.
+  - About icons are synchronized from official suite repositories before release builds, with correct own-app filtering. Winget verification retries temporary GitHub read failures.
+  - Automated checks cover preview output, color-picker interaction, confirmation flows, widget preference persistence, monitor placement, menus and mixed-DPI behavior.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
-- **Zoom integrado**: congela y amplía de 1.25× a 4×. `C` o el atajo de captura selecciona una región; `Enter` selecciona la vista completa. Ajusta y anota en la confirmación habitual, con Vista previa opcional. Cancelar devuelve al mismo Zoom y la transición a captura conserva la imagen ampliada. Barra de ayuda opcional, activada por defecto.
-- **Fijar en pantalla (Pin)**: referencias temporales desde región, portapapeles, archivo, Vista previa, Galería, widget o barra de captura. Mueve entre monitores, amplía con rueda o `+` / `-`, cambia opacidad con `Ctrl` + rueda o su menú, copia, guarda o abre en el Editor. Clic central o `0` restablece zoom y opacidad. Sombra y borde configurables, activados por defecto; el borde al pasar el mouse siempre permanece disponible.
-- **Pin más pulido**: selector con fondo atenuado al 40%, centrado entre distintas escalas y aviso sutil al hacer clic fuera. Portapapeles deshabilitado si no contiene una imagen, con tooltip dinámico. Menús con iconos que permanecen en su monitor y correcciones de los cierres inesperados al usar o cerrar la herramienta.
-- **Atajos y barra de captura**: un atajo global por herramienta, conservando tus asignaciones y los controles de cada etapa. `Tab` / `Shift+Tab` recorre botones visibles; `Espacio` o `Enter` activa el enfocado. Configuración agrupa las seis herramientas y mejora el ancho de las tarjetas de atajos del Editor.
-- **Widget y tray**: cuadrícula 3×3 con separación de herramientas, Zoom y Pin alineados en el tray, y ajustes de cursor independientes en los submenús de Imagen, MP4 y GIF. Tooltips útiles de dos líneas en ambos idiomas, siempre visibles sobre el widget, y sin destello cian al ocultarse.
-- **Otros ajustes**: navegación y subpestañas de Configuración, hover consistente, toggles de Sonidos sin recortes, scroll separado del footer, sonido predeterminado propio para Vista previa e ilustraciones de la app en el instalador.
-- **Distribución**: instalador y portable con .NET 10 y FFmpeg incluidos. La automatización mantiene actualizado el PR más antiguo de winget y cierra duplicados; su aprobación depende de los revisores de winget.
+- **Vista previa personalizable**: alterna entre damero y fondo sólido, elige colores con HEX, RGB, HSV, paletas o cuentagotas, y vuelve al color predeterminado del tema. Los colores se recuerdan por separado para temas claros y oscuros y se comparten entre pestañas y sesiones. El fondo de Vista previa por sí solo conserva la transparencia de la imagen.
+- **Delineado y margen**: añade un delineado de color y grosor configurable (1–32 píxeles de salida) y un margen de 1–256 píxeles por lado con el color del fondo sólido. Se agregan por fuera de la captura y se conservan al copiar y guardar. Cada pestaña mantiene sus ajustes; las nuevas capturas recuperan la última elección guardada.
+- **Controles más claros**: botones alineados y etiquetas mayores, barra inferior compacta con dimensiones finales, menú Más más denso, **Copiar ruta de imagen** cuando existe un archivo para la pestaña y **Enviar a Paint** con escala, delineado y margen incluidos. La captura conserva el centro al maximizar y restaurar, respetando el zoom manual.
+- **Pickers más cómodos**: Restablecer y Aceptar permanecen visibles al desplazar el contenido con DPI alto. Los sliders muestran su recorrido, los valores de píxeles son editables, los campos numéricos siguen el tema y la paleta estándar cabe en una fila.
+- **Seguir cursor**: nueva opción en Pantalla y en Ajustes para mover el widget entre monitores sin clic adicional. Se guarda entre sesiones y se pausa mientras usas el panel, sus menús o el arrastre. **Seguir monitor activo** continúa como opción predeterminada. El botón principal tiene un área de clic y hover mayor, con más espacio vertical.
+- **Confirmación y anotaciones**: guías contextuales para captura, Pin y Zoom; selección inicial sin la barra de captura; destino propio de Pin y Zoom; opciones mediante clic; herramientas visibles, grips estables, historial más fluido y etiqueta de dimensiones arrastrable. Los conflictos de atajos se revisan dentro de su etapa.
+- **Compatibilidad y calidad**: mejoras en la importación de imágenes de Pin, incluidos transparencia, primer fotograma de GIF, alta profundidad de color y CMYK. Iconos oficiales de la suite sincronizados, reintentos en la verificación de winget y nuevas pruebas automáticas de exportación, menús, preferencias y múltiples monitores.
 
 </details>
 
