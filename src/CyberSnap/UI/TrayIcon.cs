@@ -52,7 +52,7 @@ public sealed class TrayIcon : IDisposable
         _defaultIcon = CreateDefaultIcon();
         _notifyIcon = new NotifyIcon
         {
-            Text = T("CyberSnap - Left-click to activate / Right-click for menu"),
+            Text = FormatTrayTooltip(),
             Icon = _defaultIcon,
             Visible = true
         };
@@ -94,6 +94,30 @@ public sealed class TrayIcon : IDisposable
         _notifyIcon.ContextMenuStrip = null; // Use custom WPF menu instead
     }
 
+    public void RefreshTooltip()
+    {
+        if (_notifyIcon != null)
+        {
+            _notifyIcon.Text = FormatTrayTooltip();
+        }
+    }
+
+    private string FormatTrayTooltip()
+    {
+        string text;
+        if (_isShowingRecording)
+        {
+            var status = _isRecordingPaused ? T("Recording paused") : T("Recording");
+            text = $"CyberSnap · {status}";
+        }
+        else
+        {
+            var hint = HotkeyHint("rect");
+            text = string.IsNullOrWhiteSpace(hint) ? "CyberSnap" : $"CyberSnap · {hint}";
+        }
+        return text.Length > 63 ? text[..63] : text;
+    }
+
     public void CloseContextMenu()
     {
         _menu?.Close();
@@ -118,14 +142,14 @@ public sealed class TrayIcon : IDisposable
         if (isRecording)
         {
             _recordingIcon ??= CreateRecordingIcon();
-            _notifyIcon.Text = T("CyberSnap recording - click to stop, right-click for menu");
+            _notifyIcon.Text = FormatTrayTooltip();
             ApplyRecordingLedVisual();
         }
         else
         {
             StopRecordingBlink();
             _notifyIcon.Icon = _defaultIcon;
-            _notifyIcon.Text = T("CyberSnap - Left-click to activate / Right-click for menu");
+            _notifyIcon.Text = FormatTrayTooltip();
         }
     }
 

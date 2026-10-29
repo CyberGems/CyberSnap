@@ -67,6 +67,7 @@ public partial class App
             ToastWindow.Show(ToastSpec.Standard(title, body) with { SuppressSound = true, IsWelcomeToast = true });
             SoundService.PlayStartupSound();
         }
+        _trayIcon?.RefreshTooltip();
     }
 
     private void OnHotkeyPressed()
