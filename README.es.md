@@ -22,6 +22,33 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [¿Qué es CyberSnap?](#qué-es-cybersnap)
+- [📸 ¿Por qué CyberSnap?](#-por-qué-cybersnap)
+- [✨ Funciones principales](#-funciones-principales)
+- [🚀 Primeros pasos](#-primeros-pasos)
+- [🛠️ Stack tecnológico y arquitectura](#️-stack-tecnológico-y-arquitectura)
+- [⌨️ Atajos de teclado](#️-atajos-de-teclado)
+- [🤝 Contribuir](#-contribuir)
+- [🙏 Agradecimientos](#-agradecimientos)
+- [❤️ Donar](#️-donar)
+- [📄 Licencia](#-licencia)
+- [❓ Preguntas frecuentes](#-preguntas-frecuentes)
+- [🔗 Ver también](#-ver-también)
+
+<details>
+<summary><strong>🔗 Related links (outside this README)</strong></summary>
+
+- 🌐 [CyberSnap en la web](https://cybergems.org/apps/cybersnap/) — resumen, descarga y guía de SmartScreen
+- 📚 [Documentación y FAQ — Wiki](https://github.com/CyberGems/CyberSnap/wiki) — solución de problemas y guías detalladas
+- 💾 [Releases](https://github.com/CyberGems/CyberSnap/releases) — instaladores, versiones portátiles y changelog
+- 🟣 [Suite CyberGems](https://github.com/CyberGems) — todas las apps de código abierto
+
+</details>
+
+---
+
 ## ¿Qué es CyberSnap?
 
 CyberSnap es una **suite de captura y anotación de pantalla** todo en uno para Windows, creada para llevar una captura desde el primer clic hasta el resultado final sin interrumpir tu flujo de trabajo. Captura áreas, ventanas, pantallas completas o contenido con desplazamiento; graba MP4 o GIF; anota con herramientas vectoriales; extrae y traduce texto con OCR; y muestrea colores de pantalla. Una galería local con búsqueda, recorte de vídeo integrado y múltiples destinos de subida hacen que las capturas pasadas sean fáciles de encontrar, refinar y compartir. Construido con **.NET 10** y **WPF**.
@@ -270,9 +297,7 @@ Este proyecto también se construye sobre componentes de código abierto como Te
 
 ## ❤️ Donar
 
-Tras incontables horas construyendo y perfeccionando **CyberSnap** para mi propio uso, decidí recientemente compartirlo con el mundo junto a mis otras herramientas de código abierto en [CyberGems](https://github.com/CyberGems#-all-apps--repositories).
-
-Si te gustaría apoyar las futuras actualizaciones, te lo agradecería de verdad. Tu donación ayuda a mantener el desarrollo, lanzar nuevas funciones, acelerar la resolución de actualizaciones y errores, y mejorar la calidad de la documentación. También puedes mostrar tu apoyo [poniendo una estrella al repo en GitHub](https://github.com/CyberGems/CyberSnap). ¡Gracias! 🙏
+**CyberSnap** es 100% gratis y de código abierto. Si te resulta útil, por favor considera [donar](https://cybergems.org/donate) o [dar una estrella al repo en GitHub](https://github.com/CyberGems/CyberSnap) para apoyar el desarrollo continuo. [Lee la historia completa](https://cybergems.org/about/) del proyecto. ¡Gracias! 🙏
 
 <p align="center">
   <a href="https://www.paypal.com/donate/?hosted_button_id=M4PY3UPJA5Y6Q"><img src="https://img.shields.io/badge/Donar-PayPal-0070BA?style=for-the-badge&logo=paypal" alt="Donar con PayPal" /></a>
