@@ -25,7 +25,7 @@
 
 <div align="center">
 
-### Captura, anota y comparte capturas de pantalla, grabaciones, texto y color con rapidez
+### Captura, graba, anota y comparte sin salir de la ventana que capturaste
 
 </div>
 
@@ -60,7 +60,7 @@
 
 ## 👋 Introducción
 
-CyberSnap es una **suite de captura y anotación de pantalla** todo en uno para Windows, creada para llevar una captura desde el primer clic hasta el resultado final sin interrumpir tu flujo de trabajo. Captura áreas, ventanas, pantallas completas o contenido con desplazamiento; graba MP4 o GIF; anota con herramientas vectoriales; extrae y traduce texto con OCR; y muestrea colores de pantalla. Una galería local con búsqueda, recorte de vídeo integrado y múltiples destinos de subida hacen que las capturas pasadas sean fáciles de encontrar, refinar y compartir. Construido con **.NET 10** y **WPF**.
+Una captura suele necesitar cuatro herramientas: una para tomarla, otra para anotarla, otra para leer el texto que contiene y otra para subirla. CyberSnap hace todo eso en una sola ventana: captura un área, una ventana, la pantalla completa o una página larga con desplazamiento; graba MP4 o GIF; anota con formas, texto, reglas y marcos; extrae el texto de la imagen con OCR multilingüe y lo traduce al momento; y toma el color de cualquier punto de la pantalla. Las capturas anteriores van a una galería local que puedes buscar por las palabras que contienen, y pueden salir directas a FTP, SFTP, S3, ImgBB, Imgur, un webhook o CyberSnap Share. Construido con **.NET 10** y **WPF**.
 
 *Gratuito y de código abierto (GPLv3): sin anuncios, sin rastreo y sin recogida de datos. Solo disfrútalo.*
 
