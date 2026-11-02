@@ -4,27 +4,36 @@
 
 <p align="center">
   <a href="https://cybergems.org/apps/cybersnap/">
-    <img src="https://cybergems.org/banners/cybersnap.png" alt="CyberSnap — capture, annotate and share screenshots, recordings, text and color with speed" />
+    <img src="https://cybergems.org/banners/cybersnap.png" alt="Capture, annotate and record your screen" />
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/CyberGems/CyberSnap/releases/latest"><img src="https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fraw.githubusercontent.com%2FCyberGems%2FCyberSnap%2Fmain%2Fsrc%2FCyberSnap%2FCyberSnap.csproj&query=%2FProject%2FPropertyGroup%2FVersion&prefix=%20Download%20CyberSnap%20v&suffix=%20&style=for-the-badge&label=&labelColor=0891B2&color=0891B2" alt="Download Latest Release" /><img src="https://img.shields.io/badge/Windows_10%2F11_(64--bit)-2563EB?style=for-the-badge" alt="Windows 10/11 (64-bit)" /></a>
-  &nbsp;<a href="https://github.com/CyberGems/CyberSnap/releases"><img src="https://img.shields.io/badge/All_releases-30363D?style=for-the-badge&logo=github&logoColor=white" alt="All Releases" /><img src="https://img.shields.io/badge/Changelog-475569?style=for-the-badge" alt="Changelog" /></a>
+  <a href="https://github.com/CyberGems/CyberSnap/releases/latest"><img src="https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fraw.githubusercontent.com%2FCyberGems%2FCyberSnap%2Fmain%2Fsrc%2FCyberSnap%2FCyberSnap.csproj&query=%2FProject%2FPropertyGroup%2FVersion&prefix=%20Download%20v&suffix=%20&style=for-the-badge&label=&labelColor=0891B2&color=0891B2" alt="Download Latest Release" /><img src="https://img.shields.io/badge/Windows_10%2F11_(64--bit)-2563EB?style=for-the-badge" alt="Windows 10/11 (64-bit)" /></a>
+  &nbsp;<a href="https://github.com/CyberGems/CyberSnap/releases"><img src="https://img.shields.io/badge/All_releases-30363D?style=for-the-badge&logo=github&logoColor=white" alt="All Releases" /></a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL--3.0-1F2428.svg?style=flat-square&color=334155" alt="License" />&nbsp;
   <img src="https://img.shields.io/badge/Platform-Windows_10%2F11-1F2428.svg?style=flat-square&color=334155" alt="Platform" />&nbsp;
   <img src="https://img.shields.io/badge/.NET-10-1F2428.svg?style=flat-square&logo=dotnet&logoColor=white&color=334155" alt=".NET" />&nbsp;
-  <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/Wiki-Documentation-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=334155" alt="Wiki" /></a>
+  <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/Wiki-Documentation-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=334155" alt="Wiki" /></a>&nbsp;
+  <a href="https://github.com/CyberGems/CyberSnap/blob/main/CHANGELOG.md"><img src="https://img.shields.io/badge/Changelog-475569?style=flat-square" alt="Changelog" /></a>
 </p>
+
+---
+
+<div align="center">
+
+### Capture, annotate and share screenshots, recordings, text and color with speed
+
+</div>
 
 ---
 
 ## 📑 Table of Contents
 
-- [What is CyberSnap?](#what-is-cybersnap)
+- [👋 Introduction](#-introduction)
 - [📸 Why CyberSnap?](#-why-cybersnap)
 - [✨ Key Features](#-key-features)
 - [🚀 Getting Started](#-getting-started)
@@ -49,7 +58,7 @@
 
 ---
 
-## What is CyberSnap?
+## 👋 Introduction
 
 CyberSnap is an all-in-one **screen capture and annotation suite** for Windows, built to take a capture from first click to finished result without interrupting your workflow. Capture areas, windows, full screens, or scrolling content; record MP4 or GIF; annotate with vector tools; extract and translate text with OCR; and sample on-screen colors. A searchable local gallery, built-in video trimming, and multiple upload destinations make past captures easy to find, refine, and share. Built with **.NET 10** and **WPF**.
 
