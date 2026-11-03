@@ -25,7 +25,7 @@
 
 <div align="center">
 
-### Captura, graba, anota y comparte sin salir de la ventana que capturaste
+### Captura, edita y comparte cualquier cosa de la pantalla: capturas, grabaciones, OCR, códigos QR y selector de color
 
 </div>
 
@@ -60,7 +60,7 @@
 
 ## 👋 Introducción
 
-Una captura suele necesitar cuatro herramientas: una para tomarla, otra para anotarla, otra para leer el texto que contiene y otra para subirla. CyberSnap hace todo eso en una sola ventana: captura un área, una ventana, la pantalla completa o una página larga con desplazamiento; graba MP4 o GIF; anota con formas, texto, reglas y marcos; extrae el texto de la imagen con OCR multilingüe y lo traduce al momento; y toma el color de cualquier punto de la pantalla. Las capturas anteriores van a una galería local que puedes buscar por las palabras que contienen, y pueden salir directas a FTP, SFTP, S3, ImgBB, Imgur, un webhook o CyberSnap Share. Construido con **.NET 10** y **WPF**.
+Una captura suele necesitar cuatro herramientas: una para tomarla, otra para anotarla, otra para leer el texto que contiene y otra para subirla. CyberSnap hace todo eso en una sola ventana. Captura un área, una ventana, la pantalla completa, una página larga con desplazamiento o la misma región que la última vez, y graba MP4 o GIF cuando una imagen no basta. Anota sobre el overlay o abre el editor completo para formas, texto, reglas y marcos. El OCR extrae el texto de la imagen y lo traduce, el QR lee códigos, Zoom amplía la pantalla bajo el puntero para que captures una región de la vista aumentada, Pin mantiene una referencia sobre tu trabajo y el selector de color lee cualquier píxel. Las capturas anteriores van a una galería local que puedes buscar por las palabras que contienen, y pueden salir directas a FTP, SFTP, S3, ImgBB, Imgur, un webhook o CyberSnap Share. Construido con **.NET 10** y **WPF**.
 
 *Gratuito y de código abierto (GPLv3): sin anuncios, sin rastreo y sin recogida de datos. Solo disfrútalo.*
 
