@@ -902,9 +902,11 @@ public sealed partial class RegionOverlayForm : Form
                 return;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Fall through to solid fill.
+            // Falling back to a black fill would show the user a black overlay, so record
+            // why the screenshot blit failed instead of swallowing it silently.
+            AppDiagnostics.LogWarning("overlay.paint-background-failed", ex.Message, ex);
         }
 
         e.Graphics.Clear(Color.Black);

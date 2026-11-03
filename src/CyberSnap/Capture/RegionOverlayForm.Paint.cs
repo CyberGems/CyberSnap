@@ -28,6 +28,34 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        try
+        {
+            PaintOverlayFrame(e);
+        }
+        catch (Exception ex)
+        {
+            // A paint exception that escapes OnPaint leaves the double buffer unblitted,
+            // which the user sees as a full black screen while the overlay stays alive.
+            // Log it and present the raw screenshot so the frame is never left blank.
+            AppDiagnostics.LogError("overlay.paint-failed", ex);
+            try
+            {
+                var g = e.Graphics;
+                var clip = e.ClipRectangle;
+                if (clip.Width <= 0 || clip.Height <= 0)
+                    clip = ClientRectangle;
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.DrawImage(_screenshot, clip, clip, GraphicsUnit.Pixel);
+            }
+            catch
+            {
+                // Nothing more we can do this frame; next paint retries.
+            }
+        }
+    }
+
+    private void PaintOverlayFrame(PaintEventArgs e)
+    {
         var g = e.Graphics;
         g.InterpolationMode = InterpolationMode.NearestNeighbor;
         g.PixelOffsetMode = PixelOffsetMode.None;
