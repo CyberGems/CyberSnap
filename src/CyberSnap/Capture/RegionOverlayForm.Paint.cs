@@ -66,7 +66,7 @@ public sealed partial class RegionOverlayForm
         if (clip.Width <= 0 || clip.Height <= 0)
             clip = ClientRectangle;
 
-        var committed = GetCommittedAnnotationsBitmap();
+        var committed = GetCommittedOrBaseBitmap();
         bool isOcr = _mode == CaptureMode.Ocr;
         bool isScan = _mode == CaptureMode.Scan;
         bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;

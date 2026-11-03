@@ -697,6 +697,11 @@ public sealed partial class RegionOverlayForm : Form
         // dim + window hole together. No Opacity tricks (those caused a white flash).
         PrimeSelectionDimFromCursor();
 
+        // Bake the grayscale dim base here too, while the window is still invisible. Doing
+        // it inside the first WM_PAINT stretched the visible black gap between Show and the
+        // first completed frame on large or busy screenshots.
+        EnsureDesaturatedScreenshot();
+
         CalcToolbar();
 
         _animTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };

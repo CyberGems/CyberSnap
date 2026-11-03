@@ -1422,6 +1422,25 @@ public sealed partial class RegionOverlayForm
         public void Invalidate() => _owner.MarkCommittedAnnotationsDirty();
     }
 
+    /// <summary>
+    /// Annotations composite over a full-screen copy of the screenshot. The overlay always
+    /// opens with none, so the raw screenshot is an equivalent read-only source until the
+    /// first annotation lands; skipping the full-screen rebuild keeps the first visible
+    /// frame to a pair of plain blits.
+    /// </summary>
+    private Bitmap GetCommittedOrBaseBitmap()
+    {
+        if (_committedAnnotationsBitmap is null
+            && _undoStack.Count == 0
+            && _editUndoStack.Count == 0
+            && _editRedoStack.Count == 0)
+        {
+            return _screenshot;
+        }
+
+        return GetCommittedAnnotationsBitmap();
+    }
+
     private Bitmap GetCommittedAnnotationsBitmap()
     {
         if (!_committedAnnotationsDirty && _committedAnnotationsBitmap is not null)
