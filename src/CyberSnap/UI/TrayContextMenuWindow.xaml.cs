@@ -270,7 +270,7 @@ public partial class TrayContextMenuWindow : Window
         // Primary capture matches the widget: accent cyan so it reads as the default action.
         var accentColor = Theme.Accent;
 
-        AppLogoImage.Source = ThemedLogo.SquareGrayscale(20);
+        AppLogoImage.Source = ThemedLogo.SquareSaturated(20, 0.4);
 
         AreaCaptureRing.Fill = new SolidColorBrush(accentColor);
         AreaCaptureCenter.Fill = new SolidColorBrush(accentColor);
@@ -1053,7 +1053,7 @@ public partial class TrayContextMenuWindow : Window
         {
             AboutHeaderBtn.Background = System.Windows.Media.Brushes.Transparent;
             TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
-            AppLogoImage.Source = ThemedLogo.SquareGrayscale(20);
+            AppLogoImage.Source = ThemedLogo.SquareSaturated(20, 0.4);
             AppLogoImage.Opacity = 0.75;
             DismissAboutHeaderToolTip();
         }

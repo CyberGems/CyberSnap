@@ -13,6 +13,60 @@ public static class ThemedLogo
 
     public static ImageSource SquareGrayscale(int size) => RenderGrayscale(SquarePath, size, size);
 
+    /// <summary>Logo blended toward grayscale (1 = full color, 0 = grayscale).</summary>
+    public static ImageSource SquareSaturated(int size, double saturation)
+        => RenderSaturated(SquarePath, size, size, saturation);
+
+    private static ImageSource RenderSaturated(string resourcePath, int width, int height, double saturation)
+    {
+        saturation = Math.Clamp(saturation, 0.0, 1.0);
+        if (saturation >= 1.0)
+            return Render(resourcePath, width, height, Theme.TextPrimary);
+        if (saturation <= 0.0)
+            return RenderGrayscale(resourcePath, width, height);
+
+        var source = LoadBitmap(resourcePath);
+        var pWidth = source.PixelWidth;
+        var pHeight = source.PixelHeight;
+        var stride = pWidth * 4;
+        var pixels = new byte[pHeight * stride];
+
+        if (source.Format != PixelFormats.Bgra32 && source.Format != PixelFormats.Pbgra32)
+        {
+            var formatted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+            formatted.CopyPixels(pixels, stride, 0);
+        }
+        else
+        {
+            source.CopyPixels(pixels, stride, 0);
+        }
+
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            byte b = pixels[i];
+            byte g = pixels[i + 1];
+            byte r = pixels[i + 2];
+            byte a = pixels[i + 3];
+
+            if (a > 0)
+            {
+                byte gray = (byte)(0.299 * r + 0.587 * g + 0.114 * b);
+                pixels[i] = (byte)Math.Round(gray + (b - gray) * saturation);
+                pixels[i + 1] = (byte)Math.Round(gray + (g - gray) * saturation);
+                pixels[i + 2] = (byte)Math.Round(gray + (r - gray) * saturation);
+            }
+        }
+
+        var blended = BitmapSource.Create(pWidth, pHeight, source.DpiX, source.DpiY, PixelFormats.Bgra32, null, pixels, stride);
+        var scaled = new TransformedBitmap(
+            blended,
+            new ScaleTransform(
+                width / (double)pWidth,
+                height / (double)pHeight));
+        scaled.Freeze();
+        return scaled;
+    }
+
     private static ImageSource Render(string resourcePath, int width, int height, MediaColor color)
     {
         var source = LoadBitmap(resourcePath);
