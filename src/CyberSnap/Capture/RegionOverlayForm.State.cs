@@ -3245,16 +3245,14 @@ public sealed partial class RegionOverlayForm
         bool annotationRight = _annotationFrameDockSide == CaptureDockSide.Right;
         bool oppositeSideFits = annotationRight ? leftSideFits : rightSideFits;
 
-        // Priority: below the frame (near the lower edge) -> inside the frame docked to its
-        // bottom edge -> beside the frame -> above -> last-resort clamp to the monitor.
+        // Priority: below the frame (near the lower edge) -> beside the frame on the side
+        // opposite the annotation column (stays near the release point without covering the
+        // crop) -> above -> inside the frame docked to its bottom edge -> last-resort clamp.
+        // Outside placements win over "inside": a dock over the crop interior blocks
+        // annotations there and hides captured content, which reads as broken.
         if (belowFits)
         {
             y = outsideBelow;
-        }
-        else if (canPlaceInside)
-        {
-            y = insideY;
-            insidePlacement = true;
         }
         else if (oppositeSideFits)
         {
@@ -3264,6 +3262,11 @@ public sealed partial class RegionOverlayForm
         else if (aboveFits)
         {
             y = outsideAbove;
+        }
+        else if (canPlaceInside)
+        {
+            y = insideY;
+            insidePlacement = true;
         }
         else
         {
