@@ -73,6 +73,10 @@ public partial class CaptureWidgetWindow : Window
         InitializeComponent();
         SizeToContent = SizeToContent.Manual;
 
+        // The widget can be docked to any monitor: re-rasterize the icons when the render
+        // DPI changes, otherwise the constructor-time bitmaps stay upscaled and soft.
+        DpiChanged += (_, _) => LoadIcons();
+
         // Inset the content so the transparent halo around it (window grown by ShadowMargin)
         // is free for the drop shadow to render into. The docked side gets no halo (see ShadowHalo).
         RootGrid.Margin = ShadowHalo(_settings.WidgetDockEdge);
@@ -331,26 +335,32 @@ public partial class CaptureWidgetWindow : Window
         var accentColor = ToDrawingColor(Theme.Accent);
         var normalIconColor = ToDrawingColor(Theme.TextPrimary);
 
-        string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureDot";
-        BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, 20);
+        // Render each icon at the physical pixel size its Image occupies (UiScale layout
+        // transform x monitor DPI). Rasterizing at the raw 96-DPI size left WPF upscaling
+        // the bitmap ~1.8x on 125%/150% monitors, which read as soft, low-quality glyphs.
+        double deviceScale = UiScale.Current * VisualTreeHelper.GetDpi(this).DpiScaleX;
+        int IconPx(double dip) => Math.Max(1, (int)Math.Round(dip * deviceScale));
 
-        ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, 22);
-        GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, 22);
-        QrScanIcon.Source = Helpers.FluentIcons.RenderWpf("scan", normalIconColor, 22);
-        ColorPickerIcon.Source = Helpers.FluentIcons.RenderWpf("picker", normalIconColor, 22);
-        ScreenRecordIcon.Source = Helpers.FluentIcons.RenderWpf("record", normalIconColor, 22); // record dot for MP4
-        GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
-        RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, 22); // Ruler tool icon
-        ZoomIcon.Source = Helpers.FluentIcons.RenderWpf("zoom", normalIconColor, 22);
-        PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", normalIconColor, 22);
+        string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureDot";
+        BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, IconPx(22));
+
+        ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, IconPx(22));
+        GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, IconPx(22));
+        QrScanIcon.Source = Helpers.FluentIcons.RenderWpf("scan", normalIconColor, IconPx(22));
+        ColorPickerIcon.Source = Helpers.FluentIcons.RenderWpf("picker", normalIconColor, IconPx(22));
+        ScreenRecordIcon.Source = Helpers.FluentIcons.RenderWpf("record", normalIconColor, IconPx(22)); // record dot for MP4
+        GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, IconPx(22)); // GIF format icon
+        RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, IconPx(22)); // Ruler tool icon
+        ZoomIcon.Source = Helpers.FluentIcons.RenderWpf("zoom", normalIconColor, IconPx(22));
+        PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", normalIconColor, IconPx(22));
         System.Windows.Automation.AutomationProperties.SetName(PinToolButton,
             LocalizationService.Translate(_settings.InterfaceLanguage, "Pin to screen"));
-        MoreIcon.Source = Helpers.FluentIcons.RenderWpf("more", normalIconColor, 18);
+        MoreIcon.Source = Helpers.FluentIcons.RenderWpf("more", normalIconColor, IconPx(18));
         System.Windows.Automation.AutomationProperties.SetName(WidgetMoreButton,
             LocalizationService.Translate(_settings.InterfaceLanguage, "More"));
 
-        _widgetLogoColor = ThemedLogo.Square(12);
-        _widgetLogoMuted = ThemedLogo.SquareGrayscale(12);
+        _widgetLogoColor = ThemedLogo.Square(IconPx(11));
+        _widgetLogoMuted = ThemedLogo.SquareGrayscale(IconPx(11));
         WidgetLogoImage.Source = _widgetLogoMuted;
         WidgetLogoImage.Opacity = 0.7;
         WidgetBrandText.Opacity = 0.65;
