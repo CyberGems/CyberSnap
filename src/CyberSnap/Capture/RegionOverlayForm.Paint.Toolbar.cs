@@ -54,6 +54,11 @@ public sealed partial class RegionOverlayForm
         var r = new Rectangle(_toolbarRect.X, _toolbarRect.Y,
             _toolbarRect.Width, _toolbarRect.Height);
 
+        // Hidden stage (e.g. confirm without annotation chrome): nothing to paint, and a
+        // degenerate rect would throw inside the accent gradient below.
+        if (r.Width <= 0 || r.Height <= 0)
+            return;
+
         float cr = UiChrome.ScaledToolbarCornerRadius;
         int pad = UiChrome.ScaledToolbarInnerPadding;
         int buttonSize = UiChrome.ScaledToolbarButtonSize;
@@ -87,20 +92,24 @@ public sealed partial class RegionOverlayForm
                 // neon line dissolves softly into the rounded corners instead of ending abruptly.
                 PointF p0 = new PointF(r.X, r.Y);
                 PointF p1 = horizontal ? new PointF(r.Right, r.Y) : new PointF(r.X, r.Bottom);
-                using (var brush = new LinearGradientBrush(p0, p1, accent, accent))
+                // GDI+ rejects a gradient whose endpoints coincide (zero-size dock mid-layout).
+                if (p0 != p1)
                 {
-                    brush.InterpolationColors = new ColorBlend
+                    using (var brush = new LinearGradientBrush(p0, p1, accent, accent))
                     {
-                        Colors = new[] { fade, accent, accent, fade },
-                        Positions = new[] { 0f, 0.10f, 0.90f, 1f },
-                    };
-                    using (var pen = new Pen(brush, 2f)
-                    {
-                        StartCap = LineCap.Round,
-                        EndCap = LineCap.Round,
-                        LineJoin = LineJoin.Round,
-                    })
-                        g.DrawPath(pen, path);
+                        brush.InterpolationColors = new ColorBlend
+                        {
+                            Colors = new[] { fade, accent, accent, fade },
+                            Positions = new[] { 0f, 0.10f, 0.90f, 1f },
+                        };
+                        using (var pen = new Pen(brush, 2f)
+                        {
+                            StartCap = LineCap.Round,
+                            EndCap = LineCap.Round,
+                            LineJoin = LineJoin.Round,
+                        })
+                            g.DrawPath(pen, path);
+                    }
                 }
             }
         }
