@@ -2,8 +2,10 @@ using System.Buffers;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 using CyberSnap.Native;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
@@ -27,25 +29,10 @@ public static class ScreenCapture
 
     private static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreensCore(bool includeCursor, Rectangle bounds)
     {
-        try
-        {
-            var capture = DxgiScreenCapture.CaptureAllScreens();
-            if (!IsLikelyInvalidCapture(capture.Bitmap))
-            {
-                if (includeCursor)
-                    DrawCursor(capture.Bitmap, capture.Bounds);
-                return capture;
-            }
-
-            capture.Bitmap.Dispose();
-            DxgiScreenCapture.ResetCache();
-        }
-        catch
-        {
-            DxgiScreenCapture.ResetCache();
-        }
-
-        return CaptureAllScreensLegacy(includeCursor, bounds);
+        var bitmap = CapturePreferDxgi(bounds, includeCursor,
+            () => DxgiScreenCapture.CaptureAllScreens().Bitmap,
+            () => CaptureAllScreensLegacy(includeCursor, bounds).Bitmap);
+        return (bitmap, bounds);
     }
 
     /// <summary>Captures only the monitor that currently contains the cursor.</summary>
@@ -65,25 +52,66 @@ public static class ScreenCapture
 
     private static Bitmap CaptureRegionCore(Rectangle region, bool includeCursor)
     {
+        return CapturePreferDxgi(region, includeCursor,
+            () => DxgiScreenCapture.CaptureRegion(region),
+            () => CaptureRegionLegacy(region, includeCursor));
+    }
+
+    private const int BlackFrameRetryDelayMs = 80;
+    /// <summary>Per-channel ceiling for "essentially pure black". Legit dark desktops (dark
+    /// themes, IDEs, video) rarely sit this low, while broken capture backends return exact
+    /// zeros, so a strict threshold keeps the black-frame detection meaningful.</summary>
+    private const byte BlackChannelCeiling = 2;
+
+    /// <summary>
+    /// Shared capture pipeline for still captures: prefer DXGI desktop duplication and only
+    /// pay BitBlt when duplication cannot serve this call. An all-black frame from either
+    /// backend is retried once before being returned, so a transient driver/MPO hiccup never
+    /// reaches the overlay as a black screenshot.
+    /// </summary>
+    private static Bitmap CapturePreferDxgi(Rectangle bounds, bool includeCursor, Func<Bitmap> tryDxgi, Func<Bitmap> tryLegacy)
+    {
         try
         {
-            var capture = DxgiScreenCapture.CaptureRegion(region);
-            if (!IsLikelyInvalidCapture(capture))
+            var dxgi = tryDxgi();
+            if (!IsPureBlackFrame(dxgi))
             {
                 if (includeCursor)
-                    DrawCursor(capture, region);
-                return capture;
+                    DrawCursor(dxgi, bounds);
+                return dxgi;
             }
 
-            capture.Dispose();
+            AppDiagnostics.LogInfo("capture.dxgi-black-frame", "DXGI returned an all-black frame; falling back to BitBlt.");
+            dxgi.Dispose();
             DxgiScreenCapture.ResetCache();
         }
-        catch
+        catch (DxgiScreenCapture.DxgiFrameTimeoutException)
         {
+            // Static desktop with a healthy duplication: BitBlt below handles this call while
+            // the duplication cache stays warm for the next capture.
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("capture.dxgi-failed", ex.Message, ex);
             DxgiScreenCapture.ResetCache();
         }
 
-        return CaptureRegionLegacy(region, includeCursor);
+        var legacy = tryLegacy();
+        if (!IsPureBlackFrame(legacy))
+            return legacy;
+
+        // Both backends returned black: transient GDI/driver failures usually clear within a
+        // frame, so retry once rather than presenting a black overlay.
+        AppDiagnostics.LogWarning("capture.black-frame", "Capture came back all-black after DXGI and BitBlt; retrying once.");
+        legacy.Dispose();
+        Thread.Sleep(BlackFrameRetryDelayMs);
+        legacy = tryLegacy();
+        if (IsPureBlackFrame(legacy))
+            AppDiagnostics.LogWarning("capture.black-frame", "Retry still all-black; returning the frame as captured.");
+        else
+            AppDiagnostics.LogInfo("capture.black-frame", "Retry recovered a valid frame.");
+
+        return legacy;
     }
 
     /// <summary>
@@ -195,7 +223,7 @@ public static class ScreenCapture
         return fullScreenshot.Clone(cropRect, fullScreenshot.PixelFormat);
     }
 
-    private static unsafe bool IsLikelyInvalidCapture(Bitmap bitmap)
+    private static unsafe bool IsPureBlackFrame(Bitmap bitmap)
     {
         if (bitmap.Width <= 0 || bitmap.Height <= 0)
             return true;
@@ -210,7 +238,7 @@ public static class ScreenCapture
             byte* scan0 = (byte*)data.Scan0;
             int stride = data.Stride;
             int samples = 0;
-            int darkSamples = 0;
+            int blackSamples = 0;
 
             for (int y = 0; y < bitmap.Height; y += stepY)
             {
@@ -218,14 +246,16 @@ public static class ScreenCapture
                 for (int x = 0; x < bitmap.Width; x += stepX)
                 {
                     int i = x * 4;
-                    byte b = row[i], g = row[i + 1], r = row[i + 2], a = row[i + 3];
+                    byte b = row[i], g = row[i + 1], r = row[i + 2];
                     samples++;
-                    if (a <= 4 || (r <= 6 && g <= 6 && b <= 6))
-                        darkSamples++;
+                    if (r <= BlackChannelCeiling && g <= BlackChannelCeiling && b <= BlackChannelCeiling)
+                        blackSamples++;
                 }
             }
 
-            return samples > 0 && darkSamples >= (int)(samples * 0.9);
+            // A handful of stray bright samples (tiny text on a black surface) must not
+            // disqualify the frame; anything below 0.5% is treated as noise.
+            return samples > 0 && blackSamples >= (int)(samples * 0.995);
         }
         finally
         {
