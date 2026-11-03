@@ -265,9 +265,9 @@ public sealed partial class EditorForm
             LabelText = LocalizationService.Translate("Outline"),
             Checked = _canvas.ShowCaptureFrame,
             Height = 42,
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             Margin = new Padding(0),
         };
+        EditorFonts.Bind(_toggleFrameSwitch, dpi => EditorFonts.Fixed("Segoe UI", 9.5f, FontStyle.Bold, dpi));
         _toggleFrameSwitch.CheckedChanged += (_, _) =>
         {
             _canvas.ShowCaptureFrame = _toggleFrameSwitch.Checked;
@@ -296,10 +296,10 @@ public sealed partial class EditorForm
             MinimumSize = new Size(130, 0),
             Text = "0, 0",
             ForeColor = EditorColors.TextPrimary,
-            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
             Margin = new Padding(0, 12, 0, 12),
         };
+        EditorFonts.Bind(_coordsLabel, dpi => EditorFonts.Fixed("Consolas", 10.5f, FontStyle.Bold, dpi));
         coordsPanel.Controls.Add(coordsIcon);
         coordsPanel.Controls.Add(_coordsLabel);
         _coordsPanel = coordsPanel;
@@ -332,9 +332,9 @@ public sealed partial class EditorForm
             LabelText = "",
             Checked = _canvas.FitToWindowOnLoad,
             Height = 42,
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             Margin = new Padding(12, 0, 0, 0),
         };
+        EditorFonts.Bind(_toggleFitSwitch, dpi => EditorFonts.Fixed("Segoe UI", 9.5f, FontStyle.Bold, dpi));
         _toggleFitSwitch.CheckedChanged += (_, _) =>
         {
             _canvas.FitToWindowOnLoad = _toggleFitSwitch.Checked;
@@ -347,9 +347,9 @@ public sealed partial class EditorForm
             LabelText = "",
             Checked = _canvas.PanModeLockObjects,
             Height = 42,
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             Margin = new Padding(12, 0, 0, 0),
         };
+        EditorFonts.Bind(_togglePanLockSwitch, dpi => EditorFonts.Fixed("Segoe UI", 9.5f, FontStyle.Bold, dpi));
         _togglePanLockSwitch.CheckedChanged += (_, _) =>
         {
             _canvas.PanModeLockObjects = _togglePanLockSwitch.Checked;
@@ -379,9 +379,9 @@ public sealed partial class EditorForm
             BackColor = Color.Transparent,
             Text = "100%",
             ForeColor = EditorColors.Accent,
-            Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleRight,
         };
+        EditorFonts.Bind(_zoomLabel, dpi => EditorFonts.Fixed("Segoe UI", 10.5f, FontStyle.Bold, dpi));
 
         var zoomIcon = new DoubleBufferedPanel
         {
@@ -440,10 +440,10 @@ public sealed partial class EditorForm
             AutoSize = false,
             SingleLine = true, // one line + ellipsis instead of wrapping to a second row
             ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
             Text = "",
         };
+        EditorFonts.Bind(_liveStatusLabel, dpi => EditorFonts.Fixed("Segoe UI", 10f, FontStyle.Bold, dpi));
 
         // Hint area: a lightbulb glyph leads the live hint text. Two-column table keeps the icon
         // pinned left while the label fills (and ellipsizes within) the remaining width.
@@ -589,8 +589,8 @@ public sealed partial class EditorForm
 
             var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
             SplitEditorBrandTitle(titleText, out var feature, out var brand);
-            using var featureFont = UiChrome.ChromeFont(9.75f, FontStyle.Bold);
-            using var brandFont = UiChrome.ChromeFont(8f, FontStyle.Regular);
+            using var featureFont = EditorFonts.Chrome(9.75f, FontStyle.Bold, DeviceDpi);
+            using var brandFont = EditorFonts.Chrome(8f, FontStyle.Regular, DeviceDpi);
             var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
             int textX = leftPad + iconSize + textGap;
             int h = brandPanel.Height;
@@ -686,7 +686,7 @@ public sealed partial class EditorForm
 
             int ledAuraSize = 14;
             int gap = 8;
-            using var titleFont = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
+            using var titleFont = EditorFonts.Fixed("Consolas", 10.5f, FontStyle.Bold, DeviceDpi);
             int textWidth = TextRenderer.MeasureText(_titleFileNameText, titleFont).Width;
             int totalWidth = ledAuraSize + gap + textWidth;
 
@@ -904,8 +904,8 @@ public sealed partial class EditorForm
         var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
         SplitEditorBrandTitle(titleText, out var feature, out var brand);
         var flags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
-        using var featureFont = UiChrome.ChromeFont(9.75f, FontStyle.Bold);
-        using var brandFont = UiChrome.ChromeFont(8f, FontStyle.Regular);
+        using var featureFont = EditorFonts.Chrome(9.75f, FontStyle.Bold, DeviceDpi);
+        using var brandFont = EditorFonts.Chrome(8f, FontStyle.Regular, DeviceDpi);
         int textW = 0;
         if (!string.IsNullOrEmpty(feature))
             textW += TextRenderer.MeasureText(feature, featureFont, Size.Empty, flags).Width;
@@ -1391,7 +1391,7 @@ public sealed partial class EditorForm
     {
         int width = 74;
         using (var g = CreateGraphics())
-        using (var font = UiChrome.ChromeFont(8.5f, FontStyle.Bold))
+        using (var font = EditorFonts.Chrome(8.5f, FontStyle.Bold, DeviceDpi))
         {
             var size = TextRenderer.MeasureText(g, text, font);
             width = Math.Max(74, size.Width + 16);
@@ -2977,7 +2977,7 @@ internal sealed class EditorToolButton : EditorButtonBase
 
     public EditorToolButton()
     {
-        Font = UiChrome.ChromeFont(7.5f, FontStyle.Bold);
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(7.5f, FontStyle.Bold, dpi));
     }
 
     /// <summary>Invoked on double-click (WinForms DoubleClick is unreliable on UserPaint buttons).</summary>
@@ -3143,7 +3143,7 @@ internal sealed class EditorCommandButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        Font = UiChrome.ChromeFont(8.5f, FontStyle.Bold);
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(8.5f, FontStyle.Bold, dpi));
         TabStop = true;
     }
 
@@ -3153,7 +3153,7 @@ internal sealed class EditorCommandButton : Button
         try
         {
             using var g = CreateGraphics();
-            using var font = Font ?? UiChrome.ChromeFont(8.5f, FontStyle.Bold);
+            using var font = Font ?? EditorFonts.Chrome(8.5f, FontStyle.Bold, DeviceDpi);
             var size = TextRenderer.MeasureText(g, Text, font);
             Width = Math.Max(74, size.Width + 18);
         }
@@ -3390,7 +3390,7 @@ internal abstract class EditorButtonBase : Button
         BackColor = Color.Transparent;
         ForeColor = EditorColors.TextPrimary;
         Cursor = Cursors.Hand;
-        Font = UiChrome.ChromeFont(8.5f, FontStyle.Bold);
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(8.5f, FontStyle.Bold, dpi));
         TabStop = true;
     }
 
@@ -4184,7 +4184,7 @@ internal sealed class EditorScaleMenuButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        Font = UiChrome.ChromeFont(10f, FontStyle.Bold);
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(10f, FontStyle.Bold, dpi));
         TabStop = true;
         AccessibleName = "Scale";
         Height = 42;
@@ -4310,7 +4310,7 @@ internal sealed class EditorZoomBarButton : Button
         BackColor = Color.Transparent;
         ForeColor = EditorColors.Accent;
         Cursor = Cursors.Hand;
-        Font = UiChrome.ChromeFont(10f, FontStyle.Bold);
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(10f, FontStyle.Bold, dpi));
         TabStop = true;
     }
 
@@ -4478,7 +4478,7 @@ internal sealed class EditorToggleSwitch : Control
         AutoSize = true;
     }
 
-    private Font LabelFont => Font ?? UiChrome.ChromeFont(9f, FontStyle.Bold);
+    private Font LabelFont => Font ?? EditorFonts.Chrome(9f, FontStyle.Bold, DeviceDpi);
 
     public override Size GetPreferredSize(Size proposedSize)
     {

@@ -257,7 +257,7 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(EditorColors.BgPrimary);
 
-        using var titleFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
+        using var titleFont = EditorFonts.Chrome(9f, FontStyle.Bold, DeviceDpi);
 
         // Tabs are clipped to the region between the chevrons so a partially
         // scrolled tab never paints under the buttons.
@@ -423,7 +423,7 @@ internal sealed class EditorTabStrip : DoubleBufferedPanel
         _closeRects.Clear();
         const int pad = 4;
         int tabH = Math.Max(20, Height - 4);
-        using var font = UiChrome.ChromeFont(9f, FontStyle.Bold);
+        using var font = EditorFonts.Chrome(9f, FontStyle.Bold, DeviceDpi);
 
         // Measure first: whether the chevrons appear decides the viewport, and
         // the viewport decides the scroll range.

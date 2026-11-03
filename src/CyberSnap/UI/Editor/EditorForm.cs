@@ -365,6 +365,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         if (captured is null) throw new ArgumentNullException(nameof(captured));
 
+        // Anchor the editor's font compensation to the process-start DPI (primary monitor):
+        // every editor font then renders with the physical size this monitor produces.
+        EditorFonts.CaptureBaseDpi(DeviceDpi);
+
         var initial = CreateDocument(new Bitmap(captured), savedFilePath, cloneFrom: null);
         _documents.Add(initial);
         _activeDocument = initial;
@@ -396,7 +400,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
         MinimumSize = new Size(1400, 920);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = EditorColors.BgPrimary;
-        Font = UiChrome.ChromeFont(9f, FontStyle.Regular);
+        Font = EditorFonts.Chrome(9f, FontStyle.Regular, DeviceDpi);
+        // The window can land on (or be dragged to) a monitor with a different scale; the
+        // binding re-anchors the font there instead of letting PMV2 multiply the point size.
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(9f, FontStyle.Regular, dpi));
         KeyPreview = true;
         // Invisible until Shown finishes maximize + layout (see RevealEditorWhenReady).
         // Matches the Capture Widget pattern: never show an incomplete first frame.
@@ -2924,7 +2931,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
         {
             ForeColor = UiChrome.SurfaceTextMuted,
-            Font = UiChrome.ChromeFont(8.5f),
+            Font = EditorFonts.Chrome(8.5f, FontStyle.Regular, DeviceDpi),
             Padding = new Padding(10, 4, 0, 2),
             AutoSize = true,
         };
