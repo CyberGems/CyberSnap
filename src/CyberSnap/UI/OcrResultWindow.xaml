@@ -266,7 +266,6 @@
         <Style x:Key="OcrTranslateButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Padding" Value="14,6"/>
-            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>

@@ -12,7 +12,7 @@
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="MinHeight" Value="32"/>
             <Setter Property="MinWidth" Value="40"/>
             <Setter Property="Padding" Value="12,6"/>
