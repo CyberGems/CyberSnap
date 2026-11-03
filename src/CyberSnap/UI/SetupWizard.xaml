@@ -29,8 +29,6 @@
         <Color x:Key="WizSidebarBottomColor">#121417</Color>
 
         <Style x:Key="WizBtn" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
             <Setter Property="Padding" Value="22,10"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="MinWidth" Value="100"/>
@@ -42,7 +40,7 @@
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="MinWidth" Value="118"/>
             <Setter Property="MinHeight" Value="38"/>

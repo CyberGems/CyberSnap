@@ -63,7 +63,7 @@
         </Style>
         <Style x:Key="TipPrimaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForegroundBrush}"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="12,6"/>
@@ -93,7 +93,7 @@
         </Style>
         <Style x:Key="TipSecondaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="MinHeight" Value="30"/>

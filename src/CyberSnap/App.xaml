@@ -159,7 +159,7 @@
             <Setter Property="MinHeight" Value="24"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
             <Setter Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
