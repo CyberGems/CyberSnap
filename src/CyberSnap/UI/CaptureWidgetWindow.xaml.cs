@@ -327,7 +327,7 @@ public partial class CaptureWidgetWindow : Window
     }
 
     private ImageSource? _widgetLogoColor;
-    private ImageSource? _widgetLogoMuted;
+    private ImageSource? _widgetLogoIdle;
 
     private void LoadIcons()
     {
@@ -342,7 +342,7 @@ public partial class CaptureWidgetWindow : Window
         int IconPx(double dip) => Math.Max(1, (int)Math.Round(dip * deviceScale));
 
         string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureDot";
-        BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, IconPx(22));
+        BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, IconPx(23.1));
 
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, IconPx(22));
         GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, IconPx(22));
@@ -360,8 +360,9 @@ public partial class CaptureWidgetWindow : Window
             LocalizationService.Translate(_settings.InterfaceLanguage, "More"));
 
         _widgetLogoColor = ThemedLogo.Square(IconPx(11));
-        _widgetLogoMuted = ThemedLogo.SquareGrayscale(IconPx(11));
-        WidgetLogoImage.Source = _widgetLogoMuted;
+        // Idle keeps 40% of the logo's color instead of the old full grayscale.
+        _widgetLogoIdle = ThemedLogo.SquareSaturated(IconPx(11), 0.4);
+        WidgetLogoImage.Source = _widgetLogoIdle;
         WidgetLogoImage.Opacity = 0.7;
         WidgetBrandText.Opacity = 0.65;
         WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetTextMuted");
@@ -1618,8 +1619,8 @@ public partial class CaptureWidgetWindow : Window
 
     private void WidgetBranding_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (_widgetLogoMuted != null)
-            WidgetLogoImage.Source = _widgetLogoMuted;
+        if (_widgetLogoIdle != null)
+            WidgetLogoImage.Source = _widgetLogoIdle;
         WidgetLogoImage.Opacity = 0.7;
 
         WidgetBrandText.Opacity = 0.65;
