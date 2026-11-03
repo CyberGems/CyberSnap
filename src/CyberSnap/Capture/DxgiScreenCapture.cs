@@ -14,6 +14,26 @@ internal static class DxgiScreenCapture
     private static readonly object CacheLock = new();
     private static DeviceBundle? _cachedBundle;
 
+    /// <summary>
+    /// Short acquire window. A healthy duplication delivers the composed frame within a few
+    /// vsyncs; when the desktop is fully static no frame ever arrives, and waiting longer only
+    /// delays the BitBlt fallback that handles that case cheaply.
+    /// </summary>
+    private const int AcquireTimeoutMs = 60;
+
+    /// <summary>
+    /// Raised when desktop duplication has no new frame (DXGI_ERROR_WAIT_TIMEOUT). This is not
+    /// a failure of the duplication itself: the device bundle must stay cached so the next
+    /// capture does not pay a full device rebuild.
+    /// </summary>
+    internal sealed class DxgiFrameTimeoutException : Exception
+    {
+        public DxgiFrameTimeoutException()
+            : base("Desktop duplication reported no new frame (DXGI_ERROR_WAIT_TIMEOUT).")
+        {
+        }
+    }
+
     public static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreens()
     {
         int left = User32.GetSystemMetrics(User32.SM_XVIRTUALSCREEN);
@@ -46,7 +66,9 @@ internal static class DxgiScreenCapture
                         continue;
 
                     var duplication = output.GetOrCreateDuplication(deviceBundle.Device);
-                    using var frame = AcquireFrame(duplication);
+                    using var frame = TryAcquireFrame(duplication);
+                    if (frame is null)
+                        throw new DxgiFrameTimeoutException();
                     using var desktopTexture = frame.Resource.QueryInterface<ID3D11Texture2D>();
                     var staging = deviceBundle.GetOrCreateStagingTexture(overlap.Width, overlap.Height);
 
@@ -68,6 +90,13 @@ internal static class DxgiScreenCapture
                 return result;
             }
         }
+        catch (DxgiFrameTimeoutException)
+        {
+            // Static desktop: the duplication is healthy, only quiet. Keep the bundle cached —
+            // the caller falls back to BitBlt for this call, and recreating the whole device
+            // would tax the next capture instead.
+            throw;
+        }
         catch
         {
             ResetCache();
@@ -88,9 +117,11 @@ internal static class DxgiScreenCapture
                     if (outputBounds.Width <= 0 || outputBounds.Height <= 0)
                         continue;
 
-                    var duplication = output.GetOrCreateDuplication(deviceBundle.Device);
-                    using var frame = AcquireFrame(duplication);
-                    using var desktopTexture = frame.Resource.QueryInterface<ID3D11Texture2D>();
+                    // Precreate duplication + staging only. Do NOT acquire a frame here: the
+                    // first AcquireNextFrame after DuplicateOutput always returns the current
+                    // desktop immediately, and consuming it at startup would leave the first
+                    // real capture waiting on a timeout whenever the desktop is static.
+                    _ = output.GetOrCreateDuplication(deviceBundle.Device);
                     _ = deviceBundle.GetOrCreateStagingTexture(outputBounds.Width, outputBounds.Height);
                 }
                 catch
@@ -161,9 +192,16 @@ internal static class DxgiScreenCapture
         return outputs;
     }
 
-    private static FrameBundle AcquireFrame(IDXGIOutputDuplication duplication)
+    private static FrameBundle? TryAcquireFrame(IDXGIOutputDuplication duplication)
     {
-        duplication.AcquireNextFrame(250, out _, out IDXGIResource resource).CheckError();
+        var result = duplication.AcquireNextFrame(AcquireTimeoutMs, out _, out IDXGIResource resource);
+        if (result == Vortice.DXGI.ResultCode.WaitTimeout)
+        {
+            resource?.Dispose();
+            return null;
+        }
+
+        result.CheckError();
         return new FrameBundle(duplication, resource);
     }
 
