@@ -1221,7 +1221,10 @@ public sealed partial class RegionOverlayForm
         if (needsRepaint)
             Invalidate();
 
-        if (toolbarDirty)
+        // Mid-drag the dock is hidden by design. Hover tracking near the dock corner
+        // (anchor re-resolve + button/brand hover flips) sets toolbarDirty on every move,
+        // and refreshing here re-showed the bar over the selection until mouse-up.
+        if (toolbarDirty && !_isSelecting)
             RefreshToolbar();
     }
 

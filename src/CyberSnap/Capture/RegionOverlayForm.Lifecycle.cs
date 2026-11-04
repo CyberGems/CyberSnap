@@ -443,6 +443,16 @@ public sealed partial class RegionOverlayForm
         if (IsDisposed || Disposing)
             return;
 
+        // Mid-selection-drag the dock is hidden by design. Hover tracking near the dock
+        // sets dirty flags on every move; refreshing here would re-show the bar over the
+        // selection until mouse-up (stack-verified: OnMouseMove → RefreshToolbar → Show).
+        if (_isSelecting)
+        {
+            if (_toolbarForm is { Visible: true })
+                HideToolbarImmediately();
+            return;
+        }
+
         // Confirm mode now shows the annotation chrome on the same dock (stroke/color + flyout).
         // Keep the toolbar visible and rebuild layout for the current phase.
         var oldUiBounds = _lastOverlayUiBounds;
