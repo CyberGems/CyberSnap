@@ -38,18 +38,38 @@ public static class UiScale
     }
 
     /// <summary>
-    /// Uniform scaling model for every chrome window: content and bounds render at design ×
-    /// UiScale × the monitor's native DPI — the WPF-standard behavior Settings and Preview
-    /// always had, so sibling windows share one size language. The user's UI-scale slider is
-    /// the only global growth knob and re-applies to open windows live.
+    /// Primary-anchored constant-physical model for chrome windows: content and bounds render
+    /// at design × UiScale × the PRIMARY monitor's DPI, captured at process start. Windows
+    /// therefore keep one physical size across every monitor (user-verified ideal), and the
+    /// size is immune to WPF per-monitor DPI adoption races — both contexts produce the same
+    /// physical result. The user's UI-scale slider is the only growth knob and re-applies to
+    /// open windows live. Self-managed surfaces (widget, toast, recording bar) opt out via
+    /// <paramref name="scaleWindowBounds"/> = false.
     /// </summary>
     public static void ApplyToWindow(Window window, FrameworkElement root, bool scaleWindowBounds)
     {
         var scale = Normalize(Current);
-        root.LayoutTransform = Math.Abs(scale - 1.0) < 0.001
-            ? Transform.Identity
-            : new ScaleTransform(scale, scale);
-        EnsureLiveScaleHook(window, root, scaleWindowBounds);
+        if (BaseDpi <= 0)
+            BaseDpi = GetWindowMonitorScale(window);
+
+        double effective = scale;
+        if (scaleWindowBounds)
+        {
+            var adopted = GetWindowMonitorScale(window);
+            if (adopted > 0)
+                effective = scale * BaseDpi / adopted;
+
+            root.LayoutTransform = Math.Abs(effective - 1.0) < 0.001
+                ? Transform.Identity
+                : new ScaleTransform(effective, effective);
+            EnsureLiveScaleHook(window, root, scaleWindowBounds);
+        }
+        else
+        {
+            root.LayoutTransform = Math.Abs(scale - 1.0) < 0.001
+                ? Transform.Identity
+                : new ScaleTransform(scale, scale);
+        }
 
         if (!scaleWindowBounds)
             return;
@@ -60,14 +80,30 @@ public static class UiScale
             w.MinWidth,
             w.MinHeight));
 
-        window.MinWidth = Math.Max(320, state.MinWidth * scale);
-        window.MinHeight = Math.Max(240, state.MinHeight * scale);
+        window.MinWidth = Math.Max(320, state.MinWidth * effective);
+        window.MinHeight = Math.Max(240, state.MinHeight * effective);
         if (!double.IsNaN(state.Width) && !double.IsInfinity(state.Width) && state.Width > 0)
-            window.Width = state.Width * scale;
+            window.Width = state.Width * effective;
         if (!double.IsNaN(state.Height) && !double.IsInfinity(state.Height) && state.Height > 0)
-            window.Height = state.Height * scale;
+            window.Height = state.Height * effective;
 
         ClampToCurrentMonitor(window);
+    }
+
+    /// <summary>Primary monitor DPI at process start; the anchor every chrome window
+    /// renders at, on any monitor. Captured once from the first pre-show window.</summary>
+    private static double BaseDpi;
+
+    private static double GetWindowMonitorScale(Window window)
+    {
+        try
+        {
+            var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window).DpiScaleX;
+            if (dpi > 0)
+                return dpi;
+        }
+        catch { }
+        return 1.0;
     }
 
     private static void EnsureLiveScaleHook(Window window, FrameworkElement root, bool scaleWindowBounds)
