@@ -47,6 +47,22 @@ public sealed class ToolbarForm : Form
         StartPosition = FormStartPosition.Manual;
     }
 
+    protected override void SetVisibleCore(bool value)
+    {
+        // The capture toolbar must stay hidden while a region drag is in progress. Every
+        // reveal goes through EnsureToolbarReady, but static analysis could not find the
+        // caller that re-shows it mid-drag when the drag starts near the dock's corner
+        // (user report: the bar reappears over the selection and hides again on mouse-up).
+        // Log the full stack on the next reproduction so the culprit is named exactly.
+        if (value && !_owner.IsDisposed && _owner.IsSelectionDragActive)
+        {
+            Services.AppDiagnostics.LogWarning(
+                "toolbar.reveal-during-selection",
+                Environment.StackTrace);
+        }
+        base.SetVisibleCore(value);
+    }
+
     protected override CreateParams CreateParams
     {
         get

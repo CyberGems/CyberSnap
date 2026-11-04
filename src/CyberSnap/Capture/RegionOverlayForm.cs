@@ -22,6 +22,10 @@ public sealed partial class RegionOverlayForm : Form
 
     private CaptureMode _mode = CaptureMode.Rectangle;
     private bool _isSelecting;
+
+    /// <summary>True while a region rubber-band drag is in progress. The toolbar form
+    /// consults this to log any reveal that happens mid-drag.</summary>
+    internal bool IsSelectionDragActive => _isSelecting;
     private Point _selectionStart;
     private Point _selectionEnd;
     private Rectangle _selectionRect;
