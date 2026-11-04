@@ -15,9 +15,9 @@ public static class UiScale
     public const double Max = 1.4;
 
     private static readonly ConditionalWeakTable<Window, WindowScaleState> WindowStates = new();
-    /// <summary>Windows already hooked to re-derive their constant-physical scale on DPI
-    /// changes. Weakly held so closed windows never leak.</summary>
-    private static readonly ConditionalWeakTable<Window, object> ConstantPhysicalHooks = new();
+    /// <summary>Windows hooked to re-apply their scale when the user moves the UI-scale
+    /// slider. Weakly held so closed windows never leak.</summary>
+    private static readonly ConditionalWeakTable<Window, object> LiveScaleHooks = new();
 
     public static double Current { get; private set; } = Default;
 
@@ -38,34 +38,18 @@ public static class UiScale
     }
 
     /// <summary>
-    /// Constant-physical scaling model (user-approved): chrome windows render at design ×
-    /// UiScale regardless of the monitor's DPI, the same model the WinForms editor uses, so
-    /// sibling windows keep identical physical sizes on mixed-DPI setups. Only full-chrome
-    /// windows (<paramref name="scaleWindowBounds"/>) opt in; self-managed surfaces (widget,
-    /// toast, recording bar) keep their own DPI handling.
+    /// Uniform scaling model for every chrome window: content and bounds render at design ×
+    /// UiScale × the monitor's native DPI — the WPF-standard behavior Settings and Preview
+    /// always had, so sibling windows share one size language. The user's UI-scale slider is
+    /// the only global growth knob and re-applies to open windows live.
     /// </summary>
     public static void ApplyToWindow(Window window, FrameworkElement root, bool scaleWindowBounds)
     {
         var scale = Normalize(Current);
-
-        double effective = scale;
-        if (scaleWindowBounds)
-        {
-            double monitorScale = GetWindowMonitorScale(window);
-            if (monitorScale > 0)
-                effective = scale / monitorScale;
-
-            root.LayoutTransform = Math.Abs(effective - 1.0) < 0.001
-                ? Transform.Identity
-                : new ScaleTransform(effective, effective);
-            EnsureConstantPhysicalHooks(window, root, scaleWindowBounds);
-        }
-        else
-        {
-            root.LayoutTransform = Math.Abs(scale - 1.0) < 0.001
-                ? Transform.Identity
-                : new ScaleTransform(scale, scale);
-        }
+        root.LayoutTransform = Math.Abs(scale - 1.0) < 0.001
+            ? Transform.Identity
+            : new ScaleTransform(scale, scale);
+        EnsureLiveScaleHook(window, root, scaleWindowBounds);
 
         if (!scaleWindowBounds)
             return;
@@ -76,38 +60,31 @@ public static class UiScale
             w.MinWidth,
             w.MinHeight));
 
-        window.MinWidth = Math.Max(320, state.MinWidth * effective);
-        window.MinHeight = Math.Max(240, state.MinHeight * effective);
+        window.MinWidth = Math.Max(320, state.MinWidth * scale);
+        window.MinHeight = Math.Max(240, state.MinHeight * scale);
         if (!double.IsNaN(state.Width) && !double.IsInfinity(state.Width) && state.Width > 0)
-            window.Width = state.Width * effective;
+            window.Width = state.Width * scale;
         if (!double.IsNaN(state.Height) && !double.IsInfinity(state.Height) && state.Height > 0)
-            window.Height = state.Height * effective;
+            window.Height = state.Height * scale;
 
         ClampToCurrentMonitor(window);
     }
 
-    private static double GetWindowMonitorScale(Window window)
+    private static void EnsureLiveScaleHook(Window window, FrameworkElement root, bool scaleWindowBounds)
     {
-        try
-        {
-            var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window).DpiScaleX;
-            if (dpi > 0)
-                return dpi;
-        }
-        catch { }
-        return 1.0;
-    }
-
-    private static void EnsureConstantPhysicalHooks(Window window, FrameworkElement root, bool scaleWindowBounds)
-    {
-        if (ConstantPhysicalHooks.TryGetValue(window, out _))
+        if (LiveScaleHooks.TryGetValue(window, out _))
             return;
-        ConstantPhysicalHooks.Add(window, new object());
+        LiveScaleHooks.Add(window, new object());
 
-        // The render DPI at constructor time is the process/primary context; once the window
-        // settles (Loaded) or moves (DpiChanged), re-derive so the physical size stays put.
-        window.Loaded += (_, _) => ApplyToWindow(window, root, scaleWindowBounds);
-        window.DpiChanged += (_, _) => ApplyToWindow(window, root, scaleWindowBounds);
+        void OnScaleChanged(double _)
+        {
+            if (!window.IsLoaded && !window.IsVisible)
+                return;
+            ApplyToWindow(window, root, scaleWindowBounds);
+        }
+
+        Changed += OnScaleChanged;
+        window.Closed += (_, _) => Changed -= OnScaleChanged;
     }
 
     private static void ClampToCurrentMonitor(Window window)

@@ -59,8 +59,7 @@ internal sealed class ColorDetailWindow : Window
     private Action<bool>? _setAutoToggle;
     private Action<bool>? _setHashToggle;
     private CyberSnapTitleBar _titleBar = null!;
-    /// <summary>XAML design width; the DPI correction rescales from this base.</summary>
-    private double _baseWidth;
+    private FrameworkElement? _contentRoot;
 
     private string _builtLang = "";
     private WpfColor _builtAccent;
@@ -88,8 +87,9 @@ internal sealed class ColorDetailWindow : Window
 
         Title = LocalizationService.Translate(WindowTitles.Color);
         try { Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/Icons/ColorPicker.ico")); } catch { }
+        // Design width; UiScale.ApplyToWindow captures this and re-scales it with the user's
+        // UI-scale setting, the same model the OCR/QR/Preview windows use.
         Width = 400;
-        _baseWidth = Width;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -100,7 +100,10 @@ internal sealed class ColorDetailWindow : Window
         FontFamily = new WpfFontFamily(UiChrome.PreferredFamilyName);
         Foreground = Theme.Brush(Theme.TextPrimary);
 
-        Content = BuildContent();
+        var contentRoot = BuildContent();
+        _contentRoot = contentRoot;
+        Content = contentRoot;
+        UiScale.ApplyToWindow(this, contentRoot, scaleWindowBounds: true);
         PositionNearCursor();
         RefreshAll();
         SnapshotLiveState();
@@ -108,7 +111,6 @@ internal sealed class ColorDetailWindow : Window
         PreviewKeyDown += OnPreviewKeyDown;
         Activated += (_, _) => RefreshLiveState();
         ContentRendered += (_, _) => ClampToMonitor();
-        Loaded += (_, _) => ApplyDpiCorrection();
         // Window-level drag covers the header plus its surrounding margin/padding,
         // which otherwise form a dead strip above the title.
         PreviewMouseLeftButtonDown += OnWindowDragDown;
@@ -142,7 +144,10 @@ internal sealed class ColorDetailWindow : Window
             try { Theme.ApplyTo(Resources); } catch { }
             LoadPrefs();
             Title = LocalizationService.Translate(WindowTitles.Color);
-            Content = BuildContent();
+            var contentRoot = BuildContent();
+            _contentRoot = contentRoot;
+            Content = contentRoot;
+            UiScale.ApplyToWindow(this, contentRoot, scaleWindowBounds: true);
             SnapshotLiveState();
             ApplyFooterExpansionState();
             RefreshAll();
@@ -1264,53 +1269,6 @@ internal sealed class ColorDetailWindow : Window
         else if (e.Key == Key.D3) CopyRow("HSL");
     }
 
-    /// <summary>
-    /// Deterministic DPI adoption. The window can be created on the primary monitor's DPI
-    /// context while the cursor (and therefore the window) sits on a monitor with a different
-    /// scale; when WPF misses that WM_DPICHANGED the panel renders at the primary scale
-    /// (user-visible as a smaller picker on the 150% monitor). Compensate with the monitor's
-    /// authoritative Shcore DPI, the same pattern the toast, the tray menu and the widget use.
-    /// </summary>
-    private void ApplyDpiCorrection()
-    {
-        try
-        {
-            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            if (hwnd == IntPtr.Zero)
-                return;
-
-            var monitor = System.Windows.Forms.Screen.FromHandle(hwnd);
-            var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(
-                monitor.WorkingArea.Left + monitor.WorkingArea.Width / 2,
-                monitor.WorkingArea.Top + monitor.WorkingArea.Height / 2)).X;
-            var adoptedDpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
-            if (adoptedDpi <= 0)
-                return;
-
-            double correction = Math.Abs(adoptedDpi - targetDpi) > 0.01 ? targetDpi / adoptedDpi : 1.0;
-            if (Content is FrameworkElement root)
-            {
-                root.LayoutTransform = Math.Abs(correction - 1.0) > 0.001
-                    ? new System.Windows.Media.ScaleTransform(correction, correction)
-                    : Transform.Identity;
-            }
-            Width = _baseWidth * correction;
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("colorpicker.dpi-correction", ex.Message, ex);
-        }
-    }
-
-    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
-    {
-        base.OnDpiChanged(oldDpi, newDpi);
-        // WPF adopting the monitor's real DPI rescales the window on its own; recompute the
-        // correction so it falls back to identity instead of stacking on top of it.
-        ApplyDpiCorrection();
-        ClampToMonitor();
-    }
-
     private void PositionNearCursor()
     {
         try
@@ -1318,14 +1276,16 @@ internal sealed class ColorDetailWindow : Window
             var cursor = System.Windows.Forms.Cursor.Position;
             WindowStartupLocation = WindowStartupLocation.Manual;
             // Initial placement next to the cursor; ContentRendered clamps with the real size.
+            // Pre-show GetDpi is the process/primary context, so resolve the cursor monitor's
+            // authoritative scale instead (Shcore) — the same source the placement model uses.
             var work = System.Windows.Forms.Screen.FromPoint(cursor).WorkingArea;
-            var dpi = VisualTreeHelper.GetDpi(this);
+            var (dpiX, dpiY) = PopupWindowHelper.GetScaleForPoint(cursor);
             double xPhys = cursor.X + 24;
             double yPhys = cursor.Y - 240;
             xPhys = Math.Min(xPhys, work.Right - 100);
             yPhys = Math.Clamp(yPhys, work.Top + 8, Math.Max(work.Top + 8, work.Bottom - 200));
-            Left = xPhys / dpi.DpiScaleX;
-            Top = yPhys / dpi.DpiScaleY;
+            Left = xPhys / dpiX;
+            Top = yPhys / dpiY;
         }
         catch
         {
