@@ -258,7 +258,8 @@
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
+    <Border x:Name="MenuRoot"
+            BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
             BorderThickness="1"
             CornerRadius="12"
             Background="{DynamicResource ThemeInputBackgroundBrush}"

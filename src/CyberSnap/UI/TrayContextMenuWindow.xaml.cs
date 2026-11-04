@@ -21,6 +21,8 @@ public partial class TrayContextMenuWindow : Window
 {
     private readonly TrayIcon _trayIcon;
     private readonly System.Drawing.Point _clickPoint;
+    /// <summary>XAML design width of the panel; DPI correction rescales from this base.</summary>
+    private readonly double _baseWidth;
     private bool _isClosing = false;
     private bool _isCompact;
     private bool _showRecording = true;
@@ -37,6 +39,7 @@ public partial class TrayContextMenuWindow : Window
         _trayIcon = trayIcon;
         _clickPoint = clickPoint;
         InitializeComponent();
+        _baseWidth = Width;
         AddHandler(UIElement.PreviewMouseMoveEvent, new System.Windows.Input.MouseEventHandler(Window_PreviewMouseMove), true);
 
         // Refresh local theme resources to guarantee proper look on creation
@@ -112,6 +115,33 @@ public partial class TrayContextMenuWindow : Window
             new Native.User32.POINT(_clickPoint.X, _clickPoint.Y), Native.User32.MONITOR_DEFAULTTONEAREST);
         if (Native.User32.MonitorFromWindow(hwnd, Native.User32.MONITOR_DEFAULTTONEAREST) != targetMonitor)
             MoveTo(work.Location);
+
+        // Deterministic DPI adoption. The window can be created on the primary monitor's DPI
+        // context and moved to the click monitor afterwards; when WPF misses that WM_DPICHANGED
+        // the panel renders at the primary scale (user-visible as a smaller tray menu on the
+        // 150% monitor). Compensate with the monitor's authoritative Shcore DPI, the same
+        // pattern the toast and the capture widget use.
+        double dpiCorrection = 1.0;
+        try
+        {
+            var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(
+                info.rcMonitor.Left + (info.rcMonitor.Right - info.rcMonitor.Left) / 2,
+                info.rcMonitor.Top + (info.rcMonitor.Bottom - info.rcMonitor.Top) / 2)).X;
+            var adoptedDpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+            if (adoptedDpi > 0 && Math.Abs(adoptedDpi - targetDpi) > 0.01)
+                dpiCorrection = targetDpi / adoptedDpi;
+        }
+        catch { /* keep identity correction */ }
+        if (Math.Abs(dpiCorrection - 1.0) > 0.001)
+        {
+            MenuRoot.LayoutTransform = new System.Windows.Media.ScaleTransform(dpiCorrection, dpiCorrection);
+            Width = _baseWidth * dpiCorrection;
+        }
+        else
+        {
+            MenuRoot.LayoutTransform = Transform.Identity;
+            Width = _baseWidth;
+        }
 
         UpdateLayout();
         if (!Native.User32.GetWindowRect(hwnd, out var rect))
