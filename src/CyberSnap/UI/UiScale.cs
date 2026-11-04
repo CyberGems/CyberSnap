@@ -127,8 +127,49 @@ public static class UiScale
         // may not adopt that monitor's DPI (race observed on .NET 10). The primary-anchored
         // transform is adoption-immune, but only when re-derived for whichever context ended
         // up active: Width set for the stale context renders at the wrong physical size.
-        window.Loaded += (_, _) => ApplyToWindow(window, root, scaleWindowBounds);
+        window.Loaded += (_, _) =>
+        {
+            ApplyToWindow(window, root, scaleWindowBounds);
+            // The re-derive can change the width after WPF already centered the window with
+            // the pre-correction size, so restore the CenterScreen intent. Manual-positioned
+            // windows (picker near cursor, preview stacks) keep their placement, and monitor
+            // changes while open never re-center (the user may have dragged the window).
+            if (window.WindowStartupLocation == WindowStartupLocation.CenterScreen)
+                CenterOnCurrentMonitor(window);
+        };
         window.DpiChanged += (_, _) => ApplyToWindow(window, root, scaleWindowBounds);
+    }
+
+    /// <summary>Centers <paramref name="window"/> on the monitor it currently occupies,
+    /// in physical pixels (per-monitor aware process).</summary>
+    private static void CenterOnCurrentMonitor(Window window)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero)
+                return;
+
+            var monitor = Native.User32.MonitorFromWindow(
+                hwnd, Native.User32.MONITOR_DEFAULTTONEAREST);
+            var info = new Native.User32.MONITORINFO
+            {
+                cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Native.User32.MONITORINFO>()
+            };
+            if (!Native.User32.GetMonitorInfo(monitor, ref info))
+                return;
+
+            if (!Native.User32.GetWindowRect(hwnd, out var rect))
+                return;
+
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+            int x = info.rcWork.Left + ((info.rcWork.Right - info.rcWork.Left) - width) / 2;
+            int y = info.rcWork.Top + ((info.rcWork.Bottom - info.rcWork.Top) - height) / 2;
+            Native.User32.SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0,
+                Native.User32.SWP_NOSIZE | Native.User32.SWP_NOZORDER | Native.User32.SWP_NOACTIVATE);
+        }
+        catch { }
     }
 
     private static void ClampToCurrentMonitor(Window window)
