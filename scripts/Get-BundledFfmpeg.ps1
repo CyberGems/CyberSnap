@@ -55,6 +55,13 @@ if (-not $ffmpeg) {
     throw "ffmpeg.exe was not found in $FileName"
 }
 
+$ffprobe = Get-ChildItem -LiteralPath $extractDir -Recurse -Filter 'ffprobe.exe' |
+    Where-Object { $_.Directory.Name -eq 'bin' } |
+    Select-Object -First 1
+if (-not $ffprobe) {
+    throw "ffprobe.exe was not found in $FileName"
+}
+
 $license = Get-ChildItem -LiteralPath $extractDir -Recurse -File |
     Where-Object { $_.Name -eq 'LICENSE' -or $_.Name -eq 'COPYING.GPLv3' } |
     Select-Object -First 1
@@ -63,19 +70,20 @@ if (-not $license) {
 }
 
 Copy-Item -LiteralPath $ffmpeg.FullName -Destination (Join-Path $Destination 'ffmpeg.exe') -Force
+Copy-Item -LiteralPath $ffprobe.FullName -Destination (Join-Path $Destination 'ffprobe.exe') -Force
 Copy-Item -LiteralPath $license.FullName -Destination (Join-Path $Destination 'FFmpeg-LICENSE.txt') -Force
 
 $notice = @"
-CyberSnap includes this ffmpeg.exe so MP4 recording, GIF encoding, trimming, and audio waveforms work without a separate FFmpeg install.
+CyberSnap includes ffmpeg.exe and ffprobe.exe so MP4 recording, GIF encoding, trimming (duration probe and preview frames), and audio waveforms work without a separate FFmpeg install.
 
 Build: FFmpeg $Version essentials for Windows x64, from https://github.com/GyanD/codexffmpeg/releases/tag/$Version
 Upstream source: https://github.com/FFmpeg/FFmpeg/commit/946fcce07b
 Archive SHA256: $Sha256
 License: GNU General Public License v3.0, because this build includes libx264. The license text is in FFmpeg-LICENSE.txt.
 
-Only ffmpeg.exe is shipped. ffplay.exe and ffprobe.exe from the same archive are not.
+ffmpeg.exe and ffprobe.exe from the same archive are shipped. ffplay.exe is not.
 
-CyberSnap looks for ffmpeg.exe beside CyberSnap.exe first, then in %AppData%\CyberSnap, then on PATH. Replacing this file with another ffmpeg.exe is supported. The replacement must provide libx264, AAC, the GIF muxer, and the palettegen and paletteuse filters.
+CyberSnap looks for ffmpeg.exe beside CyberSnap.exe first, then in %AppData%\CyberSnap, then on PATH. ffprobe.exe is looked up beside ffmpeg.exe first, then on PATH. Replacing these files with another ffmpeg build is supported. The replacement must provide libx264, AAC, the GIF muxer, and the palettegen and paletteuse filters.
 "@
 Set-Content -LiteralPath (Join-Path $Destination 'FFmpeg-NOTICE.txt') -Value $notice -Encoding utf8
 
@@ -116,4 +124,18 @@ Invoke-FfmpegSmoke `
     -OutputPath $smokePalette `
     -FailureMessage 'Bundled ffmpeg.exe could not run palettegen, which GIF encoding needs.'
 
-Write-Output "Bundled FFmpeg $Version into $Destination"
+$bundledProbe = Join-Path $Destination 'ffprobe.exe'
+$probe = New-Object System.Diagnostics.ProcessStartInfo
+$probe.FileName = $bundledProbe
+$probe.Arguments = '-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "' + $smokeMp4 + '"'
+$probe.UseShellExecute = $false
+$probe.RedirectStandardOutput = $true
+$probe.CreateNoWindow = $true
+$probeProc = [System.Diagnostics.Process]::Start($probe)
+$probeOutput = $probeProc.StandardOutput.ReadToEnd().Trim()
+$probeProc.WaitForExit()
+if ($probeProc.ExitCode -ne 0 -or -not [double]::TryParse($probeOutput, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]([double]0))) {
+    throw 'Bundled ffprobe.exe could not read the duration of the smoke MP4.'
+}
+
+Write-Output "Bundled FFmpeg $Version (ffmpeg.exe + ffprobe.exe) into $Destination"
