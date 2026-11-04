@@ -121,6 +121,14 @@ public static class UiScale
 
         Changed += OnScaleChanged;
         window.Closed += (_, _) => Changed -= OnScaleChanged;
+
+        // Deterministic re-derive after the HWND settles. The constructor-time DPI is the
+        // process/primary context; once the window is shown on its real monitor WPF may or
+        // may not adopt that monitor's DPI (race observed on .NET 10). The primary-anchored
+        // transform is adoption-immune, but only when re-derived for whichever context ended
+        // up active: Width set for the stale context renders at the wrong physical size.
+        window.Loaded += (_, _) => ApplyToWindow(window, root, scaleWindowBounds);
+        window.DpiChanged += (_, _) => ApplyToWindow(window, root, scaleWindowBounds);
     }
 
     private static void ClampToCurrentMonitor(Window window)
