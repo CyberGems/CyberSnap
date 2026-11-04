@@ -2301,6 +2301,25 @@ public partial class ToastWindow : Window
                 Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER);
         }
 
+        // 2b. Deterministic DPI adoption. The HWND is created at the process/primary DPI and
+        // moved here programmatically; WPF can miss that WM_DPICHANGED (observed on the first
+        // toast after startup), leaving the window rendered at the primary scale on a monitor
+        // with a different one. Compensate the content transform with the monitor's
+        // authoritative Shcore DPI, the same pattern the capture widget uses.
+        double dpiCorrection = 1.0;
+        try
+        {
+            var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(
+                phys.Left + phys.Width / 2, phys.Top + phys.Height / 2)).X;
+            var adoptedDpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+            if (adoptedDpi > 0 && Math.Abs(adoptedDpi - targetDpi) > 0.01)
+                dpiCorrection = targetDpi / adoptedDpi;
+        }
+        catch { /* keep identity correction */ }
+        OuterShell.LayoutTransform = new System.Windows.Media.ScaleTransform(
+            UiScale.Current * dpiCorrection, UiScale.Current * dpiCorrection);
+        UpdateLayout();
+
         // 3. Now calculate the work area in DIPs using PointFromScreen.
         var topLeft = PointFromScreen(new System.Windows.Point(phys.Left, phys.Top));
         var bottomRight = PointFromScreen(new System.Windows.Point(phys.Right, phys.Bottom));
