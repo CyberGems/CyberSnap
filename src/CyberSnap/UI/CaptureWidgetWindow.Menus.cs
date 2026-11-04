@@ -19,7 +19,19 @@ public partial class CaptureWidgetWindow
             var end = WidgetMoreButton.PointToScreen(new System.Windows.Point(WidgetMoreButton.ActualWidth, WidgetMoreButton.ActualHeight));
             return Rectangle.FromLTRB((int)Math.Floor(start.X), (int)Math.Floor(start.Y), (int)Math.Ceiling(end.X), (int)Math.Ceiling(end.Y));
         });
+        // While this menu is open the topmost watchdog stays quiet; without the flag the
+        // next five-second tick would push the panel over the menu.
+        _widgetMenuOpen = true;
+        menu.Closed += (_, _) => _widgetMenuOpen = false;
         layout.Show();
+        // The watchdog (or any other topmost window) may have taken the band top right
+        // before the menu appeared: pin the menu back above the panel once it is open.
+        try
+        {
+            Native.User32.SetWindowPos(menu.Handle, Native.User32.HWND_TOPMOST, 0, 0, 0, 0,
+                Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE);
+        }
+        catch { /* best-effort z-order pin */ }
     }
 
     private sealed class WidgetMenuLayout

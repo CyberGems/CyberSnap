@@ -30,6 +30,10 @@ public partial class App
     public bool IsSessionBusy() =>
         Volatile.Read(ref _isCapturing) != 0 || Volatile.Read(ref _activeStandaloneTools) != 0;
 
+    /// <summary>True while the custom tray context menu is showing. Topmost surfaces that
+    /// re-assert themselves periodically (the capture widget's watchdog) pause during it.</summary>
+    internal bool IsTrayContextMenuOpen => _trayIcon?.IsContextMenuOpen ?? false;
+
     /// <summary>
     /// Raised on the UI dispatcher when the app transitions from busy to idle
     /// (capture ended and no standalone tool is open).

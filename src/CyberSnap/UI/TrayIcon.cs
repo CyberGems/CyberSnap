@@ -118,6 +118,11 @@ public sealed class TrayIcon : IDisposable
         return text.Length > 63 ? text[..63] : text;
     }
 
+    /// <summary>True while the custom WPF tray context menu is on screen. Other topmost
+    /// surfaces (the capture widget's watchdog) consult this so they do not re-assert
+    /// themselves over the open menu.</summary>
+    public bool IsContextMenuOpen => _activeWpfMenu is { IsVisible: true };
+
     public void CloseContextMenu()
     {
         _menu?.Close();

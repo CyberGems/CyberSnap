@@ -47,6 +47,9 @@ public partial class CaptureWidgetWindow : Window
     // Show desktop, sleep/resume, Hide→Show cycles). The managed Topmost property
     // stays true, so the user sees "activado pero no arriba". Re-assert natively.
     private readonly DispatcherTimer _topmostWatchdogTimer;
+    /// <summary>True while one of the widget's own menus (More/contextual) is on screen:
+    /// the watchdog must not re-assert over it, or the menu ends up behind the panel.</summary>
+    private bool _widgetMenuOpen;
     private System.Windows.Controls.ToolTip? _openToolTip;
 
     // Layout constants
@@ -112,8 +115,14 @@ public partial class CaptureWidgetWindow : Window
         _topmostWatchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _topmostWatchdogTimer.Tick += (_, _) =>
         {
-            if (_settings.WidgetAlwaysOnTop && IsVisible)
-                AssertWidgetTopmost();
+            // Never fight our own menus or an active capture session for the top of the Z
+            // order: re-asserting while one of the widget's menus is open buries the menu
+            // behind the panel, and re-asserting mid-capture pops the widget above the
+            // frozen overlay after five seconds.
+            if (!_settings.WidgetAlwaysOnTop || !IsVisible || _widgetMenuOpen) return;
+            if (System.Windows.Application.Current is App app
+                && (app.IsSessionBusy() || app.IsTrayContextMenuOpen)) return;
+            AssertWidgetTopmost();
         };
         _activeMonitorTimer.Tick += FollowActiveMonitorTick;
 
