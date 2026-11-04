@@ -2316,6 +2316,19 @@ public partial class ToastWindow : Window
 
         Left = targetLeft;
         Top = targetTop;
+
+        // One-line render-context diagnostics per toast: the same toast legitimately
+        // renders at a different physical size per monitor (WPF native DPI), so two
+        // screenshots can only be compared through the scale they actually rendered at.
+        try
+        {
+            var toastMonitor = System.Windows.Forms.Screen.FromHandle(hwnd);
+            AppDiagnostics.LogInfo("toast.placement",
+                $"uiScale={UiScale.Current:0.###}, dpiScale={VisualTreeHelper.GetDpi(this).DpiScaleX:0.###}, " +
+                $"widthDip={ActualWidth:0.#}, monitor={toastMonitor.DeviceName}, workArea={toastMonitor.WorkingArea}");
+        }
+        catch { /* diagnostics only */ }
+
         Opacity = 1;
         Root.Opacity = 1;
         OuterShell.Opacity = 1;
