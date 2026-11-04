@@ -14,56 +14,145 @@ namespace CyberSnap.Helpers;
 /// </summary>
 internal static class MediaProbe
 {
-    /// <summary>Locates ffprobe next to the bundled ffmpeg, or null when missing.</summary>
+    /// <summary>Locates ffprobe next to the bundled ffmpeg, or on PATH, or null when missing.
+    /// Older installs bundled only ffmpeg.exe, so the PATH fallback matters there.</summary>
     public static string? FindFfprobe()
     {
         string? ffmpeg = VideoRecorder.FindFfmpeg();
-        if (ffmpeg == null)
-            return null;
-
-        string? directory = Path.GetDirectoryName(ffmpeg);
-        string ffprobePath = directory == null
-            ? "ffprobe.exe"
-            : Path.Combine(directory, "ffprobe.exe");
-
-        if (!File.Exists(ffprobePath))
+        if (ffmpeg != null)
         {
-            if (ffmpeg.EndsWith("ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
-                ffprobePath = ffmpeg[..^"ffmpeg.exe".Length] + "ffprobe.exe";
-            else if (ffmpeg.EndsWith("ffmpeg", StringComparison.OrdinalIgnoreCase))
-                ffprobePath = ffmpeg[..^"ffmpeg".Length] + "ffprobe";
+            string? directory = Path.GetDirectoryName(ffmpeg);
+            string ffprobePath = directory == null
+                ? "ffprobe.exe"
+                : Path.Combine(directory, "ffprobe.exe");
+
+            if (!File.Exists(ffprobePath))
+            {
+                if (ffmpeg.EndsWith("ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
+                    ffprobePath = ffmpeg[..^"ffmpeg.exe".Length] + "ffprobe.exe";
+                else if (ffmpeg.EndsWith("ffmpeg", StringComparison.OrdinalIgnoreCase))
+                    ffprobePath = ffmpeg[..^"ffmpeg".Length] + "ffprobe";
+            }
+
+            if (File.Exists(ffprobePath))
+                return ffprobePath;
         }
 
-        return File.Exists(ffprobePath) ? ffprobePath : null;
+        return FindOnPath("ffprobe.exe");
     }
 
-    /// <summary>Container duration in seconds via ffprobe, or 0 when unreadable.</summary>
+    /// <summary>First hit for <paramref name="executable"/> on PATH, or null.</summary>
+    private static string? FindOnPath(string executable)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("where", executable)
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using var proc = Process.Start(psi);
+            var output = proc?.StandardOutput.ReadToEnd().Trim();
+            proc?.WaitForExit(3000);
+            if (string.IsNullOrEmpty(output))
+                return null;
+
+            var first = output.Split('\n')[0].Trim();
+            return File.Exists(first) ? first : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Container duration in seconds via ffprobe, with an ffmpeg-metadata fallback
+    /// for installs where ffprobe is unavailable. Returns 0 when unreadable.</summary>
     public static double TryGetDurationSeconds(string mediaPath)
     {
+        if (!File.Exists(mediaPath))
+            return 0;
+
         string? ffprobe = FindFfprobe();
-        if (ffprobe == null || !File.Exists(mediaPath))
+        if (ffprobe != null)
+        {
+            double viaProbe = ReadDurationFromProcess(ffprobe,
+                $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{mediaPath}\"",
+                readsError: false);
+            if (viaProbe > 0.05)
+                return viaProbe;
+        }
+
+        // Older installs bundled only ffmpeg.exe. Its own metadata line carries the same
+        // container duration ("Duration: 00:00:02.80, ..."), written to stderr.
+        return TryGetDurationViaFfmpeg(mediaPath);
+    }
+
+    private static double ReadDurationFromProcess(string fileName, string arguments, bool readsError)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = !readsError,
+                RedirectStandardError = readsError
+            });
+
+            if (process == null)
+                return 0;
+
+            string output = readsError
+                ? process.StandardError.ReadToEnd().Trim()
+                : process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit(5000);
+
+            return double.TryParse(output, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
+                ? seconds
+                : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static double TryGetDurationViaFfmpeg(string mediaPath)
+    {
+        string? ffmpeg = VideoRecorder.FindFfmpeg();
+        if (ffmpeg == null)
             return 0;
 
         try
         {
             using var process = Process.Start(new ProcessStartInfo
             {
-                FileName = ffprobe,
-                Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{mediaPath}\"",
+                FileName = ffmpeg,
+                Arguments = $"-hide_banner -i \"{mediaPath}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardOutput = true
+                RedirectStandardError = true
             });
 
             if (process == null)
                 return 0;
 
-            string output = process.StandardOutput.ReadToEnd().Trim();
+            // ffmpeg exits with code 1 (no output file requested) after printing the metadata.
+            string stderr = process.StandardError.ReadToEnd();
             process.WaitForExit(5000);
 
-            return double.TryParse(output, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
-                ? seconds
-                : 0;
+            var match = System.Text.RegularExpressions.Regex.Match(
+                stderr, @"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)");
+            if (!match.Success)
+                return 0;
+
+            return int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) * 3600
+                + int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture) * 60
+                + double.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
         }
         catch
         {
