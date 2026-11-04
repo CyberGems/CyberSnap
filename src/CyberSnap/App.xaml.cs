@@ -16,6 +16,9 @@ public partial class App : Application
     }
 
     private static Mutex? _mutex;
+    /// <summary>True when this process acquired the single-instance mutex. Only the owning
+    /// thread may release it; second instances exit without ownership.</summary>
+    private static bool _mutexOwned;
     private HotkeyService? _hotkeyService;
     private SettingsService? _settingsService;
     private AutomaticBackupService? _backupService;

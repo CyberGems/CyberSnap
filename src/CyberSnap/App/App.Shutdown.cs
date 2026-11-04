@@ -24,7 +24,12 @@ public partial class App
         _settingsWindow?.Close();
         _achievementsWindow?.Close();
         try { CyberSnap.Capture.DxgiScreenCapture.ResetCache(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.reset-dxgi-cache", ex); }
-        try { _mutex?.ReleaseMutex(); } catch (Exception ex) { AppDiagnostics.LogWarning("shutdown.release-mutex", ex.Message, ex); }
+        // Only the thread that acquired the single-instance mutex may release it; a second
+        // instance shuts down without owning it and would otherwise log a warning on exit.
+        if (_mutexOwned)
+        {
+            try { _mutex?.ReleaseMutex(); } catch (Exception ex) { AppDiagnostics.LogWarning("shutdown.release-mutex", ex.Message, ex); }
+        }
         try { _mutex?.Dispose(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.dispose-mutex", ex); }
         base.OnExit(e);
     }

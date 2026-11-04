@@ -46,8 +46,10 @@ public partial class App
         }
         catch (AbandonedMutexException)
         {
+            // The previous owner died without releasing: this thread owns it now.
             acquired = true;
         }
+        _mutexOwned = acquired;
 
         if (!acquired)
         {
