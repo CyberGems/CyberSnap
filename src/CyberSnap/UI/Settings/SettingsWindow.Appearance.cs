@@ -319,6 +319,7 @@ public partial class SettingsWindow
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             PopulateWidgetMonitors();
             WidgetAlwaysOnTopCheck.IsChecked = s.WidgetAlwaysOnTop;
+            WidgetHideDuringCaptureCheck.IsChecked = s.WidgetHideDuringCapture;
             UpdateWidgetOptionsVisibility(s.ShowCaptureWidget);
             EditorFitCheck.IsChecked = s.EditorFitToWindowOnOpen;
             EditorShowFrameCheck.IsChecked = s.EditorShowFrame;

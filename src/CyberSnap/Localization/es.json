@@ -2875,5 +2875,7 @@
   "The margin and outline would exceed the image size limit.": "El margen y el delineado superarían el límite de tamaño de la imagen.",
   "The scaled image, margin and outline would exceed the image size limit.": "La imagen escalada, el margen y el delineado superarían el límite de tamaño de la imagen.",
   "Active": "Activo",
-  "Inactive": "Inactivo"
+  "Inactive": "Inactivo",
+  "Hide during captures": "Ocultar durante capturas",
+  "Keep the widget out of screenshots and recordings.": "Mantiene el widget fuera de capturas de pantalla y grabaciones."
 }

@@ -73,7 +73,31 @@ public partial class App : Application
             return false;
 
         HideActivePreviewForCapture();
+        HideWidgetForCaptureIfNeeded();
         return true;
+    }
+
+    /// <summary>
+    /// Hides the floating widget for the duration of the capture session when
+    /// <see cref="Models.AppSettings.WidgetHideDuringCapture"/> is on. The widget restores
+    /// itself through <see cref="SessionBecameIdle"/> when the session ends, so captures and
+    /// recordings never show it.
+    /// </summary>
+    internal void HideWidgetForCaptureIfNeeded()
+    {
+        var widget = _widgetWindow;
+        if (widget is null)
+            return;
+        if (!(_settingsService?.Settings.WidgetHideDuringCapture ?? true))
+            return;
+
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(HideWidgetForCaptureIfNeeded);
+            return;
+        }
+
+        widget.HideForExternalSession(this);
     }
 
     private void HideActivePreviewForCapture()

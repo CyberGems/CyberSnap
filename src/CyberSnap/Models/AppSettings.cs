@@ -718,6 +718,9 @@ public sealed class AppSettings
     // Floating Quick-Capture Widget Settings
     public bool ShowCaptureWidget { get; set; } = true;
     public bool WidgetAlwaysOnTop { get; set; } = true;
+    /// <summary>When true, the floating widget hides itself for the duration of any capture
+    /// session (overlay, recording, standalone tool) and returns when the session ends.</summary>
+    public bool WidgetHideDuringCapture { get; set; } = true;
     public CaptureDockSide WidgetDockEdge { get; set; } = CaptureDockSide.Top;
     // -1 follows the active monitor, -2 follows the cursor, 0+ selects a fixed monitor.
     public int WidgetMonitorIndex { get; set; } = -1;

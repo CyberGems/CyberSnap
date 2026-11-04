@@ -1213,6 +1213,22 @@ public partial class SettingsWindow
             value => SettingsService.PublishWidgetPreferences(_settingsService.Settings));
     }
 
+    private void WidgetHideDuringCaptureCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.WidgetHideDuringCapture;
+        var selected = WidgetHideDuringCaptureCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.widget-hide-during-capture",
+            "Hide during captures",
+            previous,
+            selected,
+            value => _settingsService.Settings.WidgetHideDuringCapture = value,
+            value => WidgetHideDuringCaptureCheck.IsChecked = value,
+            _ => { });
+    }
+
     // Pulls the "Always on top" checkbox back into sync after the change originated on the widget's
     // own toggle. Suppressed so reflecting the value doesn't echo back into a save/sync round-trip.
     public void RefreshAlwaysOnTopCheck()
@@ -1571,6 +1587,8 @@ public partial class SettingsWindow
         WidgetOptionsSeparator.Visibility = visibility;
         WidgetAlwaysOnTopRow.Visibility = visibility;
         WidgetAlwaysOnTopSeparator.Visibility = visibility;
+        WidgetHideDuringCaptureRow.Visibility = visibility;
+        WidgetHideDuringCaptureSeparator.Visibility = visibility;
         WidgetCaptureCursorRow.Visibility = visibility;
         WidgetCaptureCursorSeparator.Visibility = visibility;
         WidgetDockEdgeRow.Visibility = visibility;

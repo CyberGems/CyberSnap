@@ -108,6 +108,7 @@ public partial class App
 
         if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
         HideSettingsForCapture();
+        HideWidgetForCaptureIfNeeded();
         LaunchGifRecording(fmt);
     }
 
