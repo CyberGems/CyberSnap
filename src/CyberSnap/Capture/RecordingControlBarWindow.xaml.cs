@@ -105,6 +105,9 @@ public sealed partial class RecordingControlBarWindow : Window
     /// <summary>Once the user moves the bar, auto-anchoring to the capture region stops.</summary>
     private bool _userPositioned;
 
+    /// <summary>True once the bar became visible at its settled placement (see ctor).</summary>
+    private bool _revealedAtFinalPlacement;
+
     private System.Drawing.Point _dragCursorStart;
     private System.Drawing.Point _dragWindowStart;
 
@@ -200,7 +203,15 @@ public sealed partial class RecordingControlBarWindow : Window
         // LayoutTransform settle after layout), so the visible bar parks left of the region
         // center until the next explicit reposition. Re-center whenever the settled size
         // differs, unless the user owns the position or the mini surface manages placement.
-        SizeChanged += (_, _) => Reposition(_lastCaptureRegion);
+        // The bar stays transparent until the settled placement is in: revealing at the
+        // pre-measure rect showed a two-step "appear here, snap into place" opening.
+        Opacity = 0;
+        SizeChanged += (_, _) =>
+        {
+            Reposition(_lastCaptureRegion);
+            RevealAfterPlacementSettles();
+        };
+        ContentRendered += (_, _) => RevealAfterPlacementSettles();
 
         // Briefly introduce the ready control once the final layout is visible.
         Loaded += (_, _) =>
@@ -418,6 +429,18 @@ public sealed partial class RecordingControlBarWindow : Window
         if (_userPositioned || _isBarDragging || _isMini)
             return;
         PositionAboveRegion(captureRegion);
+    }
+
+    /// <summary>
+    /// Makes the bar visible after its size settled and the size-driven re-centering ran
+    /// (first SizeChanged), or after the first frame when the pre-measure rect was already
+    /// final (ContentRendered). Idempotent; later size changes are already visible.
+    /// </summary>
+    private void RevealAfterPlacementSettles()
+    {
+        if (_revealedAtFinalPlacement) return;
+        _revealedAtFinalPlacement = true;
+        Opacity = 1;
     }
 
     // ══════════════════════════════════════════════════════════════
