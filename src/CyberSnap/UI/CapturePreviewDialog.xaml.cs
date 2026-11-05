@@ -435,6 +435,20 @@ namespace CyberSnap.UI
                 }
                 catch { /* keep current position */ }
 
+                // Render-context diagnostics: stacked re-shows move this window between
+                // monitors, and a size report can only be compared through the DPI context
+                // it actually rendered at (user-visible "compact preview" reports).
+                try
+                {
+                    var monitor = System.Windows.Forms.Screen.FromHandle(
+                        new System.Windows.Interop.WindowInteropHelper(this).Handle);
+                    AppDiagnostics.LogInfo("preview.placement",
+                        $"uiScale={UiScale.Current:0.###}, dpiScale={VisualTreeHelper.GetDpi(this).DpiScaleX:0.###}, " +
+                        $"widthDip={ActualWidth:0.#}, heightDip={ActualHeight:0.#}, " +
+                        $"monitor={monitor.DeviceName}, workArea={monitor.WorkingArea}");
+                }
+                catch { /* diagnostics only */ }
+
                 Opacity = 1;
                 // Pills first: if a completion simulation starts, the countdown waits for it
                 // (InitAutoCloseCountdown no-ops while _pillSimRunning and is re-run on finish).
