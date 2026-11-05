@@ -38,38 +38,20 @@ public static class UiScale
     }
 
     /// <summary>
-    /// Primary-anchored constant-physical model for chrome windows: content and bounds render
-    /// at design × UiScale × the PRIMARY monitor's DPI, captured at process start. Windows
-    /// therefore keep one physical size across every monitor (user-verified ideal), and the
-    /// size is immune to WPF per-monitor DPI adoption races — both contexts produce the same
-    /// physical result. The user's UI-scale slider is the only growth knob and re-applies to
-    /// open windows live. Self-managed surfaces (widget, toast, recording bar) opt out via
+    /// Uniform scaling model for every chrome window: content and bounds render at design ×
+    /// UiScale × the monitor's native DPI — the WPF-standard behavior, so sibling windows
+    /// share one size language and scale together on every monitor. The user's UI-scale
+    /// slider is the only global growth knob and re-applies to open windows live.
+    /// Self-managed surfaces (widget, toast, recording bar) opt out via
     /// <paramref name="scaleWindowBounds"/> = false.
     /// </summary>
     public static void ApplyToWindow(Window window, FrameworkElement root, bool scaleWindowBounds)
     {
         var scale = Normalize(Current);
-        if (BaseDpi <= 0)
-            BaseDpi = GetWindowMonitorScale(window);
-
-        double effective = scale;
-        if (scaleWindowBounds)
-        {
-            var adopted = GetWindowMonitorScale(window);
-            if (adopted > 0)
-                effective = scale * BaseDpi / adopted;
-
-            root.LayoutTransform = Math.Abs(effective - 1.0) < 0.001
-                ? Transform.Identity
-                : new ScaleTransform(effective, effective);
-            EnsureLiveScaleHook(window, root, scaleWindowBounds);
-        }
-        else
-        {
-            root.LayoutTransform = Math.Abs(scale - 1.0) < 0.001
-                ? Transform.Identity
-                : new ScaleTransform(scale, scale);
-        }
+        root.LayoutTransform = Math.Abs(scale - 1.0) < 0.001
+            ? Transform.Identity
+            : new ScaleTransform(scale, scale);
+        EnsureLiveScaleHook(window, root, scaleWindowBounds);
 
         if (!scaleWindowBounds)
             return;
@@ -80,30 +62,14 @@ public static class UiScale
             w.MinWidth,
             w.MinHeight));
 
-        window.MinWidth = Math.Max(320, state.MinWidth * effective);
-        window.MinHeight = Math.Max(240, state.MinHeight * effective);
+        window.MinWidth = Math.Max(320, state.MinWidth * scale);
+        window.MinHeight = Math.Max(240, state.MinHeight * scale);
         if (!double.IsNaN(state.Width) && !double.IsInfinity(state.Width) && state.Width > 0)
-            window.Width = state.Width * effective;
+            window.Width = state.Width * scale;
         if (!double.IsNaN(state.Height) && !double.IsInfinity(state.Height) && state.Height > 0)
-            window.Height = state.Height * effective;
+            window.Height = state.Height * scale;
 
         ClampToCurrentMonitor(window);
-    }
-
-    /// <summary>Primary monitor DPI at process start; the anchor every chrome window
-    /// renders at, on any monitor. Captured once from the first pre-show window.</summary>
-    private static double BaseDpi;
-
-    private static double GetWindowMonitorScale(Window window)
-    {
-        try
-        {
-            var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window).DpiScaleX;
-            if (dpi > 0)
-                return dpi;
-        }
-        catch { }
-        return 1.0;
     }
 
     private static void EnsureLiveScaleHook(Window window, FrameworkElement root, bool scaleWindowBounds)
@@ -121,55 +87,6 @@ public static class UiScale
 
         Changed += OnScaleChanged;
         window.Closed += (_, _) => Changed -= OnScaleChanged;
-
-        // Deterministic re-derive after the HWND settles. The constructor-time DPI is the
-        // process/primary context; once the window is shown on its real monitor WPF may or
-        // may not adopt that monitor's DPI (race observed on .NET 10). The primary-anchored
-        // transform is adoption-immune, but only when re-derived for whichever context ended
-        // up active: Width set for the stale context renders at the wrong physical size.
-        window.Loaded += (_, _) =>
-        {
-            ApplyToWindow(window, root, scaleWindowBounds);
-            // The re-derive can change the width after WPF already centered the window with
-            // the pre-correction size, so restore the CenterScreen intent. Manual-positioned
-            // windows (picker near cursor, preview stacks) keep their placement, and monitor
-            // changes while open never re-center (the user may have dragged the window).
-            if (window.WindowStartupLocation == WindowStartupLocation.CenterScreen)
-                CenterOnCurrentMonitor(window);
-        };
-        window.DpiChanged += (_, _) => ApplyToWindow(window, root, scaleWindowBounds);
-    }
-
-    /// <summary>Centers <paramref name="window"/> on the monitor it currently occupies,
-    /// in physical pixels (per-monitor aware process).</summary>
-    private static void CenterOnCurrentMonitor(Window window)
-    {
-        try
-        {
-            var hwnd = new WindowInteropHelper(window).Handle;
-            if (hwnd == IntPtr.Zero)
-                return;
-
-            var monitor = Native.User32.MonitorFromWindow(
-                hwnd, Native.User32.MONITOR_DEFAULTTONEAREST);
-            var info = new Native.User32.MONITORINFO
-            {
-                cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Native.User32.MONITORINFO>()
-            };
-            if (!Native.User32.GetMonitorInfo(monitor, ref info))
-                return;
-
-            if (!Native.User32.GetWindowRect(hwnd, out var rect))
-                return;
-
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
-            int x = info.rcWork.Left + ((info.rcWork.Right - info.rcWork.Left) - width) / 2;
-            int y = info.rcWork.Top + ((info.rcWork.Bottom - info.rcWork.Top) - height) / 2;
-            Native.User32.SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0,
-                Native.User32.SWP_NOSIZE | Native.User32.SWP_NOZORDER | Native.User32.SWP_NOACTIVATE);
-        }
-        catch { }
     }
 
     private static void ClampToCurrentMonitor(Window window)
