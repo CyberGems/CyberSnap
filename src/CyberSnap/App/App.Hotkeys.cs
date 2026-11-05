@@ -238,6 +238,7 @@ public partial class App
                             return;
                         }
 
+                        AppDiagnostics.LogInfo("capture.slot", "claimed");
                         HideSettingsForCapture();
                         OpenStandaloneCapturePreview(bmp);
                     });

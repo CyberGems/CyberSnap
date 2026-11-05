@@ -18,6 +18,7 @@ public partial class App
     private void ResetCapturing()
     {
         Volatile.Write(ref _isCapturing, 0);
+        AppDiagnostics.LogInfo("capture.slot", "released");
         RestoreSettingsAfterCapture();
         RestorePreviewAfterCapture();
         NotifySessionBecameIdleIfQuiet();
@@ -29,6 +30,15 @@ public partial class App
     /// </summary>
     public bool IsSessionBusy() =>
         Volatile.Read(ref _isCapturing) != 0 || Volatile.Read(ref _activeStandaloneTools) != 0;
+
+    /// <summary>
+    /// True while the overlay-closed delegate hands the session off to a standalone tool
+    /// (picker, OCR, scan, ruler, zoom). Releasing the capture slot inside it raises
+    /// SessionBecameIdle before the tool claims its own session, so the floating widget
+    /// would re-show into that gap and float above the tool's own window. The widget
+    /// defers its restore while this is set.
+    /// </summary>
+    internal bool IsSessionHandoffPending { get; private set; }
 
     /// <summary>True while the custom tray context menu is showing. Topmost surfaces that
     /// re-assert themselves periodically (the capture widget's watchdog) pause during it.</summary>
@@ -107,6 +117,7 @@ public partial class App
         }
 
         if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        AppDiagnostics.LogInfo("capture.slot", "claimed");
         HideSettingsForCapture();
         HideWidgetForCaptureIfNeeded();
         LaunchGifRecording(fmt);
@@ -1119,17 +1130,36 @@ public partial class App
 
                     Dispatcher.BeginInvoke(() =>
                     {
-                        ResetCapturing();
-                        if (handoffStandalonePicker)
-                            OnStandaloneColorPickerHotkeyPressed();
-                        else if (handoffStandaloneOcr)
-                            OnStandaloneOcrHotkeyPressed();
-                        else if (handoffStandaloneScan)
-                            OnStandaloneScanHotkeyPressed();
-                        else if (handoffStandaloneRuler)
-                            OnStandaloneRulerHotkeyPressed();
-                        else if (handoffStandaloneZoom)
-                            OnStandaloneZoomHotkeyPressed();
+                        // Releasing the slot raises SessionBecameIdle, which lets the
+                        // floating widget re-show into the gap before the handoff tool
+                        // claims its own session. Defer the widget restore across it.
+                        IsSessionHandoffPending = true;
+                        try
+                        {
+                            ResetCapturing();
+                            string? handoffTool =
+                                handoffStandalonePicker ? "ColorPicker" :
+                                handoffStandaloneOcr ? "Ocr" :
+                                handoffStandaloneScan ? "Scan" :
+                                handoffStandaloneRuler ? "Ruler" :
+                                handoffStandaloneZoom ? "Zoom" : null;
+                            if (handoffTool is not null)
+                                AppDiagnostics.LogInfo("session.handoff", handoffTool);
+                            if (handoffStandalonePicker)
+                                OnStandaloneColorPickerHotkeyPressed();
+                            else if (handoffStandaloneOcr)
+                                OnStandaloneOcrHotkeyPressed();
+                            else if (handoffStandaloneScan)
+                                OnStandaloneScanHotkeyPressed();
+                            else if (handoffStandaloneRuler)
+                                OnStandaloneRulerHotkeyPressed();
+                            else if (handoffStandaloneZoom)
+                                OnStandaloneZoomHotkeyPressed();
+                        }
+                        finally
+                        {
+                            IsSessionHandoffPending = false;
+                        }
                     });
                 };
 

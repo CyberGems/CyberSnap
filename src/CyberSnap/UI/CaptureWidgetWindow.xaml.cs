@@ -123,8 +123,9 @@ public partial class CaptureWidgetWindow : Window
         _sessionRestorePollTimer.Tick += (_, _) =>
         {
             if (!_awaitingSessionRestore) return;
-            if (System.Windows.Application.Current is App app && !app.IsSessionBusy())
-                FinishSessionRestore();
+            if (System.Windows.Application.Current is App app
+                && (app.IsSessionBusy() || app.IsSessionHandoffPending)) return;
+            FinishSessionRestore("poll");
         };
 
         _topmostWatchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
@@ -1737,6 +1738,7 @@ public partial class CaptureWidgetWindow : Window
     {
         CancelHideLaunch();
         CancelSessionRestore();
+        AppDiagnostics.LogInfo("widget.session", "HideAndLaunch");
 
         PrepareForSession();
 
@@ -1756,13 +1758,13 @@ public partial class CaptureWidgetWindow : Window
                 // The widget is already hidden at this point. Always restore it even when a
                 // capture entry point fails before its normal cleanup path is established.
                 AppDiagnostics.LogError("widget.capture-launch", ex);
-                FinishSessionRestore();
+                FinishSessionRestore("launch-error");
                 return;
             }
 
             // If the launch did not open a session (e.g. busy gate rejected it), re-show now.
             if (!app.IsSessionBusy())
-                FinishSessionRestore();
+                FinishSessionRestore("launch-fallback");
         };
         _hideLaunchTimer.Start();
     }
@@ -1820,20 +1822,25 @@ public partial class CaptureWidgetWindow : Window
     private void OnAppSessionBecameIdle()
     {
         if (!_awaitingSessionRestore) return;
-        if (System.Windows.Application.Current is App app && app.IsSessionBusy()) return;
-        FinishSessionRestore();
+        if (System.Windows.Application.Current is App app
+            && (app.IsSessionBusy() || app.IsSessionHandoffPending)) return;
+        FinishSessionRestore("idle");
     }
 
-    private void FinishSessionRestore()
+    private void FinishSessionRestore(string reason)
     {
         // Never re-show while a capture session is still active: any early invocation
         // (poll tick racing the session start, launch fallback) would float the peek
         // over the live overlay until mouse-up. The poll timer retries once it ends.
-        if (System.Windows.Application.Current is App app && app.IsSessionBusy())
+        // The handoff flag covers the slot-release → standalone-tool-claim gap in the
+        // overlay-closed delegate, where IsSessionBusy() is briefly false.
+        if (System.Windows.Application.Current is App app
+            && (app.IsSessionBusy() || app.IsSessionHandoffPending))
             return;
 
         if (!_awaitingSessionRestore || _sessionRestoreInProgress) return;
         _sessionRestoreInProgress = true;
+        AppDiagnostics.LogInfo("widget.restore", $"reason={reason}");
 
         _hoverDelayTimer.Stop();
         _collapseTimer.Stop();
@@ -1891,6 +1898,35 @@ public partial class CaptureWidgetWindow : Window
     private const int IDC_SIZEALL = 32646;
     private const int WM_SETCURSOR = 0x0020;
 
+    // A reveal that bypasses WPF (external ShowWindow, or SetWindowPos carrying
+    // SWP_SHOWWINDOW) never raises IsVisibleChanged, so the widget.visibility trace
+    // cannot see it. Log those native messages only while WPF still believes the
+    // window is hidden: WPF-initiated shows always set IsVisible first.
+    private const int WM_SHOWWINDOW = 0x0018;
+    private const int WM_WINDOWPOSCHANGING = 0x0046;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPOS
+    {
+        public IntPtr hwndInsertAfter;
+        public IntPtr hwnd;
+        public int x;
+        public int y;
+        public int cx;
+        public int cy;
+        public uint flags;
+    }
+
+    private static uint ReadWindowPosFlags(IntPtr lParam)
+    {
+        if (lParam == IntPtr.Zero) return 0;
+        var pos = Marshal.PtrToStructure<WINDOWPOS>(lParam);
+        return pos.flags;
+    }
+
+    private static bool SessionBusyNow() =>
+        System.Windows.Application.Current is App app && app.IsSessionBusy();
+
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (msg == WM_SETCURSOR && (_isDragging || _isDragArmed))
@@ -1899,6 +1935,16 @@ public partial class CaptureWidgetWindow : Window
             SetCursor(hCursor);
             handled = true;
             return (IntPtr)1;
+        }
+        if (!IsVisible)
+        {
+            if (msg == WM_SHOWWINDOW && wParam != 0)
+                AppDiagnostics.LogInfo("widget.win32",
+                    $"WM_SHOWWINDOW while WPF-hidden, busy={SessionBusyNow()}");
+            else if (msg == WM_WINDOWPOSCHANGING
+                     && (ReadWindowPosFlags(lParam) & Native.User32.SWP_SHOWWINDOW) != 0)
+                AppDiagnostics.LogInfo("widget.win32",
+                    $"WM_WINDOWPOSCHANGING SWP_SHOWWINDOW while WPF-hidden, busy={SessionBusyNow()}");
         }
         return IntPtr.Zero;
     }
