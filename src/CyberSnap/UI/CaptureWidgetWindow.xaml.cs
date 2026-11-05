@@ -84,12 +84,11 @@ public partial class CaptureWidgetWindow : Window
         // window mid-session it floats over the live overlay - log the stack to name it.
         IsVisibleChanged += (_, args) =>
         {
-            if (args.NewValue is true && System.Windows.Application.Current is App busyApp && busyApp.IsSessionBusy())
-            {
-                Services.AppDiagnostics.LogWarning(
-                    "widget.reveal-during-session",
-                    Environment.StackTrace);
-            }
+            var busy = System.Windows.Application.Current is App app && app.IsSessionBusy();
+            Services.AppDiagnostics.LogInfo(
+                "widget.visibility",
+                $"visible={args.NewValue}, busy={busy}, awaitingRestore={_awaitingSessionRestore}, expanded={_isExpanded}" +
+                (args.NewValue is true && busy ? Environment.StackTrace : string.Empty));
         };
         DpiChanged += (_, _) => LoadIcons();
 
@@ -1769,6 +1768,7 @@ public partial class CaptureWidgetWindow : Window
     internal void HideForExternalSession(App app)
     {
         if (!IsVisible) return;
+        Services.AppDiagnostics.LogInfo("widget.session", "HideForExternalSession");
         CancelHideLaunch();
         CancelSessionRestore();
         PrepareForSession();
