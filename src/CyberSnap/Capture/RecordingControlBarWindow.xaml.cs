@@ -195,6 +195,13 @@ public sealed partial class RecordingControlBarWindow : Window
         // correct per-monitor DPI). SourceInitialized fires before Loaded.
         SourceInitialized += (_, _) => PositionAboveRegion(captureRegion);
 
+        // That first placement can read an inflated GetWindowRect: at SourceInitialized the
+        // window still carries the pre-measure size (SizeToContent + the UiScale
+        // LayoutTransform settle after layout), so the visible bar parks left of the region
+        // center until the next explicit reposition. Re-center whenever the settled size
+        // differs, unless the user owns the position or the mini surface manages placement.
+        SizeChanged += (_, _) => Reposition(_lastCaptureRegion);
+
         // Briefly introduce the ready control once the final layout is visible.
         Loaded += (_, _) =>
         {

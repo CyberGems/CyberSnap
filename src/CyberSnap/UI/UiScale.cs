@@ -87,6 +87,54 @@ public static class UiScale
 
         Changed += OnScaleChanged;
         window.Closed += (_, _) => Changed -= OnScaleChanged;
+
+        if (!scaleWindowBounds) return;
+        if (window.WindowStartupLocation != WindowStartupLocation.CenterScreen) return;
+        // WPF centers CenterScreen windows with the DPI context active at handle creation;
+        // on mixed-DPI setups where the system DPI differs from the target monitor (system
+        // 150%, landing monitor 125%) the window lands off-center: the trimmer opened
+        // top-left on the 125% primary while centering perfectly on the 150% one. Restore
+        // the CenterScreen intent once, in physical pixels, after the final size is set.
+        // Monitor changes while open never re-center: the user may have dragged the window.
+        window.Loaded += (_, _) => CenterOnCurrentMonitor(window);
+    }
+
+    /// <summary>Centers <paramref name="window"/> on the monitor it currently occupies,
+    /// in physical pixels (per-monitor aware process).</summary>
+    private static void CenterOnCurrentMonitor(Window window)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero)
+                return;
+
+            var monitor = Native.User32.MonitorFromWindow(
+                hwnd, Native.User32.MONITOR_DEFAULTTONEAREST);
+            var info = new Native.User32.MONITORINFO
+            {
+                cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Native.User32.MONITORINFO>()
+            };
+            if (!Native.User32.GetMonitorInfo(monitor, ref info))
+                return;
+
+            if (!Native.User32.GetWindowRect(hwnd, out var rect))
+                return;
+
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+            int x = info.rcWork.Left + ((info.rcWork.Right - info.rcWork.Left) - width) / 2;
+            int y = info.rcWork.Top + ((info.rcWork.Bottom - info.rcWork.Top) - height) / 2;
+            Native.User32.SetWindowPos(
+                hwnd,
+                IntPtr.Zero,
+                x,
+                y,
+                0,
+                0,
+                Native.User32.SWP_NOSIZE | Native.User32.SWP_NOZORDER | Native.User32.SWP_NOACTIVATE);
+        }
+        catch { }
     }
 
     private static void ClampToCurrentMonitor(Window window)
