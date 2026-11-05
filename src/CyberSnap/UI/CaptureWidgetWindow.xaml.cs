@@ -76,8 +76,21 @@ public partial class CaptureWidgetWindow : Window
         InitializeComponent();
         SizeToContent = SizeToContent.Manual;
 
-        // The widget can be docked to any monitor: re-rasterize the icons when the render
-        // DPI changes, otherwise the constructor-time bitmaps stay upscaled and soft.
+        // The peek must stay hidden while a capture session runs (hide-on-capture). Every
+        // reveal goes through FinishSessionRestore, but if any other path re-shows the
+        // window mid-session it floats over the live overlay - log the stack to name it.
+        // The peek must stay hidden while a capture session runs (hide-on-capture). Every
+        // reveal goes through FinishSessionRestore, but if any other path re-shows the
+        // window mid-session it floats over the live overlay - log the stack to name it.
+        IsVisibleChanged += (_, args) =>
+        {
+            if (args.NewValue is true && System.Windows.Application.Current is App busyApp && busyApp.IsSessionBusy())
+            {
+                Services.AppDiagnostics.LogWarning(
+                    "widget.reveal-during-session",
+                    Environment.StackTrace);
+            }
+        };
         DpiChanged += (_, _) => LoadIcons();
 
         // Inset the content so the transparent halo around it (window grown by ShadowMargin)
@@ -1798,6 +1811,12 @@ public partial class CaptureWidgetWindow : Window
 
     private void FinishSessionRestore()
     {
+        // Never re-show while a capture session is still active: any early invocation
+        // (poll tick racing the session start, launch fallback) would float the peek
+        // over the live overlay until mouse-up. The poll timer retries once it ends.
+        if (System.Windows.Application.Current is App app && app.IsSessionBusy())
+            return;
+
         if (!_awaitingSessionRestore || _sessionRestoreInProgress) return;
         _sessionRestoreInProgress = true;
 
