@@ -90,7 +90,10 @@ public partial class CaptureWidgetWindow : Window
                 $"visible={args.NewValue}, busy={busy}, awaitingRestore={_awaitingSessionRestore}, expanded={_isExpanded}" +
                 (args.NewValue is true && busy ? Environment.StackTrace : string.Empty));
         };
-        DpiChanged += (_, _) => LoadIcons();
+        // Re-rasterize icons when the render DPI changes (monitor moves), but AFTER the
+        // move settles: re-rasterizing synchronously inside the DPI transition deformed
+        // the peek mid-flight when following the cursor across monitors.
+        DpiChanged += (_, _) => Dispatcher.BeginInvoke(LoadIcons, DispatcherPriority.ApplicationIdle);
 
         // Inset the content so the transparent halo around it (window grown by ShadowMargin)
         // is free for the drop shadow to render into. The docked side gets no halo (see ShadowHalo).
