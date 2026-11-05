@@ -18,7 +18,6 @@ public partial class App
     private void ResetCapturing()
     {
         Volatile.Write(ref _isCapturing, 0);
-        AppDiagnostics.LogInfo("capture.slot", "released");
         RestoreSettingsAfterCapture();
         RestorePreviewAfterCapture();
         NotifySessionBecameIdleIfQuiet();
@@ -117,7 +116,6 @@ public partial class App
         }
 
         if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
-        AppDiagnostics.LogInfo("capture.slot", "claimed");
         HideSettingsForCapture();
         HideWidgetForCaptureIfNeeded();
         LaunchGifRecording(fmt);
@@ -1137,14 +1135,6 @@ public partial class App
                         try
                         {
                             ResetCapturing();
-                            string? handoffTool =
-                                handoffStandalonePicker ? "ColorPicker" :
-                                handoffStandaloneOcr ? "Ocr" :
-                                handoffStandaloneScan ? "Scan" :
-                                handoffStandaloneRuler ? "Ruler" :
-                                handoffStandaloneZoom ? "Zoom" : null;
-                            if (handoffTool is not null)
-                                AppDiagnostics.LogInfo("session.handoff", handoffTool);
                             if (handoffStandalonePicker)
                                 OnStandaloneColorPickerHotkeyPressed();
                             else if (handoffStandaloneOcr)

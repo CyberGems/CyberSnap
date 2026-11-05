@@ -680,12 +680,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             _awaitingInitialReveal = false;
 
-            // One-time DPI diagnostics: the editor mixes fixed logical-pixel layout with
-            // point-based fonts, so the text-to-chrome ratio depends on which monitor DPI
-            // the window settled at and whether it crossed DPI boundaries. This makes that
-            // trajectory visible when comparing dev vs installed runs on mixed-DPI setups.
-            LogEditorDiagnosticsOnce();
-
             // Drop the STA splash first so it never sits on top of the revealed editor.
             var splash = _startupSplash;
             _startupSplash = null;
@@ -709,26 +703,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
         Activate();
         BringToFront();
         _canvas?.Focus();
-    }
-
-    /// <summary>
-    /// Logs the DPI context the editor finally rendered at, once per window, so truncation
-    /// reports can be traced to the monitor scale the fonts were rendered against.
-    /// </summary>
-    private void LogEditorDiagnosticsOnce()
-    {
-        try
-        {
-            var center = new System.Drawing.Point(Bounds.Left + Bounds.Width / 2, Bounds.Top + Bounds.Height / 2);
-            var (monitorScaleX, monitorScaleY) = PopupWindowHelper.GetScaleForPoint(center);
-            AppDiagnostics.LogInfo("editor.opened",
-                $"DeviceDpi={DeviceDpi}, fontPt={Font.SizeInPoints:0.##}, uiScale={Helpers.UiChrome.UiScale:0.##}, " +
-                $"monitorScale={monitorScaleX:0.##}x{monitorScaleY:0.##}, client={ClientSize.Width}x{ClientSize.Height}, bounds={Bounds}");
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("editor.opened", ex.Message, ex);
-        }
     }
 
     private void UpdateStatusBarResponsiveLayout()

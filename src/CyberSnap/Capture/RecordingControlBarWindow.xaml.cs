@@ -474,9 +474,9 @@ public sealed partial class RecordingControlBarWindow : Window
             captureRegion.X + captureRegion.Width / 2,
             captureRegion.Y));
 
-        var hwndEarly = new WindowInteropHelper(this).Handle;
+        var hwnd = new WindowInteropHelper(this).Handle;
         int barWidthPhys, barHeightPhys;
-        if (hwndEarly != IntPtr.Zero && User32.GetWindowRect(hwndEarly, out var wr))
+        if (hwnd != IntPtr.Zero && User32.GetWindowRect(hwnd, out var wr))
         {
             barWidthPhys = wr.Right - wr.Left;
             barHeightPhys = wr.Bottom - wr.Top;
@@ -523,15 +523,6 @@ public sealed partial class RecordingControlBarWindow : Window
         MoveBarToPhysical(tx, ty);
         NotifyOverlayChromeRelayout();
 
-        // Placement diagnostics: the bar straddles a manual estimate and the real HWND
-        // rect; a left-shift-then-jump report needs both numbers per DPI context.
-        try
-        {
-            var adopted = VisualTreeHelper.GetDpi(this).DpiScaleX;
-            AppDiagnostics.LogInfo("recbar.placement",
-                $"targetDpi={scale.X:0.###}, adoptedDpi={adopted:0.###}, barPhys={barWidthPhys}x{barHeightPhys}, pos=[{tx},{ty}], hwndEarly={hwndEarly != IntPtr.Zero}");
-        }
-        catch { }
         // If handle isn't ready, SourceInitialized re-invokes this and places it then.
     }
 

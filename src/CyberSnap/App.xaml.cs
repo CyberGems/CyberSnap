@@ -72,7 +72,6 @@ public partial class App : Application
         if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0)
             return false;
 
-        AppDiagnostics.LogInfo("capture.slot", "claimed");
         HideActivePreviewForCapture();
         HideWidgetForCaptureIfNeeded();
         return true;
