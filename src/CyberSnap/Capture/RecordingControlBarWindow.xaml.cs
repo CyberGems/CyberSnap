@@ -492,6 +492,16 @@ public sealed partial class RecordingControlBarWindow : Window
         _parkedAboveRegion = noRoomBelow && !clampedOffTop;
         MoveBarToPhysical(tx, ty);
         NotifyOverlayChromeRelayout();
+
+        // Placement diagnostics: the bar straddles a manual estimate and the real HWND
+        // rect; a left-shift-then-jump report needs both numbers per DPI context.
+        try
+        {
+            var adopted = VisualTreeHelper.GetDpi(this).DpiScaleX;
+            AppDiagnostics.LogInfo("recbar.placement",
+                $"targetDpi={scale.X:0.###}, adoptedDpi={adopted:0.###}, barPhys={barWidthPhys}x{barHeightPhys}, pos=[{tx},{ty}], hwndEarly={hwndEarly != IntPtr.Zero}");
+        }
+        catch { }
         // If handle isn't ready, SourceInitialized re-invokes this and places it then.
     }
 
@@ -631,6 +641,8 @@ public sealed partial class RecordingControlBarWindow : Window
     /// </summary>
     internal void AssertBarTopmost()
     {
+        if (_topmostSuspended)
+            return;
         IntPtr hwnd;
         try { hwnd = new WindowInteropHelper(this).Handle; }
         catch { return; }
@@ -643,10 +655,15 @@ public sealed partial class RecordingControlBarWindow : Window
     /// <summary>
     /// Temporarily drops TOPMOST so owned modal dialogs (discard confirm, settings)
     /// render above the bar instead of underneath it. HWND-only, safe from any
-    /// thread. Restore with <see cref="AssertBarTopmost"/>.
+    /// thread. Restore with <see cref="ResumeTopmost"/>. While suspended, every
+    /// AssertBarTopmost is a no-op: stray re-asserts (focus, overlay keep-above)
+    /// would bury the open dialog again.
     /// </summary>
+    private bool _topmostSuspended;
+
     internal void SuspendTopmost()
     {
+        _topmostSuspended = true;
         IntPtr hwnd;
         try { hwnd = new WindowInteropHelper(this).Handle; }
         catch { return; }
@@ -654,6 +671,12 @@ public sealed partial class RecordingControlBarWindow : Window
             return;
         User32.SetWindowPos(hwnd, User32.HWND_NOTOPMOST, 0, 0, 0, 0,
             User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE);
+    }
+
+    internal void ResumeTopmost()
+    {
+        _topmostSuspended = false;
+        AssertBarTopmost();
     }
 
     private bool TryGetBarDragOrigin(out System.Drawing.Point cursor, out System.Drawing.Point window)

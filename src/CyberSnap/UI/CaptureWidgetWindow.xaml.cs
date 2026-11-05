@@ -608,6 +608,18 @@ public partial class CaptureWidgetWindow : Window
             return;
 
         ApplyWindowPlacement(left, top, width, height, halo, _isExpanded, animate: false);
+
+        // Placement diagnostics for the cross-monitor jump report: position per DPI
+        // context, logged on the non-animated placement path only (low volume).
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd != IntPtr.Zero && Native.User32.GetWindowRect(hwnd, out var wr))
+                Services.AppDiagnostics.LogInfo("widget.placement",
+                    $"screen={targetScreen.DeviceName}, dpi={VisualTreeHelper.GetDpi(this).DpiScaleX:0.###}, " +
+                    $"phys=[{wr.Left},{wr.Top} {wr.Right - wr.Left}x{wr.Bottom - wr.Top}], expanded={_isExpanded}");
+        }
+        catch { }
     }
 
     /// <summary>

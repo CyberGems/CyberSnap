@@ -173,7 +173,9 @@ public sealed partial class RecordingForm
         }
         finally
         {
-            _controlBarWpf?.AssertBarTopmost();
+            // Resume (not Assert): stray re-asserts fired while the dialog was up
+            // buried it behind the topmost bar again.
+            _controlBarWpf?.ResumeTopmost();
         }
 
         if (confirmed)

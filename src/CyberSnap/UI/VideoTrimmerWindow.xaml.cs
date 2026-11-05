@@ -151,6 +151,22 @@ namespace CyberSnap.UI
             RootScale.ScaleX = 0.97;
             RootScale.ScaleY = 0.97;
             Loaded += (_, _) => PlayOpenAnimation();
+            ContentRendered += (_, _) =>
+            {
+                // Placement diagnostics: the trimmer opens CenterScreen, and a left-shifted
+                // window report on mixed-DPI setups needs the real context it landed in.
+                try
+                {
+                    var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                    var monitor = System.Windows.Forms.Screen.FromHandle(hwnd);
+                    Native.User32.GetWindowRect(hwnd, out var rect);
+                    AppDiagnostics.LogInfo("trimmer.placement",
+                        $"uiScale={UiScale.Current:0.###}, dpiScale={VisualTreeHelper.GetDpi(this).DpiScaleX:0.###}, " +
+                        $"widthDip={ActualWidth:0.#}, phys=[{rect.Left},{rect.Top} {rect.Right - rect.Left}x{rect.Bottom - rect.Top}], " +
+                        $"monitor={monitor.DeviceName}, startup={WindowStartupLocation}");
+                }
+                catch { /* diagnostics only */ }
+            };
 
             InitializeTabs(filePath, posterFrame, ephemeral);
         }

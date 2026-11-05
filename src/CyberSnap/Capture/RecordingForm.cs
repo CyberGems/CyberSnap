@@ -1438,6 +1438,8 @@ public sealed partial class RecordingForm : Form
 
         if (!suppress)
         {
+            // The topmost bar would cover the modal; suspend and resume around it.
+            _controlBarWpf?.SuspendTopmost();
             bool confirmed = ThemedConfirmDialog.Confirm(
                 Handle,
                 LocalizationService.Translate("Open recording settings?"),
@@ -1447,10 +1449,10 @@ public sealed partial class RecordingForm : Form
                 secondaryText: LocalizationService.Translate("Cancel"),
                 danger: false,
                 iconId: "gear");
+            _controlBarWpf?.ResumeTopmost();
 
             if (!confirmed)
             {
-                _controlBarWpf?.AssertBarTopmost();
                 return;
             }
             if (dontShowAgain)
