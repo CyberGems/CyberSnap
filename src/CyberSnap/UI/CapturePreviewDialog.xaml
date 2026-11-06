@@ -685,7 +685,7 @@
                                  <Button x:Name="EditBtn" Click="EditBtn_Click"
                                          Style="{StaticResource PreviewActionButton}"
                                          HorizontalAlignment="Stretch"
-                                         Margin="0,0,0,4">
+                                         Margin="3,0,3,4">
                                      <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
                                          <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0"
                                                 VerticalAlignment="Center"
@@ -693,7 +693,7 @@
                                          <TextBlock x:Name="EditText" Text="Send to Editor..." VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
                                      </StackPanel>
                                  </Button>
-                                 <UniformGrid x:Name="OptionalActionsPanel" Columns="2" Margin="-3,0,0,0">
+                                 <UniformGrid x:Name="OptionalActionsPanel" Columns="2">
                                     <Button x:Name="SaveBtn" Click="SaveBtn_Click"
                                              Style="{StaticResource PreviewActionButton}"
                                              Margin="3,0,3,4">
