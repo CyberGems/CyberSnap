@@ -693,7 +693,7 @@
                                          <TextBlock x:Name="EditText" Text="Send to Editor..." VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
                                      </StackPanel>
                                  </Button>
-                                 <UniformGrid x:Name="OptionalActionsPanel" Columns="2" Margin="-3,0,-3,0">
+                                 <UniformGrid x:Name="OptionalActionsPanel" Columns="2" Margin="-3,0,0,0">
                                     <Button x:Name="SaveBtn" Click="SaveBtn_Click"
                                              Style="{StaticResource PreviewActionButton}"
                                              Margin="3,0,3,4">
