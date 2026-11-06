@@ -198,6 +198,13 @@ public sealed class WindowsToolTip : Form
                 Show();
         }
 
+        // Windows demotes HWNDs inside the topmost band over time (other topmost chrome,
+        // Hide/Show cycles); the widget and the recording bar re-assert natively for the
+        // same reason. A demoted tooltip that overlaps its anchor renders partially behind
+        // the dock's own paint, leaving only a textless sliver visible.
+        User32.SetWindowPos(Handle, User32.HWND_TOPMOST, 0, 0, 0, 0,
+            User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_NOACTIVATE);
+
         try
         {
             CyberSnap.Native.Dwm.TrySetWindowCornerPreference(Handle, CyberSnap.Native.Dwm.DWMWCP_ROUND);
@@ -206,6 +213,9 @@ public sealed class WindowsToolTip : Form
         catch { }
 
         Invalidate();
+        // A freshly shown tooltip composites an empty surface until its first WM_PAINT;
+        // when the overlay thread stalls that empty box lingers on screen. Paint now.
+        Update();
     }
 
     protected override void OnPaint(PaintEventArgs e)
