@@ -126,6 +126,19 @@ public sealed class WindowsToolTip : Form
         var measureFlags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
         if (!singleLine)
             measureFlags |= TextFormatFlags.WordBreak;
+
+        // Create the handle ON the anchor's monitor before Show: otherwise the handle is
+        // born when Show places the window, and landing on a monitor whose DPI differs
+        // from the owner's fires WM_DPICHANGED — .NET 10 PMv2 rescales the form while the
+        // text keeps the thread's fixed metrics, inflating/offsetting the box on the 150%
+        // monitor (the confirm-dock tooltips clipped and the toolbar tooltips drifted
+        // left, 150% only). Control.CreateControl skips invisible controls; the Handle
+        // getter forces creation.
+        if (!IsHandleCreated)
+        {
+            Bounds = new Rectangle(anchorScreenBounds.Left, anchorScreenBounds.Top, 1, 1);
+            _ = Handle;
+        }
         var preferred = TextRenderer.MeasureText(text, _font, measureSize, measureFlags);
         _title = null;
         _description = null;
