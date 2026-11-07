@@ -13,6 +13,55 @@ using Forms = System.Windows.Forms;
 
 internal static partial class Program
 {
+    private static void CheckWidgetSessionRestore(SettingsService settings)
+    {
+        var app = (CyberSnap.App)Application.Current;
+        settings.Settings.WidgetHideDuringCapture = true;
+        settings.Settings.DisableAnimations = true;
+        var widget = new CaptureWidgetWindow(settings) { IsHitTestVisible = false };
+        SetZoomAppField(app, "_widgetWindow", widget);
+        try
+        {
+            widget.Show(); Pump();
+            GetField<DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
+
+            SetZoomAppField(app, "_isCapturing", 1);
+            Call(widget, "HideForExternalSession", app);
+            Assert(!widget.IsVisible && widget.Opacity == 0,
+                "capture hides the widget before the overlay opens");
+
+            // The previous capture ends and starts a deferred render-stage restore.
+            // A new capture then claims the slot before that callback executes.
+            SetZoomAppField(app, "_isCapturing", 0);
+            Call(widget, "FinishSessionRestore");
+            SetZoomAppField(app, "_isCapturing", 1);
+            Call(widget, "HideForExternalSession", app);
+            Pump();
+            Assert(!widget.IsVisible && widget.Opacity == 0 && GetField<bool>(widget, "_awaitingSessionRestore"),
+                "a queued restore cannot reveal the peek over a new capture");
+
+            // Also cover a slot claim that races ahead of the widget's hide dispatch.
+            SetZoomAppField(app, "_isCapturing", 0);
+            Call(widget, "FinishSessionRestore");
+            SetZoomAppField(app, "_isCapturing", 1);
+            Pump();
+            Assert(!widget.IsVisible && widget.Opacity == 0 && GetField<bool>(widget, "_awaitingSessionRestore"),
+                "render-stage restore rechecks whether capture became busy");
+
+            SetZoomAppField(app, "_isCapturing", 0);
+            Call(widget, "FinishSessionRestore");
+            Pump();
+            Assert(widget.IsVisible && widget.Opacity == 1 && !GetField<bool>(widget, "_awaitingSessionRestore"),
+                "the widget returns after the capture session ends");
+        }
+        finally
+        {
+            SetZoomAppField(app, "_isCapturing", 0);
+            SetZoomAppField(app, "_widgetWindow", null);
+            widget.Close(); Pump();
+        }
+    }
+
     private static void CheckWidgetCollapseAppearance(SettingsService settings, string? renders)
     {
         var motion = typeof(CaptureWidgetWindow).Assembly.GetType("CyberSnap.UI.Motion")!

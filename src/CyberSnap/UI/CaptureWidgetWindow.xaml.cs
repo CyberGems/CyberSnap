@@ -41,6 +41,7 @@ public partial class CaptureWidgetWindow : Window
     private readonly DispatcherTimer _sessionRestorePollTimer;
     private bool _awaitingSessionRestore;
     private bool _sessionRestoreInProgress;
+    private int _sessionRestoreGeneration;
 
     // Topmost watchdog: WPF sets WS_EX_TOPMOST once, but Windows can demote the HWND
     // within the topmost Z-band over time (other topmost windows, UAC/fullscreen,
@@ -1757,7 +1758,7 @@ public partial class CaptureWidgetWindow : Window
 
     internal void HideForExternalSession(App app)
     {
-        if (!IsVisible) return;
+        if (!IsVisible && !_awaitingSessionRestore) return;
         CancelHideLaunch();
         CancelSessionRestore();
         PrepareForSession();
@@ -1781,6 +1782,9 @@ public partial class CaptureWidgetWindow : Window
 
     private void CancelSessionRestore()
     {
+        // A queued render callback from an earlier session must not reveal the widget
+        // after a new capture has hidden it.
+        _sessionRestoreGeneration++;
         _awaitingSessionRestore = false;
         _sessionRestoreInProgress = false;
         _sessionRestorePollTimer.Stop();
@@ -1812,6 +1816,7 @@ public partial class CaptureWidgetWindow : Window
 
         if (!_awaitingSessionRestore || _sessionRestoreInProgress) return;
         _sessionRestoreInProgress = true;
+        int generation = _sessionRestoreGeneration;
 
         _hoverDelayTimer.Stop();
         _collapseTimer.Stop();
@@ -1835,6 +1840,16 @@ public partial class CaptureWidgetWindow : Window
 
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
+            if (!_awaitingSessionRestore || generation != _sessionRestoreGeneration)
+                return;
+            if (System.Windows.Application.Current is App currentApp
+                && (currentApp.IsSessionBusy() || currentApp.IsSessionHandoffPending))
+            {
+                _sessionRestoreInProgress = false;
+                PrepareForSession();
+                return;
+            }
+
             try
             {
                 if (!IsVisible)
@@ -1847,16 +1862,24 @@ public partial class CaptureWidgetWindow : Window
             {
                 AppDiagnostics.LogWarning("widget.restore-position", ex.Message, ex);
             }
-            finally
+
+            if (!_awaitingSessionRestore || generation != _sessionRestoreGeneration)
+                return;
+            if (System.Windows.Application.Current is App restoringApp
+                && (restoringApp.IsSessionBusy() || restoringApp.IsSessionHandoffPending))
             {
-                // Visibility is more important than perfect placement. Never let a transient
-                // DPI/work-area failure leave a live widget permanently transparent.
-                Opacity = 1;
-                if (IsVisible)
-                    CancelSessionRestore();
-                else
-                    _sessionRestoreInProgress = false; // polling will retry
+                _sessionRestoreInProgress = false;
+                PrepareForSession();
+                return;
             }
+
+            // Visibility is more important than perfect placement. Never let a transient
+            // DPI/work-area failure leave a live widget permanently transparent.
+            Opacity = 1;
+            if (IsVisible)
+                CancelSessionRestore();
+            else
+                _sessionRestoreInProgress = false; // polling will retry
         }), DispatcherPriority.Render);
     }
 
