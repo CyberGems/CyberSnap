@@ -674,7 +674,7 @@
                              so the breathing room stays under the pills instead of mid-card. -->
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                       PanningMode="VerticalOnly" Focusable="False" Margin="0,8,0,0">
-                            <StackPanel x:Name="OptionalActionsSection" VerticalAlignment="Top">
+                            <StackPanel x:Name="OptionalActionsSection" VerticalAlignment="Top" Margin="0,0,4,0">
                                 <TextBlock x:Name="OptionalActionsHeaderLabel"
                                            Text="You can also:"
                                            FontSize="11.5" FontWeight="SemiBold"
