@@ -41,6 +41,11 @@ internal static partial class Program
                     preview.Show(); Pump();
                     object first = Field(preview, "_active");
                     CheckActionGrid(preview, language);
+                    double initialHeight = preview.Height;
+                    preview.Height = preview.MinHeight; Pump();
+                    CheckShortActionsScrollbar(preview, language, scale);
+                    Render(preview, renders, $"preview-actions-short-{language}-{scale}.png");
+                    preview.Height = initialHeight; Pump();
                     CheckPreviewCenter(preview, "initial small capture");
                     preview.WindowState = WindowState.Maximized; Pump();
                     CheckPreviewCenter(preview, "maximized small capture");
@@ -176,6 +181,22 @@ internal static partial class Program
                 $"{button.Name} uses the larger label without clipping in {language}: content {content.DesiredSize.Width:0.0}, button {button.ActualWidth:0.0}");
         }
         preview.UpdateLayout();
+    }
+
+    private static void CheckShortActionsScrollbar(CapturePreviewDialog preview, string language, double scale)
+    {
+        var scroller = Element<ScrollViewer>(preview, "OptionalActionsScroller");
+        Assert(scroller.ComputedVerticalScrollBarVisibility == Visibility.Visible
+            && scroller.ExtentHeight > scroller.ViewportHeight,
+            $"short preview keeps optional actions scrollable in {language}, UI={scale}");
+        var bar = VisualDescendants(scroller).OfType<ScrollBar>()
+            .Single(b => b.Orientation == Orientation.Vertical && b.Visibility == Visibility.Visible);
+        var thumb = VisualDescendants(bar).OfType<Thumb>().Single();
+        var edit = Element<Button>(preview, "EditBtn");
+        var editBounds = edit.TransformToAncestor(scroller).TransformBounds(new Rect(edit.RenderSize));
+        var thumbBounds = thumb.TransformToAncestor(scroller).TransformBounds(new Rect(thumb.RenderSize));
+        Assert(thumbBounds.Left - editBounds.Right >= 8,
+            $"short preview leaves room between action buttons and the scroll thumb in {language}, UI={scale}");
     }
 
     private static void CheckPreviewCenter(CapturePreviewDialog preview, string context)
