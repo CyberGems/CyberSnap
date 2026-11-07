@@ -21,39 +21,39 @@ public static class ScreenCapture
         return new Rectangle(left, top, width, height);
     }
 
-    public static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreens(bool includeCursor = false)
+    public static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreens(bool includeCursor = false, long frameNotBefore = 0)
     {
         var bounds = GetVirtualScreenBounds();
-        return CaptureWindowExclusion.RunWithoutIntersectingWindows(bounds, () => CaptureAllScreensCore(includeCursor, bounds));
+        return CaptureWindowExclusion.RunWithoutIntersectingWindows(bounds, () => CaptureAllScreensCore(includeCursor, bounds, frameNotBefore));
     }
 
-    private static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreensCore(bool includeCursor, Rectangle bounds)
+    private static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreensCore(bool includeCursor, Rectangle bounds, long frameNotBefore)
     {
         var bitmap = CapturePreferDxgi(bounds, includeCursor,
-            () => DxgiScreenCapture.CaptureAllScreens().Bitmap,
+            () => DxgiScreenCapture.CaptureAllScreens(frameNotBefore).Bitmap,
             () => CaptureAllScreensLegacy(includeCursor, bounds).Bitmap);
         return (bitmap, bounds);
     }
 
     /// <summary>Captures only the monitor that currently contains the cursor.</summary>
-    public static (Bitmap Bitmap, Rectangle Bounds) CaptureCurrentScreen(bool includeCursor = false)
+    public static (Bitmap Bitmap, Rectangle Bounds) CaptureCurrentScreen(bool includeCursor = false, long frameNotBefore = 0)
     {
         Screen screen;
         try { screen = Screen.FromPoint(System.Windows.Forms.Cursor.Position); }
         catch { screen = Screen.PrimaryScreen ?? Screen.AllScreens[0]; }
 
         var bounds = screen.Bounds;
-        var bmp = CaptureRegion(bounds, includeCursor);
+        var bmp = CaptureRegion(bounds, includeCursor, frameNotBefore);
         return (bmp, bounds);
     }
 
-    public static Bitmap CaptureRegion(Rectangle region, bool includeCursor = false)
-        => CaptureWindowExclusion.RunWithoutIntersectingWindows(region, () => CaptureRegionCore(region, includeCursor));
+    public static Bitmap CaptureRegion(Rectangle region, bool includeCursor = false, long frameNotBefore = 0)
+        => CaptureWindowExclusion.RunWithoutIntersectingWindows(region, () => CaptureRegionCore(region, includeCursor, frameNotBefore));
 
-    private static Bitmap CaptureRegionCore(Rectangle region, bool includeCursor)
+    private static Bitmap CaptureRegionCore(Rectangle region, bool includeCursor, long frameNotBefore)
     {
         return CapturePreferDxgi(region, includeCursor,
-            () => DxgiScreenCapture.CaptureRegion(region),
+            () => DxgiScreenCapture.CaptureRegion(region, frameNotBefore),
             () => CaptureRegionLegacy(region, includeCursor));
     }
 

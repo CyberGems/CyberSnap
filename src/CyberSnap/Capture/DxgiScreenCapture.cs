@@ -34,7 +34,7 @@ internal static class DxgiScreenCapture
         }
     }
 
-    public static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreens()
+    public static (Bitmap Bitmap, Rectangle Bounds) CaptureAllScreens(long frameNotBefore = 0)
     {
         int left = User32.GetSystemMetrics(User32.SM_XVIRTUALSCREEN);
         int top = User32.GetSystemMetrics(User32.SM_YVIRTUALSCREEN);
@@ -42,17 +42,18 @@ internal static class DxgiScreenCapture
         int height = User32.GetSystemMetrics(User32.SM_CYVIRTUALSCREEN);
 
         var bounds = new Rectangle(left, top, width, height);
-        return (CaptureRegion(bounds), bounds);
+        return (CaptureRegion(bounds, frameNotBefore), bounds);
     }
 
-    public static Bitmap CaptureRegion(Rectangle region)
+    public static Bitmap CaptureRegion(Rectangle region, long frameNotBefore = 0)
     {
         var deviceBundle = GetOrCreateDeviceBundle();
+        Bitmap? result = null;
         try
         {
             lock (deviceBundle.CaptureSyncRoot)
             {
-                var result = new Bitmap(region.Width, region.Height, PixelFormat.Format32bppArgb);
+                result = new Bitmap(region.Width, region.Height, PixelFormat.Format32bppArgb);
 
                 var outputs = deviceBundle.GetOutputs();
                 if (!IsRegionFullyCoveredByOutputs(region, outputs.Select(output => ToRectangle(output.Description.DesktopCoordinates))))
@@ -66,7 +67,7 @@ internal static class DxgiScreenCapture
                         continue;
 
                     var duplication = output.GetOrCreateDuplication(deviceBundle.Device);
-                    using var frame = TryAcquireFrame(duplication);
+                    using var frame = TryAcquireFrame(duplication, frameNotBefore);
                     if (frame is null)
                         throw new DxgiFrameTimeoutException();
                     using var desktopTexture = frame.Resource.QueryInterface<ID3D11Texture2D>();
@@ -92,6 +93,7 @@ internal static class DxgiScreenCapture
         }
         catch (DxgiFrameTimeoutException)
         {
+            result?.Dispose();
             // Static desktop: the duplication is healthy, only quiet. Keep the bundle cached —
             // the caller falls back to BitBlt for this call, and recreating the whole device
             // would tax the next capture instead.
@@ -99,6 +101,7 @@ internal static class DxgiScreenCapture
         }
         catch
         {
+            result?.Dispose();
             ResetCache();
             throw;
         }
@@ -192,9 +195,15 @@ internal static class DxgiScreenCapture
         return outputs;
     }
 
-    private static FrameBundle? TryAcquireFrame(IDXGIOutputDuplication duplication)
+    internal static bool IsFrameCurrent(long lastPresentTime, long frameNotBefore)
+        => frameNotBefore == 0 || lastPresentTime >= frameNotBefore;
+
+    private static FrameBundle? TryAcquireFrame(IDXGIOutputDuplication duplication, long frameNotBefore)
     {
-        var result = duplication.AcquireNextFrame(AcquireTimeoutMs, out _, out IDXGIResource resource);
+        // After the composition barrier, use an already-presented frame or BitBlt.
+        // A static monitor may have no new DXGI frame; waiting another 60 ms buys nothing.
+        var result = duplication.AcquireNextFrame(frameNotBefore == 0 ? (uint)AcquireTimeoutMs : 0u,
+            out var info, out IDXGIResource resource);
         if (result == Vortice.DXGI.ResultCode.WaitTimeout)
         {
             resource?.Dispose();
@@ -202,7 +211,12 @@ internal static class DxgiScreenCapture
         }
 
         result.CheckError();
-        return new FrameBundle(duplication, resource);
+        var frame = new FrameBundle(duplication, resource);
+        if (IsFrameCurrent(info.LastPresentTime, frameNotBefore)) return frame;
+        // Includes pointer-only updates (LastPresentTime == 0). Never return an
+        // unverified image that could still contain chrome hidden for this capture.
+        frame.Dispose();
+        return null;
     }
 
     private static ID3D11Texture2D CreateStagingTexture(ID3D11Device device, int width, int height)

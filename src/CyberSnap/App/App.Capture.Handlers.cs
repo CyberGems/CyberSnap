@@ -51,9 +51,20 @@ public partial class App
                 copiedEarly,
                 captureKind);
             dialog.SessionCompleted += CompletePreviewSession;
+            // Keep the widget hidden while the new Preview is still transparent and
+            // being centered. Revealing it during those topmost/DPI transitions makes
+            // the peek flash behind the new window.
+            bool slotReleased = false;
+            void ReleaseCaptureSlot()
+            {
+                if (slotReleased) return;
+                slotReleased = true;
+                ResetCapturing();
+            }
+            dialog.ShownOnScreen += ReleaseCaptureSlot;
+            dialog.Closed += (_, _) => ReleaseCaptureSlot();
             ShowCapturePreviewDialog(dialog);
             _previewHiddenForCapture = false;
-            ResetCapturing();
         }
         catch (Exception ex)
         {

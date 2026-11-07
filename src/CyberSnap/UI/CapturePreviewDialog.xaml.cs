@@ -52,6 +52,7 @@ namespace CyberSnap.UI
         private bool _extractTextRunning;
         private long _suppressWindowMotionUntilTicks;
         private bool _didCenterOnOpen;
+        internal event Action? ShownOnScreen;
         private bool _isSideBySide = true;
         private bool _isClosing;
         private int _pillSimToken;
@@ -436,6 +437,8 @@ namespace CyberSnap.UI
                 catch { /* keep current position */ }
 
                 Opacity = 1;
+                Dispatcher.BeginInvoke(new Action(() => ShownOnScreen?.Invoke()),
+                    DispatcherPriority.ApplicationIdle);
                 // Pills first: if a completion simulation starts, the countdown waits for it
                 // (InitAutoCloseCountdown no-ops while _pillSimRunning and is re-run on finish).
                 BeginDeferredPillCompletionSimulation();

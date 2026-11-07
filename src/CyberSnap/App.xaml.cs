@@ -72,6 +72,7 @@ public partial class App : Application
         if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0)
             return false;
 
+        _captureFrameNotBefore = 0;
         HideActivePreviewForCapture();
         HideWidgetForCaptureIfNeeded();
         return true;
@@ -123,21 +124,41 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogWarning("preview.restore-after-capture", ex.Message, ex); }
     }
 
+    private long _captureFrameNotBefore;
+
     private void RunAfterPreviewChromeHidden(Action action)
     {
-        if (!_previewHiddenForCapture)
+        // The overlay paints a desktop frame captured on another thread. A WPF Hide()
+        // can precede the corresponding DWM frame, leaving the widget baked into the
+        // overlay background even though its own window never becomes visible again.
+        bool widgetHidden = _settingsService?.Settings.WidgetHideDuringCapture == true
+            && _widgetWindow is { IsVisible: false };
+        if (!_previewHiddenForCapture && !widgetHidden)
         {
             action();
             return;
         }
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
-        timer.Tick += (_, _) =>
+        // Drain WPF's queued work before waiting for this process's DWM present.
+        // The timestamp also prevents a cached DXGI frame from undoing the hide.
+        _ = Dispatcher.BeginInvoke(new Action(async () =>
         {
-            timer.Stop();
+            try
+            {
+                int result = await System.Threading.Tasks.Task.Run(Native.Dwm.DwmFlush);
+                System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(result);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("capture.composition-sync", ex.Message, ex);
+                // Preserve the proven conservative path if composition is unavailable.
+                await System.Threading.Tasks.Task.Delay(150);
+            }
+            // Only accept DXGI images presented after completion of the barrier.
+            // Earlier images can predate the hide even when another desktop area changed.
+            _captureFrameNotBefore = System.Diagnostics.Stopwatch.GetTimestamp();
             action();
-        };
-        timer.Start();
+        }), DispatcherPriority.ContextIdle);
     }
 
     /// <summary>

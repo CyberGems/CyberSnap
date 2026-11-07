@@ -30,6 +30,12 @@ internal static partial class Program
             Assert(!widget.IsVisible && widget.Opacity == 0,
                 "capture hides the widget before the overlay opens");
 
+            bool desktopFrameStarted = false;
+            CallZoomApp(app, "RunAfterPreviewChromeHidden", new Action(() => desktopFrameStarted = true));
+            Assert(!desktopFrameStarted,
+                "the desktop frame waits for the hidden widget to leave composition");
+            WaitForWidgetAnimation(() => desktopFrameStarted);
+
             // The previous capture ends and starts a deferred render-stage restore.
             // A new capture then claims the slot before that callback executes.
             SetZoomAppField(app, "_isCapturing", 0);
@@ -50,15 +56,100 @@ internal static partial class Program
 
             SetZoomAppField(app, "_isCapturing", 0);
             Call(widget, "FinishSessionRestore");
-            Pump();
+            var hwnd = new WindowInteropHelper(widget).Handle;
+            var inspectionRegion = CreateRectRgn(0, 0, 0, 0);
+            try
+            {
+                Assert(widget.IsVisible && widget.Opacity == 0 && GetWindowRgn(hwnd, inspectionRegion) == 1,
+                    "the remapped widget stays clipped while its WPF surface settles");
+            }
+            finally { DeleteObject(inspectionRegion); }
+            WaitForWidgetAnimation(() => widget.IsVisible && widget.Opacity == 1);
             Assert(widget.IsVisible && widget.Opacity == 1 && !GetField<bool>(widget, "_awaitingSessionRestore"),
                 "the widget returns after the capture session ends");
+            inspectionRegion = CreateRectRgn(0, 0, 0, 0);
+            try { Assert(GetWindowRgn(hwnd, inspectionRegion) == 0, "the widget region is fully restored"); }
+            finally { DeleteObject(inspectionRegion); }
+
+            var dxgi = typeof(CyberSnap.App).Assembly.GetType("CyberSnap.Capture.DxgiScreenCapture")!;
+            var currentFrame = dxgi.GetMethod("IsFrameCurrent", BindingFlags.Static | BindingFlags.NonPublic)!;
+            Assert(!(bool)currentFrame.Invoke(null, new object[] { 99L, 100L })!
+                && !(bool)currentFrame.Invoke(null, new object[] { 0L, 100L })!
+                && (bool)currentFrame.Invoke(null, new object[] { 101L, 100L })!,
+                "capture rejects old and pointer-only DXGI frames after the composition barrier");
+
+            if (Environment.GetEnvironmentVariable("CYBERSNAP_CHECK_DESKTOP_PIXELS") == "1")
+                CheckWidgetDesktopPixels(app, widget);
         }
         finally
         {
             SetZoomAppField(app, "_isCapturing", 0);
             SetZoomAppField(app, "_widgetWindow", null);
             widget.Close(); Pump();
+        }
+    }
+
+    private static void CheckWidgetDesktopPixels(CyberSnap.App app, CaptureWidgetWindow widget)
+    {
+        var dwm = typeof(CyberSnap.App).Assembly.GetType("CyberSnap.Native.Dwm")!
+            .GetMethod("DwmFlush", BindingFlags.Public | BindingFlags.Static)!;
+        foreach (var screen in Forms.Screen.AllScreens)
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            Call(widget, "PositionWindowOnScreen", screen);
+            Pump();
+            var grip = Element<Border>(widget, "PeekGrip");
+            var point = grip.PointToScreen(new System.Windows.Point(grip.ActualWidth / 2, grip.ActualHeight / 2));
+            var sample = new Drawing.Rectangle((int)point.X, (int)point.Y, 1, 1);
+            using var backdrop = new Forms.Form
+            {
+                FormBorderStyle = Forms.FormBorderStyle.None, ShowInTaskbar = false,
+                StartPosition = Forms.FormStartPosition.Manual, TopMost = true,
+                Bounds = new Drawing.Rectangle(sample.X - 10, sample.Y - 10, 21, 21),
+                BackColor = Drawing.Color.Magenta
+            };
+            backdrop.Show();
+            widget.AssertWidgetTopmost();
+            Pump();
+            Marshal.ThrowExceptionForHR((int)dwm.Invoke(null, null)!);
+            using (var visible = CyberSnap.Capture.ScreenCapture.CaptureRegion(sample,
+                frameNotBefore: Stopwatch.GetTimestamp()))
+                Assert(visible.GetPixel(0, 0).ToArgb() != Drawing.Color.Magenta.ToArgb(),
+                    "desktop pixel oracle sees the visible peek", false);
+
+            SetZoomAppField(app, "_isCapturing", 1);
+            Call(widget, "HideForExternalSession", app);
+            bool completed = false;
+            Exception? failure = null;
+            bool fixedDelayReference = attempt % 2 == 1;
+            var elapsed = Stopwatch.StartNew();
+            Action capturePixel = () =>
+            {
+                try
+                {
+                    long barrierMs = elapsed.ElapsedMilliseconds;
+                    var barrier = fixedDelayReference ? 0 : (long)ZoomAppField(app, "_captureFrameNotBefore")!;
+                    using var hidden = CyberSnap.Capture.ScreenCapture.CaptureRegion(sample, frameNotBefore: barrier);
+                    Assert(hidden.GetPixel(0, 0).ToArgb() == Drawing.Color.Magenta.ToArgb(),
+                        "the captured desktop contains the backdrop instead of the peek", false);
+                    Console.WriteLine($"PASS: clean widget capture on {screen.DeviceName}, fixed-delay reference={fixedDelayReference}, barrier {barrierMs} ms, capture {elapsed.ElapsedMilliseconds - barrierMs} ms.");
+                }
+                catch (Exception ex) { failure = ex; }
+                finally { completed = true; }
+            };
+            if (fixedDelayReference)
+            {
+                var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+                timer.Tick += (_, _) => { timer.Stop(); capturePixel(); };
+                timer.Start();
+            }
+            else
+                CallZoomApp(app, "RunAfterPreviewChromeHidden", capturePixel);
+            WaitForWidgetAnimation(() => completed);
+            if (failure is not null) throw failure;
+            SetZoomAppField(app, "_isCapturing", 0);
+            Call(widget, "FinishSessionRestore");
+            WaitForWidgetAnimation(() => !GetField<bool>(widget, "_awaitingSessionRestore"));
         }
     }
 

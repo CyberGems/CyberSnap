@@ -42,7 +42,7 @@ public partial class App
                         // Let the tray/widget dismissal reach the compositor before freezing the monitor.
                         Thread.Sleep(100);
                         var bounds = Forms.Screen.FromPoint(pointer).Bounds;
-                        var frozen = ScreenCapture.CaptureRegion(bounds);
+                        var frozen = ScreenCapture.CaptureRegion(bounds, frameNotBefore: _captureFrameNotBefore);
                         StandaloneZoomForm form;
                         try { form = new StandaloneZoomForm(frozen, bounds, pointer, options); }
                         catch { frozen.Dispose(); throw; }

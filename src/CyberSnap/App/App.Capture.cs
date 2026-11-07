@@ -409,7 +409,7 @@ public partial class App
                 bool showCursor = false;
                 _settingsService!.Load();
                 var captureMode = _settingsService.Settings.ScrollingCaptureMode;
-                var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
+                var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor, _captureFrameNotBefore);
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService.Settings.ShowSelectionSize;
                 var form = new ScrollingCaptureForm(selectionScreenshot, bounds, showCursor,
                     _settingsService.Settings.ShowCaptureMagnifier,
@@ -664,8 +664,8 @@ public partial class App
                 var (bmp, bounds) = zoomCapture is not null
                     ? (zoomCapture.Frame, zoomCapture.Bounds)
                     : _settingsService.Settings.OverlayCaptureAllMonitors
-                        ? ScreenCapture.CaptureAllScreens(showCursor)
-                        : ScreenCapture.CaptureCurrentScreen(showCursor);
+                        ? ScreenCapture.CaptureAllScreens(showCursor, _captureFrameNotBefore)
+                        : ScreenCapture.CaptureCurrentScreen(showCursor, _captureFrameNotBefore);
                 screenshot = bmp;
                 var captureBounds = bounds;
 

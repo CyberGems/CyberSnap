@@ -4,6 +4,9 @@ namespace CyberSnap.Native;
 
 internal static partial class Dwm
 {
+    [LibraryImport("dwmapi.dll")]
+    public static partial int DwmFlush();
+
     public const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     public const int DWMWA_CLOAK = 13;

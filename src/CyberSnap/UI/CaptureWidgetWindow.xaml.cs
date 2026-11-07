@@ -42,6 +42,7 @@ public partial class CaptureWidgetWindow : Window
     private bool _awaitingSessionRestore;
     private bool _sessionRestoreInProgress;
     private int _sessionRestoreGeneration;
+    private bool _restoreRegionClipped;
 
     // Topmost watchdog: WPF sets WS_EX_TOPMOST once, but Windows can demote the HWND
     // within the topmost Z-band over time (other topmost windows, UAC/fullscreen,
@@ -67,6 +68,7 @@ public partial class CaptureWidgetWindow : Window
     // Expand/collapse: short and snappy so the panel feels responsive, not ornamental.
     private const int ExpandAnimMs = 110;
     private const int CollapseAnimMs = 90;
+    private const int SessionRestoreSettleMs = 100;
 
     private int _layoutAnimGeneration;
     private bool _displayEventsHooked;
@@ -1756,6 +1758,37 @@ public partial class CaptureWidgetWindow : Window
         Hide();
     }
 
+    private void ClipRestoreWindow()
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        var emptyRegion = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
+        if (emptyRegion == IntPtr.Zero) return;
+        if (Native.User32.SetWindowRgn(hwnd, emptyRegion, true) != 0)
+        {
+            // SetWindowRgn owns emptyRegion after success.
+            _restoreRegionClipped = true;
+            return;
+        }
+
+        Native.Gdi32.DeleteObject(emptyRegion);
+        AppDiagnostics.LogWarning("widget.restore-clip", "Windows could not clip the widget before Show.");
+    }
+
+    private bool RevealRestoreWindow()
+    {
+        if (!_restoreRegionClipped) return true;
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero || Native.User32.SetWindowRgn(hwnd, IntPtr.Zero, true) == 0)
+        {
+            AppDiagnostics.LogWarning("widget.restore-clip", "Windows could not reveal the widget window region.");
+            return false;
+        }
+
+        _restoreRegionClipped = false;
+        return true;
+    }
+
     internal void HideForExternalSession(App app)
     {
         if (!IsVisible && !_awaitingSessionRestore) return;
@@ -1825,6 +1858,7 @@ public partial class CaptureWidgetWindow : Window
         {
             // Still Hidden + Opacity 0: lock peek geometry before the first composed frame.
             CollapseImmediately();
+            ClipRestoreWindow();
             if (!IsVisible)
                 Show();
             AssertWidgetTopmost();
@@ -1873,13 +1907,49 @@ public partial class CaptureWidgetWindow : Window
                 return;
             }
 
-            // Visibility is more important than perfect placement. Never let a transient
-            // DPI/work-area failure leave a live widget permanently transparent.
-            Opacity = 1;
-            if (IsVisible)
-                CancelSessionRestore();
-            else
-                _sessionRestoreInProgress = false; // polling will retry
+            // Show() remaps a layered HWND. Give WPF/DWM a frame to settle its native
+            // bounds at the current monitor DPI before revealing the peek; otherwise
+            // the cached surface can flash at the old size during the first frame.
+            var settleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(SessionRestoreSettleMs) };
+            settleTimer.Tick += (_, _) =>
+            {
+                settleTimer.Stop();
+                if (!_awaitingSessionRestore || generation != _sessionRestoreGeneration)
+                    return;
+                if (System.Windows.Application.Current is App settledApp
+                    && (settledApp.IsSessionBusy() || settledApp.IsSessionHandoffPending))
+                {
+                    _sessionRestoreInProgress = false;
+                    PrepareForSession();
+                    return;
+                }
+
+                if (!IsVisible)
+                {
+                    _sessionRestoreInProgress = false; // polling will retry
+                    return;
+                }
+
+                Opacity = 1;
+                _ = Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!_awaitingSessionRestore || generation != _sessionRestoreGeneration)
+                        return;
+                    if (System.Windows.Application.Current is App revealApp
+                        && (revealApp.IsSessionBusy() || revealApp.IsSessionHandoffPending))
+                    {
+                        _sessionRestoreInProgress = false;
+                        PrepareForSession();
+                        return;
+                    }
+
+                    if (RevealRestoreWindow())
+                        CancelSessionRestore();
+                    else
+                        _sessionRestoreInProgress = false; // polling retries the reveal
+                }), DispatcherPriority.Render);
+            };
+            settleTimer.Start();
         }), DispatcherPriority.Render);
     }
 
