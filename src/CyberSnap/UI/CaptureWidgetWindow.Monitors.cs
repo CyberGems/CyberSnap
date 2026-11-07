@@ -16,6 +16,26 @@ public partial class CaptureWidgetWindow
     private Rect _dragWorkingArea;
     private DpiScale _dragDpi;
     private bool _dpiPlacementPending;
+    private Native.User32.RECT? _monitorMoveBounds;
+
+    private bool MoveToMonitor(IntPtr hwnd, int left, int top, int width, int height, bool keepBounds)
+    {
+        var previousBounds = _monitorMoveBounds;
+        _monitorMoveBounds = new Native.User32.RECT
+        {
+            Left = left, Top = top, Right = left + width, Bottom = top + height
+        };
+        try
+        {
+            return Native.User32.SetWindowPos(hwnd, IntPtr.Zero, left, top, width, height,
+                Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER);
+        }
+        finally
+        {
+            if (!keepBounds)
+                _monitorMoveBounds = previousBounds;
+        }
+    }
 
     private static System.Drawing.Rectangle GetPhysicalWorkingArea(Forms.Screen screen)
         => PopupWindowHelper.TryGetNativeMonitorInfo(screen, out _, out var work) ? work : screen.WorkingArea;

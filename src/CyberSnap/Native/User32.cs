@@ -188,6 +188,7 @@ internal static partial class User32
     public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_NOOWNERZORDER = 0x0200;
     public const int WM_ACTIVATE = 0x0006;
+    public const int WM_WINDOWPOSCHANGING = 0x0046;
     public const int WM_WINDOWPOSCHANGED = 0x0047;
     public const uint ASFW_ANY = 0xFFFFFFFF;
 
@@ -293,6 +294,14 @@ internal static partial class User32
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool IsIconic(IntPtr hWnd);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WINDOWPOS
+    {
+        public IntPtr Hwnd, InsertAfter;
+        public int X, Y, Width, Height;
+        public uint Flags;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT

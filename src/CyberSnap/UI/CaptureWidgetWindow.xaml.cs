@@ -594,10 +594,17 @@ public partial class CaptureWidgetWindow : Window
     private void PositionWindowOnScreen(Screen targetScreen)
     {
         if (!IsLoaded) return;
-        if (!TryGetWindowPlacement(_isExpanded, out var left, out var top, out var width, out var height, out var halo, targetScreen))
-            return;
-
-        ApplyWindowPlacement(left, top, width, height, halo, _isExpanded, animate: false);
+        var previousBounds = _monitorMoveBounds;
+        try
+        {
+            if (TryGetWindowPlacement(_isExpanded, out var left, out var top, out var width, out var height,
+                out var halo, targetScreen, keepMoveBounds: true))
+                ApplyWindowPlacement(left, top, width, height, halo, _isExpanded, animate: false);
+        }
+        finally
+        {
+            _monitorMoveBounds = previousBounds;
+        }
     }
 
     /// <summary>
@@ -611,7 +618,8 @@ public partial class CaptureWidgetWindow : Window
         out double width,
         out double height,
         out Thickness halo,
-        Screen? targetScreen = null)
+        Screen? targetScreen = null,
+        bool keepMoveBounds = false)
     {
         left = top = width = height = 0;
         halo = default;
@@ -651,9 +659,9 @@ public partial class CaptureWidgetWindow : Window
                 new Native.User32.POINT(phys.X, phys.Y), Native.User32.MONITOR_DEFAULTTONEAREST);
             if (windowMonitor != targetMonitor)
             {
-                if (!Native.User32.SetWindowPos(hwnd, IntPtr.Zero,
+                if (!MoveToMonitor(hwnd,
                     (int)Math.Round(physicalLeft), (int)Math.Round(physicalTop), (int)physicalWidth, (int)physicalHeight,
-                    Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER))
+                    keepMoveBounds))
                 {
                     AppDiagnostics.LogWarning("widget.monitor-placement", "Unable to move the widget to its target monitor.");
                     return false;
@@ -661,24 +669,23 @@ public partial class CaptureWidgetWindow : Window
             }
         }
 
-        var dpi = VisualTreeHelper.GetDpi(this);
-        // Window.Left/Top use desktop coordinates in the window's render DIPs.
-        // A relative PointFromScreen conversion can observe the native move before
-        // WPF updates Left/Top on .NET 10, shifting placement on mixed-DPI monitors.
-        double correctionX = targetDpi.X / dpi.DpiScaleX;
-        double correctionY = targetDpi.Y / dpi.DpiScaleY;
-        // A programmatic monitor move can update the HWND's DPI before WPF updates
-        // its visual/render DPI. Compensate only for that difference. Once WPF adopts
-        // the new DPI, OnDpiChanged repositions us and these factors become 1 again.
+        // Window bounds are converted by the composition target. Its DPI can
+        // change before the visual tree reports the new scale.
+        var transform = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice;
+        var visualDpi = VisualTreeHelper.GetDpi(this);
+        double scaleX = transform?.M11 ?? visualDpi.DpiScaleX;
+        double scaleY = transform?.M22 ?? visualDpi.DpiScaleY;
+        double correctionX = targetDpi.X / scaleX;
+        double correctionY = targetDpi.Y / scaleY;
         RootGrid.LayoutTransform = new ScaleTransform(UiScale.Current * correctionX, UiScale.Current * correctionY);
         // Inset the content by the same shadow halo used for the physical window bounds.
         // The docked side has no halo, keeping the peek interactive at the screen edge.
         halo = new Thickness(targetHalo.Left * correctionX, targetHalo.Top * correctionY,
             targetHalo.Right * correctionX, targetHalo.Bottom * correctionY);
-        width = physicalWidth / dpi.DpiScaleX;
-        height = physicalHeight / dpi.DpiScaleY;
-        left = physicalLeft / dpi.DpiScaleX;
-        top = physicalTop / dpi.DpiScaleY;
+        width = physicalWidth / scaleX;
+        height = physicalHeight / scaleY;
+        left = physicalLeft / scaleX;
+        top = physicalTop / scaleY;
         return true;
     }
 
@@ -1961,9 +1968,26 @@ public partial class CaptureWidgetWindow : Window
 
     private const int IDC_SIZEALL = 32646;
     private const int WM_SETCURSOR = 0x0020;
+    private const int WM_DPICHANGED = 0x02E0;
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        // The requested rectangle already uses the destination DPI. Keep WPF's
+        // DPI update, but replace Windows' suggested rectangle for this move.
+        if (msg == WM_DPICHANGED && _monitorMoveBounds is { } bounds && lParam != IntPtr.Zero)
+            Marshal.StructureToPtr(bounds, lParam, fDeleteOld: false);
+
+        // WPF can issue separate position and size updates while it switches DPI.
+        if (msg == Native.User32.WM_WINDOWPOSCHANGING && _monitorMoveBounds is { } target)
+        {
+            var position = Marshal.PtrToStructure<Native.User32.WINDOWPOS>(lParam);
+            position.X = target.Left;
+            position.Y = target.Top;
+            position.Width = target.Width;
+            position.Height = target.Height;
+            Marshal.StructureToPtr(position, lParam, fDeleteOld: false);
+        }
+
         if (msg == WM_SETCURSOR && (_isDragging || _isDragArmed))
         {
             var hCursor = LoadCursor(IntPtr.Zero, IDC_SIZEALL);

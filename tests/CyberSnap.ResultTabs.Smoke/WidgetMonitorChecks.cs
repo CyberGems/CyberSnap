@@ -138,7 +138,7 @@ internal static partial class Program
                 Assert(!widget.IsVisible && widget.Opacity == 0, "capture preparation hides the widget", false);
                 SetField(widget, "_awaitingSessionRestore", true);
                 Call(widget, "FinishSessionRestore");
-                Pump();
+                WaitForWidgetAnimation(() => !GetField<bool>(widget, "_awaitingSessionRestore"));
                 Assert(widget.IsVisible && widget.Opacity == 1 && !GetField<bool>(widget, "_isExpanded")
                     && !GetField<bool>(widget, "_awaitingSessionRestore"), "capture completion restores an opaque collapsed widget", false);
                 Assert(Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName == expectedScreen.DeviceName,
