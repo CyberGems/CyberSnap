@@ -1,7 +1,10 @@
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Threading;
+using System.Threading.Tasks;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Services;
 using Point = System.Windows.Point;
 using Forms = System.Windows.Forms;
 
@@ -17,9 +20,14 @@ public partial class CaptureWidgetWindow
     private DpiScale _dragDpi;
     private bool _dpiPlacementPending;
     private Native.User32.RECT? _monitorMoveBounds;
+    private int _peekMoveGeneration;
+    private bool _peekMoveCloaked;
 
-    private bool MoveToMonitor(IntPtr hwnd, int left, int top, int width, int height, bool keepBounds)
+    private bool MoveToMonitor(IntPtr hwnd, int left, int top, int width, int height, bool keepBounds, bool dpiChanges)
     {
+        if (dpiChanges && IsVisible && !_isExpanded && Opacity == 1 && !_peekMoveCloaked)
+            _peekMoveCloaked = Native.Dwm.TrySetCloaked(hwnd, true);
+
         var previousBounds = _monitorMoveBounds;
         _monitorMoveBounds = new Native.User32.RECT
         {
@@ -34,7 +42,35 @@ public partial class CaptureWidgetWindow
         {
             if (!keepBounds)
                 _monitorMoveBounds = previousBounds;
+            if (_peekMoveCloaked)
+                RevealPeekAfterMonitorMove(hwnd, ++_peekMoveGeneration);
         }
+    }
+
+    private void RevealPeekAfterMonitorMove(IntPtr hwnd, int generation)
+    {
+        // Let the DPI placement and WPF render work run first. DWM can otherwise
+        // show the old layered surface at the destination for a frame.
+        _ = Dispatcher.BeginInvoke(new Action(async () =>
+        {
+            if (generation != _peekMoveGeneration) return;
+            try
+            {
+                int result = await Task.Run(Native.Dwm.DwmFlush);
+                System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(result);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("widget.monitor-composition", ex.Message, ex);
+            }
+
+            if (generation == _peekMoveGeneration && new WindowInteropHelper(this).Handle == hwnd)
+            {
+                _peekMoveCloaked = !Native.Dwm.TrySetCloaked(hwnd, false);
+                if (_peekMoveCloaked)
+                    AppDiagnostics.LogWarning("widget.monitor-composition", "Windows could not reveal the moved widget.");
+            }
+        }), DispatcherPriority.ContextIdle);
     }
 
     private static System.Drawing.Rectangle GetPhysicalWorkingArea(Forms.Screen screen)

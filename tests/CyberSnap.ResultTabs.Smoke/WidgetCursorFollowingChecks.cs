@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -11,6 +12,9 @@ using Forms = System.Windows.Forms;
 
 internal static partial class Program
 {
+    [DllImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
+    private static extern int ReadWidgetCloak(IntPtr hwnd, int attribute, out int value, int size);
+
     private static void CheckWidgetCursorFollowing(SettingsService settings, string? renders)
     {
         var original = WidgetPreferences.FromSettings(settings.Settings);
@@ -27,6 +31,7 @@ internal static partial class Program
             widget.Show(); Pump(); Pump();
             GetField<DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
             widget.CollapseImmediately();
+            CheckPausedCursorCrossings(widget, screens);
             foreach (var target in screens.Reverse())
             {
                 var cursor = new System.Drawing.Point(target.Bounds.X + target.Bounds.Width / 2, target.Bounds.Y + target.Bounds.Height / 2);
@@ -111,5 +116,42 @@ internal static partial class Program
             Theme.SetMode(AppThemeMode.Dark);
         }
         string Here() => Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName;
+    }
+
+    private static void CheckPausedCursorCrossings(CaptureWidgetWindow widget, Forms.Screen[] screens)
+    {
+        if (screens.Length < 2) return;
+
+        IntPtr hwnd = new WindowInteropHelper(widget).Handle;
+        Call(widget, "PositionWindowOnScreen", screens[0]);
+        WaitForWidgetAnimation(() => !IsCloaked());
+
+        foreach (var target in new[] { screens[1], screens[0], screens[1], screens[0] })
+        {
+            // Let the existing layered frame settle before asking the widget to move.
+            long pausedUntil = Environment.TickCount64 + 250;
+            WaitForWidgetAnimation(() => Environment.TickCount64 >= pausedUntil);
+
+            uint previousDpi = GetDpiForWindow(hwnd);
+            var cursor = new System.Drawing.Point(target.Bounds.X + target.Bounds.Width / 2,
+                target.Bounds.Y + target.Bounds.Height / 2);
+            Call(widget, "FollowCursorOnMonitor", cursor);
+            uint targetDpi = GetDpiForWindow(hwnd);
+            Assert(Forms.Screen.FromHandle(hwnd).DeviceName == target.DeviceName,
+                "a paused cursor crossing reaches the other monitor", false);
+            if (previousDpi != targetDpi)
+                Assert(IsCloaked(), "the old peek surface is hidden during the DPI change", false);
+
+            WaitForWidgetAnimation(() => !IsCloaked());
+            Assert(widget.IsVisible && widget.Opacity == 1
+                && Math.Abs(VisualTreeHelper.GetDpi(widget).PixelsPerInchX - targetDpi) < 0.01,
+                "the peek is revealed at the destination DPI", false);
+        }
+
+        bool IsCloaked()
+        {
+            Marshal.ThrowExceptionForHR(ReadWidgetCloak(hwnd, 14 /* DWMWA_CLOAKED */, out int value, sizeof(int)));
+            return value != 0;
+        }
     }
 }

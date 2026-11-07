@@ -66,10 +66,10 @@ internal static partial class Dwm
     /// Cloaks the HWND so DWM keeps composing it but does not present frames.
     /// Used to hide layout/paint until the editor is complete, then uncloak atomically.
     /// </summary>
-    public static void TrySetCloaked(IntPtr hwnd, bool cloaked)
+    public static bool TrySetCloaked(IntPtr hwnd, bool cloaked)
     {
         int value = cloaked ? 1 : 0;
-        DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, ref value, sizeof(int));
+        return DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, ref value, sizeof(int)) >= 0;
     }
 
     [LibraryImport("dwmapi.dll")]

@@ -659,9 +659,10 @@ public partial class CaptureWidgetWindow : Window
                 new Native.User32.POINT(phys.X, phys.Y), Native.User32.MONITOR_DEFAULTTONEAREST);
             if (windowMonitor != targetMonitor)
             {
+                var currentDpi = VisualTreeHelper.GetDpi(this);
                 if (!MoveToMonitor(hwnd,
                     (int)Math.Round(physicalLeft), (int)Math.Round(physicalTop), (int)physicalWidth, (int)physicalHeight,
-                    keepMoveBounds))
+                    keepMoveBounds, dpiChanges: currentDpi.DpiScaleX != targetDpi.X || currentDpi.DpiScaleY != targetDpi.Y))
                 {
                     AppDiagnostics.LogWarning("widget.monitor-placement", "Unable to move the widget to its target monitor.");
                     return false;
