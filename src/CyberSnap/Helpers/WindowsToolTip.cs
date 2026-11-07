@@ -195,7 +195,13 @@ public sealed class WindowsToolTip : Form
             }
         }
 
-        Bounds = new Rectangle(x, y, width, height);
+        var targetBounds = new Rectangle(x, y, width, height);
+        Bounds = targetBounds;
+        // Moving an existing Form to another monitor raises WM_DPICHANGED inside the
+        // Bounds setter. WinForms then scales the size we already measured in screen
+        // pixels. Set it again after the handle has adopted the destination DPI.
+        if (Bounds != targetBounds)
+            Bounds = targetBounds;
         Region?.Dispose();
         using (var path = WindowsDockRenderer.RoundedRect(new RectangleF(0, 0, width, height), 7f))
             Region = new Region(path);
