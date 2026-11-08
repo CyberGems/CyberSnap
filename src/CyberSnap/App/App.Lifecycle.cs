@@ -517,15 +517,6 @@ public partial class App
     {
         var win = new HistoryWindow(_settingsService!, historyService, imageSearchIndexService);
 
-        var activeEditor = UI.Editor.EditorForm.ActiveInstance;
-        if (activeEditor != null)
-        {
-            var helper = new System.Windows.Interop.WindowInteropHelper(win)
-            {
-                Owner = activeEditor.Handle
-            };
-        }
-
         win.Closed += (_, _) =>
         {
             _historyWindow = null;
@@ -533,6 +524,7 @@ public partial class App
         };
         _historyWindow = win;
         win.Show();
+        win.Activate();
         if (navigateToFilePath != null)
             win.NavigateToItem(navigateToFilePath);
     }
