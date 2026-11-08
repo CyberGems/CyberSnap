@@ -97,6 +97,9 @@ public sealed partial class EditorForm
 
     /// <summary>Compact tool-cell height so the palette does not stretch when the editor is maximized.</summary>
     private const int ToolButtonRowHeight = 66;
+    internal const int StatusControlHeight = 38;
+    private const int TitleStatusIndicatorSize = 14;
+    private const int TitleStatusIndicatorGap = 8;
 
     private void ShowColorPickerPopup(EditorColorButton button)
     {
@@ -223,8 +226,8 @@ public sealed partial class EditorForm
         MinimumSize = new Size(Math.Min(DefaultEditorWidth, work.Width), Math.Min(DefaultEditorHeight, work.Height));
         if (Width > work.Width || Height > work.Height)
             Bounds = NormalizeRestoredBounds(Bounds, work, MinimumSize);
-        _coordsLabel.Height = Math.Max(EditorChromeMetrics.Pixels(18, DeviceDpi), _coordsLabel.Font.Height);
-        int coordsInset = Math.Max(0, (EditorChromeMetrics.Pixels(42, DeviceDpi) - _coordsLabel.Height) / 2);
+        _coordsLabel.Height = Math.Max(EditorChromeMetrics.Pixels(16, DeviceDpi), _coordsLabel.Font.Height);
+        int coordsInset = Math.Max(0, (EditorChromeMetrics.Pixels(StatusControlHeight, DeviceDpi) - _coordsLabel.Height) / 2);
         _coordsLabel.Margin = new Padding(0, coordsInset, 0, coordsInset);
         foreach (var (button, _) in _localizedCommandButtons)
             button.RecalculateWidth();
@@ -374,9 +377,9 @@ public sealed partial class EditorForm
         _statusBarPanel = new DoubleBufferedPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 58,
+            Height = 50,
             BackColor = EditorColors.TitleBar,
-            Padding = new Padding(18, 8, 18, 8),
+            Padding = new Padding(16, 6, 16, 6),
         };
         // Seamless status bar matching Settings window (no top border)
 
@@ -385,7 +388,7 @@ public sealed partial class EditorForm
         {
             LabelText = LocalizationService.Translate("Outline"),
             Checked = _canvas.ShowCaptureFrame,
-            Height = 42,
+            Height = StatusControlHeight,
             Margin = new Padding(0),
         };
         EditorFonts.Bind(_toggleFrameSwitch, dpi => EditorFonts.Fixed("Segoe UI", 9.5f, FontStyle.Bold, dpi));
@@ -403,24 +406,24 @@ public sealed partial class EditorForm
             WrapContents = false,
             AutoSize = true,
             BackColor = Color.Transparent,
-            Margin = new Padding(0, 0, 12, 0),
+            Margin = new Padding(0, 0, 9, 0),
             Visible = SettingsService.LoadStatic()?.EditorShowCoordinates ?? true,
         };
-        var coordsIcon = new DoubleBufferedPanel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
-        coordsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "select", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
+        var coordsIcon = new DoubleBufferedPanel { Width = 16, Height = 16, Margin = new Padding(0, 11, 5, 11) };
+        coordsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "select", coordsIcon.ClientRectangle, EditorColors.Accent, 0f, false);
         _coordsLabel = new DoubleBufferedLabel
         {
             AutoSize = false,
             SingleLine = true,
-            Width = 130,
-            Height = 18,
-            MinimumSize = new Size(130, 0),
+            Width = 114,
+            Height = 16,
+            MinimumSize = new Size(114, 0),
             Text = "0, 0",
             ForeColor = EditorColors.TextPrimary,
             TextAlign = ContentAlignment.MiddleLeft,
-            Margin = new Padding(0, 12, 0, 12),
+            Margin = new Padding(0, 11, 0, 11),
         };
-        EditorFonts.Bind(_coordsLabel, dpi => EditorFonts.Fixed("Consolas", 10.5f, FontStyle.Bold, dpi));
+        EditorFonts.Bind(_coordsLabel, dpi => EditorFonts.Fixed("Consolas", 9f, FontStyle.Bold, dpi));
         coordsPanel.Controls.Add(coordsIcon);
         coordsPanel.Controls.Add(_coordsLabel);
         _coordsPanel = coordsPanel;
@@ -435,9 +438,9 @@ public sealed partial class EditorForm
         {
             IconId = "zoomFit",
             Text = "",
-            Width = 42,
-            Height = 42,
-            Margin = new Padding(8, 0, 0, 0),
+            Width = 38,
+            Height = StatusControlHeight,
+            Margin = new Padding(6, 0, 0, 0),
         };
         _zoomViewBtn.Click += (_, _) =>
         {
@@ -452,8 +455,8 @@ public sealed partial class EditorForm
         {
             LabelText = "",
             Checked = _canvas.FitToWindowOnLoad,
-            Height = 42,
-            Margin = new Padding(12, 0, 0, 0),
+            Height = StatusControlHeight,
+            Margin = new Padding(8, 0, 0, 0),
         };
         EditorFonts.Bind(_toggleFitSwitch, dpi => EditorFonts.Fixed("Segoe UI", 9.5f, FontStyle.Bold, dpi));
         _toggleFitSwitch.CheckedChanged += (_, _) =>
@@ -467,8 +470,8 @@ public sealed partial class EditorForm
         {
             LabelText = "",
             Checked = _canvas.PanModeLockObjects,
-            Height = 42,
-            Margin = new Padding(12, 0, 0, 0),
+            Height = StatusControlHeight,
+            Margin = new Padding(8, 0, 0, 0),
         };
         EditorFonts.Bind(_togglePanLockSwitch, dpi => EditorFonts.Fixed("Segoe UI", 9.5f, FontStyle.Bold, dpi));
         _togglePanLockSwitch.CheckedChanged += (_, _) =>
@@ -480,29 +483,30 @@ public sealed partial class EditorForm
 
         var zoomHost = new EditorZoomHostPanel
         {
-            Width = 230,
-            Height = 42,
+            Width = 200,
+            Height = StatusControlHeight,
             BackColor = EditorColors.TitleBar,
             ColumnCount = 3,
             RowCount = 1,
             Padding = new Padding(8, 3, 8, 3),
             Margin = new Padding(0),
         };
-        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 28));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 24));
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 65));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
         zoomHost.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _zoomLabel = new DoubleBufferedLabel
         {
             Dock = DockStyle.Fill,
-            Width = 65,
+            SingleLine = true,
+            Margin = new Padding(0),
             BackColor = Color.Transparent,
             Text = "100%",
             ForeColor = EditorColors.Accent,
             TextAlign = ContentAlignment.MiddleRight,
         };
-        EditorFonts.Bind(_zoomLabel, dpi => EditorFonts.Fixed("Segoe UI", 10.5f, FontStyle.Bold, dpi));
+        EditorFonts.Bind(_zoomLabel, dpi => EditorFonts.Fixed("Segoe UI", 9f, FontStyle.Bold, dpi));
 
         var zoomIcon = new DoubleBufferedPanel
         {
@@ -512,7 +516,7 @@ public sealed partial class EditorForm
         };
         zoomIcon.Paint += (s, e) =>
         {
-            var rect = new RectangleF((zoomIcon.Width - 18) / 2f, (zoomIcon.Height - 18) / 2f, 18, 18);
+            var rect = new RectangleF((zoomIcon.Width - 16) / 2f, (zoomIcon.Height - 16) / 2f, 16, 16);
             StreamlineIcons.DrawIcon(e.Graphics, "magnifier", rect, EditorColors.TextSecondary, 0f, false);
         };
 
@@ -564,20 +568,20 @@ public sealed partial class EditorForm
             TextAlign = ContentAlignment.MiddleLeft,
             Text = "",
         };
-        EditorFonts.Bind(_liveStatusLabel, dpi => EditorFonts.Fixed("Segoe UI", 10f, FontStyle.Bold, dpi));
+        EditorFonts.Bind(_liveStatusLabel, dpi => EditorFonts.Fixed("Segoe UI", 9f, FontStyle.Bold, dpi));
 
         // Hint area: a lightbulb glyph leads the live hint text. Two-column table keeps the icon
         // pinned left while the label fills (and ellipsizes within) the remaining width.
         var hintIcon = new DoubleBufferedPanel
         {
-            Width = 22,
-            Height = 22,
+            Width = 19,
+            Height = 19,
             Margin = new Padding(0, 0, 7, 0),
             Anchor = AnchorStyles.None,
             BackColor = Color.Transparent,
         };
         hintIcon.Paint += (s, e) =>
-            StreamlineIcons.DrawIcon(e.Graphics, "lightbulb", new RectangleF(0, 0, 22, 22), EditorColors.Accent, 0f, false);
+            StreamlineIcons.DrawIcon(e.Graphics, "lightbulb", hintIcon.ClientRectangle, EditorColors.Accent, 0f, false);
 
         var hintLayout = new TableLayoutPanel
         {
@@ -799,29 +803,23 @@ public sealed partial class EditorForm
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
         };
+        EditorFonts.Bind(_titleFileNameLabel, dpi => EditorFonts.Fixed("Consolas", 10.5f, FontStyle.Bold, dpi));
         _titleFileNameLabel.MouseDown += BeginWindowDrag;
         _titleFileNameLabel.Paint += (_, e) =>
         {
             var g = e.Graphics;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            int cy = _titleFileNameLabel.Height / 2;
             bool dirty = _canvas.IsDirty;
             bool hasSavedPath = !string.IsNullOrWhiteSpace(_savedFilePath);
 
-            int ledAuraSize = 14;
-            int gap = 8;
-            using var titleFont = EditorFonts.Fixed("Consolas", 10.5f, FontStyle.Bold, DeviceDpi);
-            int textWidth = TextRenderer.MeasureText(_titleFileNameText, titleFont).Width;
-            int totalWidth = ledAuraSize + gap + textWidth;
-
-            int startX = (_titleFileNameLabel.Width - totalWidth) / 2;
-            if (startX < 4) startX = 4;
+            var indicator = GetTitleStatusIndicatorBounds();
 
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            EditorColors.DrawStatusLed(g, startX, cy, dirty, hasSavedPath, coreSize: 8f, auraSize: ledAuraSize);
+            EditorColors.DrawStatusLed(g, indicator.Left, indicator.Top + indicator.Height / 2,
+                dirty, hasSavedPath, auraSize: indicator.Width);
 
-            int textX = startX + ledAuraSize + gap;
-            TextRenderer.DrawText(g, _titleFileNameText, titleFont,
+            int textX = indicator.Right + TitleStatusIndicatorGap;
+            TextRenderer.DrawText(g, _titleFileNameText, _titleFileNameLabel.Font,
                 new Rectangle(textX, 0, _titleFileNameLabel.Width - textX, _titleFileNameLabel.Height),
                 EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
@@ -831,7 +829,7 @@ public sealed partial class EditorForm
             _titleFileNameLabel,
             () => FormatDocumentStatusTooltip(_canvas.IsDirty, !string.IsNullOrWhiteSpace(_savedFilePath)),
             above: false,
-            boundsProvider: () => GetTitleTooltipAnchorScreen());
+            boundsProvider: () => GetTitleStatusTooltipBounds(Cursor.Position));
 
         _titleBarPanel.Controls.Add(_titleFileNameLabel);
         _titleBarPanel.Controls.Add(brandPanel);
@@ -931,8 +929,8 @@ public sealed partial class EditorForm
             IconId = "chevronDown",
             Text = "",
             Primary = false,
-            Width = 32,
-            Height = 62,
+            Width = 28,
+            Height = EditorCommandButton.DesignHeight,
             RoundRightOnly = true,
             Margin = new Padding(0, 0, 2, 0),
         };
@@ -962,8 +960,8 @@ public sealed partial class EditorForm
             IconId = "chevronDown",
             Text = "",
             Primary = false,
-            Width = 32,
-            Height = 62,
+            Width = 28,
+            Height = EditorCommandButton.DesignHeight,
             RoundRightOnly = true,
             Margin = new Padding(0, 0, 2, 0),
         };
@@ -1001,6 +999,15 @@ public sealed partial class EditorForm
         InitializeMenuHoverTriggers();
 
         return _topBarPanel;
+    }
+
+    private Rectangle GetTitleStatusIndicatorBounds()
+    {
+        int textWidth = TextRenderer.MeasureText(_titleFileNameText, _titleFileNameLabel.Font).Width;
+        int groupWidth = TitleStatusIndicatorSize + TitleStatusIndicatorGap + textWidth;
+        return new Rectangle(Math.Max(4, (_titleFileNameLabel.Width - groupWidth) / 2),
+            (_titleFileNameLabel.Height - TitleStatusIndicatorSize) / 2,
+            TitleStatusIndicatorSize, TitleStatusIndicatorSize);
     }
 
     private static void SplitEditorBrandTitle(string title, out string feature, out string brand)
@@ -1502,25 +1509,14 @@ public sealed partial class EditorForm
         return button;
     }
 
-    private EditorCommandButton MakeCommandButton(string iconId, string text, bool primary)
-    {
-        int width = 74;
-        using (var g = CreateGraphics())
-        using (var font = EditorFonts.Chrome(8.5f, FontStyle.Bold, DeviceDpi))
-        {
-            var size = TextRenderer.MeasureText(g, text, font);
-            width = Math.Max(74, size.Width + 16);
-        }
-        return new EditorCommandButton
+    private static EditorCommandButton MakeCommandButton(string iconId, string text, bool primary)
+        => new()
         {
             IconId = iconId,
             Text = text,
             Primary = primary,
-            Width = width,
-            Height = 62,
             Margin = new Padding(2, 0, 2, 0),
         };
-    }
 
     private EditorChromeButton MakeChromeButton(string iconId, string tooltip)
     {
@@ -1683,8 +1679,8 @@ public sealed partial class EditorForm
     {
         _scaleButton = new EditorScaleMenuButton
         {
-            Height = 42,
-            Margin = new Padding(0, 0, 16, 0),
+            Height = StatusControlHeight,
+            Margin = new Padding(0, 0, 10, 0),
         };
         _scaleButton.Click += (_, _) => ShowScaleMenu();
         UpdateScaleControls();
@@ -3211,15 +3207,12 @@ internal sealed class EditorToolButton : EditorButtonBase
     protected override Color IdleFill => EditorColors.IsDark ? Color.Transparent : Color.FromArgb(250, 251, 255);
 
     protected override Color ResolveBorder(bool active)
-    {
-        if (EditorColors.IsDark)
-        {
-            if (active || _hover)
-                return base.ResolveBorder(active);
-            return Color.Transparent;
-        }
-        return base.ResolveBorder(active);
-    }
+        => Enabled && IsSelected ? base.ResolveBorder(active) : Color.Transparent;
+
+    protected override Color ResolveFill(bool active)
+        => Enabled && !IsSelected && (IsPressedActive || IsHoverActive)
+            ? Color.FromArgb(IsPressedActive ? 36 : 20, EditorColors.Accent)
+            : base.ResolveFill(active);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked
@@ -3285,6 +3278,7 @@ internal sealed class EditorToolButton : EditorButtonBase
 
 internal sealed class EditorCommandButton : Button
 {
+    internal const int DesignHeight = 54;
     private bool _hover;
     private bool _pressed;
     private bool _primary;
@@ -3360,7 +3354,7 @@ internal sealed class EditorCommandButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(8.5f, FontStyle.Bold, dpi));
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(7.5f, FontStyle.Bold, dpi));
         TabStop = true;
     }
 
@@ -3371,9 +3365,9 @@ internal sealed class EditorCommandButton : Button
         {
             using var g = CreateGraphics();
             var size = TextRenderer.MeasureText(g, Text, Font);
-            Width = Math.Max(EditorChromeMetrics.Pixels(74, DeviceDpi),
-                size.Width + EditorChromeMetrics.Pixels(18, DeviceDpi));
-            Height = Math.Max(EditorChromeMetrics.Pixels(62, DeviceDpi),
+            Width = Math.Max(EditorChromeMetrics.Pixels(64, DeviceDpi),
+                size.Width + EditorChromeMetrics.Pixels(14, DeviceDpi));
+            Height = Math.Max(EditorChromeMetrics.Pixels(DesignHeight, DeviceDpi),
                 CaptionTop + size.Height + EditorChromeMetrics.Pixels(2, DeviceDpi) + 1);
         }
         catch { }
@@ -3385,7 +3379,7 @@ internal sealed class EditorCommandButton : Button
         RecalculateWidth();
     }
 
-    private int CaptionTop => EditorChromeMetrics.Pixels(38, DeviceDpi);
+    private int CaptionTop => EditorChromeMetrics.Pixels(32, DeviceDpi);
 
     internal Rectangle CaptionBounds => new(2, CaptionTop, Width - 5, Math.Max(1, Height - 1 - CaptionTop));
 
@@ -3474,7 +3468,7 @@ internal sealed class EditorCommandButton : Button
             }
         }
 
-        int iconSize = EditorChromeMetrics.Pixels(34, DeviceDpi);
+        int iconSize = EditorChromeMetrics.Pixels(28, DeviceDpi);
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
             rect.Top + EditorChromeMetrics.Pixels(3, DeviceDpi),
@@ -4407,10 +4401,10 @@ internal sealed class EditorScaleMenuButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(10f, FontStyle.Bold, dpi));
+        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(8.5f, FontStyle.Bold, dpi));
         TabStop = true;
         AccessibleName = "Scale";
-        Height = 42;
+        Height = EditorForm.StatusControlHeight;
         Width = 118;
     }
 
@@ -4593,7 +4587,7 @@ internal sealed class EditorZoomBarButton : Button
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
         }
 
-        var iconSize = 28;
+        var iconSize = 24;
         bool iconOnly = string.IsNullOrEmpty(Text);
         float iconX = iconOnly
             ? rect.Left + (rect.Width - iconSize) / 2f
@@ -4683,9 +4677,9 @@ internal sealed class EditorToggleSwitch : Control
     public string LabelText { get; set; } = string.Empty;
 
     // Pill geometry, shared by layout (GetPreferredSize) and painting.
-    private const int PillWidth = 42;
-    private const int PillHeight = 22;
-    private const int LabelPillGap = 12;
+    private const int PillWidth = 36;
+    private const int PillHeight = 19;
+    private const int LabelPillGap = 8;
     private const TextFormatFlags LabelFlags =
         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding;
 
@@ -4706,7 +4700,8 @@ internal sealed class EditorToggleSwitch : Control
     public override Size GetPreferredSize(Size proposedSize)
     {
         int labelWidth = TextRenderer.MeasureText(LabelText, LabelFont, new Size(int.MaxValue, PillHeight), LabelFlags).Width;
-        return new Size(labelWidth + LabelPillGap + PillWidth + 2, 42);
+        return new Size(labelWidth + LabelPillGap + PillWidth + 2,
+            EditorChromeMetrics.Pixels(EditorForm.StatusControlHeight, DeviceDpi));
     }
 
     private void StartAnimation()
@@ -4760,7 +4755,7 @@ internal sealed class EditorToggleSwitch : Control
         }
 
         // Thumb: always white, sliding with margins like the config toggle.
-        const int knobSize = swHeight - 8; // 14px leaves breathing room around the thumb
+        const int knobSize = swHeight - 6;
         const float knobMargin = 4f;
         float knobMinX = swX + knobMargin;
         float knobMaxX = swX + swWidth - knobSize - knobMargin;

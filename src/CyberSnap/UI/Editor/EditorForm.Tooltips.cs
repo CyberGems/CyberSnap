@@ -245,9 +245,7 @@ public sealed partial class EditorForm
         if (IsDisposed || string.IsNullOrWhiteSpace(text) || !anchor.IsHandleCreated)
             return;
 
-        var bounds = customBounds ?? (anchor == _titleFileNameLabel
-            ? GetTitleTooltipAnchorScreen()
-            : anchor.RectangleToScreen(anchor.ClientRectangle));
+        var bounds = customBounds ?? anchor.RectangleToScreen(anchor.ClientRectangle);
 
         if (ReferenceEquals(_hoverAnchor, anchor)
             && _hoverTooltipText == text
@@ -262,20 +260,12 @@ public sealed partial class EditorForm
         _hoverToolTip.ShowNear(this, text!, bounds, above);
     }
 
-    /// <summary>
-    /// Pins the title-bar tooltip to a narrow strip around the cursor so a long
-    /// filename does not park the bubble in the horizontal center of the title.
-    /// Position is quantized so the bubble does not chase every mouse pixel.
-    /// </summary>
-    private Rectangle GetTitleTooltipAnchorScreen()
+    private Rectangle? GetTitleStatusTooltipBounds(Point screenPoint)
     {
-        const int pinWidth = 24;
-        const int snap = 16;
-        var client = _titleFileNameLabel.PointToClient(Cursor.Position);
-        int maxX = Math.Max(0, _titleFileNameLabel.Width - pinWidth);
-        int x = Math.Clamp(client.X - pinWidth / 2, 0, maxX);
-        x = (x / snap) * snap;
-        return _titleFileNameLabel.RectangleToScreen(new Rectangle(x, 0, pinWidth, _titleFileNameLabel.Height));
+        var indicator = Rectangle.Intersect(GetTitleStatusIndicatorBounds(), _titleFileNameLabel.ClientRectangle);
+        return indicator.Contains(_titleFileNameLabel.PointToClient(screenPoint))
+            ? _titleFileNameLabel.RectangleToScreen(indicator)
+            : null;
     }
 
     private static string FormatDocumentStatusTooltip(bool dirty, bool hasSavedPath)

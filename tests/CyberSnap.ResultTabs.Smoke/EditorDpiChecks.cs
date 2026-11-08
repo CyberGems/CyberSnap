@@ -86,6 +86,8 @@ internal static partial class Program
                     scroll.Value = 0;
 
                     CheckEditorSidebar(palette, toolViewport, tools, swatches, context);
+                    CheckEditorTitleTooltip(editor, context);
+                    CheckEditorStatusBar(editor, context);
                     SaveEditorRender(editor, renders, language, uiScale, "restored");
 
                     var command = GetField<Forms.Button>(editor, "_galleryButton");
@@ -93,6 +95,7 @@ internal static partial class Program
                     using var graphics = command.CreateGraphics();
                     var dimensions = (command.Height, Forms.TextRenderer.MeasureText(graphics, command.Text, command.Font).Height,
                         tool.Height, tool.Font.Height);
+                    Assert(command.Font.Size == tool.Font.Size, "command and tool labels use the same size: " + context, false);
                     if (sizes.TryGetValue(dpi, out var previous))
                         Assert(dimensions == previous, "returning to the same monitor restores the chrome metrics: " + context, false);
                     sizes[dpi] = dimensions;
@@ -136,6 +139,39 @@ internal static partial class Program
 
     private static bool ContainsControl(Forms.Control parent, Forms.Control child)
         => child.Visible && parent.ClientRectangle.Contains(parent.RectangleToClient(child.RectangleToScreen(child.ClientRectangle)));
+
+    private static void CheckEditorTitleTooltip(EditorForm editor, string context)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var title = GetField<Forms.Panel>(editor, "_titleFileNameLabel");
+        var indicator = (Rectangle)typeof(EditorForm).GetMethod("GetTitleStatusIndicatorBounds", flags)!.Invoke(editor, null)!;
+        var hitTest = typeof(EditorForm).GetMethod("GetTitleStatusTooltipBounds", flags)!
+            .CreateDelegate<Func<Point, Rectangle?>>(editor);
+        int centerY = indicator.Top + indicator.Height / 2;
+        Assert(hitTest(title.PointToScreen(new Point(indicator.Left + indicator.Width / 2, centerY))) == title.RectangleToScreen(indicator),
+            "the status tooltip is anchored to the document indicator: " + context, false);
+        Assert(hitTest(title.PointToScreen(new Point(indicator.Left - 1, centerY))) is null
+            && hitTest(title.PointToScreen(new Point(indicator.Right, centerY))) is null
+            && hitTest(title.PointToScreen(new Point(indicator.Left, indicator.Top - 1))) is null,
+            "the rest of the title bar does not show the status tooltip: " + context, false);
+    }
+
+    private static void CheckEditorStatusBar(EditorForm editor, string context)
+    {
+        var status = GetField<Forms.Panel>(editor, "_statusBarPanel");
+        foreach (string field in new[] { "_scaleButton", "_coordsLabel", "_zoomSlider", "_zoomLabel", "_zoomViewBtn", "_toggleFitSwitch", "_togglePanLockSwitch" })
+        {
+            var control = GetField<Forms.Control>(editor, field);
+            if (control.Visible)
+                Assert(ContainsControl(status, control), $"the {field} control fits the compact status bar: {context}", false);
+        }
+        var zoom = GetField<Forms.Label>(editor, "_zoomLabel");
+        using var graphics = zoom.CreateGraphics();
+        var maxZoom = Forms.TextRenderer.MeasureText(graphics, $"{CyberSnap.UI.Controls.AnnotationCanvas.MaxZoomPercent}%", zoom.Font,
+            Size.Empty, Forms.TextFormatFlags.SingleLine | Forms.TextFormatFlags.NoPrefix);
+        Assert(maxZoom.Width <= zoom.ClientSize.Width && maxZoom.Height <= zoom.ClientSize.Height,
+            $"the complete zoom percentage fits ({maxZoom} in {zoom.ClientSize}): {context}", false);
+    }
 
     private static void CheckEditorSidebar(Forms.Panel palette, Forms.Panel viewport, Forms.Button[] tools, Forms.Control[] swatches, string context)
     {
