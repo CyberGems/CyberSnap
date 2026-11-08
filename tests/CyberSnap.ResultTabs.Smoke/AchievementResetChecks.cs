@@ -13,14 +13,14 @@ internal static partial class Program
         settings.Settings.InterfaceLanguage = "es";
         LocalizationService.ApplyCurrentCulture("es");
         using var history = new HistoryService();
-        var oldDate = DateTime.Today.AddDays(-19);
+        var oldDate = new DateTime(2026, 5, 10);
         var galleryItem = new HistoryEntry { Kind = HistoryKind.Image, CapturedAt = oldDate };
         SetField(history, "_entries", new List<HistoryEntry> { galleryItem });
         var progress = settings.Settings;
         progress.HasFirstEditor = true;
         progress.FirstEditorAt = oldDate.AddDays(3).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         progress.CurrentStreak = progress.LongestStreak = 3;
-        progress.LastCelebrationDate = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        progress.LastCelebrationDate = oldDate.AddDays(10).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
         var window = new AchievementsWindow(settings, history);
         try
@@ -33,16 +33,14 @@ internal static partial class Program
             Assert(progress.AchievementsStartedOn == DateOnly.FromDateTime(oldDate)
                 && progress.CelebrationCaptureCount == 1 && progress.ScreenshotCount == 1,
                 "existing achievement progress uses the earliest recorded date");
-            var spanishDate = oldDate.ToString("d MMM yyyy", CultureInfo.GetCultureInfo("es"));
-            Assert(label.Text == $"Fecha de inicio: {spanishDate}" && reset.Content is "Reiniciar progreso",
-                "the Spanish start date shows an abbreviated month and the reset action is localized");
+            Assert(label.Text == "Fecha de inicio: Mayo 10, 2026" && reset.Content is "Reiniciar progreso",
+                "the Spanish start date shows a capitalized full month first and the reset action is localized");
             Render(window, renders, "achievements-start-date.png");
 
             progress.InterfaceLanguage = "en";
             window.RefreshLocalization();
-            var englishDate = oldDate.ToString("d MMM yyyy", CultureInfo.GetCultureInfo("en"));
-            Assert(label.Text == $"Start date: {englishDate}",
-                "the English start date shows an abbreviated month");
+            Assert(label.Text == "Start date: May 10, 2026",
+                "the English start date shows the full month first");
             progress.InterfaceLanguage = "es";
             window.RefreshLocalization();
 
