@@ -243,6 +243,12 @@ internal static partial class Program
                 Console.WriteLine($"PASS: {_checks} About update layout checks.");
                 return 0;
             }
+            if (args.Contains("--toast-placement-only"))
+            {
+                CheckToastPlacement(settings);
+                Console.WriteLine($"PASS: {_checks} toast placement checks.");
+                return 0;
+            }
             if (args.Contains("--backups-only"))
             {
                 CheckAutomaticBackups(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
@@ -313,6 +319,7 @@ internal static partial class Program
             CheckToolsSettings(temp, args.FirstOrDefault());
             CheckAutomaticBackups(temp, args.FirstOrDefault());
             CheckAboutUpdates(settings, args.FirstOrDefault());
+            CheckToastPlacement(settings);
             CheckTrayMenuMonitors();
             CheckWidgetMonitors(settings);
             CheckWidgetPopups(settings, args.FirstOrDefault());

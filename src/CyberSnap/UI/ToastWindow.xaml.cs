@@ -2286,55 +2286,43 @@ public partial class ToastWindow : Window
     {
         ApplyTimelineLayout();
 
-        // 1. Get the target monitor
         var screens = PopupWindowHelper.GetSortedScreens();
         var screen = (_monitorIndex >= 0 && _monitorIndex < screens.Length)
             ? screens[_monitorIndex]
             : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position);
 
-        // 2. Move window to the target monitor physically first to let WPF update its DPI context.
-        var phys = screen.WorkingArea;
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        if (hwnd != IntPtr.Zero)
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var work = PopupWindowHelper.TryGetNativeMonitorInfo(screen, out _, out var nativeWork)
+            ? nativeWork : screen.WorkingArea;
+        var anchor = new System.Drawing.Point(work.Left + work.Width / 2, work.Top + work.Height / 2);
+        var targetMonitor = Native.User32.MonitorFromPoint(new Native.User32.POINT(anchor.X, anchor.Y),
+            Native.User32.MONITOR_DEFAULTTONEAREST);
+        const uint moveFlags = Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER;
+        if (Native.User32.MonitorFromWindow(hwnd, Native.User32.MONITOR_DEFAULTTONEAREST) != targetMonitor)
         {
-            Native.User32.SetWindowPos(hwnd, IntPtr.Zero, phys.X, phys.Y, 0, 0,
-                Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER);
+            Native.User32.SetWindowPos(hwnd, IntPtr.Zero, work.Left, work.Top, 0, 0, moveFlags);
         }
 
-        // 2b. Deterministic DPI adoption. The HWND is created at the process/primary DPI and
-        // moved here programmatically; WPF can miss that WM_DPICHANGED (observed on the first
-        // toast after startup), leaving the window rendered at the primary scale on a monitor
-        // with a different one. Compensate the content transform with the monitor's
-        // authoritative Shcore DPI, the same pattern the capture widget uses.
-        double dpiCorrection = 1.0;
-        try
-        {
-            var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(
-                phys.Left + phys.Width / 2, phys.Top + phys.Height / 2)).X;
-            var adoptedDpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
-            if (adoptedDpi > 0 && Math.Abs(adoptedDpi - targetDpi) > 0.01)
-                dpiCorrection = targetDpi / adoptedDpi;
-        }
-        catch { /* keep identity correction */ }
-        OuterShell.LayoutTransform = new System.Windows.Media.ScaleTransform(
-            UiScale.Current * dpiCorrection, UiScale.Current * dpiCorrection);
+        // A new HWND can still render at the primary monitor's DPI after the move.
+        var (targetScaleX, targetScaleY) = PopupWindowHelper.GetScaleForPoint(anchor);
+        var renderDpi = VisualTreeHelper.GetDpi(this);
+        OuterShell.LayoutTransform = new ScaleTransform(
+            UiScale.Current * targetScaleX / renderDpi.DpiScaleX,
+            UiScale.Current * targetScaleY / renderDpi.DpiScaleY);
         UpdateLayout();
 
-        // 3. Now calculate the work area in DIPs using PointFromScreen.
-        var topLeft = PointFromScreen(new System.Windows.Point(phys.Left, phys.Top));
-        var bottomRight = PointFromScreen(new System.Windows.Point(phys.Right, phys.Bottom));
-        
-        var wa = new Rect(
-            this.Left + topLeft.X,
-            this.Top + topLeft.Y,
-            bottomRight.X - topLeft.X,
-            bottomRight.Y - topLeft.Y);
-
+        // WPF Left and Top can still use the old DPI after a native move. Measure and
+        // anchor the HWND in physical pixels throughout, including on negative origins.
+        if (!Native.User32.GetWindowRect(hwnd, out var bounds))
+            return;
         var (targetLeft, targetTop, startLeft, startTop, animateLeft) = PopupWindowHelper.GetPlacement(
-            _position, ActualWidth, ActualHeight, wa, Edge);
-
-        Left = targetLeft;
-        Top = targetTop;
+            _position, bounds.Width, bounds.Height, new Rect(work.Left, work.Top, work.Width, work.Height),
+            Edge * targetScaleX, offScreenDistance: 10 * targetScaleX);
+        Native.User32.SetWindowPos(hwnd, IntPtr.Zero, (int)Math.Round(targetLeft), (int)Math.Round(targetTop),
+            0, 0, moveFlags);
 
         Opacity = 1;
         Root.Opacity = 1;
@@ -2364,8 +2352,9 @@ public partial class ToastWindow : Window
         }
         else
         {
-            offsetX = animateLeft ? startLeft - targetLeft : 0;
-            offsetY = animateLeft ? 0 : startTop - targetTop;
+            var animationDpi = VisualTreeHelper.GetDpi(this);
+            offsetX = animateLeft ? (startLeft - targetLeft) / animationDpi.DpiScaleX : 0;
+            offsetY = animateLeft ? 0 : (startTop - targetTop) / animationDpi.DpiScaleY;
         }
 
         SlideTransform.X = offsetX;
