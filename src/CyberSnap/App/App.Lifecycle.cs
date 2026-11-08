@@ -103,7 +103,11 @@ public partial class App
         });
     }
 
-    public void ShowAbout()
+    public void ShowAbout() => ShowAbout(deferOpening: true);
+
+    internal void ShowAboutFromTitle() => ShowAbout(deferOpening: false);
+
+    private void ShowAbout(bool deferOpening)
     {
         if (_aboutWindow is { IsVisible: true })
         {
@@ -117,7 +121,12 @@ public partial class App
         if (Interlocked.CompareExchange(ref _aboutWindowOpening, 1, 0) != 0)
             return;
 
-        _ = Dispatcher.BeginInvoke(() =>
+        if (deferOpening || !Dispatcher.CheckAccess())
+            _ = Dispatcher.BeginInvoke(OpenWindow, DispatcherPriority.Background);
+        else
+            OpenWindow();
+
+        void OpenWindow()
         {
             try
             {
@@ -138,7 +147,7 @@ public partial class App
             {
                 Interlocked.Exchange(ref _aboutWindowOpening, 0);
             }
-        }, DispatcherPriority.Background);
+        }
     }
 
     /// <summary>True when the user skipped this release label in the About update section.

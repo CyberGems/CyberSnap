@@ -78,8 +78,12 @@ internal static partial class Program
             title.NotifyDefault(true);
             Assert(!(bool)title.GetType().GetProperty("IsDefault", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(title)!,
                 "the title does not paint the default-button frame");
+            bool openedWhenClickResolved = ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true };
+            clickTimer.Tick += (_, _) =>
+                openedWhenClickResolved = ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true };
             AwaitCondition(() => ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
                 "Clicking the title did not open About", 5000);
+            Assert(openedWhenClickResolved, "About opens as soon as the title click is resolved");
             var about = (AboutWindow)ZoomAppField(app, "_aboutWindow")!;
             var checkNow = Element<System.Windows.Controls.Button>(about, "UpdateBtn");
             Assert(ReferenceEquals(checkNow.Parent, Element<System.Windows.Controls.Grid>(about, "UpdateHeader"))

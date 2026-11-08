@@ -912,7 +912,7 @@ public partial class CyberSnapTitleBar : UserControl
     {
         _titleClickTimer.Stop();
         if (OwnerWindow is not AboutWindow && System.Windows.Application.Current is App app)
-            app.ShowAbout();
+            app.ShowAboutFromTitle();
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

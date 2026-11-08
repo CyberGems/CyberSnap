@@ -1038,7 +1038,12 @@ public sealed partial class EditorForm
     private void OpenEditorAbout(object? sender, EventArgs e)
     {
         DismissVisibleHoverTooltips();
-        if (System.Windows.Application.Current is CyberSnap.App app)
+        if (System.Windows.Application.Current is not CyberSnap.App app)
+            return;
+
+        if (sender == _editorTitleButton)
+            app.ShowAboutFromTitle();
+        else
             app.ShowAbout();
     }
 
