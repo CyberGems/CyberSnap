@@ -8,51 +8,47 @@
 
 <!-- IMPORTANT FOR AGENTS & MAINTAINERS: Always rewrite this entire section and highlights with the ACTUAL release notes for this specific new version before tagging. NEVER leave or copy previous version notes! Use 25-45 words for the summary, lead with user-facing changes, and do not repeat the app name or version. -->
 <!-- changelog-summary:start -->
-Customize capture previews with solid colors, then add outlines and margins to copied or saved images. The widget can follow your cursor between monitors, while clearer confirmation controls, steadier annotations and improved Pin imports smooth everyday capture.
+Achievements now show a progress start date, allow a clean reset, and persist independently from general settings. Gallery opens on its own, while the editor, multi-monitor scaling, capture recovery, widget placement, and recording metadata handling receive broad refinements.
 <!-- changelog-summary:end -->
 
 ### ✨ Key Features & Highlights
 
-- 🎨 **Capture Preview backgrounds, outlines and margins**:
-  - Switch between the checkerboard and a solid preview background next to the zoom controls. Choose custom colors with HEX, RGB, HSV, palettes or screen sampling, and reset to the theme default when needed.
-  - Background colors are remembered separately for light and dark themes (including grayscale), shared across capture tabs and sessions. Changing the preview background alone preserves the image's transparency.
-  - Add an outline with a custom color and a thickness of 1–32 output pixels. Add a margin of 1–256 pixels per side using the chosen solid background color.
-  - Outlines and margins grow outside the capture, preserving its content, and are included in saved and copied images. Tabs keep their individual effect settings, and new captures inherit the last saved choices.
+- 🏆 **Achievement progress**:
+  - See the date achievement tracking began and reset progress to start a new period.
+  - Progress is stored separately from general settings. Existing history migrates once, and a reset does not import it again.
 
-- 🖼️ **Clearer Preview controls and export actions**:
-  - Action buttons use aligned columns and larger labels. The compact bottom toolbar wraps when needed and shows final output dimensions, with the original dimensions available in contextual help.
-  - The denser More menu adds **Copy image path** when the active tab has an existing file, and **Send to Paint** for a snapshot including the current image scale, outline and margin.
-  - Maximizing and restoring Preview keeps the capture centered while preserving manual zoom.
-  - Color pickers retain visible Reset and Accept actions when scrolling at high DPI. Slider tracks, editable pixel values, themed numeric inputs and a single-row standard palette make adjustments easier.
+- 🖼️ **A more flexible Gallery and Editor**:
+  - Open the Gallery independently from the Editor.
+  - Editor controls and captions scale together across monitors, the palette remains visible at high DPI, and the zoom percentage resets the view.
+  - The compact zoom controls, title actions, typography, icons and window chrome receive visual and interaction refinements.
 
-- 🧩 **A widget that can follow the cursor**:
-  - Choose **Follow cursor** under the widget's Screen menu or in Settings to move it between monitors without an extra click. The choice persists across sessions and synchronizes between both places.
-  - Monitor changes preserve the docked edge and position, with mixed-DPI placement. Following pauses while the panel is expanded, a menu is open, the widget is being dragged or a capture session is restoring.
-  - **Follow active monitor** remains the default, and fixed-monitor choices remain available.
-  - The primary capture button has a larger clickable tile, a tray-style hover background and more space above and below the capture mark.
+- 🖥️ **More consistent multi-monitor behavior**:
+  - Window scaling follows the selected UI scale and maintains physical size when moving between monitors with different DPI settings.
+  - Widget, tray, notification, color picker and tooltip placement responds more reliably to monitor changes.
+  - Optionally hide the floating widget during capture; it stays hidden through capture transitions and returns without flicker.
 
-- ✏️ **Steadier capture confirmation and annotations**:
-  - Contextual confirmation guides explain the screenshot, Pin and Zoom flows. Pin and Zoom region selection keep the capture toolbar out of the way until confirmation, and retain their own capture destination.
-  - Confirmation options open on click, with clearer state and menu dismissal. Selection tools stay visible, resizing grips remain steady and annotation history transitions are smoother.
-  - Drag the dimension readout away from important content. Shortcut conflict checks respect the active stage instead of treating separate tool contexts as one set.
+- 📸 **Steadier capture and recording**:
+  - Capture overlays recover from paint failures, retry black frames once, and keep the capture toolbar hidden while selecting a region.
+  - Preview actions and scrollbars have clearer spacing, and the widget no longer interrupts capture or menu interactions.
+  - Release packages include `ffprobe.exe`; recording duration detection can also use FFmpeg tools available on `PATH`.
 
-- 🔧 **Compatibility and reliability**:
-  - Pin imports handle more image-format variations, including transparency, the first frame of animated GIFs, and high-bit-depth or CMYK sources.
-  - About icons are synchronized from official suite repositories before release builds, with correct own-app filtering. Winget verification retries temporary GitHub read failures.
-  - Automated checks cover preview output, color-picker interaction, confirmation flows, widget preference persistence, monitor placement, menus and mixed-DPI behavior.
+- 🔧 **Reliability fixes**:
+  - Dialogs and floating windows retain their correct size and placement when Windows misses a monitor DPI update.
+  - Single-instance cleanup releases only a mutex owned by the current process.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
-- **Vista previa personalizable**: alterna entre damero y fondo sólido, elige colores con HEX, RGB, HSV, paletas o cuentagotas, y vuelve al color predeterminado del tema. Los colores se recuerdan por separado para temas claros y oscuros y se comparten entre pestañas y sesiones. El fondo de Vista previa por sí solo conserva la transparencia de la imagen.
-- **Delineado y margen**: añade un delineado de color y grosor configurable (1–32 píxeles de salida) y un margen de 1–256 píxeles por lado con el color del fondo sólido. Se agregan por fuera de la captura y se conservan al copiar y guardar. Cada pestaña mantiene sus ajustes; las nuevas capturas recuperan la última elección guardada.
-- **Controles más claros**: botones alineados y etiquetas mayores, barra inferior compacta con dimensiones finales, menú Más más denso, **Copiar ruta de imagen** cuando existe un archivo para la pestaña y **Enviar a Paint** con escala, delineado y margen incluidos. La captura conserva el centro al maximizar y restaurar, respetando el zoom manual.
-- **Pickers más cómodos**: Restablecer y Aceptar permanecen visibles al desplazar el contenido con DPI alto. Los sliders muestran su recorrido, los valores de píxeles son editables, los campos numéricos siguen el tema y la paleta estándar cabe en una fila.
-- **Seguir cursor**: nueva opción en Pantalla y en Ajustes para mover el widget entre monitores sin clic adicional. Se guarda entre sesiones y se pausa mientras usas el panel, sus menús o el arrastre. **Seguir monitor activo** continúa como opción predeterminada. El botón principal tiene un área de clic y hover mayor, con más espacio vertical.
-- **Confirmación y anotaciones**: guías contextuales para captura, Pin y Zoom; selección inicial sin la barra de captura; destino propio de Pin y Zoom; opciones mediante clic; herramientas visibles, grips estables, historial más fluido y etiqueta de dimensiones arrastrable. Los conflictos de atajos se revisan dentro de su etapa.
-- **Compatibilidad y calidad**: mejoras en la importación de imágenes de Pin, incluidos transparencia, primer fotograma de GIF, alta profundidad de color y CMYK. Iconos oficiales de la suite sincronizados, reintentos en la verificación de winget y nuevas pruebas automáticas de exportación, menús, preferencias y múltiples monitores.
+El progreso de logros ahora muestra la fecha de inicio y permite reiniciar para comenzar un período nuevo. La Galería se abre sin el Editor, y se mejoran el escalado entre monitores, la confiabilidad de las capturas, la ubicación del widget y la lectura de metadatos de grabaciones.
+
+- **Progreso de logros**: consulta cuándo comenzó el seguimiento y reinícialo para comenzar una etapa nueva. Se conserva aparte de la configuración general; el historial existente se migra una sola vez y no se vuelve a importar al reiniciar.
+- **Galería y Editor más flexibles**: abre la Galería sin el Editor. Los controles y textos del Editor se escalan juntos entre monitores, la paleta permanece visible con DPI alto y el porcentaje de zoom restablece la vista. También se ajustan los controles compactos, las acciones de título, la tipografía, los iconos y el marco de las ventanas.
+- **Mejoras entre monitores**: el escalado sigue el ajuste de interfaz y conserva mejor el tamaño físico al mover ventanas entre pantallas con distinto DPI. Widget, bandeja, notificaciones, selector de color y tooltips se ubican con más precisión. Puedes ocultar el widget durante las capturas; permanece oculto durante las transiciones y vuelve sin destellos.
+- **Capturas y grabaciones más estables**: las superposiciones se recuperan de fallos de dibujo y reintentan una vez los fotogramas negros. La barra permanece oculta mientras seleccionas una región. Se mejora el espaciado de acciones y barras de desplazamiento de Vista previa y el widget ya no interfiere con menús o capturas.
+- **Duración de medios**: los paquetes incluyen `ffprobe.exe`; la detección de duración también puede usar herramientas FFmpeg de `PATH`.
+- **Correcciones de confiabilidad**: ventanas y diálogos conservan mejor tamaño y ubicación si Windows omite un cambio de DPI. La aplicación solo libera el mutex de instancia única si el proceso es su propietario.
 
 </details>
 

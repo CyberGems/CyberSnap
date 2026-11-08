@@ -121,6 +121,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ### 📊 Gallery & History
 - **Persistent History**: Captures, OCR text, barcodes, and colors with configurable retention
+- **Independent Window**: Open the Gallery without opening the Editor
 - **Search**: Find past captures by content, OCR text, or metadata
 - **Click Actions**: Open in editor, copy to clipboard, or open in default viewer
 - **Auto-Indexing**: SQLite local index with configurable search sources
@@ -147,6 +148,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Auto-Update**: Built-in updater with toast notifications, changelog preview, and per-version skip
 - **Setup Wizard**: First-run configuration assistant
 - **Automatic Backups**: Configuration → Backup & Data protects settings and achievements on startup, daily (default), weekly, or monthly. Choose a folder, keep 1–50 verified copies (3 by default), and create, restore, or delete backups. Missed intervals catch up when CyberSnap opens. Restoring first creates a recovery copy and keeps current credentials and backup preferences. Captures and recordings are not included; API keys and passwords are excluded.
+- **Achievement Progress**: View when achievement tracking began, reset it for a fresh run, and keep progress separate from general settings. Existing history is migrated once.
 - **Backup Management**: Automatic backups lists each filename, date, size, and restore/delete actions. Files use local timestamps such as `CyberSnap-backup-2026-10-20_07-39-11.json`, with short suffixes only for collisions. Manual JSON export and import are grouped under Manual backup.
 
 ### 🎨 Customization
