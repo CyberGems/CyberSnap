@@ -632,6 +632,8 @@ public sealed class AppSettings
     // Running total of all captures (image, OCR, and video/GIF recordings alike). Drives
     // milestone celebrations (50, 100, 250, ...) and the milestone rail in Settings.
     public int CelebrationCaptureCount { get; set; }
+    public DateOnly? AchievementsStartedOn { get; set; }
+    public bool AchievementHistoryInitialized { get; set; }
     // Per-type capture counters. Start at 0 for new installs; retroactively bootstrapped
     // from the gallery on first load for existing users. All are incremented in RegisterCapture.
     public int ScreenshotCount { get; set; }
@@ -670,6 +672,19 @@ public sealed class AppSettings
 
     // Set of achievement IDs already seen by the user in the Achievements window (clears "NEW" badges).
     public HashSet<string> SeenAchievementIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    internal void ResetAchievementProgress(DateOnly startDate)
+    {
+        AchievementsStartedOn = startDate;
+        AchievementHistoryInitialized = true;
+        CelebrationCaptureCount = ScreenshotCount = RecordingCount = OcrCount = ColorPickCount = ScanCount = ScrollCaptureCount = 0;
+        LastSeenMilestone = CurrentStreak = LongestStreak = 0;
+        LastCelebrationDate = null;
+        HasFirstOcr = HasFirstRecording = HasFirstScrollingCapture = HasFirstColorPicker = HasFirstScan = HasFirstRuler = HasFirstEditor = false;
+        FirstOcrAt = FirstRecordingAt = FirstScrollCaptureAt = FirstColorPickerAt = FirstScanAt = FirstRulerAt = FirstEditorAt = null;
+        SeenAchievementIds.Clear();
+    }
+
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;

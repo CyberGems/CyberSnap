@@ -62,6 +62,11 @@ internal static partial class Program
                 CheckEditorDpi(args.FirstOrDefault(a => !a.StartsWith("--")));
                 return 0;
             }
+            if (args.Contains("--achievement-reset-only"))
+            {
+                CheckAchievementReset(settings, settingsPath, args.FirstOrDefault(a => !a.StartsWith("--")));
+                return 0;
+            }
             if (args.Contains("--editor-scale-menu-only"))
             {
                 CheckEditorScaleMenuTooltip();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -60,41 +61,53 @@ public partial class AchievementsWindow
         }
 
         var s = _settingsService.Settings;
-        BootstrapCaptureCountsFromGallery(s);
+        InitializeAchievementHistory(s);
+        var startDate = s.AchievementsStartedOn?.ToString("d", CultureInfo.CurrentCulture)
+            ?? LocalizationService.Translate("Not recorded");
+        AchievementsStartDate.Text = string.Format(LocalizationService.Translate("Start date: {0}"), startDate);
         BuildStatsCards(statsHost, s);
         BuildMedalGrid(medalsHost, s);
     }
 
-    // Seeds per-type counters from the gallery on the very first load for existing users.
-    // Once any counter is non-zero we assume AppSettings is being maintained incrementally.
-    private void BootstrapCaptureCountsFromGallery(AppSettings s)
+    // Import legacy history once. Reset starts a new period that must never reimport the gallery.
+    private void InitializeAchievementHistory(AppSettings s)
     {
-        if (s.ScreenshotCount > 0 || s.RecordingCount > 0 || s.OcrCount > 0 ||
-            s.ColorPickCount > 0 || s.ScanCount > 0)
+        if (s.AchievementHistoryInitialized)
             return;
 
         try
         {
-            s.ScreenshotCount  = _historyService.ImageEntries.Count;
-            s.RecordingCount   = _historyService.VideoEntries.Count + _historyService.GifEntries.Count;
-            s.OcrCount         = _historyService.OcrEntries.Count;
-            s.ColorPickCount   = _historyService.ColorEntries.Count;
-            s.ScanCount        = _historyService.CodeEntries.Count;
-            // ScrollCaptureCount stays 0 — scroll captures are stored as images
-            // and cannot be distinguished from regular screenshots retroactively.
-
-            // Also sync CelebrationCaptureCount if the gallery total exceeds it — this
-            // happens for users who had captures before the Achievements system was added.
-            int galleryTotal = s.ScreenshotCount + s.RecordingCount + s.OcrCount +
-                               s.ColorPickCount + s.ScanCount;
-            if (galleryTotal > s.CelebrationCaptureCount)
-                s.CelebrationCaptureCount = galleryTotal;
-
-            if (s.ScreenshotCount > 0 || s.RecordingCount > 0 || s.OcrCount > 0 ||
-                s.ColorPickCount > 0 || s.ScanCount > 0)
+            var media = _historyService.Entries;
+            var ocr = _historyService.OcrEntries;
+            var colors = _historyService.ColorEntries;
+            var codes = _historyService.CodeEntries;
+            if (s.ScreenshotCount == 0 && s.RecordingCount == 0 && s.OcrCount == 0 &&
+                s.ColorPickCount == 0 && s.ScanCount == 0 && s.ScrollCaptureCount == 0)
             {
-                try { _settingsService.Save(); } catch { /* non-critical */ }
+                s.ScreenshotCount = media.Count(e => e.Kind == HistoryKind.Image);
+                s.RecordingCount = media.Count(e => e.Kind is HistoryKind.Video or HistoryKind.Gif);
+                s.OcrCount = ocr.Count;
+                s.ColorPickCount = colors.Count;
+                s.ScanCount = codes.Count;
+                // The gallery cannot distinguish old scrolling captures from screenshots.
+                int galleryTotal = s.ScreenshotCount + s.RecordingCount + s.OcrCount + s.ColorPickCount + s.ScanCount;
+                s.CelebrationCaptureCount = Math.Max(s.CelebrationCaptureCount, galleryTotal);
             }
+
+            var medalDates = new[]
+            {
+                s.FirstOcrAt, s.FirstRecordingAt, s.FirstScrollCaptureAt, s.FirstColorPickerAt,
+                s.FirstScanAt, s.FirstRulerAt, s.FirstEditorAt, s.LastCelebrationDate,
+            };
+            var galleryDates = media.Select(e => e.CapturedAt).Concat(ocr.Select(e => e.CapturedAt))
+                .Concat(colors.Select(e => e.CapturedAt)).Concat(codes.Select(e => e.CapturedAt));
+            s.AchievementsStartedOn = galleryDates.Where(date => date != default)
+                .Select(date => (DateOnly?)DateOnly.FromDateTime(date))
+                .Concat(medalDates.Select(date => DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var recorded) ? recorded : (DateOnly?)null))
+                .Append(s.AchievementsStartedOn).Min();
+            s.AchievementHistoryInitialized = true;
+            _settingsService.Save();
         }
         catch (Exception ex)
         {

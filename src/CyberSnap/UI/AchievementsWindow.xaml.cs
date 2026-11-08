@@ -109,6 +109,18 @@ public partial class AchievementsWindow : Window
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
+    private void ResetAchievementsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ThemedConfirmDialog.Confirm(this, "Reset achievements?",
+                "This clears achievement counters, streaks and medals and starts a new period.", "Reset progress", "Cancel"))
+            return;
+
+        _settingsService.Settings.ResetAchievementProgress(DateOnly.FromDateTime(DateTime.Today));
+        _settingsService.Save();
+        _settingsService.FlushPendingWrites();
+        RefreshAchievementContent(revealRail: false);
+    }
+
     private void AchievementsWindow_ContentRendered(object? sender, EventArgs e)
     {
         ContentRendered -= AchievementsWindow_ContentRendered;

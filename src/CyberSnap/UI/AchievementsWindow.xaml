@@ -128,6 +128,18 @@
                         <TextBlock Text="Your progress" Style="{StaticResource SectionLabel}"
                                    Services:LocalizationService.SourceText="Your progress"/>
 
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="AchievementsStartDate" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}" Margin="0,0,12,0"/>
+                            <Button x:Name="ResetAchievementsButton" Grid.Column="1" Content="Reset progress"
+                                    Services:LocalizationService.SourceContent="Reset progress" Click="ResetAchievementsButton_Click"
+                                    Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontSize="11" Padding="10,3" Height="28"/>
+                        </Grid>
+
                         <Border Padding="20,16,20,18" CornerRadius="12" Margin="0,0,0,16"
                                 Background="{DynamicResource ThemeCardBrush}"
                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">

@@ -818,8 +818,11 @@ public partial class App
         string? achievementTitleKey = null, string? iconId = null, Action<string>? setUnlockedDate = null)
     {
         if (alreadyUnlocked) return;
+        var today = DateOnly.FromDateTime(DateTime.Today);
         setUnlocked();
-        setUnlockedDate?.Invoke(DateTime.Now.ToString("yyyy-MM-dd"));
+        setUnlockedDate?.Invoke(today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+        if (_settingsService is { } service)
+            service.Settings.AchievementsStartedOn ??= today;
         try { _settingsService!.Save(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.first-time-save", ex.Message, ex); }
 
@@ -898,8 +901,9 @@ public partial class App
             default:                        settings.ScreenshotCount++;    break;
         }
 
-        var todayDate = DateTime.Now.Date;
-        var today = todayDate.ToString("yyyy-MM-dd");
+        var todayDate = DateTime.Today;
+        settings.AchievementsStartedOn ??= DateOnly.FromDateTime(todayDate);
+        var today = todayDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         var isFirstToday = settings.LastCelebrationDate != today;
         if (isFirstToday)
         {
