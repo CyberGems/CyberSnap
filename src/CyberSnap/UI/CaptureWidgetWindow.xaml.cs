@@ -389,6 +389,8 @@ public partial class CaptureWidgetWindow : Window
     {
         PopupWindowHelper.ApplyNoActivateChrome(this);
         var source = System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+        if (source is not null)
+            Native.Dwm.TrySetTransitionsForcedDisabled(source.Handle, true);
         source?.AddHook(WndProc);
     }
 

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using System.Threading.Tasks;
 using CyberSnap.Helpers;
@@ -26,7 +27,13 @@ public partial class CaptureWidgetWindow
     private bool MoveToMonitor(IntPtr hwnd, int left, int top, int width, int height, bool keepBounds, bool dpiChanges)
     {
         if (dpiChanges && IsVisible && !_isExpanded && Opacity == 1 && !_peekMoveCloaked)
+        {
             _peekMoveCloaked = Native.Dwm.TrySetCloaked(hwnd, true);
+            // Cloak is queued to the compositor. Commit it on the source monitor
+            // before SetWindowPos can carry the old surface to the destination.
+            if (_peekMoveCloaked)
+                FlushMonitorComposition();
+        }
 
         var previousBounds = _monitorMoveBounds;
         _monitorMoveBounds = new Native.User32.RECT
@@ -35,8 +42,11 @@ public partial class CaptureWidgetWindow
         };
         try
         {
-            return Native.User32.SetWindowPos(hwnd, IntPtr.Zero, left, top, width, height,
+            bool moved = Native.User32.SetWindowPos(hwnd, IntPtr.Zero, left, top, width, height,
                 Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER);
+            if (moved && _peekMoveCloaked)
+                SynchronizeMonitorDpi(hwnd, _monitorMoveBounds.Value);
+            return moved;
         }
         finally
         {
@@ -47,6 +57,17 @@ public partial class CaptureWidgetWindow
         }
     }
 
+    private unsafe void SynchronizeMonitorDpi(IntPtr hwnd, Native.User32.RECT bounds)
+    {
+        uint nativeDpi = Native.User32.GetDpiForWindow(hwnd);
+        if (nativeDpi == 0 || Math.Abs(VisualTreeHelper.GetDpi(this).PixelsPerInchX - nativeDpi) < 0.01)
+            return;
+
+        // A programmatic move can advance the HWND DPI without updating WPF's
+        // visual DPI. Replay the current native DPI while the peek is still hidden.
+        Native.User32.SendMessage(hwnd, WM_DPICHANGED, new IntPtr(nativeDpi | (nativeDpi << 16)), (IntPtr)(&bounds));
+    }
+
     private void RevealPeekAfterMonitorMove(IntPtr hwnd, int generation)
     {
         // Let the DPI placement and WPF render work run first. DWM can otherwise
@@ -54,15 +75,7 @@ public partial class CaptureWidgetWindow
         _ = Dispatcher.BeginInvoke(new Action(async () =>
         {
             if (generation != _peekMoveGeneration) return;
-            try
-            {
-                int result = await Task.Run(Native.Dwm.DwmFlush);
-                System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(result);
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogWarning("widget.monitor-composition", ex.Message, ex);
-            }
+            await Task.Run(FlushMonitorComposition);
 
             if (generation == _peekMoveGeneration && new WindowInteropHelper(this).Handle == hwnd)
             {
@@ -71,6 +84,13 @@ public partial class CaptureWidgetWindow
                     AppDiagnostics.LogWarning("widget.monitor-composition", "Windows could not reveal the moved widget.");
             }
         }), DispatcherPriority.ContextIdle);
+    }
+
+    private static void FlushMonitorComposition()
+    {
+        int result = Native.Dwm.DwmFlush();
+        if (result < 0)
+            AppDiagnostics.LogWarning("widget.monitor-composition", $"DwmFlush returned 0x{result:X8}.");
     }
 
     private static System.Drawing.Rectangle GetPhysicalWorkingArea(Forms.Screen screen)

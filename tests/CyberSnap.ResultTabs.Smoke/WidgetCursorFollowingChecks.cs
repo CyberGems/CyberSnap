@@ -1,5 +1,8 @@
 using System.Windows;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -32,6 +35,13 @@ internal static partial class Program
             GetField<DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
             widget.CollapseImmediately();
             CheckPausedCursorCrossings(widget, screens);
+            if (Environment.GetEnvironmentVariable("CYBERSNAP_CHECK_PEEK_FRAMES") == "1")
+            {
+                // Keep the test peek away from the user's live widget.
+                settings.Settings.WidgetDockPositionOffset = 0.12;
+                try { CheckComposedPeekCrossing(widget, screens); }
+                finally { settings.Settings.WidgetDockPositionOffset = 0.5; }
+            }
             foreach (var target in screens.Reverse())
             {
                 var cursor = new System.Drawing.Point(target.Bounds.X + target.Bounds.Width / 2, target.Bounds.Y + target.Bounds.Height / 2);
@@ -143,15 +153,133 @@ internal static partial class Program
                 Assert(IsCloaked(), "the old peek surface is hidden during the DPI change", false);
 
             WaitForWidgetAnimation(() => !IsCloaked());
-            Assert(widget.IsVisible && widget.Opacity == 1
-                && Math.Abs(VisualTreeHelper.GetDpi(widget).PixelsPerInchX - targetDpi) < 0.01,
-                "the peek is revealed at the destination DPI", false);
+            double visualDpi = VisualTreeHelper.GetDpi(widget).PixelsPerInchX;
+            Assert(widget.IsVisible && widget.Opacity == 1 && Math.Abs(visualDpi - targetDpi) < 0.01,
+                $"the peek is revealed at the destination DPI (visual={visualDpi}, native={targetDpi})", false);
         }
 
         bool IsCloaked()
         {
             Marshal.ThrowExceptionForHR(ReadWidgetCloak(hwnd, 14 /* DWMWA_CLOAKED */, out int value, sizeof(int)));
             return value != 0;
+        }
+    }
+
+    private static void CheckComposedPeekCrossing(CaptureWidgetWindow widget, Forms.Screen[] screens)
+    {
+        Assert(screens.Length >= 2, "the desktop crossing check has two monitors");
+        var hwnd = new WindowInteropHelper(widget).Handle;
+        var monitors = screens.Take(2).Select(screen =>
+        {
+            Call(widget, "PositionWindowOnScreen", screen);
+            WaitForWidgetAnimation(() => !GetField<bool>(widget, "_peekMoveCloaked"));
+            return (Screen: screen, Dpi: GetDpiForWindow(hwnd));
+        }).OrderBy(item => item.Dpi).ToArray();
+        var source = monitors[0].Screen;
+        var target = monitors[1].Screen;
+        Assert(monitors[0].Dpi != monitors[1].Dpi, "the desktop crossing check uses different display scales");
+        Call(widget, "PositionWindowOnScreen", target);
+
+        var area = new System.Drawing.Rectangle(target.WorkingArea.Left, target.WorkingArea.Top, target.WorkingArea.Width / 2, 36);
+        using var backdrop = new Forms.Form
+        {
+            FormBorderStyle = Forms.FormBorderStyle.None,
+            ShowInTaskbar = false,
+            StartPosition = Forms.FormStartPosition.Manual,
+            TopMost = true,
+            Bounds = area,
+            BackColor = System.Drawing.Color.Magenta
+        };
+        backdrop.Show();
+        widget.AssertWidgetTopmost();
+        var captureRegion = typeof(CyberSnap.App).Assembly.GetType("CyberSnap.Capture.DxgiScreenCapture")!
+            .GetMethod("CaptureRegion", BindingFlags.Static | BindingFlags.Public)!;
+        Settle();
+        using var normal = CaptureReference();
+        Call(widget, "PositionWindowOnScreen", source);
+        Settle();
+        using var blank = CaptureReference();
+        Assert(!SamePixels(normal, blank), "the reference frames distinguish the peek from the background");
+        Assert(IsBackdrop(normal.GetPixel(0, area.Height - 1)) && IsBackdrop(blank.GetPixel(0, area.Height - 1)),
+            "both reference frames contain the composed backdrop");
+        Console.WriteLine($"Peek references: background {Describe(blank)}, settled {Describe(normal)}.");
+
+        int bad = 0, seen = 0;
+        for (int crossing = 0; crossing < 8; crossing++)
+        {
+            using var sampling = new ManualResetEventSlim();
+            var frames = Task.Run(() =>
+            {
+                var elapsed = Stopwatch.StartNew();
+                sampling.Set();
+                while (elapsed.ElapsedMilliseconds < 350)
+                {
+                    try
+                    {
+                        using var frame = ReadFrame();
+                        if (SamePixels(frame, normal)) seen++;
+                        else if (!SamePixels(frame, blank))
+                        {
+                            if (bad < 12) Console.WriteLine($"Peek intermediate after {elapsed.ElapsedMilliseconds} ms: {Describe(frame)}.");
+                            bad++;
+                        }
+                    }
+                    catch (TargetInvocationException ex) when (ex.InnerException?.GetType().Name == "DxgiFrameTimeoutException")
+                    {
+                        // Static desktop: no new frame to inspect.
+                    }
+                }
+            });
+            WaitForWidgetAnimation(() => sampling.IsSet);
+            Call(widget, "FollowCursorOnMonitor", new System.Drawing.Point(target.Bounds.Left + 100, target.Bounds.Top + 100));
+            WaitForWidgetAnimation(() => frames.IsCompleted);
+            frames.GetAwaiter().GetResult();
+            Call(widget, "PositionWindowOnScreen", source);
+            Settle();
+        }
+        Console.WriteLine($"Peek desktop frames at {monitors[1].Dpi} DPI: {seen} settled, {bad} intermediate.");
+        Assert(seen > 0 && bad == 0, "the higher-DPI monitor presents only the settled peek or the background");
+
+        System.Drawing.Bitmap ReadFrame() => (System.Drawing.Bitmap)captureRegion.Invoke(null, [area, 0L])!;
+        System.Drawing.Bitmap CaptureReference() =>
+            CyberSnap.Capture.ScreenCapture.CaptureRegion(area, frameNotBefore: Stopwatch.GetTimestamp());
+
+        static bool IsBackdrop(System.Drawing.Color pixel) => pixel.R > 248 && pixel.B > 248 && pixel.G < 8;
+
+        static bool SamePixels(System.Drawing.Bitmap a, System.Drawing.Bitmap b)
+        {
+            for (int y = 0; y < a.Height; y += 2)
+            for (int x = 0; x < a.Width; x += 3)
+            {
+                var p = a.GetPixel(x, y);
+                var q = b.GetPixel(x, y);
+                if (Math.Abs(p.R - q.R) + Math.Abs(p.G - q.G) + Math.Abs(p.B - q.B) > 12) return false;
+            }
+            return true;
+        }
+
+        static string Describe(System.Drawing.Bitmap frame)
+        {
+            int left = frame.Width, right = -1, top = frame.Height, bottom = -1, pixels = 0;
+            for (int y = 0; y < frame.Height; y++)
+            for (int x = 0; x < frame.Width; x++)
+            {
+                var p = frame.GetPixel(x, y);
+                if (IsBackdrop(p)) continue;
+                left = Math.Min(left, x);
+                right = Math.Max(right, x);
+                top = Math.Min(top, y);
+                bottom = Math.Max(bottom, y);
+                pixels++;
+            }
+            return $"{left},{top} to {right},{bottom} ({pixels} non-background pixels)";
+        }
+
+        void Settle()
+        {
+            long end = Environment.TickCount64 + 300;
+            WaitForWidgetAnimation(() => Environment.TickCount64 >= end
+                && !GetField<bool>(widget, "_peekMoveCloaked"));
         }
     }
 }

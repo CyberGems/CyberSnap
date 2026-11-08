@@ -318,6 +318,9 @@ internal static partial class User32
     [LibraryImport("user32.dll")]
     public static partial IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
 
+    [LibraryImport("user32.dll")]
+    public static partial uint GetDpiForWindow(IntPtr hwnd);
+
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
