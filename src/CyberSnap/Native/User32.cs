@@ -52,6 +52,7 @@ internal static partial class User32
 
     public const int SM_XVIRTUALSCREEN = 76;
     public const int SM_YVIRTUALSCREEN = 77;
+    public const int SM_CYHSCROLL = 3;
     public const int SM_CXVIRTUALSCREEN = 78;
     public const int SM_CYVIRTUALSCREEN = 79;
 
@@ -92,6 +93,9 @@ internal static partial class User32
 
     [LibraryImport("user32.dll")]
     public static partial int GetSystemMetrics(int nIndex);
+
+    [LibraryImport("user32.dll")]
+    public static partial int GetSystemMetricsForDpi(int nIndex, uint dpi);
 
     [LibraryImport("user32.dll")]
     public static partial int GetLastError();

@@ -647,7 +647,10 @@ public sealed partial class EditorForm
 
         _tabStrip.Visible = tabs;
         if (_tabRow is not null)
+        {
+            _tabRow.Height = _tabStrip.PreferredHeight;
             _tabRow.Visible = tabs;
+        }
         if (_topRuler is not null)
             _topRuler.Visible = rulers;
         if (_rulerRow is not null)
@@ -659,7 +662,7 @@ public sealed partial class EditorForm
 
         if (_topRulerContainer is not null)
         {
-            int height = (tabs ? EditorTabStrip.PreferredHeight : 0) + (rulers ? 28 : 0);
+            int height = (tabs ? _tabStrip.PreferredHeight : 0) + (rulers ? 28 : 0);
             _topRulerContainer.Height = height;
             _topRulerContainer.Visible = height > 0;
         }

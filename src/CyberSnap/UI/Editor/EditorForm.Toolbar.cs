@@ -187,6 +187,122 @@ public sealed partial class EditorForm
         flyout.Focus();
     }
 
+    private float _appliedChromeScale = 1f;
+    private TableLayoutPanel _toolbarLayout = null!;
+    private Panel _commandViewport = null!;
+    private FlowLayoutPanel _commandActions = null!;
+    private HScrollBar _commandScroll = null!;
+    private bool _layingOutCommands;
+    private bool _commandLayoutPending;
+
+    private void ApplyChromeDpi()
+    {
+        if (IsDisposed || Disposing) return;
+        float scale = EditorChromeMetrics.Scale(DeviceDpi);
+        if (Math.Abs(scale - _appliedChromeScale) > 0.001f)
+        {
+            float ratio = scale / _appliedChromeScale;
+            _appliedChromeScale = scale;
+            var factor = new SizeF(ratio, ratio);
+            SuspendLayout();
+            try
+            {
+                _topBarPanel.Scale(factor);
+                _toolbarHost.Scale(factor);
+                _statusBarPanel.Scale(factor);
+                if (_brandPanel is not null)
+                    _brandPanel.Width = CalculateBrandWidth();
+            }
+            finally { ResumeLayout(performLayout: true); }
+        }
+        // WinForms scales the minimum form size separately from the chrome.
+        // Keep the original resize limits usable on the destination work area.
+        var work = Screen.FromControl(this).WorkingArea;
+        MinimumSize = new Size(Math.Min(DefaultEditorWidth, work.Width), Math.Min(DefaultEditorHeight, work.Height));
+        if (Width > work.Width || Height > work.Height)
+            Bounds = NormalizeRestoredBounds(Bounds, work, MinimumSize);
+        _coordsLabel.Height = Math.Max(EditorChromeMetrics.Pixels(18, DeviceDpi), _coordsLabel.Font.Height);
+        int coordsInset = Math.Max(0, (EditorChromeMetrics.Pixels(42, DeviceDpi) - _coordsLabel.Height) / 2);
+        _coordsLabel.Margin = new Padding(0, coordsInset, 0, coordsInset);
+        foreach (var (button, _) in _localizedCommandButtons)
+            button.RecalculateWidth();
+        _shareMenuButton.Height = _shareButton.Height;
+        _exportMenuButton.Height = _exportButton.Height;
+        UpdateCommandViewport();
+        UpdateToolbarViewport();
+        ApplyRulerAndTabLayout();
+        Invalidate(invalidateChildren: true);
+    }
+
+    private void UpdateCommandViewport()
+    {
+        if (IsDisposed || Disposing || _layingOutCommands || _commandActions is null) return;
+        _layingOutCommands = true;
+        try
+        {
+            int rowWidth = 0;
+            int rowHeight = 0;
+            foreach (Control control in _commandActions.Controls)
+            {
+                rowWidth += control.Width + control.Margin.Horizontal;
+                rowHeight = Math.Max(rowHeight, control.Height + control.Margin.Vertical);
+            }
+
+            int padding = EditorChromeMetrics.Pixels(2, DeviceDpi);
+            int availableWidth = _topBarPanel.ClientSize.Width;
+            bool needsScroll = rowWidth > availableWidth;
+            int scrollHeight = needsScroll
+                ? Native.User32.GetSystemMetricsForDpi(Native.User32.SM_CYHSCROLL, (uint)DeviceDpi) : 0;
+            int viewportHeight = rowHeight + padding + scrollHeight;
+            _topBarPanel.Height = _titleBarPanel.Height + viewportHeight;
+            _commandViewport.Bounds = new Rectangle(0, _titleBarPanel.Height, availableWidth, viewportHeight);
+            _commandScroll.Height = scrollHeight;
+            _commandScroll.Maximum = Math.Max(0, rowWidth - 1);
+            _commandScroll.LargeChange = Math.Max(1, availableWidth);
+            _commandScroll.SmallChange = EditorChromeMetrics.Pixels(32, DeviceDpi);
+            _commandScroll.Value = Math.Min(_commandScroll.Value, Math.Max(0, rowWidth - availableWidth));
+            _commandScroll.Visible = needsScroll;
+            _commandActions.Size = new Size(rowWidth, rowHeight);
+            int inset = Math.Max(0, (availableWidth - rowWidth) / 2);
+            _commandActions.Location = new Point(inset - _commandScroll.Value, padding / 2);
+        }
+        finally { _layingOutCommands = false; }
+    }
+
+    private void QueueCommandLayout()
+    {
+        if (_layingOutCommands || _commandLayoutPending || !IsHandleCreated || IsDisposed || Disposing) return;
+        _commandLayoutPending = true;
+        BeginInvoke(new Action(() =>
+        {
+            _commandLayoutPending = false;
+            UpdateCommandViewport();
+        }));
+    }
+
+    private void RevealCommand(Control command)
+    {
+        if (!_commandScroll.Visible) return;
+        int left = _commandScroll.Value;
+        int right = left + _commandViewport.ClientSize.Width;
+        if (command.Left < left)
+            _commandScroll.Value = command.Left;
+        else if (command.Right > right)
+            _commandScroll.Value = Math.Min(command.Right - _commandViewport.ClientSize.Width,
+                _commandScroll.Maximum - _commandScroll.LargeChange + 1);
+    }
+
+    private void UpdateToolbarViewport()
+    {
+        var layout = _toolbarLayout;
+        if (IsDisposed || Disposing || layout is null) return;
+        int width = Math.Max(1, _toolbarPanel.ClientSize.Width - _toolbarPanel.Padding.Horizontal);
+        var proposed = new Size(width, 0);
+        int minimumHeight = layout.GetControlFromPosition(0, 0)!.GetPreferredSize(proposed).Height
+            + layout.GetControlFromPosition(0, 2)!.GetPreferredSize(proposed).Height;
+        layout.Height = Math.Max(minimumHeight, _toolbarPanel.ClientSize.Height - _toolbarPanel.Padding.Vertical);
+    }
+
     private void BuildToolbar()
     {
         _topBarPanel = BuildTopBar();
@@ -194,6 +310,7 @@ public sealed partial class EditorForm
         _toolbarPanel = new DoubleBufferedPanel
         {
             Dock = DockStyle.Fill,
+            AutoScroll = true,
             BackColor = EditorColors.BgSecondary,
             Padding = new Padding(20, 10, 20, 8),
         };
@@ -215,7 +332,7 @@ public sealed partial class EditorForm
 
         var layout = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             BackColor = Color.Transparent,
             ColumnCount = 1,
             RowCount = 4,
@@ -245,7 +362,9 @@ public sealed partial class EditorForm
         layout.Controls.Add(colorSection, 0, 2);
         layout.Controls.Add(spacerBottom, 0, 3);
 
+        _toolbarLayout = layout;
         _toolbarPanel.Controls.Add(layout);
+        _toolbarPanel.ClientSizeChanged += (_, _) => UpdateToolbarViewport();
     }
 
     private void BuildStatusBar()
@@ -717,32 +836,23 @@ public sealed partial class EditorForm
         _titleBarPanel.Controls.Add(windowActions);
 
         // Row 2: Command Bar Panel
-        var commandBarPanel = new TableLayoutPanel
+        var commandViewport = new Panel
         {
-            Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            ColumnCount = 3,
-            RowCount = 1,
             Margin = new Padding(0),
-            Padding = new Padding(0),
         };
-        EnableDoubleBuffering(commandBarPanel);
-        commandBarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        commandBarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        commandBarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        commandBarPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        commandBarPanel.MouseDown += BeginWindowDrag;
+        EnableDoubleBuffering(commandViewport);
+        commandViewport.MouseDown += BeginWindowDrag;
 
         var commandActions = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            AutoSize = true,
             BackColor = Color.Transparent,
             Padding = new Padding(0),
             Margin = new Padding(0),
-            Anchor = AnchorStyles.None, // centers horizontally and vertically in the middle column
         };
+        EnableDoubleBuffering(commandActions);
         commandActions.MouseDown += BeginWindowDrag;
 
         // New, Open & Save (project operations)
@@ -869,10 +979,20 @@ public sealed partial class EditorForm
         _exportMenuButton.MouseDown += (_, _) => { _exportButton.PressedOverride = true; };
         _exportMenuButton.MouseUp += (_, _) => { _exportButton.PressedOverride = false; };
 
-        commandBarPanel.Controls.Add(commandActions, 1, 0);
+        _commandViewport = commandViewport;
+        _commandActions = commandActions;
+        _commandScroll = new HScrollBar { Dock = DockStyle.Bottom, Visible = false, TabStop = false };
+        _commandScroll.ValueChanged += (_, _) => UpdateCommandViewport();
+        commandViewport.Controls.Add(commandActions);
+        commandViewport.Controls.Add(_commandScroll);
+        foreach (var button in commandActions.Controls.OfType<Button>())
+            button.GotFocus += (_, _) => RevealCommand(button);
+        _topBarPanel.ClientSizeChanged += (_, _) => QueueCommandLayout();
+        commandActions.Layout += (_, _) => QueueCommandLayout();
 
-        _topBarPanel.Controls.Add(commandBarPanel);
+        _topBarPanel.Controls.Add(commandViewport);
         _topBarPanel.Controls.Add(_titleBarPanel);
+        UpdateCommandViewport();
 
         UpdateWindowStateButton();
 
@@ -3036,10 +3156,10 @@ internal sealed class EditorToolButton : EditorButtonBase
         // Compact stack at the top of the cell. Leave a tall enough caption box so
         // descenders (j, p, g) are not clipped — TextRenderer's default padding was
         // eating those pixels inside a 16px line.
-        const float iconSize = 32f;
-        const float iconTop = 3f;
-        const int textHeight = 22;
-        const float textGap = 1f;
+        int iconSize = EditorChromeMetrics.Pixels(32, DeviceDpi);
+        int iconTop = EditorChromeMetrics.Pixels(3, DeviceDpi);
+        int textHeight = EditorChromeMetrics.Pixels(22, DeviceDpi);
+        int textGap = EditorChromeMetrics.Pixels(1, DeviceDpi);
 
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
@@ -3048,7 +3168,7 @@ internal sealed class EditorToolButton : EditorButtonBase
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
 
-        int textTop = (int)Math.Round(rect.Top + iconTop + iconSize + textGap);
+        int textTop = rect.Top + iconTop + iconSize + textGap;
         int textBottom = Math.Min(textTop + textHeight, rect.Bottom - 1);
         var textRect = new Rectangle(rect.Left + 2, textTop, rect.Width - 4, Math.Max(1, textBottom - textTop));
         TextRenderer.DrawText(
@@ -3065,7 +3185,8 @@ internal sealed class EditorToolButton : EditorButtonBase
     }
 
     public override Size GetPreferredSize(Size proposedSize)
-        => new(proposedSize.Width > 0 ? proposedSize.Width : Width, EditorForm.ToolButtonRowHeight);
+        => new(proposedSize.Width > 0 ? proposedSize.Width : Width,
+            EditorChromeMetrics.Pixels(EditorForm.ToolButtonRowHeight, DeviceDpi));
 }
 
 
@@ -3156,9 +3277,11 @@ internal sealed class EditorCommandButton : Button
         try
         {
             using var g = CreateGraphics();
-            using var font = Font ?? EditorFonts.Chrome(8.5f, FontStyle.Bold, DeviceDpi);
-            var size = TextRenderer.MeasureText(g, Text, font);
-            Width = Math.Max(74, size.Width + 18);
+            var size = TextRenderer.MeasureText(g, Text, Font);
+            Width = Math.Max(EditorChromeMetrics.Pixels(74, DeviceDpi),
+                size.Width + EditorChromeMetrics.Pixels(18, DeviceDpi));
+            Height = Math.Max(EditorChromeMetrics.Pixels(62, DeviceDpi),
+                CaptionTop + size.Height + EditorChromeMetrics.Pixels(2, DeviceDpi) + 1);
         }
         catch { }
     }
@@ -3168,6 +3291,10 @@ internal sealed class EditorCommandButton : Button
         base.OnTextChanged(e);
         RecalculateWidth();
     }
+
+    private int CaptionTop => EditorChromeMetrics.Pixels(38, DeviceDpi);
+
+    internal Rectangle CaptionBounds => new(2, CaptionTop, Width - 5, Math.Max(1, Height - 1 - CaptionTop));
 
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -3254,20 +3381,19 @@ internal sealed class EditorCommandButton : Button
             }
         }
 
-        var iconSize = 34;
+        int iconSize = EditorChromeMetrics.Pixels(34, DeviceDpi);
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
-            rect.Top + 3,
+            rect.Top + EditorChromeMetrics.Pixels(3, DeviceDpi),
             iconSize,
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
 
-        var textRect = new Rectangle(rect.Left + 2, rect.Top + 38, rect.Width - 4, 22);
         TextRenderer.DrawText(
             g,
             Text,
             Font,
-            textRect,
+            CaptionBounds,
             contentColor,
             TextFormatFlags.HorizontalCenter |
             TextFormatFlags.VerticalCenter |
@@ -3361,7 +3487,8 @@ internal sealed class EditorChromeButton : EditorButtonBase
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
-        var iconSize = Math.Min(24, Math.Max(20, rect.Height - 18));
+        int iconSize = Math.Min(EditorChromeMetrics.Pixels(24, DeviceDpi),
+            Math.Max(EditorChromeMetrics.Pixels(20, DeviceDpi), rect.Height - EditorChromeMetrics.Pixels(18, DeviceDpi)));
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
             rect.Top + (rect.Height - iconSize) / 2f,

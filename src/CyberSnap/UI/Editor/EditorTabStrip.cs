@@ -15,7 +15,7 @@ internal readonly record struct EditorTabInfo(string Title, bool Dirty, bool Has
 /// </summary>
 internal sealed class EditorTabStrip : DoubleBufferedPanel
 {
-    public const int PreferredHeight = 34;
+    public int PreferredHeight => EditorChromeMetrics.Pixels(34, DeviceDpi);
     private const int WmContextMenu = 0x007B;
     // 20px clickable button plus a 4px gutter from the strip edge.
     private const int ChevronWidth = 20;

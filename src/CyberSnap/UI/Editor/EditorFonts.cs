@@ -5,39 +5,19 @@ using CyberSnap.Helpers;
 namespace CyberSnap.UI.Editor;
 
 /// <summary>
-/// DPI-compensated fonts for the annotation editor.
-/// The editor lays out with fixed logical pixels, but point-based fonts grow with the
-/// monitor DPI, and WinForms PMV2 additionally multiplies point sizes when a window is
-/// created on (or moved into) a monitor whose scale differs from the process DPI. On a
-/// 150% monitor that rendered text at roughly twice the chrome design and truncated
-/// labels everywhere. Every editor font is therefore compensated so it renders at the
-/// same physical pixel height it has on the monitor that was active at process start,
-/// no matter which monitor the window settles on.
+/// Fonts measured in destination-monitor pixels so GDI cannot apply DPI a second time.
+/// Bind restores the intended font after WinForms rescales a control.
 /// </summary>
 internal static class EditorFonts
 {
-    /// <summary>Device DPI the editor design was measured against (primary monitor at process start).</summary>
-    public static int BaseDpi { get; private set; } = 96;
-
-    public static void CaptureBaseDpi(int deviceDpi)
-        => BaseDpi = Math.Max(96, deviceDpi);
-
-    public static float Scale(int deviceDpi)
-        => BaseDpi / (float)Math.Max(96, deviceDpi);
-
-    /// <summary>UiChrome-equivalent font (shared family + UiScale) compensated to <paramref name="deviceDpi"/>.</summary>
     public static Font Chrome(float logicalPt, FontStyle style, int deviceDpi)
-        => new Font(UiChrome.FontFamily.Name, (float)(logicalPt * UiChrome.UiScale * Scale(deviceDpi)), style);
+        => Fixed(UiChrome.FontFamily.Name, (float)(logicalPt * UiChrome.UiScale), style, deviceDpi);
 
-    /// <summary>Fixed-family font compensated to <paramref name="deviceDpi"/>.</summary>
     public static Font Fixed(string family, float logicalPt, FontStyle style, int deviceDpi)
-        => new Font(family, logicalPt * Scale(deviceDpi), style);
+        => new Font(family, logicalPt * Math.Max(96, deviceDpi) / 72f, style, GraphicsUnit.Pixel);
 
     /// <summary>
-    /// Keeps a control's font DPI-compensated for its lifetime: re-applied when the handle
-    /// is created (the monitor DPI is only final then) and again whenever the window
-    /// crosses into a monitor with a different scale, which would otherwise multiply the
-    /// point size on top of the compensation.
+    /// Reapply the pixel font after the handle adopts the monitor DPI.
     /// </summary>
     public static void Bind(Control control, Func<int, Font> factory)
     {

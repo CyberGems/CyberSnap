@@ -56,6 +56,11 @@ internal static partial class Program
         try
         {
             CheckSqliteRuntime();
+            if (args.Contains("--editor-dpi-only"))
+            {
+                CheckEditorDpi(args.FirstOrDefault(a => !a.StartsWith("--")));
+                return 0;
+            }
             if (args.Contains("--gallery-focus-only"))
             {
                 CheckGalleryFocus((CyberSnap.App)app, settings);

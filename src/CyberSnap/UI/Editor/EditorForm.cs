@@ -365,10 +365,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         if (captured is null) throw new ArgumentNullException(nameof(captured));
 
-        // Anchor the editor's font compensation to the process-start DPI (primary monitor):
-        // every editor font then renders with the physical size this monitor produces.
-        EditorFonts.CaptureBaseDpi(DeviceDpi);
-
         var initial = CreateDocument(new Bitmap(captured), savedFilePath, cloneFrom: null);
         _documents.Add(initial);
         _activeDocument = initial;
@@ -472,7 +468,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         _tabRow = new Panel
         {
             Dock = DockStyle.Top,
-            Height = EditorTabStrip.PreferredHeight,
+            Height = _tabStrip.PreferredHeight,
             Visible = false,
             BackColor = EditorColors.BgPrimary,
         };
@@ -633,6 +629,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
             UpdateStatusBarResponsiveLayout();
         };
         Shown += OnEditorShownFirstTime;
+        DpiChanged += (_, _) =>
+        {
+            if (IsHandleCreated && !IsDisposed && !Disposing)
+                BeginInvoke(new Action(ApplyChromeDpi));
+        };
     }
 
     /// <summary>
@@ -649,6 +650,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             RestoreSavedWindowPlacement();
             MaybeAutoMaximizeForCapture();
+            ApplyChromeDpi();
             UpdateWindowChromeRegion();
             RefreshUi();
             UpdateStatusBarResponsiveLayout();
