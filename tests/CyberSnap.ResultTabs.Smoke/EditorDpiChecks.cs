@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using CyberSnap.Services;
 using CyberSnap.UI;
+using CyberSnap.UI.Controls;
 using CyberSnap.UI.Editor;
 using Forms = System.Windows.Forms;
 
@@ -97,6 +98,7 @@ internal static partial class Program
                 AwaitCondition(() => editor.Opacity == 1, "Editor did not finish opening");
                 var screens = Forms.Screen.AllScreens;
                 var sizes = new Dictionary<int, (int Button, int Text, int Tool, int ToolText)>();
+                var checkedZoomDpis = new HashSet<int>();
                 var palette = GetField<Forms.Panel>(editor, "_toolbarPanel");
                 var toolViewport = GetField<Forms.Panel>(editor, "_toolViewport");
                 var tools = ((System.Collections.IDictionary)Field(editor, "_toolButtons")).Values.Cast<Forms.Button>()
@@ -153,6 +155,8 @@ internal static partial class Program
                     CheckEditorSidebar(palette, toolViewport, tools, swatches, context);
                     CheckEditorTitleTooltip(editor, context);
                     CheckEditorStatusBar(editor, context);
+                    if (language == "es" && uiScale == UiScale.Default && checkedZoomDpis.Add(dpi))
+                        CheckEditorZoomInteraction(editor, context);
                     SaveEditorRender(editor, renders, language, uiScale, "restored");
 
                     var command = GetField<Forms.Button>(editor, "_galleryButton");
@@ -224,18 +228,67 @@ internal static partial class Program
     private static void CheckEditorStatusBar(EditorForm editor, string context)
     {
         var status = GetField<Forms.Panel>(editor, "_statusBarPanel");
-        foreach (string field in new[] { "_scaleButton", "_coordsLabel", "_zoomSlider", "_zoomLabel", "_zoomViewBtn", "_toggleFitSwitch", "_togglePanLockSwitch" })
+        foreach (string field in new[] { "_scaleButton", "_coordsLabel", "_zoomSlider", "_zoomResetButton", "_zoomViewBtn", "_toggleFitSwitch", "_togglePanLockSwitch" })
         {
             var control = GetField<Forms.Control>(editor, field);
             if (control.Visible)
                 Assert(ContainsControl(status, control), $"the {field} control fits the compact status bar: {context}", false);
         }
-        var zoom = GetField<Forms.Label>(editor, "_zoomLabel");
+        var zoom = GetField<Forms.Button>(editor, "_zoomResetButton");
         using var graphics = zoom.CreateGraphics();
-        var maxZoom = Forms.TextRenderer.MeasureText(graphics, $"{CyberSnap.UI.Controls.AnnotationCanvas.MaxZoomPercent}%", zoom.Font,
+        var maxZoom = Forms.TextRenderer.MeasureText(graphics, $"{AnnotationCanvas.MaxZoomPercent}%", zoom.Font,
             Size.Empty, Forms.TextFormatFlags.SingleLine | Forms.TextFormatFlags.NoPrefix);
         Assert(maxZoom.Width <= zoom.ClientSize.Width && maxZoom.Height <= zoom.ClientSize.Height,
             $"the complete zoom percentage fits ({maxZoom} in {zoom.ClientSize}): {context}", false);
+
+        var slider = GetField<Forms.Control>(editor, "_zoomSlider");
+        var fit = GetField<Forms.Button>(editor, "_zoomViewBtn");
+        var rail = GetZoomRail(slider);
+        Assert(slider.Parent == zoom.Parent && zoom.Parent == fit.Parent && slider.Right == zoom.Left && zoom.Right == fit.Left,
+            "the rail, percentage and fit button share one row without gaps: " + context, false);
+        Assert(rail.Width >= Math.Round(74 * editor.DeviceDpi / 120.0) && rail.Height < 6,
+            $"the compact slider has a longer, thinner rail ({rail.Size}): {context}", false);
+    }
+
+    private static Rectangle GetZoomRail(Forms.Control slider)
+        => (Rectangle)slider.GetType().GetMethod("GetTrackRect", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(slider, null)!;
+
+    private static void CheckEditorZoomInteraction(EditorForm editor, string context)
+    {
+        var canvas = (AnnotationCanvas)typeof(EditorForm).GetProperty("_canvas", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(editor)!;
+        var slider = GetField<Forms.Control>(editor, "_zoomSlider");
+        var reset = GetField<Forms.Button>(editor, "_zoomResetButton");
+        var rail = GetZoomRail(slider);
+        int y = rail.Top + rail.Height / 2;
+        var center = new Point(rail.Left + rail.Width / 2, y);
+        var end = new Point(rail.Right, y);
+        SendMessageW(slider.Handle, 0x0201, (IntPtr)1, MousePositionParameter(center));
+        SendMessageW(slider.Handle, 0x0200, (IntPtr)1, MousePositionParameter(end));
+        SendMessageW(slider.Handle, 0x0202, IntPtr.Zero, MousePositionParameter(end));
+        Assert(canvas.Zoom == AnnotationCanvas.MaxZoomPercent / 100.0, "dragging the compact rail reaches maximum zoom: " + context, false);
+
+        SendMessageW(slider.Handle, 0x020A, (IntPtr)(-120 << 16), MousePositionParameter(slider.PointToScreen(center)));
+        double afterWheel = canvas.Zoom;
+        Assert(afterWheel < AnnotationCanvas.MaxZoomPercent / 100.0, "the wheel still changes zoom: " + context, false);
+
+        typeof(EditorForm).GetMethod("ShowHoverTooltip", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(editor, new object?[] { slider, "Zoom", true, null });
+        var left = Forms.Message.Create(slider.Handle, 0x0100, (IntPtr)(int)Forms.Keys.Left, IntPtr.Zero);
+        Assert(!((Forms.IMessageFilter)editor).PreFilterMessage(ref left), "a visible tooltip leaves the zoom key with its target: " + context, false);
+        SendMessageW(left.HWnd, (uint)left.Msg, left.WParam, left.LParam);
+        Assert(canvas.Zoom < afterWheel, "the focused slider responds to the arrow key: " + context, false);
+
+        reset.PerformClick();
+        Assert(canvas.Zoom == 1.0 && reset.Text == "100%", "clicking the percentage restores the canvas and label to 100%: " + context, false);
+        canvas.ZoomToPercent(175);
+        Assert(reset.Focus(), "the percentage button can receive keyboard focus: " + context, false);
+        SendMessageW(reset.Handle, 0x0100, (IntPtr)(int)Forms.Keys.Space, IntPtr.Zero);
+        SendMessageW(reset.Handle, 0x0101, (IntPtr)(int)Forms.Keys.Space, IntPtr.Zero);
+        Assert(canvas.Zoom == 1.0 && reset.Text == "100%", "Space activates the focused percentage button: " + context, false);
+
+        static IntPtr MousePositionParameter(Point point) => (IntPtr)((point.Y << 16) | (point.X & 0xffff));
     }
 
     private static void CheckEditorSidebar(Forms.Panel palette, Forms.Panel viewport, Forms.Button[] tools, Forms.Control[] swatches, string context)

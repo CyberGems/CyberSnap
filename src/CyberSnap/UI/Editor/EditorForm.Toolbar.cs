@@ -25,7 +25,7 @@ public sealed partial class EditorForm
     private Control _hintArea = null!;
     private DoubleBufferedPanel _titleFileNameLabel = null!;
     private string _titleFileNameText = "";
-    private Label _zoomLabel = null!;
+    private EditorZoomBarButton _zoomResetButton = null!;
     private EditorScaleMenuButton _scaleButton = null!;
     private bool _applyingEditorScale;
     private DateTime _scaleMenuLastClosed = DateTime.MinValue;
@@ -437,10 +437,8 @@ public sealed partial class EditorForm
         _zoomViewBtn = new EditorZoomBarButton
         {
             IconId = "zoomFit",
-            Text = "",
-            Width = 38,
-            Height = StatusControlHeight,
-            Margin = new Padding(6, 0, 0, 0),
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0),
         };
         _zoomViewBtn.Click += (_, _) =>
         {
@@ -483,51 +481,36 @@ public sealed partial class EditorForm
 
         var zoomHost = new EditorZoomHostPanel
         {
-            Width = 200,
+            Width = 182,
             Height = StatusControlHeight,
             BackColor = EditorColors.TitleBar,
             ColumnCount = 3,
             RowCount = 1,
-            Padding = new Padding(8, 3, 8, 3),
             Margin = new Padding(0),
         };
-        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 24));
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 54));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34));
         zoomHost.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        _zoomLabel = new DoubleBufferedLabel
+        _zoomResetButton = new EditorZoomBarButton
         {
             Dock = DockStyle.Fill,
-            SingleLine = true,
             Margin = new Padding(0),
-            BackColor = Color.Transparent,
             Text = "100%",
-            ForeColor = EditorColors.Accent,
-            TextAlign = ContentAlignment.MiddleRight,
+            AccessibleName = LocalizationService.Translate("Reset zoom to 100%"),
         };
-        EditorFonts.Bind(_zoomLabel, dpi => EditorFonts.Fixed("Segoe UI", 9f, FontStyle.Bold, dpi));
-
-        var zoomIcon = new DoubleBufferedPanel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = Color.Transparent,
-            Margin = new Padding(0),
-        };
-        zoomIcon.Paint += (s, e) =>
-        {
-            var rect = new RectangleF((zoomIcon.Width - 16) / 2f, (zoomIcon.Height - 16) / 2f, 16, 16);
-            StreamlineIcons.DrawIcon(e.Graphics, "magnifier", rect, EditorColors.TextSecondary, 0f, false);
-        };
+        _zoomResetButton.Click += (_, _) => _canvas.ZoomReset();
 
         _zoomSlider = new EditorZoomSlider
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
+            AccessibleName = LocalizationService.Translate("Zoom"),
             Minimum = AnnotationCanvas.MinZoomPercent,
             Maximum = AnnotationCanvas.MaxZoomPercent,
             Value = 100,
-            Margin = new Padding(4, 0, 4, 0),
+            Margin = new Padding(0),
         };
         _zoomSlider.ValueChanged += (_, _) =>
         {
@@ -535,9 +518,9 @@ public sealed partial class EditorForm
             _canvas.ZoomToPercent(_zoomSlider.Value);
         };
 
-        zoomHost.Controls.Add(zoomIcon, 0, 0);
-        zoomHost.Controls.Add(_zoomSlider, 1, 0);
-        zoomHost.Controls.Add(_zoomLabel, 2, 0);
+        zoomHost.Controls.Add(_zoomSlider, 0, 0);
+        zoomHost.Controls.Add(_zoomResetButton, 1, 0);
+        zoomHost.Controls.Add(_zoomViewBtn, 2, 0);
 
         // Right-side controls grouped in a single FlowLayoutPanel
         var rightControlsFlow = new FlowLayoutPanel
@@ -555,7 +538,6 @@ public sealed partial class EditorForm
         rightControlsFlow.Controls.Add(scaleHost);
         rightControlsFlow.Controls.Add(coordsPanel);
         rightControlsFlow.Controls.Add(zoomHost);
-        rightControlsFlow.Controls.Add(_zoomViewBtn);
         rightControlsFlow.Controls.Add(_toggleFitSwitch);
         rightControlsFlow.Controls.Add(_togglePanLockSwitch);
 
@@ -633,6 +615,7 @@ public sealed partial class EditorForm
             return WithShortcut("Fit to window", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomFit") ?? "9");
         });
         RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", $"{EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomIn") ?? "8"} / {EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomOut") ?? "7"}"));
+        RegisterHoverTooltip(_zoomResetButton, () => WithShortcut("Reset zoom to 100%", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomReset") ?? "0"));
         RegisterHoverTooltip(_scaleButton, "Change the image size in pixels. Zoom only changes the view.");
 
         RegisterHoverTooltip(_liveStatusLabel, () =>
@@ -1828,8 +1811,8 @@ public sealed partial class EditorForm
     {
         var percent = (int)Math.Round(_canvas.Zoom * 100);
         var zoomText = $"{percent}%";
-        if (_zoomLabel.Text != zoomText)
-            _zoomLabel.Text = zoomText;
+        if (_zoomResetButton.Text != zoomText)
+            _zoomResetButton.Text = zoomText;
 
         bool fitted = IsZoomFitted();
         if (_zoomViewBtn is not null)
@@ -4093,6 +4076,8 @@ internal sealed class EditorStrokeWidthButton : Button
 
 internal sealed class EditorZoomSlider : Control
 {
+    private const int ThumbDiameter = 12;
+    private const int ThumbHalo = 3;
     private bool _hover;
     private bool _dragging;
     private int _minimum = 10;
@@ -4161,32 +4146,38 @@ internal sealed class EditorZoomSlider : Control
         g.Clear(EditorColors.TitleBar);
 
         var track = GetTrackRect();
-        using (var trackPath = EditorPaint.RoundedRect(track, 4))
-        using (var trackFill = new SolidBrush(Color.FromArgb(18, 0, 255, 255)))
-        using (var trackGlow = new Pen(Color.FromArgb(42, EditorColors.Accent), 3f))
-        using (var trackPen = new Pen(EditorColors.Border))
-        {
-            g.FillPath(trackFill, trackPath);
-            g.DrawPath(trackGlow, trackPath);
-            g.DrawPath(trackPen, trackPath);
-        }
+        float centerY = track.Top + track.Height / 2f;
+        int thumbX = track.Left + (int)Math.Round(track.Width * ValueToFraction(Value));
+        using var rail = new Pen(Color.FromArgb(90, EditorColors.TextSecondary), track.Height)
+            { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using var progress = new Pen(Color.FromArgb(180, EditorColors.Accent), track.Height)
+            { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        g.DrawLine(rail, track.Left, centerY, track.Right, centerY);
+        if (thumbX > track.Left)
+            g.DrawLine(progress, track.Left, centerY, thumbX, centerY);
 
-        var thumbX = GetThumbX();
-        var fillRect = Rectangle.FromLTRB(track.Left, track.Top, thumbX, track.Bottom);
-        if (fillRect.Width > 0)
+        int diameter = EditorChromeMetrics.Pixels(ThumbDiameter, DeviceDpi);
+        int halo = EditorChromeMetrics.Pixels(ThumbHalo, DeviceDpi);
+        var thumb = new RectangleF(thumbX - diameter / 2f, centerY - diameter / 2f, diameter, diameter);
+        if (_hover || _dragging || (Focused && ShowFocusCues))
         {
-            using var fillPath = EditorPaint.RoundedRect(fillRect, 4);
-            using var accent = new SolidBrush(Color.FromArgb(120, EditorColors.Accent));
-            g.FillPath(accent, fillPath);
+            using var glow = new SolidBrush(Color.FromArgb(64, EditorColors.Accent));
+            g.FillEllipse(glow, RectangleF.Inflate(thumb, halo, halo));
         }
-
-        using var glow = new SolidBrush(Color.FromArgb(_hover || _dragging ? 80 : 44, EditorColors.Accent));
         using var thumbFill = new SolidBrush(EditorColors.Accent);
-        using var thumbStroke = new Pen(Color.FromArgb(230, 4, 20, 26), 1.4f);
-        var thumb = new Rectangle(thumbX - 8, track.Top - 5, 16, 16);
-        g.FillEllipse(glow, thumb.X - 5, thumb.Y - 5, thumb.Width + 10, thumb.Height + 10);
         g.FillEllipse(thumbFill, thumb);
-        g.DrawEllipse(thumbStroke, thumb);
+    }
+
+    protected override void OnGotFocus(EventArgs e)
+    {
+        base.OnGotFocus(e);
+        Invalidate();
+    }
+
+    protected override void OnLostFocus(EventArgs e)
+    {
+        base.OnLostFocus(e);
+        Invalidate();
     }
 
     protected override void OnMouseEnter(EventArgs e)
@@ -4250,7 +4241,7 @@ internal sealed class EditorZoomSlider : Control
     }
 
     protected override bool IsInputKey(Keys keyData)
-        => keyData is Keys.Left or Keys.Right or Keys.Home or Keys.End || base.IsInputKey(keyData);
+        => (keyData & ~Keys.Shift) is Keys.Left or Keys.Right or Keys.Home or Keys.End || base.IsInputKey(keyData);
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
@@ -4277,7 +4268,11 @@ internal sealed class EditorZoomSlider : Control
     }
 
     private Rectangle GetTrackRect()
-        => new(14, (Height - 6) / 2, Math.Max(1, Width - 28), 6);
+    {
+        int inset = EditorChromeMetrics.Pixels(ThumbDiameter / 2 + ThumbHalo, DeviceDpi);
+        int thickness = EditorChromeMetrics.Pixels(3, DeviceDpi);
+        return new Rectangle(inset, (Height - thickness) / 2, Math.Max(1, Width - 2 * inset), thickness);
+    }
 
     // Zoom is perceived multiplicatively (the wheel steps by a constant factor), so the
     // thumb is positioned on a logarithmic scale. A linear mapping crammed the whole
@@ -4291,12 +4286,6 @@ internal sealed class EditorZoomSlider : Control
         if (lmax - lmin < 1e-9) return 0.0;
         double lval = Math.Log(Math.Clamp(value, Math.Max(1, Minimum), Math.Max(1, Maximum)));
         return (lval - lmin) / (lmax - lmin);
-    }
-
-    private int GetThumbX()
-    {
-        var track = GetTrackRect();
-        return track.Left + (int)Math.Round(track.Width * ValueToFraction(Value));
     }
 
     private void SetValueFromX(int x)
@@ -4509,9 +4498,8 @@ internal sealed class EditorZoomBarButton : Button
         FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
-        ForeColor = EditorColors.Accent;
         Cursor = Cursors.Hand;
-        EditorFonts.Bind(this, dpi => EditorFonts.Chrome(10f, FontStyle.Bold, dpi));
+        EditorFonts.Bind(this, dpi => EditorFonts.Fixed("Segoe UI", 9f, FontStyle.Bold, dpi));
         TabStop = true;
     }
 
@@ -4539,10 +4527,13 @@ internal sealed class EditorZoomBarButton : Button
         if (rect.Width <= 0 || rect.Height <= 0) return;
 
         // Ghost-button styling that mirrors the top-bar command buttons: no chrome at rest,
-        // a soft accent wash + underline on hover/press. Label stays inline (horizontal) to
-        // respect the tighter vertical space of the status bar.
+        // a soft accent wash and underline when hovered, pressed or keyboard focused.
+        bool showLabel = !string.IsNullOrEmpty(Text);
+        bool highlighted = _hover || (Focused && ShowFocusCues);
         Color fill = Color.Transparent;
-        Color contentColor = Enabled ? EditorColors.TextPrimary : Color.FromArgb(88, 105, 128);
+        Color contentColor = Enabled
+            ? (showLabel ? EditorColors.Accent : EditorColors.TextPrimary)
+            : Color.FromArgb(88, 105, 128);
 
         if (Enabled)
         {
@@ -4551,7 +4542,7 @@ internal sealed class EditorZoomBarButton : Button
                 fill = Color.FromArgb(36, EditorColors.Accent);
                 contentColor = EditorColors.Accent;
             }
-            else if (_hover)
+            else if (highlighted)
             {
                 fill = Color.FromArgb(20, EditorColors.Accent);
                 contentColor = EditorColors.Accent;
@@ -4565,33 +4556,30 @@ internal sealed class EditorZoomBarButton : Button
             g.FillPath(brush, path);
         }
 
-        if (Enabled && (_hover || _pressed))
+        if (Enabled && (highlighted || _pressed))
         {
             using var underlineBrush = new SolidBrush(EditorColors.Accent);
-            g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
+            g.FillRectangle(underlineBrush, rect.Left + 8, rect.Bottom - 1, Math.Max(0, rect.Width - 16), 2);
         }
 
-        var iconSize = 24;
-        bool iconOnly = string.IsNullOrEmpty(Text);
-        float iconX = iconOnly
-            ? rect.Left + (rect.Width - iconSize) / 2f
-            : rect.Left + 12;
-        var iconRect = new RectangleF(iconX, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
-        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
-
-        if (!iconOnly)
+        if (showLabel)
         {
-            var textRect = new Rectangle(rect.Left + 40, rect.Top, rect.Width - 46, rect.Height);
             TextRenderer.DrawText(
                 g,
                 Text,
                 Font,
-                textRect,
+                ClientRectangle,
                 contentColor,
-                TextFormatFlags.Left |
+                TextFormatFlags.HorizontalCenter |
                 TextFormatFlags.VerticalCenter |
-                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.SingleLine |
                 TextFormatFlags.NoPrefix);
+        }
+        else
+        {
+            const int iconSize = 24;
+            var iconRect = new RectangleF((rect.Width - iconSize) / 2f, (rect.Height - iconSize) / 2f, iconSize, iconSize);
+            StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
         }
     }
 

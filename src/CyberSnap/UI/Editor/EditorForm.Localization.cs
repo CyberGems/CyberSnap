@@ -42,6 +42,8 @@ public sealed partial class EditorForm
             _toggleFrameSwitch.LabelText = LocalizationService.Translate("Outline");
 
         UpdateScaleControls();
+        _zoomSlider.AccessibleName = LocalizationService.Translate("Zoom");
+        _zoomResetButton.AccessibleName = LocalizationService.Translate("Reset zoom to 100%");
 
         if (_closeButton is not null)
             _closeButton.AccessibleName = LocalizationService.Translate("Close");

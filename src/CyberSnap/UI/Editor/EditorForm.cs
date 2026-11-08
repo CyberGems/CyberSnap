@@ -853,13 +853,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (ctrl.Parent is EditorZoomHostPanel)
         {
             ctrl.BackColor = Color.Transparent;
-            if (ctrl is Label lbl)
-            {
-                if (lbl == _zoomLabel)
-                    lbl.ForeColor = EditorColors.Accent;
-                else
-                    lbl.ForeColor = EditorColors.TextSecondary;
-            }
             return;
         }
 
@@ -938,9 +931,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
         else if (ctrl is Label label)
         {
-            if (label == _zoomLabel)
-                label.ForeColor = EditorColors.Accent;
-            else if (label == _coordsLabel || label == _fileNameLabel || label == _liveStatusLabel)
+            if (label == _coordsLabel || label == _fileNameLabel || label == _liveStatusLabel)
                 label.ForeColor = EditorColors.TextSecondary;
             else
                 label.ForeColor = EditorColors.TextPrimary;
@@ -2334,9 +2325,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
     bool IMessageFilter.PreFilterMessage(ref Message m)
     {
         if (!IsDisposed && m.Msg is 0x100 or 0x104
-            && _hoverToolTip is { Visible: true, IsDisposed: false })
+            && _hoverToolTip is { Visible: true, IsDisposed: false } tip)
         {
-            return HandleKeyPressedWithTooltipVisible(ref m);
+            if (m.HWnd == tip.Handle)
+                return HandleKeyPressedWithTooltipVisible(ref m);
+            DismissVisibleHoverTooltips();
         }
 
         if (m.Msg != WM_LBUTTONDBLCLK || IsDisposed || _canvas.IsDisposed) return false;
@@ -2383,7 +2376,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
 
         // Ensure canvas gets focus for single-key shortcuts.
-        if (!_canvas.Focused && (keyData == Keys.Space || keyData == Keys.Delete
+        if (!_canvas.Focused && ((keyData == Keys.Space && _zoomResetButton is not { Focused: true }) || keyData == Keys.Delete
             || EditorViewHotkeyHelper.IsAnyViewHotkey(keyData)))
         {
             _canvas.Focus();
@@ -2446,8 +2439,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         if (key == Keys.Space)
         {
-            // Let the inline text box receive Space as a character.
-            if (_canvas.IsEditingText)
+            // Space types in the inline editor or activates the focused zoom reset button.
+            if (_canvas.IsEditingText || _zoomResetButton is { Focused: true })
                 return false;
 
             if (!_canvas.Focused)
@@ -2476,7 +2469,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return false;
 
         _canvas.HandleSpacePanKeyUp();
-        return true;
+        return _zoomResetButton is not { Focused: true };
     }
 
     /// <summary>
