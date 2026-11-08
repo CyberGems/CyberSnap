@@ -96,7 +96,7 @@ public sealed partial class EditorForm
     }
 
     /// <summary>Compact tool-cell height so the palette does not stretch when the editor is maximized.</summary>
-    internal const int ToolButtonRowHeight = 66;
+    private const int ToolButtonRowHeight = 66;
 
     private void ShowColorPickerPopup(EditorColorButton button)
     {
@@ -188,7 +188,9 @@ public sealed partial class EditorForm
     }
 
     private float _appliedChromeScale = 1f;
-    private TableLayoutPanel _toolbarLayout = null!;
+    private EditorToolViewport _toolViewport = null!;
+    private TableLayoutPanel _toolSection = null!;
+    private Control _colorSection = null!;
     private Panel _commandViewport = null!;
     private FlowLayoutPanel _commandActions = null!;
     private HScrollBar _commandScroll = null!;
@@ -294,13 +296,39 @@ public sealed partial class EditorForm
 
     private void UpdateToolbarViewport()
     {
-        var layout = _toolbarLayout;
-        if (IsDisposed || Disposing || layout is null) return;
-        int width = Math.Max(1, _toolbarPanel.ClientSize.Width - _toolbarPanel.Padding.Horizontal);
-        var proposed = new Size(width, 0);
-        int minimumHeight = layout.GetControlFromPosition(0, 0)!.GetPreferredSize(proposed).Height
-            + layout.GetControlFromPosition(0, 2)!.GetPreferredSize(proposed).Height;
-        layout.Height = Math.Max(minimumHeight, _toolbarPanel.ClientSize.Height - _toolbarPanel.Padding.Vertical);
+        if (IsDisposed || Disposing || _toolViewport is null) return;
+
+        Rectangle area = _toolbarPanel.DisplayRectangle;
+        var proposed = new Size(Math.Max(1, area.Width), 0);
+        int paletteHeight = _colorSection.GetPreferredSize(proposed).Height;
+        int toolSpace = Math.Max(0, area.Height - paletteHeight);
+        var groups = _toolSection.Controls.OfType<TableLayoutPanel>();
+        var rows = groups.SelectMany(group => group.RowStyles.Cast<RowStyle>().Select((style, index) =>
+            (Style: style, Margin: group.GetControlFromPosition(0, index)!.Margin.Vertical))).ToArray();
+        int rowSpacing = _toolSection.Padding.Vertical + groups.Sum(group => group.Margin.Vertical)
+            + rows.Sum(row => row.Margin);
+        var buttons = _toolButtons.Values.Concat(_transformButtons.Select(entry => entry.Button));
+        int captionHeight = buttons.Max(button => button.Font.Height);
+        int minimumRowHeight = captionHeight + EditorChromeMetrics.Pixels(20, DeviceDpi);
+        int preferredRowHeight = Math.Max(minimumRowHeight, EditorChromeMetrics.Pixels(ToolButtonRowHeight, DeviceDpi));
+        int rowHeight = Math.Min((toolSpace - rowSpacing) / rows.Length, preferredRowHeight);
+        if (rowHeight < minimumRowHeight)
+        {
+            // When the grid must scroll, keep more room for the icons.
+            rowHeight = Math.Min(preferredRowHeight, captionHeight + EditorChromeMetrics.Pixels(30, DeviceDpi));
+        }
+
+        foreach (var row in rows)
+            row.Style.Height = rowHeight + row.Margin;
+
+        int toolHeight = rows.Length * rowHeight + rowSpacing;
+        int viewportHeight = Math.Min(toolSpace, toolHeight);
+        _toolViewport.Bounds = new Rectangle(area.Left, area.Top,
+            area.Width + _toolViewport.ScrollGutter, viewportHeight);
+        _toolViewport.LayoutContent(area.Width, toolHeight);
+        // Share any spare space above and below the palette in taller windows.
+        int paletteTop = area.Top + viewportHeight + (toolSpace - viewportHeight) / 2;
+        _colorSection.Bounds = new Rectangle(area.Left, paletteTop, area.Width, paletteHeight);
     }
 
     private void BuildToolbar()
@@ -310,7 +338,6 @@ public sealed partial class EditorForm
         _toolbarPanel = new DoubleBufferedPanel
         {
             Dock = DockStyle.Fill,
-            AutoScroll = true,
             BackColor = EditorColors.BgSecondary,
             Padding = new Padding(20, 10, 20, 8),
         };
@@ -330,40 +357,15 @@ public sealed partial class EditorForm
         };
         _toolbarHost.Controls.Add(_toolbarPanel);
 
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            BackColor = Color.Transparent,
-            ColumnCount = 1,
-            RowCount = 4,
-            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
-        };
-        EnableDoubleBuffering(layout);
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        // Tools keep their natural height at the top. Remaining column height is split
-        // above and below the color/stroke block so that cluster sits in the leftover space
-        // instead of hugging the status bar when the editor is maximized.
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-
-        var toolSection = BuildToolSection();
-        toolSection.AutoSize = true;
-        toolSection.Dock = DockStyle.Fill;
-        var colorSection = BuildColorSection();
-        colorSection.AutoSize = true;
-        colorSection.Dock = DockStyle.Fill;
-
-        var spacerTop = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-        var spacerBottom = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-        layout.Controls.Add(toolSection, 0, 0);
-        layout.Controls.Add(spacerTop, 0, 1);
-        layout.Controls.Add(colorSection, 0, 2);
-        layout.Controls.Add(spacerBottom, 0, 3);
-
-        _toolbarLayout = layout;
-        _toolbarPanel.Controls.Add(layout);
+        _toolSection = BuildToolSection();
+        _colorSection = BuildColorSection();
+        _toolSection.Dock = _colorSection.Dock = DockStyle.None;
+        _toolSection.AutoSize = _colorSection.AutoSize = false;
+        _toolViewport = new EditorToolViewport(_toolSection);
+        foreach (var button in _toolButtons.Values.Concat(_transformButtons.Select(entry => entry.Button)))
+            button.Enter += (_, _) => _toolViewport.Reveal(button);
+        _toolbarPanel.Controls.Add(_toolViewport);
+        _toolbarPanel.Controls.Add(_colorSection);
         _toolbarPanel.ClientSizeChanged += (_, _) => UpdateToolbarViewport();
     }
 
@@ -1040,31 +1042,22 @@ public sealed partial class EditorForm
         return leftPad + iconSize + textGap + textW + 16;
     }
 
-    private Control BuildToolSection()
+    private TableLayoutPanel BuildToolSection()
     {
-        // AutoSize to the tool grid — a fixed Height shorter than the 7 rows overflowed
-        // onto the palette in the restored window and hid the first color row.
-        var section = MakeAutoSizeSection();
-
         // Three groups, 7 rows total, same 3-column grid:
         //   • Nav — 1 row
         //   • Drawing — 4 rows
         //   • Cut / crop / transform — 2 rows, below a separator after the last draw row
         var host = new TableLayoutPanel
         {
-            Dock = DockStyle.Top,
-            AutoSize = true,
             BackColor = Color.Transparent,
             ColumnCount = 1,
             RowCount = 3,
-            Padding = new Padding(0, 2, 0, 0),
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(3, 5, 3, 7),
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         EnableDoubleBuffering(host);
         host.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        // AutoSize so tool cells keep a compact height when the editor is maximized;
-        // leftover space sits between this grid and the color/stroke section below.
         host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -1074,13 +1067,14 @@ public sealed partial class EditorForm
             Dock = DockStyle.Top,
             AutoSize = true,
             BackColor = Color.Transparent,
+            Margin = new Padding(3, 0, 3, 0),
             ColumnCount = 3,
             RowCount = 1,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         for (int c = 0; c < 3; c++)
             nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        nav.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        nav.RowStyles.Add(new RowStyle(SizeType.Absolute, ToolButtonRowHeight));
 
         AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan", bottomMargin: 5);
         AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Pick", displayKey: "Sel", bottomMargin: 5);
@@ -1091,6 +1085,7 @@ public sealed partial class EditorForm
             Dock = DockStyle.Top,
             AutoSize = true,
             BackColor = Color.Transparent,
+            Margin = new Padding(3, 0, 3, 0),
             ColumnCount = 3,
             RowCount = 4,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
@@ -1098,7 +1093,7 @@ public sealed partial class EditorForm
         for (int c = 0; c < 3; c++)
             draw.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
         for (int r = 0; r < 4; r++)
-            draw.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            draw.RowStyles.Add(new RowStyle(SizeType.Absolute, ToolButtonRowHeight));
 
         AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw", topMargin: 5);
         AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", topMargin: 5);
@@ -1118,14 +1113,15 @@ public sealed partial class EditorForm
             Dock = DockStyle.Top,
             AutoSize = true,
             BackColor = Color.Transparent,
+            Margin = new Padding(3, 0, 3, 0),
             ColumnCount = 3,
             RowCount = 2,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         for (int c = 0; c < 3; c++)
             transform.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        transform.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        transform.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        transform.RowStyles.Add(new RowStyle(SizeType.Absolute, ToolButtonRowHeight));
+        transform.RowStyles.Add(new RowStyle(SizeType.Absolute, ToolButtonRowHeight));
 
         AddToolButton(transform, 0, 0, AnnotationCanvas.CanvasTool.CutOut, "cutOut", "Cut Out", displayKey: "Cut", topMargin: 5);
         AddToolButton(transform, 1, 0, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop", topMargin: 5);
@@ -1163,8 +1159,7 @@ public sealed partial class EditorForm
         host.Controls.Add(draw, 0, 1);
         host.Controls.Add(transform, 0, 2);
 
-        section.Controls.Add(host, 0, 0);
-        return section;
+        return host;
     }
 
     // Subtle, low-contrast neutral hairline fading out toward both ends so it reads as an
@@ -1217,6 +1212,7 @@ public sealed partial class EditorForm
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
         EnableDoubleBuffering(outer);
+        outer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         int paletteHeight = (swatchSize + 8) * 2;
         int strokeHeight = strokeSize + 8;
         outer.RowStyles.Add(new RowStyle(SizeType.Absolute, paletteHeight));
@@ -1390,8 +1386,8 @@ public sealed partial class EditorForm
         string iconId,
         string labelKey,
         string? displayKey = null,
-        int topMargin = 3,
-        int bottomMargin = 3)
+        int topMargin = 2,
+        int bottomMargin = 2)
     {
         // The visible button text can be a shorter label (displayKey) to avoid truncation in the
         // narrow grid; the hover tooltip below still uses the full labelKey.
@@ -1403,8 +1399,6 @@ public sealed partial class EditorForm
         var button = new EditorToolButton
         {
             Dock = DockStyle.Fill,
-            Height = ToolButtonRowHeight,
-            MinimumSize = new Size(0, ToolButtonRowHeight),
             Margin = new Padding(left, topMargin, right, bottomMargin),
             IconId = iconId,
             Text = label,
@@ -1447,8 +1441,8 @@ public sealed partial class EditorForm
         string labelKey,
         string displayKey,
         Models.Commands.CanvasTransformKind kind,
-        int topMargin = 3,
-        int bottomMargin = 3)
+        int topMargin = 2,
+        int bottomMargin = 2)
     {
         int cols = parent.ColumnCount;
         int left = column == 0 ? 0 : 4;
@@ -1456,8 +1450,6 @@ public sealed partial class EditorForm
         var button = new EditorToolButton
         {
             Dock = DockStyle.Fill,
-            Height = ToolButtonRowHeight,
-            MinimumSize = new Size(0, ToolButtonRowHeight),
             Margin = new Padding(left, topMargin, right, bottomMargin),
             IconId = iconId,
             Text = LocalizationService.Translate(displayKey),
@@ -2957,6 +2949,113 @@ internal class DoubleBufferedPanel : Panel
     }
 }
 
+internal sealed class EditorToolViewport : DoubleBufferedPanel
+{
+    private readonly Control _content;
+    private int _dragOffset;
+    private bool _hoveringScroll;
+
+    public EditorToolViewport(Control content)
+    {
+        _content = content;
+        BackColor = Color.Transparent;
+        Controls.Add(content);
+    }
+
+    public int ScrollGutter => EditorChromeMetrics.Pixels(14, DeviceDpi);
+    private int MaxOffset => Math.Max(0, _content.Height - ClientSize.Height);
+    private int Offset => -_content.Top;
+
+    private Rectangle ScrollThumb
+    {
+        get
+        {
+            if (MaxOffset == 0 || ClientSize.Height <= 1) return Rectangle.Empty;
+            int width = EditorChromeMetrics.Pixels(4, DeviceDpi);
+            int height = Math.Clamp((int)((long)ClientSize.Height * ClientSize.Height / _content.Height),
+                Math.Min(ClientSize.Height - 1, EditorChromeMetrics.Pixels(20, DeviceDpi)), ClientSize.Height - 1);
+            int top = (int)((long)(ClientSize.Height - height) * Offset / MaxOffset);
+            return new Rectangle(Width - (ScrollGutter + width) / 2, top, width, height);
+        }
+    }
+
+    public void LayoutContent(int width, int height)
+    {
+        _content.Size = new Size(width, height);
+        ScrollTo(Offset);
+    }
+
+    public void Reveal(Control tool)
+    {
+        if (MaxOffset == 0) return;
+        var bounds = RectangleToClient(tool.RectangleToScreen(tool.ClientRectangle));
+        if (bounds.Top < 0) ScrollTo(Offset + bounds.Top);
+        else if (bounds.Bottom > Height) ScrollTo(Offset + bounds.Bottom - Height);
+    }
+
+    private void ScrollTo(int offset)
+    {
+        _content.Top = -Math.Clamp(offset, 0, MaxOffset);
+        Invalidate();
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        if (MaxOffset == 0)
+        {
+            base.OnMouseWheel(e);
+            return;
+        }
+        if (e is HandledMouseEventArgs args) args.Handled = true;
+        ScrollTo(Offset - e.Delta * EditorChromeMetrics.Pixels(48, DeviceDpi) / SystemInformation.MouseWheelScrollDelta);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        var thumb = ScrollThumb;
+        if (e.Button != MouseButtons.Left || thumb.IsEmpty || e.X < _content.Right) return;
+        _dragOffset = e.Y >= thumb.Top && e.Y < thumb.Bottom ? e.Y - thumb.Top : thumb.Height / 2;
+        Capture = true;
+        DragThumb(e.Y, thumb.Height);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        _hoveringScroll = e.X >= _content.Right;
+        if (Capture && !ScrollThumb.IsEmpty) DragThumb(e.Y, ScrollThumb.Height);
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _hoveringScroll = false;
+        Invalidate();
+    }
+
+    protected override void OnMouseCaptureChanged(EventArgs e)
+    {
+        base.OnMouseCaptureChanged(e);
+        Invalidate();
+    }
+
+    private void DragThumb(int y, int thumbHeight)
+        => ScrollTo((int)((long)(y - _dragOffset) * MaxOffset / (Height - thumbHeight)));
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        var thumb = ScrollThumb;
+        if (thumb.IsEmpty) return;
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using var path = EditorPaint.RoundedRect(thumb, thumb.Width / 2);
+        using var brush = new SolidBrush(Color.FromArgb(_hoveringScroll || Capture ? 255 : 72, EditorColors.TextSecondary));
+        e.Graphics.FillPath(brush, path);
+    }
+}
+
 internal sealed class DoubleBufferedLabel : Label
 {
     public DoubleBufferedLabel()
@@ -3153,13 +3252,12 @@ internal sealed class EditorToolButton : EditorButtonBase
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
-        // Compact stack at the top of the cell. Leave a tall enough caption box so
-        // descenders (j, p, g) are not clipped — TextRenderer's default padding was
-        // eating those pixels inside a 16px line.
-        int iconSize = EditorChromeMetrics.Pixels(32, DeviceDpi);
-        int iconTop = EditorChromeMetrics.Pixels(3, DeviceDpi);
-        int textHeight = EditorChromeMetrics.Pixels(22, DeviceDpi);
+        int textHeight = Font.Height;
         int textGap = EditorChromeMetrics.Pixels(1, DeviceDpi);
+        int inset = EditorChromeMetrics.Pixels(2, DeviceDpi);
+        int iconSize = Math.Clamp(rect.Height - textHeight - textGap - 2 * inset,
+            1, EditorChromeMetrics.Pixels(32, DeviceDpi));
+        int iconTop = Math.Max(inset, (rect.Height - iconSize - textGap - textHeight) / 2);
 
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
@@ -3169,8 +3267,7 @@ internal sealed class EditorToolButton : EditorButtonBase
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active: false);
 
         int textTop = rect.Top + iconTop + iconSize + textGap;
-        int textBottom = Math.Min(textTop + textHeight, rect.Bottom - 1);
-        var textRect = new Rectangle(rect.Left + 2, textTop, rect.Width - 4, Math.Max(1, textBottom - textTop));
+        var textRect = new Rectangle(rect.Left + 2, textTop, rect.Width - 4, textHeight);
         TextRenderer.DrawText(
             g,
             Text,
@@ -3183,10 +3280,6 @@ internal sealed class EditorToolButton : EditorButtonBase
             TextFormatFlags.EndEllipsis |
             TextFormatFlags.NoPrefix);
     }
-
-    public override Size GetPreferredSize(Size proposedSize)
-        => new(proposedSize.Width > 0 ? proposedSize.Width : Width,
-            EditorChromeMetrics.Pixels(EditorForm.ToolButtonRowHeight, DeviceDpi));
 }
 
 

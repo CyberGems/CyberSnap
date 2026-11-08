@@ -31,19 +31,36 @@ internal static partial class Program
                 editor.Show();
                 AwaitCondition(() => editor.Opacity == 1, "Editor did not finish opening");
                 var screens = Forms.Screen.AllScreens;
-                var sizes = new Dictionary<int, (int Button, int Text, int Tool)>();
+                var sizes = new Dictionary<int, (int Button, int Text, int Tool, int ToolText)>();
+                var palette = GetField<Forms.Panel>(editor, "_toolbarPanel");
+                var toolViewport = GetField<Forms.Panel>(editor, "_toolViewport");
+                var tools = ((System.Collections.IDictionary)Field(editor, "_toolButtons")).Values.Cast<Forms.Button>()
+                    .Concat(((System.Collections.IEnumerable)Field(editor, "_transformButtons")).Cast<System.Runtime.CompilerServices.ITuple>()
+                        .Select(entry => (Forms.Button)entry[0]!)).ToArray();
+                var swatches = ((System.Collections.IDictionary)Field(editor, "_colorButtons")).Values.Cast<Forms.Control>()
+                    .Append(GetField<Forms.Control>(editor, "_customColorButton"))
+                    .Concat(((System.Collections.IEnumerable)Field(editor, "_strokeWidthButtons")).Cast<Forms.Control>()).ToArray();
                 foreach (var screen in screens.Append(screens[0]))
                 {
                     var work = screen.WorkingArea;
+                    var moveSize = new Size(Math.Min(1400, work.Width), Math.Min(920, work.Height));
+                    editor.Bounds = new Rectangle(work.Left + (work.Width - moveSize.Width) / 2,
+                        work.Top + (work.Height - moveSize.Height) / 2, moveSize.Width, moveSize.Height);
+                    AwaitCondition(() => GetDpiForWindow(editor.Handle) == editor.DeviceDpi,
+                        $"WinForms did not settle on {screen.DeviceName}: native {GetDpiForWindow(editor.Handle)}, managed {editor.DeviceDpi}", 4000);
                     editor.Bounds = work;
                     Pump();
+                    CheckEditorSidebar(palette, toolViewport, tools, swatches, $"{language}, UI {uiScale}, full work area {editor.ClientSize}");
+                    SaveEditorRender(editor, renders, language, uiScale, "full");
                     var min = editor.MinimumSize;
                     editor.Bounds = new Rectangle(work.Location, min);
                     Pump();
                     int dpi = editor.DeviceDpi;
                     var context = $"{language}, UI {uiScale}, DPI {dpi}, {editor.ClientSize}";
-                    Assert(GetDpiForWindow(editor.Handle) == dpi && Forms.Screen.FromHandle(editor.Handle).DeviceName == screen.DeviceName,
-                        "the Editor uses the destination monitor DPI: " + context, false);
+                    uint nativeDpi = GetDpiForWindow(editor.Handle);
+                    string actualScreen = Forms.Screen.FromHandle(editor.Handle).DeviceName;
+                    Assert(nativeDpi == dpi && actualScreen == screen.DeviceName,
+                        $"the Editor uses the destination monitor DPI (native DPI {nativeDpi}, {actualScreen}, expected {screen.DeviceName}, bounds {editor.Bounds}, work area {work}): {context}", false);
 
                     var row = GetField<Forms.FlowLayoutPanel>(editor, "_commandActions");
                     var viewport = GetField<Forms.Panel>(editor, "_commandViewport");
@@ -68,30 +85,34 @@ internal static partial class Program
                         + $" scroll={scroll.Visible}, offset={scroll.Value}): {context}", false);
                     scroll.Value = 0;
 
-                    var palette = GetField<Forms.Panel>(editor, "_toolbarPanel");
-                    var lastStroke = ((System.Collections.IEnumerable)Field(editor, "_strokeWidthButtons")!).Cast<Forms.Control>().Last();
-                    palette.ScrollControlIntoView(lastStroke);
-                    Pump();
-                    var lastStrokeBounds = palette.RectangleToClient(lastStroke.RectangleToScreen(lastStroke.ClientRectangle));
-                    Assert(palette.ClientRectangle.Contains(lastStrokeBounds),
-                        $"the last stroke control is reachable ({lastStrokeBounds} in {palette.ClientRectangle}): {context}", false);
-                    palette.AutoScrollPosition = Point.Empty;
+                    CheckEditorSidebar(palette, toolViewport, tools, swatches, context);
+                    SaveEditorRender(editor, renders, language, uiScale, "restored");
 
                     var command = GetField<Forms.Button>(editor, "_galleryButton");
-                    var tool = ((System.Collections.IDictionary)Field(editor, "_toolButtons")!).Values.OfType<Forms.Button>().First();
+                    var tool = tools[0];
                     using var graphics = command.CreateGraphics();
-                    var dimensions = (command.Height, Forms.TextRenderer.MeasureText(graphics, command.Text, command.Font).Height, tool.Height);
+                    var dimensions = (command.Height, Forms.TextRenderer.MeasureText(graphics, command.Text, command.Font).Height,
+                        tool.Height, tool.Font.Height);
                     if (sizes.TryGetValue(dpi, out var previous))
                         Assert(dimensions == previous, "returning to the same monitor restores the chrome metrics: " + context, false);
                     sizes[dpi] = dimensions;
                     Console.WriteLine($"PASS: Editor {context}, command {command.Size}, text {dimensions.Item2}px, tools {tool.Height}px.");
 
-                    if (renders is not null && language == "es" && uiScale == UiScale.Default)
+                    if (dpi == 144 && language == "es" && uiScale == UiScale.Default)
                     {
-                        Directory.CreateDirectory(renders);
-                        using var snapshot = new Bitmap(editor.Width, editor.Height);
-                        editor.DrawToBitmap(snapshot, editor.ClientRectangle);
-                        snapshot.Save(Path.Combine(renders, $"editor-{dpi}.png"));
+                        tools[0].Focus();
+                        editor.MinimumSize = new Size(min.Width, 700);
+                        editor.Height = 700;
+                        Pump();
+                        Assert(!ContainsControl(toolViewport, tools[^1]) && swatches.All(swatch => ContainsControl(palette, swatch)),
+                            "a short window scrolls the tool grid while keeping the palette visible", false);
+                        Assert(tools[^1].Focus() && ContainsControl(toolViewport, tools[^1]),
+                            "keyboard focus reveals the last tool in the short window", false);
+                        SaveEditorRender(editor, renders, language, uiScale, "short");
+                        editor.MinimumSize = min;
+                        editor.Height = min.Height;
+                        Pump();
+                        CheckEditorSidebar(palette, toolViewport, tools, swatches, "restored after scrolling");
                     }
                 }
                 if (sizes.Count > 1)
@@ -99,8 +120,8 @@ internal static partial class Program
                     int lowDpi = sizes.Keys.Min(), highDpi = sizes.Keys.Max();
                     var low = sizes[lowDpi];
                     var high = sizes[highDpi];
-                    Assert(high.Button > low.Button && high.Text > low.Text && high.Tool > low.Tool,
-                        "command buttons, text and tool rows grow together with monitor DPI");
+                    Assert(high.Button > low.Button && high.Text > low.Text && high.ToolText > low.ToolText,
+                        "command buttons and all captions grow with monitor DPI");
                 }
                 editor.Close();
                 Pump();
@@ -111,5 +132,28 @@ internal static partial class Program
             UiScale.Set(originalScale);
             LocalizationService.ApplyCurrentCulture(originalLanguage);
         }
+    }
+
+    private static bool ContainsControl(Forms.Control parent, Forms.Control child)
+        => child.Visible && parent.ClientRectangle.Contains(parent.RectangleToClient(child.RectangleToScreen(child.ClientRectangle)));
+
+    private static void CheckEditorSidebar(Forms.Panel palette, Forms.Panel viewport, Forms.Button[] tools, Forms.Control[] swatches, string context)
+    {
+        Assert(!palette.VerticalScroll.Visible && !viewport.VerticalScroll.Visible,
+            "there is no native vertical scrollbar: " + context, false);
+        foreach (var swatch in swatches)
+            Assert(ContainsControl(palette, swatch), $"all colors and stroke widths fit without scrolling ({palette.RectangleToClient(swatch.RectangleToScreen(swatch.ClientRectangle))} in {palette.ClientRectangle}): {context}", false);
+        foreach (var tool in tools)
+            Assert(ContainsControl(viewport, tool) && tool.Height > tool.Font.Height,
+                $"the {tool.Text} tool fits in the viewport ({tool.Bounds}, viewport={viewport.Bounds}): {context}", false);
+    }
+
+    private static void SaveEditorRender(EditorForm editor, string? renders, string language, double uiScale, string state)
+    {
+        if (renders is null || language != "es" || uiScale != UiScale.Default) return;
+        Directory.CreateDirectory(renders);
+        using var snapshot = new Bitmap(editor.Width, editor.Height);
+        editor.DrawToBitmap(snapshot, editor.ClientRectangle);
+        snapshot.Save(Path.Combine(renders, $"editor-{editor.DeviceDpi}-{state}.png"));
     }
 }
