@@ -33,9 +33,18 @@ internal static partial class Program
             Assert(progress.AchievementsStartedOn == DateOnly.FromDateTime(oldDate)
                 && progress.CelebrationCaptureCount == 1 && progress.ScreenshotCount == 1,
                 "existing achievement progress uses the earliest recorded date");
-            Assert(label.Text.StartsWith("Fecha de inicio:") && reset.Content is "Reiniciar progreso",
-                "the start date and reset action are localized");
+            var spanishDate = oldDate.ToString("d MMM yyyy", CultureInfo.GetCultureInfo("es"));
+            Assert(label.Text == $"Fecha de inicio: {spanishDate}" && reset.Content is "Reiniciar progreso",
+                "the Spanish start date shows an abbreviated month and the reset action is localized");
             Render(window, renders, "achievements-start-date.png");
+
+            progress.InterfaceLanguage = "en";
+            window.RefreshLocalization();
+            var englishDate = oldDate.ToString("d MMM yyyy", CultureInfo.GetCultureInfo("en"));
+            Assert(label.Text == $"Start date: {englishDate}",
+                "the English start date shows an abbreviated month");
+            progress.InterfaceLanguage = "es";
+            window.RefreshLocalization();
 
             RespondToConfirmation(false);
             Assert(progress.CelebrationCaptureCount == 1 && progress.HasFirstEditor && progress.LongestStreak == 3,

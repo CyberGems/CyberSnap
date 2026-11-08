@@ -62,7 +62,7 @@ public partial class AchievementsWindow
 
         var s = _settingsService.Settings;
         InitializeAchievementHistory(s);
-        var startDate = s.AchievementsStartedOn?.ToString("d", CultureInfo.CurrentCulture)
+        var startDate = s.AchievementsStartedOn?.ToString("d MMM yyyy", CultureInfo.CurrentCulture)
             ?? LocalizationService.Translate("Not recorded");
         AchievementsStartDate.Text = string.Format(LocalizationService.Translate("Start date: {0}"), startDate);
         BuildStatsCards(statsHost, s);
