@@ -48,7 +48,7 @@ public sealed partial class EditorForm
     private EditorChromeButton? _closeButton;
     private EditorChromeButton? _minimizeButton;
     private EditorChromeButton? _menuButton;
-    private Panel? _brandPanel;
+    private Button _editorTitleButton = null!;
     private EditorCommandButton _galleryButton = null!;
     private EditorCommandButton _captureButton = null!;
     private EditorCommandButton _newCommandButton = null!;
@@ -100,6 +100,7 @@ public sealed partial class EditorForm
     internal const int StatusControlHeight = 38;
     private const int TitleStatusIndicatorSize = 14;
     private const int TitleStatusIndicatorGap = 8;
+    private const string EditorAboutTooltipKey = "Editor About tooltip";
 
     private void ShowColorPickerPopup(EditorColorButton button)
     {
@@ -215,11 +216,10 @@ public sealed partial class EditorForm
                 _topBarPanel.Scale(factor);
                 _toolbarHost.Scale(factor);
                 _statusBarPanel.Scale(factor);
-                if (_brandPanel is not null)
-                    _brandPanel.Width = CalculateBrandWidth();
             }
             finally { ResumeLayout(performLayout: true); }
         }
+        UpdateEditorTitleLayout();
         // WinForms scales the minimum form size separately from the chrome.
         // Keep the original resize limits usable on the destination work area.
         var work = Screen.FromControl(this).WorkingArea;
@@ -653,15 +653,41 @@ public sealed partial class EditorForm
         };
         _titleBarPanel.MouseDown += BeginWindowDrag;
 
-        // Brand area: logo + "CyberSnap" + "Annotations Editor"
-        var brandPanel = new Panel
+        _editorTitleButton = new Button
         {
             Dock = DockStyle.Left,
-            Width = CalculateBrandWidth(),
-            BackColor = Color.Transparent,
+            FlatStyle = FlatStyle.Flat,
+            UseVisualStyleBackColor = false,
+            TextAlign = ContentAlignment.MiddleLeft,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
         };
-        _brandPanel = brandPanel;
-        brandPanel.MouseDown += BeginWindowDrag;
+        _editorTitleButton.FlatAppearance.BorderSize = 0;
+        EditorFonts.Bind(_editorTitleButton, dpi => EditorFonts.Chrome(9.5f, FontStyle.Bold, dpi));
+        UpdateControlTheme(_editorTitleButton);
+        UpdateEditorTitleText();
+        _editorTitleButton.Click += OpenEditorAbout;
+        RegisterHoverTooltip(_editorTitleButton, EditorAboutTooltipKey, above: false);
+
+        Rectangle dragBounds = Rectangle.Empty;
+        _editorTitleButton.MouseDown += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                Size size = SystemInformation.DragSize;
+                dragBounds = new Rectangle(e.X - size.Width / 2, e.Y - size.Height / 2, size.Width, size.Height);
+            }
+        };
+        _editorTitleButton.MouseMove += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Left && _editorTitleButton.Capture && !dragBounds.Contains(e.Location))
+            {
+                DismissVisibleHoverTooltips();
+                BeginWindowDrag(_editorTitleButton, e);
+                if (_editorTitleButton.Focused)
+                    _canvas.Focus();
+            }
+        };
 
         // Load logo bitmap from Editor.ico (high-res for scaling)
         if (_brandBitmap == null)
@@ -674,59 +700,15 @@ public sealed partial class EditorForm
             catch { }
         }
 
-        brandPanel.Paint += (_, e) =>
+        _editorTitleButton.Paint += (_, e) =>
         {
+            if (_brandBitmap is null) return;
             var g = e.Graphics;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-
-            double dpiScale = DeviceDpi / 96.0;
-            double totalScale = dpiScale * UiChrome.UiScale;
-
-            int iconSize = Math.Max(17, (int)Math.Round(17 * totalScale));
-            int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
-            int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
-            int cy = brandPanel.Height / 2;
-
-            if (_brandBitmap != null)
-            {
-                g.DrawImage(_brandBitmap, new Rectangle(leftPad, cy - (iconSize / 2), iconSize, iconSize));
-            }
-
-            var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
-            SplitEditorBrandTitle(titleText, out var feature, out var brand);
-            // Mirrors the shared CyberSnapTitleBar proportions (17px logo, 12px text) with
-            // the text a pinch larger for the 44px editor title bar.
-            using var featureFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
-            // The brand suffix matches the feature title's typeface and size; the secondary
-            // color keeps it subordinate without shrinking it into a caption.
-            using var brandFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
-            var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
-            int textX = leftPad + iconSize + textGap;
-            int h = brandPanel.Height;
-            if (!string.IsNullOrEmpty(feature))
-            {
-                int fw = TextRenderer.MeasureText(g, feature, featureFont, Size.Empty, flags).Width;
-                TextRenderer.DrawText(g, feature, featureFont,
-                    new Rectangle(textX, 0, fw, h),
-                    EditorColors.TextPrimary, flags);
-                textX += fw;
-            }
-            if (!string.IsNullOrEmpty(brand))
-            {
-                const string sep = "  ·  ";
-                int sw = TextRenderer.MeasureText(g, sep, brandFont, Size.Empty, flags).Width;
-                TextRenderer.DrawText(g, sep, brandFont,
-                    new Rectangle(textX, 0, sw, h),
-                    EditorColors.TextSecondary, flags);
-                textX += sw;
-                int bw = TextRenderer.MeasureText(g, brand, brandFont, Size.Empty, flags).Width;
-                TextRenderer.DrawText(g, brand, brandFont,
-                    new Rectangle(textX, 0, bw, h),
-                    EditorColors.TextSecondary, flags);
-            }
+            int iconSize = EditorTitlePixels(17);
+            g.DrawImage(_brandBitmap, new Rectangle(EditorTitlePixels(14), (_editorTitleButton.Height - iconSize) / 2,
+                iconSize, iconSize));
         };
 
         // Window controls FlowLayoutPanel (Dock Right)
@@ -815,7 +797,7 @@ public sealed partial class EditorForm
             boundsProvider: () => GetTitleStatusTooltipBounds(Cursor.Position));
 
         _titleBarPanel.Controls.Add(_titleFileNameLabel);
-        _titleBarPanel.Controls.Add(brandPanel);
+        _titleBarPanel.Controls.Add(_editorTitleButton);
         _titleBarPanel.Controls.Add(windowActions);
 
         // Row 2: Command Bar Panel
@@ -993,43 +975,27 @@ public sealed partial class EditorForm
             TitleStatusIndicatorSize, TitleStatusIndicatorSize);
     }
 
-    private static void SplitEditorBrandTitle(string title, out string feature, out string brand)
+    private int EditorTitlePixels(int size)
+        => Math.Max(size, (int)Math.Round(size * DeviceDpi / 96.0 * UiChrome.UiScale));
+
+    private void UpdateEditorTitleText()
     {
-        foreach (var sep in new[] { " ⋅ ", " ᐧ ", " · " })
-        {
-            int i = title.LastIndexOf(sep, StringComparison.Ordinal);
-            if (i >= 0)
-            {
-                feature = title[..i];
-                brand = title[(i + sep.Length)..];
-                return;
-            }
-        }
-        feature = title;
-        brand = "";
+        _editorTitleButton.Text = LocalizationService.Translate("Annotations Editor");
+        _editorTitleButton.AccessibleDescription = LocalizationService.Translate(EditorAboutTooltipKey);
+        UpdateEditorTitleLayout();
     }
 
-    private int CalculateBrandWidth()
+    private void UpdateEditorTitleLayout()
     {
-        double dpiScale = DeviceDpi / 96.0;
-        double totalScale = dpiScale * UiChrome.UiScale;
-        int iconSize = Math.Max(17, (int)Math.Round(17 * totalScale));
-        int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
-        int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
-        var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
-        SplitEditorBrandTitle(titleText, out var feature, out var brand);
-        var flags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
-        using var featureFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
-        using var brandFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
-        int textW = 0;
-        if (!string.IsNullOrEmpty(feature))
-            textW += TextRenderer.MeasureText(feature, featureFont, Size.Empty, flags).Width;
-        if (!string.IsNullOrEmpty(brand))
-        {
-            textW += TextRenderer.MeasureText("  ·  ", brandFont, Size.Empty, flags).Width;
-            textW += TextRenderer.MeasureText(brand, brandFont, Size.Empty, flags).Width;
-        }
-        return leftPad + iconSize + textGap + textW + 16;
+        _editorTitleButton.Padding = new Padding(EditorTitlePixels(14) + EditorTitlePixels(17) + EditorTitlePixels(8), 0, 16, 0);
+        _editorTitleButton.Width = _editorTitleButton.GetPreferredSize(Size.Empty).Width;
+    }
+
+    private void OpenEditorAbout(object? sender, EventArgs e)
+    {
+        DismissVisibleHoverTooltips();
+        if (System.Windows.Application.Current is CyberSnap.App app)
+            app.ShowAbout();
     }
 
     private TableLayoutPanel BuildToolSection()
@@ -2345,11 +2311,7 @@ public sealed partial class EditorForm
         };
 
         var aboutItem = WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap..."), iconId: "info");
-        aboutItem.Click += (_, _) =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.ShowAbout();
-        };
+        aboutItem.Click += OpenEditorAbout;
 
         helpSubmenu.DropDownItems.Add(quickStartItem);
         helpSubmenu.DropDownItems.Add(wikiItem);

@@ -868,6 +868,15 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return;
         }
 
+        if (ctrl == _editorTitleButton)
+        {
+            _editorTitleButton.BackColor = EditorColors.TitleBar;
+            _editorTitleButton.ForeColor = EditorColors.TextPrimary;
+            _editorTitleButton.FlatAppearance.MouseOverBackColor = EditorColors.BgHover;
+            _editorTitleButton.FlatAppearance.MouseDownBackColor = EditorColors.BgHover;
+            return;
+        }
+
         if (ctrl == _statusBarPanel || ctrl == _topBarPanel)
         {
             ctrl.BackColor = EditorColors.TitleBar;
@@ -2376,7 +2385,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
 
         // Ensure canvas gets focus for single-key shortcuts.
-        if (!_canvas.Focused && ((keyData == Keys.Space && _zoomResetButton is not { Focused: true }) || keyData == Keys.Delete
+        if (!_canvas.Focused && ((keyData == Keys.Space && !FocusedButtonUsesSpace) || keyData == Keys.Delete
             || EditorViewHotkeyHelper.IsAnyViewHotkey(keyData)))
         {
             _canvas.Focus();
@@ -2439,8 +2448,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         if (key == Keys.Space)
         {
-            // Space types in the inline editor or activates the focused zoom reset button.
-            if (_canvas.IsEditingText || _zoomResetButton is { Focused: true })
+            // Space types in the inline editor or activates the focused button.
+            if (_canvas.IsEditingText || FocusedButtonUsesSpace)
                 return false;
 
             if (!_canvas.Focused)
@@ -2469,8 +2478,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return false;
 
         _canvas.HandleSpacePanKeyUp();
-        return _zoomResetButton is not { Focused: true };
+        return !FocusedButtonUsesSpace;
     }
+
+    private bool FocusedButtonUsesSpace => _zoomResetButton is { Focused: true } || _editorTitleButton is { Focused: true };
 
     /// <summary>
     /// Shared editor shortcut routing for <see cref="ProcessKeyPreview"/> and

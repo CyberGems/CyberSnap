@@ -53,11 +53,7 @@ public sealed partial class EditorForm
             _menuButton.AccessibleName = LocalizationService.Translate("More");
         UpdateWindowStateButton();
 
-        if (_brandPanel is not null)
-        {
-            _brandPanel.Width = CalculateBrandWidth();
-            _brandPanel.Invalidate();
-        }
+        UpdateEditorTitleText();
         UpdateCaptureCaption();
         UpdateLiveStatusText();
         RefreshTabStrip();

@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using CyberSnap.Services;
 using CyberSnap.UI;
 using CyberSnap.UI.Controls;
@@ -9,6 +10,96 @@ using Forms = System.Windows.Forms;
 
 internal static partial class Program
 {
+    [DllImport("user32.dll", EntryPoint = "WindowFromPoint")]
+    private static extern IntPtr EditorWindowAtPoint(Point point);
+
+    [DllImport("user32.dll", EntryPoint = "mouse_event")]
+    private static extern void EditorMouseEvent(uint flags, uint dx, uint dy, uint data, nuint extraInfo);
+
+    private static void CheckEditorTitleAbout(CyberSnap.App app)
+    {
+        Forms.Application.SetUnhandledExceptionMode(Forms.UnhandledExceptionMode.ThrowException);
+        using var bitmap = new Bitmap(128, 128);
+        using var editor = new EditorForm(bitmap);
+        var close = typeof(EditorForm).GetMethod("OnFormClosing",
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!
+            .CreateDelegate<Forms.FormClosingEventHandler>(editor);
+        editor.FormClosing -= close;
+        var instance = typeof(EditorForm).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic)!;
+        instance.SetValue(null, editor);
+        var originalCursor = Forms.Cursor.Position;
+        try
+        {
+            editor.Show();
+            AwaitCondition(() => editor.Opacity == 1, "Editor did not finish opening");
+            var work = Forms.Screen.FromControl(editor).WorkingArea;
+            editor.Bounds = new Rectangle(work.Location + new Size(40, 40), editor.MinimumSize);
+            editor.Activate();
+            AwaitCondition(() => GetForegroundWindow() == editor.Handle, "The fixture could not activate the Editor", 5000);
+            var title = GetField<Forms.Button>(editor, "_editorTitleButton");
+            GetField<Forms.Timer>(editor, "_tooltipTimer").Stop();
+            var titleCenter = new Point(title.Width / 2, title.Height / 2);
+            var start = title.PointToScreen(titleCenter);
+            Forms.Cursor.Position = start;
+            Assert(EditorWindowAtPoint(start) == title.Handle && Forms.Control.MouseButtons == Forms.MouseButtons.None,
+                "the pointer is on the test Editor title before sending mouse input", false);
+
+            Point originalLocation = editor.Location;
+            Task? move = null;
+            EditorMouseEvent(0x0002, 0, 0, 0, 0); // MOUSEEVENTF_LEFTDOWN
+            try
+            {
+                AwaitCondition(() => title.Capture, "The title did not capture the press", 5000);
+                move = Task.Run(() =>
+                {
+                    try
+                    {
+                        Forms.Cursor.Position = start + new Size(30, 0);
+                        Thread.Sleep(250);
+                        Forms.Cursor.Position = start + new Size(90, 40);
+                        Thread.Sleep(100);
+                    }
+                    finally { EditorMouseEvent(0x0004, 0, 0, 0, 0); } // MOUSEEVENTF_LEFTUP
+                });
+                AwaitCondition(() => move.IsCompleted, "The title drag did not complete", 5000);
+                move.GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (move is null)
+                    EditorMouseEvent(0x0004, 0, 0, 0, 0);
+            }
+            Assert(editor.Location != originalLocation && !title.Focused && ZoomAppField(app, "_aboutWindow") is null,
+                "dragging the title moves the Editor without opening About");
+
+            Forms.Cursor.Position = title.PointToScreen(titleCenter);
+            var position = (IntPtr)((titleCenter.Y << 16) | titleCenter.X);
+            SendMessageW(title.Handle, 0x0201, (IntPtr)1, position);
+            SendMessageW(title.Handle, 0x0202, IntPtr.Zero, position);
+            AwaitCondition(() => ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
+                "Clicking the title did not open About", 5000);
+            var about = (AboutWindow)ZoomAppField(app, "_aboutWindow")!;
+            var aboutHandle = new System.Windows.Interop.WindowInteropHelper(about).Handle;
+            AwaitCondition(() => GetForegroundWindow() == aboutHandle, "About did not come to the foreground", 5000);
+            Console.WriteLine("PASS: clicking the Editor title opens About in front.");
+            about.Close();
+            editor.Activate();
+            Assert(title.Focus(), "the Editor title can receive keyboard focus", false);
+            SendMessageW(title.Handle, 0x0100, (IntPtr)(int)Forms.Keys.Space, IntPtr.Zero);
+            SendMessageW(title.Handle, 0x0101, (IntPtr)(int)Forms.Keys.Space, IntPtr.Zero);
+            AwaitCondition(() => ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
+                "Space on the focused Editor title did not open About", 5000);
+            Console.WriteLine("PASS: Space on the focused Editor title opens About.");
+        }
+        finally
+        {
+            (ZoomAppField(app, "_aboutWindow") as AboutWindow)?.Close();
+            instance.SetValue(null, null);
+            editor.Close();
+            Forms.Cursor.Position = originalCursor;
+        }
+    }
+
     private static void CheckEditorScaleMenuTooltip()
     {
         Forms.Application.SetUnhandledExceptionMode(Forms.UnhandledExceptionMode.ThrowException);
@@ -212,6 +303,12 @@ internal static partial class Program
     private static void CheckEditorTitleTooltip(EditorForm editor, string context)
     {
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var titleButton = GetField<Forms.Button>(editor, "_editorTitleButton");
+        Assert(titleButton.Text == LocalizationService.Translate("Annotations Editor")
+            && !titleButton.Text.Contains("CyberSnap", StringComparison.OrdinalIgnoreCase),
+            "the visible title only shows the editor name: " + context, false);
+        Assert(titleButton.AccessibleDescription == (context.StartsWith("es,") ? "Sobre CyberSnap..." : "About CyberSnap..."),
+            "the title has the localized About hint: " + context, false);
         var title = GetField<Forms.Panel>(editor, "_titleFileNameLabel");
         var indicator = (Rectangle)typeof(EditorForm).GetMethod("GetTitleStatusIndicatorBounds", flags)!.Invoke(editor, null)!;
         var hitTest = typeof(EditorForm).GetMethod("GetTitleStatusTooltipBounds", flags)!
