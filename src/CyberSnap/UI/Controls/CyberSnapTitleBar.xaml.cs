@@ -47,11 +47,9 @@ public partial class CyberSnapTitleBar : UserControl
     public event EventHandler? PinRequested;
 
     private Window? _subscribedWindow;
-    private readonly DispatcherTimer _titleClickTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime),
-    };
+    private readonly DispatcherTimer _titleClickTimer = new(DispatcherPriority.Input);
     private System.Windows.Point? _titlePress;
+    private long _titlePressedAt;
     /// <summary>
     /// Explicit open tracking per burger menu. ContextMenu.IsOpen alone is not reliable:
     /// the popup can die silently (activation shifts, topmost overlays) without Closed
@@ -868,6 +866,7 @@ public partial class CyberSnapTitleBar : UserControl
             return;
         }
         _titlePress = e.GetPosition(TitleAboutButton);
+        _titlePressedAt = Environment.TickCount64;
     }
 
     private void TitleAboutButton_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -878,9 +877,11 @@ public partial class CyberSnapTitleBar : UserControl
         e.Handled = true;
         if (!TitleAboutButton.IsMouseOver) return;
 
-        if (CanToggleMaximize)
+        long remaining = _titlePressedAt + System.Windows.Forms.SystemInformation.DoubleClickTime - Environment.TickCount64;
+        if (CanToggleMaximize && remaining > 0)
         {
             _titleClickTimer.Stop();
+            _titleClickTimer.Interval = TimeSpan.FromMilliseconds(remaining);
             _titleClickTimer.Start();
         }
         else

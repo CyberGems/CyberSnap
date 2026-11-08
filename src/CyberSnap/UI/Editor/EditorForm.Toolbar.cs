@@ -669,24 +669,31 @@ public sealed partial class EditorForm
         _editorTitleButton.Click += OpenEditorAbout;
         RegisterHoverTooltip(_editorTitleButton, WindowTitles.AboutTooltip, above: false);
 
-        var clickTimer = new System.Windows.Threading.DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
-        };
+        var clickTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Input);
         _editorTitleClickTimer = clickTimer;
         clickTimer.Tick += (_, _) =>
         {
             clickTimer.Stop();
-            OpenEditorAbout(_editorTitleButton, EventArgs.Empty);
+            OpenAboutFromPointer();
         };
+        void OpenAboutFromPointer()
+        {
+            if (_editorTitleButton.Focused)
+                _canvas.Focus();
+            OpenEditorAbout(_editorTitleButton, EventArgs.Empty);
+        }
 
         Rectangle dragBounds = Rectangle.Empty;
         Rectangle doubleClickBounds = Rectangle.Empty;
+        long pressedAt = 0;
+        long doubleClickDeadline = 0;
         bool doubleClick = false;
         _editorTitleButton.MouseDown += (_, e) =>
         {
             if (e.Button != MouseButtons.Left) return;
-            doubleClick = clickTimer.IsEnabled && doubleClickBounds.Contains(_editorTitleButton.PointToScreen(e.Location));
+            pressedAt = Environment.TickCount64;
+            doubleClick = clickTimer.IsEnabled && pressedAt <= doubleClickDeadline
+                && doubleClickBounds.Contains(_editorTitleButton.PointToScreen(e.Location));
             if (doubleClick)
             {
                 clickTimer.Stop();
@@ -704,7 +711,15 @@ public sealed partial class EditorForm
             doubleClickBounds = new Rectangle(point.X - size.Width / 2, point.Y - size.Height / 2, size.Width, size.Height);
             DismissVisibleHoverTooltips();
             clickTimer.Stop();
-            clickTimer.Start();
+            doubleClickDeadline = pressedAt + SystemInformation.DoubleClickTime;
+            long remaining = doubleClickDeadline - Environment.TickCount64;
+            if (remaining <= 0)
+                OpenAboutFromPointer();
+            else
+            {
+                clickTimer.Interval = TimeSpan.FromMilliseconds(remaining);
+                clickTimer.Start();
+            }
         };
         _editorTitleButton.MouseMove += (_, e) =>
         {
@@ -3152,6 +3167,8 @@ internal sealed class EditorTitleButton : Button
     private bool _handlingMouseUp;
 
     protected override bool ShowFocusCues => !_pointerFocus && base.ShowFocusCues;
+
+    public override void NotifyDefault(bool value) => base.NotifyDefault(false);
 
     protected override void WndProc(ref Message m)
     {

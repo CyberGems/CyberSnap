@@ -50,11 +50,12 @@ internal static partial class Program
             Assert(editor.Location != originalLocation && !title.Focused && ZoomAppField(app, "_aboutWindow") is null,
                 "dragging the title moves the Editor without opening About");
 
-            void ClickTitle()
+            void ClickTitle(int pressMs = 0)
             {
                 Forms.Cursor.Position = title.PointToScreen(titleCenter);
                 var position = (IntPtr)((titleCenter.Y << 16) | titleCenter.X);
                 SendMessageW(title.Handle, 0x0201, (IntPtr)1, position);
+                if (pressMs > 0) Thread.Sleep(pressMs);
                 SendMessageW(title.Handle, 0x0202, IntPtr.Zero, position);
             }
             ClickTitle();
@@ -67,11 +68,16 @@ internal static partial class Program
             Assert(!GetField<bool>(editor, "_isManualMaximized") && ZoomAppField(app, "_aboutWindow") is null,
                 "double-clicking the Editor title again restores it");
 
-            ClickTitle();
-            Assert(GetField<System.Windows.Threading.DispatcherTimer>(editor, "_editorTitleClickTimer").IsEnabled,
-                "a single title click waits for the double-click interval", false);
+            int heldMs = Math.Min(120, Forms.SystemInformation.DoubleClickTime / 2);
+            ClickTitle(heldMs);
+            var clickTimer = GetField<System.Windows.Threading.DispatcherTimer>(editor, "_editorTitleClickTimer");
+            Assert(!clickTimer.IsEnabled || clickTimer.Interval.TotalMilliseconds <= Forms.SystemInformation.DoubleClickTime - heldMs,
+                "the single title click only waits for the remainder of the Windows double-click interval");
             Assert(!(bool)title.GetType().GetProperty("ShowFocusCues", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(title)!,
                 "a pointer click does not paint a keyboard focus rectangle", false);
+            title.NotifyDefault(true);
+            Assert(!(bool)title.GetType().GetProperty("IsDefault", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(title)!,
+                "the title does not paint the default-button frame");
             AwaitCondition(() => ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
                 "Clicking the title did not open About", 5000);
             var about = (AboutWindow)ZoomAppField(app, "_aboutWindow")!;
@@ -81,6 +87,7 @@ internal static partial class Program
                 "Check Now is in the update description row");
             var aboutHandle = new System.Windows.Interop.WindowInteropHelper(about).Handle;
             AwaitCondition(() => GetForegroundWindow() == aboutHandle, "About did not come to the foreground", 5000);
+            Assert(!title.Focused, "a pointer click returns focus to the canvas before About opens", false);
             Console.WriteLine("PASS: clicking the Editor title opens About in front.");
             about.Close();
             editor.Activate();
