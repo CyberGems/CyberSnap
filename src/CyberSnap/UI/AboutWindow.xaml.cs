@@ -330,8 +330,8 @@ public partial class AboutWindow : Window
         await RunUpdateCheckAsync();
     }
 
-    /// <summary>Shows the inline available-update state: changelog peek plus
-    /// View Release / Skip actions. Update Now asks before it downloads, and
+    /// <summary>Shows the release highlights and the available update actions.
+    /// Update Now asks before it downloads, and
     /// installation asks again after the file is ready.</summary>
     private void ShowUpdateAvailable(UpdateCheckResult result)
     {
@@ -339,24 +339,22 @@ public partial class AboutWindow : Window
         AboutUpdateTitle.Text = LocalizationService.Translate("Update available");
         AboutUpdateDesc.Visibility = Visibility.Collapsed;
         UpdateBadgeText.Text = result.LatestVersionLabel;
-        UpdateBtn.Content = LocalizationService.Translate("Update Now");
-        UpdateBtn.ToolTip = LocalizationService.Translate("Download this version after you confirm. Installation waits for a second confirmation.");
-        UpdateBtn.SetResourceReference(StyleProperty, "CyberSnapAccentButton");
+        UpdateNowBtn.Content = LocalizationService.Translate("Update Now");
+        UpdateNowBtn.ToolTip = LocalizationService.Translate("Download this version after you confirm. Installation waits for a second confirmation.");
         UpdatePeekTitle.Text = LocalizationService.Translate("What's New");
         var highlights = GetUpdateHighlights(result.ReleaseNotes).ToArray();
         UpdateHighlightsList.ItemsSource = highlights;
         ViewReleaseBtn.Content = LocalizationService.Translate("View Release");
         ViewReleaseBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
         SkipVersionBtn.Content = LocalizationService.Translate("Skip this version");
-        System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
+        System.Windows.Automation.AutomationProperties.SetName(UpdateNowBtn, UpdateNowBtn.Content.ToString());
         System.Windows.Automation.AutomationProperties.SetName(ViewReleaseBtn, ViewReleaseBtn.Content.ToString());
         System.Windows.Automation.AutomationProperties.SetName(SkipVersionBtn, SkipVersionBtn.Content.ToString());
         UpdateBadge.Visibility = Visibility.Visible;
         AboutUpdateIcon.SetResourceReference(TextBlock.ForegroundProperty, "ThemeAccentBrush");
         UpdatePeekPanel.Visibility = highlights.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateBtn.Visibility = Visibility.Collapsed;
         UpdateActions.Visibility = Visibility.Visible;
-        ViewReleaseBtn.Visibility = Visibility.Visible;
-        SkipVersionBtn.Visibility = Visibility.Visible;
     }
 
     private void HideUpdateAvailable()
@@ -370,8 +368,7 @@ public partial class AboutWindow : Window
         UpdatePeekPanel.Visibility = Visibility.Collapsed;
         UpdateHighlightsList.ItemsSource = null;
         UpdateActions.Visibility = Visibility.Collapsed;
-        ViewReleaseBtn.Visibility = Visibility.Collapsed;
-        SkipVersionBtn.Visibility = Visibility.Collapsed;
+        UpdateBtn.Visibility = Visibility.Visible;
     }
 
     private static IEnumerable<string> GetUpdateHighlights(string? releaseNotes)
@@ -399,8 +396,7 @@ public partial class AboutWindow : Window
     private void SetUpdateActionsEnabled(bool enabled)
     {
         UpdateBtn.IsEnabled = enabled;
-        ViewReleaseBtn.IsEnabled = enabled;
-        SkipVersionBtn.IsEnabled = enabled;
+        UpdateActions.IsEnabled = enabled;
     }
 
     private void ShowUpdateChecking()
@@ -408,9 +404,7 @@ public partial class AboutWindow : Window
         HideUpdateAvailable();
         AboutUpdateTitle.Text = LocalizationService.Translate("Checking for updates...");
         AboutUpdateDesc.Visibility = Visibility.Collapsed;
-        UpdateBtn.ClearValue(StyleProperty);
         UpdateBtn.Content = LocalizationService.Translate("Checking...");
-        UpdateBtn.ToolTip = null;
         System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
         SetUpdateActionsEnabled(false);
     }
@@ -460,8 +454,6 @@ public partial class AboutWindow : Window
         else
             AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
         UpdateBtn.Content = LocalizationService.Translate("Check Now");
-        UpdateBtn.ToolTip = null;
-        UpdateBtn.ClearValue(StyleProperty);
         System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
     }
 

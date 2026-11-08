@@ -345,7 +345,7 @@
                                 <TextBlock x:Name="AboutUpdateTitle" Text="Check for updates" Style="{StaticResource SettingTitle}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" Services:LocalizationService.SourceText="Check for updates"/>
                                 <TextBlock x:Name="AboutUpdateDesc" Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}" AutomationProperties.LiveSetting="Polite" Services:LocalizationService.SourceText="Check for the latest version and download updates directly."/>
                             </StackPanel>
-                            <Border x:Name="UpdateBadge" Grid.Column="2" Visibility="Collapsed" CornerRadius="4" Padding="8,4" Margin="0,0,8,0" VerticalAlignment="Center"
+                            <Border x:Name="UpdateBadge" Grid.Column="2" Visibility="Collapsed" CornerRadius="4" Padding="8,4" VerticalAlignment="Center"
                                     Background="{DynamicResource ThemeTabActiveBrush}">
                                 <TextBlock x:Name="UpdateBadgeText" FontSize="12" FontWeight="SemiBold"
                                            Foreground="{DynamicResource ThemeAccentBrush}"/>
@@ -371,20 +371,23 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <WrapPanel x:Name="UpdateActions" Margin="38,14,0,0" Visibility="Collapsed">
+                        <controls:RightAlignedWrapPanel x:Name="UpdateActions" Margin="38,14,0,0" Visibility="Collapsed">
                             <Button x:Name="ViewReleaseBtn" Content="View Release" MinWidth="96" Height="32" MinHeight="32"
                                     Services:LocalizationService.SourceContent="View Release"
-                                    VerticalAlignment="Center" Margin="0,0,8,8" Click="ViewReleaseBtn_Click" Cursor="Hand"
+                                    VerticalAlignment="Center" Margin="0,0,0,8" Click="ViewReleaseBtn_Click" Cursor="Hand"
                                     ToolTip="View releases and changelogs"
                                     Services:LocalizationService.SourceToolTip="View releases and changelogs"
-                                    AutomationProperties.Name="View Release"
-                                    Visibility="Collapsed"/>
+                                    AutomationProperties.Name="View Release"/>
                             <Button x:Name="SkipVersionBtn" Content="Skip this version" MinWidth="108" Height="32" MinHeight="32"
                                     Services:LocalizationService.SourceContent="Skip this version"
-                                    VerticalAlignment="Center" Margin="0,0,8,8" Click="SkipVersionBtn_Click" Cursor="Hand"
-                                    AutomationProperties.Name="Skip this version"
-                                    Visibility="Collapsed"/>
-                        </WrapPanel>
+                                    VerticalAlignment="Center" Margin="8,0,0,8" Click="SkipVersionBtn_Click" Cursor="Hand"
+                                    AutomationProperties.Name="Skip this version"/>
+                            <Button x:Name="UpdateNowBtn" Content="Update Now" MinWidth="108" Height="32" MinHeight="32"
+                                    Style="{DynamicResource CyberSnapAccentButton}"
+                                    Services:LocalizationService.SourceContent="Update Now"
+                                    VerticalAlignment="Center" Margin="8,0,0,8" Click="UpdateCheckButton_Click" Cursor="Hand"
+                                    AutomationProperties.Name="Update Now"/>
+                        </controls:RightAlignedWrapPanel>
 
                         <StackPanel x:Name="UpdateProgressPanel" Visibility="Collapsed" Margin="38,8,0,8">
                             <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingDescription}" Margin="0,0,0,6" AutomationProperties.LiveSetting="Polite" Services:LocalizationService.SourceText="Downloading update..."/>
