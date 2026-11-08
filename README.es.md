@@ -34,6 +34,7 @@
 ## 📑 Table of Contents
 
 - [👋 Introducción](#-introducción)
+- [📸 Capturas](#-capturas)
 - [📸 ¿Por qué CyberSnap?](#-por-qué-cybersnap)
 - [✨ Funciones principales](#-funciones-principales)
 - [🚀 Primeros pasos](#-primeros-pasos)
@@ -63,6 +64,14 @@
 Una captura suele necesitar cuatro herramientas: una para tomarla, otra para anotarla, otra para leer el texto que contiene y otra para subirla. CyberSnap hace todo eso en una sola ventana. Captura un área, una ventana, la pantalla completa, una página larga con desplazamiento o la misma región que la última vez, y graba MP4 o GIF cuando una imagen no basta. Anota sobre el overlay o abre el editor completo para formas, texto, reglas y marcos. El OCR extrae el texto de la imagen y lo traduce, el QR lee códigos, Zoom amplía la pantalla bajo el puntero para que captures una región de la vista aumentada, Pin mantiene una referencia sobre tu trabajo y el selector de color lee cualquier píxel. Las capturas anteriores van a una galería local que puedes buscar por las palabras que contienen, y pueden salir directas a FTP, SFTP, S3, ImgBB, Imgur, un webhook o CyberSnap Share. Construido con **.NET 10** y **WPF**.
 
 *Gratuito y de código abierto (GPLv3): sin anuncios, sin rastreo y sin recogida de datos. Solo disfrútalo.*
+
+---
+
+<!-- Capturas: pendiente de la galería bilingüe ES/EN del plan en https://github.com/CyberGems/CyberGems.github.io/blob/main/docs/screenshots.md — sustituir la cita, conservar este título y su entrada en el índice. -->
+
+## 📸 Capturas
+
+> Próximamente...
 
 ---
 

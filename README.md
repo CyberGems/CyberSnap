@@ -34,6 +34,7 @@
 ## 📑 Table of Contents
 
 - [👋 Introduction](#-introduction)
+- [📸 Screenshots](#-screenshots)
 - [📸 Why CyberSnap?](#-why-cybersnap)
 - [✨ Key Features](#-key-features)
 - [🚀 Getting Started](#-getting-started)
@@ -63,6 +64,14 @@
 A screenshot usually takes four tools: one to grab it, one to annotate it, one to read the text inside it and one to upload it. CyberSnap does all of that in a single window. Capture an area, a window, the full screen, a long scrolling page or the same region as last time, and record MP4 or GIF when a still is not enough. Annotate on the overlay or open the full editor for shapes, text, rulers and frames. OCR pulls text out of the image and translates it, QR reads codes, Zoom magnifies the screen under the pointer so you can capture a region of the enlarged view, Pin keeps a reference on top of your work and the color picker reads any pixel. Past captures land in a local gallery you can search by the words inside them, and can go straight to FTP, SFTP, S3, ImgBB, Imgur, a webhook or CyberSnap Share. Built with **.NET 10** and **WPF**.
 
 *Free and open source (GPLv3): no ads, no tracking, and no data collection. Just enjoy it.*
+
+---
+
+<!-- Screenshots: pending the bilingual EN/ES gallery in the capture plan at https://github.com/CyberGems/CyberGems.github.io/blob/main/docs/screenshots.md — replace the blockquote, keep this heading and the TOC entry. -->
+
+## 📸 Screenshots
+
+> Coming soon...
 
 ---
 
