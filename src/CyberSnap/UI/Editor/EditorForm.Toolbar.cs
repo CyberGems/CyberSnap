@@ -560,7 +560,7 @@ public sealed partial class EditorForm
         {
             try
             {
-                using var ico = WindowIcons.WinForms(WindowIconKind.Editor, 48);
+                using var ico = WindowIcons.WinForms(WindowIconKind.Editor, 64);
                 _brandBitmap = ico.ToBitmap();
             }
             catch { }
@@ -577,7 +577,7 @@ public sealed partial class EditorForm
             double dpiScale = DeviceDpi / 96.0;
             double totalScale = dpiScale * UiChrome.UiScale;
 
-            int iconSize = Math.Max(21, (int)Math.Round(20.5 * totalScale));
+            int iconSize = Math.Max(24, (int)Math.Round(24 * totalScale));
             int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
             int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
             int cy = brandPanel.Height / 2;
@@ -590,7 +590,9 @@ public sealed partial class EditorForm
             var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
             SplitEditorBrandTitle(titleText, out var feature, out var brand);
             using var featureFont = EditorFonts.Chrome(9.75f, FontStyle.Bold, DeviceDpi);
-            using var brandFont = EditorFonts.Chrome(8f, FontStyle.Regular, DeviceDpi);
+            // The brand suffix matches the feature title's typeface and size; the secondary
+            // color keeps it subordinate without shrinking it into a caption.
+            using var brandFont = EditorFonts.Chrome(9.75f, FontStyle.Bold, DeviceDpi);
             var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
             int textX = leftPad + iconSize + textGap;
             int h = brandPanel.Height;
@@ -604,7 +606,6 @@ public sealed partial class EditorForm
             }
             if (!string.IsNullOrEmpty(brand))
             {
-                // Quiet caption: smaller, regular weight, secondary color — not a second headline.
                 const string sep = "  ·  ";
                 int sw = TextRenderer.MeasureText(g, sep, brandFont, Size.Empty, flags).Width;
                 TextRenderer.DrawText(g, sep, brandFont,
@@ -898,14 +899,14 @@ public sealed partial class EditorForm
     {
         double dpiScale = DeviceDpi / 96.0;
         double totalScale = dpiScale * UiChrome.UiScale;
-        int iconSize = Math.Max(21, (int)Math.Round(20.5 * totalScale));
+        int iconSize = Math.Max(24, (int)Math.Round(24 * totalScale));
         int leftPad = Math.Max(14, (int)Math.Round(14 * totalScale));
         int textGap = Math.Max(8, (int)Math.Round(8 * totalScale));
         var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
         SplitEditorBrandTitle(titleText, out var feature, out var brand);
         var flags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
         using var featureFont = EditorFonts.Chrome(9.75f, FontStyle.Bold, DeviceDpi);
-        using var brandFont = EditorFonts.Chrome(8f, FontStyle.Regular, DeviceDpi);
+        using var brandFont = EditorFonts.Chrome(9.75f, FontStyle.Bold, DeviceDpi);
         int textW = 0;
         if (!string.IsNullOrEmpty(feature))
             textW += TextRenderer.MeasureText(feature, featureFont, Size.Empty, flags).Width;
