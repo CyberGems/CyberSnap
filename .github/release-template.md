@@ -35,6 +35,7 @@ Achievements now show a progress start date, allow a clean reset, and persist in
 - 🔧 **Reliability fixes**:
   - Dialogs and floating windows retain their correct size and placement when Windows misses a monitor DPI update.
   - Single-instance cleanup releases only a mutex owned by the current process.
+  - The CyberSnap Share logo matches the canonical app logo.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
@@ -48,7 +49,7 @@ El progreso de logros ahora muestra la fecha de inicio y permite reiniciar para 
 - **Mejoras entre monitores**: el escalado sigue el ajuste de interfaz y conserva mejor el tamaño físico al mover ventanas entre pantallas con distinto DPI. Widget, bandeja, notificaciones, selector de color y tooltips se ubican con más precisión. Puedes ocultar el widget durante las capturas; permanece oculto durante las transiciones y vuelve sin destellos.
 - **Capturas y grabaciones más estables**: las superposiciones se recuperan de fallos de dibujo y reintentan una vez los fotogramas negros. La barra permanece oculta mientras seleccionas una región. Se mejora el espaciado de acciones y barras de desplazamiento de Vista previa y el widget ya no interfiere con menús o capturas.
 - **Duración de medios**: los paquetes incluyen `ffprobe.exe`; la detección de duración también puede usar herramientas FFmpeg de `PATH`.
-- **Correcciones de confiabilidad**: ventanas y diálogos conservan mejor tamaño y ubicación si Windows omite un cambio de DPI. La aplicación solo libera el mutex de instancia única si el proceso es su propietario.
+- **Correcciones de confiabilidad**: ventanas y diálogos conservan mejor tamaño y ubicación si Windows omite un cambio de DPI. La aplicación solo libera el mutex de instancia única si el proceso es su propietario. El logo de CyberSnap Share coincide con el logo canónico de la aplicación.
 
 </details>
 

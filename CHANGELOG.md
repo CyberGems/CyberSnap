@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.24.0] - 2026-11-08
+## [1.24.1] - 2026-11-08
 
 ### Added
 
@@ -21,6 +21,7 @@
 - Tray menus, notifications, color picker windows, tooltips, and dialogs retain their size and placement across monitor DPI changes.
 - The widget no longer reappears prematurely during capture transitions, and its topmost behavior no longer interferes with menus or captures.
 - Single-instance cleanup only releases a mutex owned by the current process.
+- The CyberSnap Share logo now matches the canonical app logo for release branding validation.
 
 ## [1.23.0] - 2026-10-27
 
@@ -49,5 +50,5 @@
 
 Earlier versions are documented in the [GitHub release history](https://github.com/CyberGems/CyberSnap/releases).
 
-[1.24.0]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.24.0
+[1.24.1]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.24.1
 [1.23.0]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.23.0
