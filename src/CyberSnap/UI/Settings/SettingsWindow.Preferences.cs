@@ -72,7 +72,7 @@ public partial class SettingsWindow
 
             previous = _settingsService.Settings;
             _settingsService.Settings = imported;
-            _settingsService.Save();
+            _settingsService.SaveAchievementProgress();
             HotkeyChanged?.Invoke();
             LoadSettings();
             SetSettingsImportExportStatus("Settings imported and applied.");
@@ -86,7 +86,7 @@ public partial class SettingsWindow
                 _settingsService.Settings = previous;
                 try
                 {
-                    _settingsService.Save();
+                    _settingsService.SaveAchievementProgress();
                 }
                 catch (Exception rollbackEx)
                 {
@@ -156,7 +156,7 @@ public partial class SettingsWindow
         try
         {
             _settingsService.Settings = new AppSettings();
-            _settingsService.Save();
+            _settingsService.SaveAchievementProgress();
             HotkeyChanged?.Invoke();
             LoadSettings();
             PopulateToolToggles();

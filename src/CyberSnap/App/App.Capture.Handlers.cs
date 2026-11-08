@@ -823,7 +823,7 @@ public partial class App
         setUnlockedDate?.Invoke(today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
         if (_settingsService is { } service)
             service.Settings.AchievementsStartedOn ??= today;
-        try { _settingsService!.Save(); }
+        try { _settingsService!.SaveAchievementProgress(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.first-time-save", ex.Message, ex); }
 
         // Recording the medal is unconditional (above); the celebratory toast for the unlock
@@ -921,7 +921,7 @@ public partial class App
             settings.LastCelebrationDate = today;
         }
 
-        try { _settingsService!.Save(); }
+        try { _settingsService!.SaveAchievementProgress(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.celebration-save", ex.Message, ex); }
 
         return (count, isFirstToday, settings.CurrentStreak);

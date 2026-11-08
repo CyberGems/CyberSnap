@@ -1432,6 +1432,8 @@
   "Reset": "Reset",
   "Reset progress": "Reset progress",
   "Reset achievements?": "Reset achievements?",
+  "Could not reset achievements": "Could not reset achievements",
+  "CyberSnap could not save the new achievement period. Try again.": "CyberSnap could not save the new achievement period. Try again.",
   "This clears achievement counters, streaks and medals and starts a new period.": "This clears achievement counters, streaks and medals and starts a new period.",
   "Start date: {0}": "Start date: {0}",
   "Not recorded": "Not recorded",

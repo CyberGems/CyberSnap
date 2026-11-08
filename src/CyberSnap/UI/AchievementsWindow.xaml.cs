@@ -115,9 +115,17 @@ public partial class AchievementsWindow : Window
                 "This clears achievement counters, streaks and medals and starts a new period.", "Reset progress", "Cancel"))
             return;
 
-        _settingsService.Settings.ResetAchievementProgress(DateOnly.FromDateTime(DateTime.Today));
-        _settingsService.Save();
-        _settingsService.FlushPendingWrites();
+        try
+        {
+            _settingsService.ResetAchievementProgress(DateOnly.FromDateTime(DateTime.Today));
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("achievements.reset", ex);
+            ToastWindow.ShowError(LocalizationService.Translate("Could not reset achievements"),
+                LocalizationService.Translate("CyberSnap could not save the new achievement period. Try again."));
+            return;
+        }
         RefreshAchievementContent(revealRail: false);
     }
 

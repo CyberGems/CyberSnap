@@ -1,4 +1,5 @@
 using CyberSnap.Helpers;
+using System.Text.Json.Serialization;
 
 namespace CyberSnap.Models;
 
@@ -627,63 +628,38 @@ public sealed class AppSettings
 
     // Celebration mode: occasional milestone toasts get a flourish. Master toggle.
     public bool CelebrationsEnabled { get; set; } = true;
-    // Local date (yyyy-MM-dd) of the last "first capture of the day" celebration.
-    public string? LastCelebrationDate { get; set; }
-    // Running total of all captures (image, OCR, and video/GIF recordings alike). Drives
-    // milestone celebrations (50, 100, 250, ...) and the milestone rail in Settings.
-    public int CelebrationCaptureCount { get; set; }
-    public DateOnly? AchievementsStartedOn { get; set; }
-    public bool AchievementHistoryInitialized { get; set; }
-    // Per-type capture counters. Start at 0 for new installs; retroactively bootstrapped
-    // from the gallery on first load for existing users. All are incremented in RegisterCapture.
-    public int ScreenshotCount { get; set; }
-    public int RecordingCount { get; set; }
-    public int OcrCount { get; set; }
-    public int ColorPickCount { get; set; }
-    public int ScanCount { get; set; }
-    public int ScrollCaptureCount { get; set; }
-    // Highest milestone value the user has already seen acknowledged in the Settings rail.
-    // When HighestAchieved(count) exceeds this, the rail flares as "new" until viewed.
-    public int LastSeenMilestone { get; set; }
-    // Consecutive days with at least one capture. Bumped on the first capture of each day when
-    // it directly follows the previous capture day; reset to 1 after a gap. Drives streak toasts
-    // and the streak shown in the Settings rail.
-    public int CurrentStreak { get; set; }
-    // Best streak ever reached (kept for records / future display).
-    public int LongestStreak { get; set; }
-    // First-time achievement flags — set once the user first performs each action, used to
-    // unlock the matching "first time" medal in the Achievements tab.
-    public bool HasFirstOcr { get; set; }
-    public bool HasFirstRecording { get; set; }
-    public bool HasFirstScrollingCapture { get; set; }
-    public bool HasFirstColorPicker { get; set; }
-    public bool HasFirstScan { get; set; }
-    public bool HasFirstRuler { get; set; }
-    public bool HasFirstEditor { get; set; }
+    [JsonIgnore]
+    internal AchievementProgress AchievementProgress { get; set; } = new();
 
-    // Dates (yyyy-MM-dd) when each first-time achievement was unlocked.
-    public string? FirstOcrAt { get; set; }
-    public string? FirstRecordingAt { get; set; }
-    public string? FirstScrollCaptureAt { get; set; }
-    public string? FirstColorPickerAt { get; set; }
-    public string? FirstScanAt { get; set; }
-    public string? FirstRulerAt { get; set; }
-    public string? FirstEditorAt { get; set; }
-
-    // Set of achievement IDs already seen by the user in the Achievements window (clears "NEW" badges).
-    public HashSet<string> SeenAchievementIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    internal void ResetAchievementProgress(DateOnly startDate)
-    {
-        AchievementsStartedOn = startDate;
-        AchievementHistoryInitialized = true;
-        CelebrationCaptureCount = ScreenshotCount = RecordingCount = OcrCount = ColorPickCount = ScanCount = ScrollCaptureCount = 0;
-        LastSeenMilestone = CurrentStreak = LongestStreak = 0;
-        LastCelebrationDate = null;
-        HasFirstOcr = HasFirstRecording = HasFirstScrollingCapture = HasFirstColorPicker = HasFirstScan = HasFirstRuler = HasFirstEditor = false;
-        FirstOcrAt = FirstRecordingAt = FirstScrollCaptureAt = FirstColorPickerAt = FirstScanAt = FirstRulerAt = FirstEditorAt = null;
-        SeenAchievementIds.Clear();
-    }
+    // Keep the flat settings schema for existing profiles, backup files and older builds.
+    public string? LastCelebrationDate { get => AchievementProgress.LastCelebrationDate; set => AchievementProgress.LastCelebrationDate = value; }
+    public int CelebrationCaptureCount { get => AchievementProgress.CelebrationCaptureCount; set => AchievementProgress.CelebrationCaptureCount = value; }
+    public DateOnly? AchievementsStartedOn { get => AchievementProgress.AchievementsStartedOn; set => AchievementProgress.AchievementsStartedOn = value; }
+    public bool AchievementHistoryInitialized { get => AchievementProgress.AchievementHistoryInitialized; set => AchievementProgress.AchievementHistoryInitialized = value; }
+    public int ScreenshotCount { get => AchievementProgress.ScreenshotCount; set => AchievementProgress.ScreenshotCount = value; }
+    public int RecordingCount { get => AchievementProgress.RecordingCount; set => AchievementProgress.RecordingCount = value; }
+    public int OcrCount { get => AchievementProgress.OcrCount; set => AchievementProgress.OcrCount = value; }
+    public int ColorPickCount { get => AchievementProgress.ColorPickCount; set => AchievementProgress.ColorPickCount = value; }
+    public int ScanCount { get => AchievementProgress.ScanCount; set => AchievementProgress.ScanCount = value; }
+    public int ScrollCaptureCount { get => AchievementProgress.ScrollCaptureCount; set => AchievementProgress.ScrollCaptureCount = value; }
+    public int LastSeenMilestone { get => AchievementProgress.LastSeenMilestone; set => AchievementProgress.LastSeenMilestone = value; }
+    public int CurrentStreak { get => AchievementProgress.CurrentStreak; set => AchievementProgress.CurrentStreak = value; }
+    public int LongestStreak { get => AchievementProgress.LongestStreak; set => AchievementProgress.LongestStreak = value; }
+    public bool HasFirstOcr { get => AchievementProgress.HasFirstOcr; set => AchievementProgress.HasFirstOcr = value; }
+    public bool HasFirstRecording { get => AchievementProgress.HasFirstRecording; set => AchievementProgress.HasFirstRecording = value; }
+    public bool HasFirstScrollingCapture { get => AchievementProgress.HasFirstScrollingCapture; set => AchievementProgress.HasFirstScrollingCapture = value; }
+    public bool HasFirstColorPicker { get => AchievementProgress.HasFirstColorPicker; set => AchievementProgress.HasFirstColorPicker = value; }
+    public bool HasFirstScan { get => AchievementProgress.HasFirstScan; set => AchievementProgress.HasFirstScan = value; }
+    public bool HasFirstRuler { get => AchievementProgress.HasFirstRuler; set => AchievementProgress.HasFirstRuler = value; }
+    public bool HasFirstEditor { get => AchievementProgress.HasFirstEditor; set => AchievementProgress.HasFirstEditor = value; }
+    public string? FirstOcrAt { get => AchievementProgress.FirstOcrAt; set => AchievementProgress.FirstOcrAt = value; }
+    public string? FirstRecordingAt { get => AchievementProgress.FirstRecordingAt; set => AchievementProgress.FirstRecordingAt = value; }
+    public string? FirstScrollCaptureAt { get => AchievementProgress.FirstScrollCaptureAt; set => AchievementProgress.FirstScrollCaptureAt = value; }
+    public string? FirstColorPickerAt { get => AchievementProgress.FirstColorPickerAt; set => AchievementProgress.FirstColorPickerAt = value; }
+    public string? FirstScanAt { get => AchievementProgress.FirstScanAt; set => AchievementProgress.FirstScanAt = value; }
+    public string? FirstRulerAt { get => AchievementProgress.FirstRulerAt; set => AchievementProgress.FirstRulerAt = value; }
+    public string? FirstEditorAt { get => AchievementProgress.FirstEditorAt; set => AchievementProgress.FirstEditorAt = value; }
+    public HashSet<string> SeenAchievementIds { get => AchievementProgress.SeenAchievementIds; set => AchievementProgress.SeenAchievementIds = value; }
 
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;

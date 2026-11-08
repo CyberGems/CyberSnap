@@ -20,10 +20,12 @@ public sealed class SettingsService : IDisposable
 
     private readonly string _settingsPath;
     private readonly string _settingsDir;
+    private readonly string _achievementProgressPath;
     private readonly TimeSpan _saveDelay;
     private readonly System.Threading.Timer _flushTimer;
     private readonly object _gate = new();
     private bool _settingsDirty;
+    private bool _achievementProgressDirty;
     private bool _disposed;
 
     public AppSettings Settings { get; internal set; } = new();
@@ -322,6 +324,7 @@ public sealed class SettingsService : IDisposable
     {
         _settingsPath = ResolveSettingsPath(settingsPath);
         _settingsDir = Path.GetDirectoryName(_settingsPath) ?? AppContext.BaseDirectory;
+        _achievementProgressPath = Path.ChangeExtension(_settingsPath, ".achievements.json");
         _saveDelay = saveDelay ?? TimeSpan.FromMilliseconds(350);
         _flushTimer = new System.Threading.Timer(_ =>
         {
@@ -382,15 +385,12 @@ public sealed class SettingsService : IDisposable
 
         try
         {
-            if (!File.Exists(resolvedPath))
-            {
-                var defaults = new AppSettings();
-                CacheSettings(resolvedPath, defaults);
-                return CloneSettings(defaults);
-            }
-
-            var json = File.ReadAllText(resolvedPath);
-            var loaded = DeserializeSettings(json);
+            var loaded = File.Exists(resolvedPath)
+                ? DeserializeSettings(File.ReadAllText(resolvedPath))
+                : new AppSettings();
+            var progress = ReadAchievementProgress(Path.ChangeExtension(resolvedPath, ".achievements.json"));
+            if (progress is not null)
+                loaded.AchievementProgress = progress;
             CacheSettings(resolvedPath, loaded);
             return CloneSettings(loaded);
         }
@@ -430,30 +430,63 @@ public sealed class SettingsService : IDisposable
         if (!File.Exists(_settingsPath))
             TryMigrateLegacyPortableSettings();
 
-        if (!File.Exists(_settingsPath))
-        {
-            CacheSettings(_settingsPath, Settings);
-            return;
-        }
-
+        bool hasLegacySettings = File.Exists(_settingsPath);
         try
         {
-            var json = File.ReadAllText(_settingsPath);
-            Settings = DeserializeSettings(json);
-            CacheSettings(_settingsPath, Settings);
+            if (hasLegacySettings)
+                Settings = DeserializeSettings(File.ReadAllText(_settingsPath));
         }
         catch (Exception ex)
         {
             AppDiagnostics.LogError("settings.load", ex, $"Failed to load settings from {_settingsPath}. Using defaults.");
+            hasLegacySettings = false;
         }
+
+        var progress = ReadAchievementProgress(_achievementProgressPath);
+        if (progress is not null)
+            Settings.AchievementProgress = progress;
+        else if (hasLegacySettings && !File.Exists(_achievementProgressPath))
+        {
+            try
+            {
+                WriteAchievementProgress(Settings.AchievementProgress, overwrite: false);
+            }
+            catch (IOException) when (File.Exists(_achievementProgressPath))
+            {
+                // Another SettingsService instance may have migrated this profile first.
+                Settings.AchievementProgress = ReadAchievementProgress(_achievementProgressPath) ?? Settings.AchievementProgress;
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("achievements.migrate", ex);
+            }
+        }
+        CacheSettings(_settingsPath, Settings);
     }
 
-    public void Save()
+    public void Save() => Save(achievementProgressChanged: false);
+
+    internal void SaveAchievementProgress() => Save(achievementProgressChanged: true);
+
+    internal void ResetAchievementProgress(DateOnly startDate)
+    {
+        var reset = new AchievementProgress { AchievementsStartedOn = startDate, AchievementHistoryInitialized = true };
+        lock (_gate)
+        {
+            WriteAchievementProgress(reset);
+            Settings.AchievementProgress = reset;
+            _achievementProgressDirty = false;
+        }
+        Save();
+    }
+
+    private void Save(bool achievementProgressChanged)
     {
         CacheSettings(_settingsPath, Settings);
 
         lock (_gate)
         {
+            _achievementProgressDirty |= achievementProgressChanged;
             if (_disposed)
             {
                 FlushPendingWrites_NoLock();
@@ -490,6 +523,12 @@ public sealed class SettingsService : IDisposable
 
     private void FlushPendingWrites_NoLock()
     {
+        if (_achievementProgressDirty)
+        {
+            WriteAchievementProgress(Settings.AchievementProgress);
+            _achievementProgressDirty = false;
+        }
+
         if (!_settingsDirty)
             return;
 
@@ -516,6 +555,24 @@ public sealed class SettingsService : IDisposable
         if (wrote)
             _settingsDirty = false;
     }
+
+    private static AchievementProgress? ReadAchievementProgress(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                return JsonSerializer.Deserialize<AchievementProgress>(File.ReadAllText(path))
+                    ?? throw new InvalidDataException("Achievement progress is missing.");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("achievements.load", ex);
+        }
+        return null;
+    }
+
+    private void WriteAchievementProgress(AchievementProgress progress, bool overwrite = true)
+        => AtomicBackupFile.Write(_achievementProgressPath, JsonSerializer.SerializeToUtf8Bytes(progress, JsonOptions), overwrite);
 
     private bool TryWriteSettingsFallback_NoLock(string tmpPath, string json, string initialError, string errorKind)
     {
@@ -642,9 +699,26 @@ public sealed class SettingsService : IDisposable
             ObjectDisposedException.ThrowIf(_disposed, this);
             var copy = CloneSettings(replacement);
             var json = JsonSerializer.Serialize(SensitiveSettingsProtection.ProtectForStorage(copy, JsonOptions), JsonOptions);
+            byte[]? previousSettings = !backupOptionsOnly && File.Exists(_settingsPath) ? File.ReadAllBytes(_settingsPath) : null;
             AtomicBackupFile.Write(_settingsPath, System.Text.Encoding.UTF8.GetBytes(json), overwrite: true);
             if (backupOptionsOnly) Settings.AutomaticBackup = copy.AutomaticBackup;
-            else Settings = copy;
+            else
+            {
+                try
+                {
+                    WriteAchievementProgress(copy.AchievementProgress);
+                }
+                catch
+                {
+                    if (previousSettings is null)
+                        File.Delete(_settingsPath);
+                    else
+                        AtomicBackupFile.Write(_settingsPath, previousSettings, overwrite: true);
+                    throw;
+                }
+                Settings = copy;
+                _achievementProgressDirty = false;
+            }
             _settingsDirty = false;
             _flushTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             CacheSettings(_settingsPath, copy);

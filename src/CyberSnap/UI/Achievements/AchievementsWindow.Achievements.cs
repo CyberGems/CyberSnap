@@ -101,15 +101,10 @@ public partial class AchievementsWindow
                 s.FirstOcrAt, s.FirstRecordingAt, s.FirstScrollCaptureAt, s.FirstColorPickerAt,
                 s.FirstScanAt, s.FirstRulerAt, s.FirstEditorAt, s.LastCelebrationDate,
             };
-            var galleryDates = media.Select(e => e.CapturedAt).Concat(ocr.Select(e => e.CapturedAt))
-                .Concat(colors.Select(e => e.CapturedAt)).Concat(codes.Select(e => e.CapturedAt));
-            s.AchievementsStartedOn = galleryDates.Where(date => date != default)
-                .Select(date => (DateOnly?)DateOnly.FromDateTime(date))
-                .Concat(medalDates.Select(date => DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
-                    DateTimeStyles.None, out var recorded) ? recorded : (DateOnly?)null))
-                .Append(s.AchievementsStartedOn).Min();
+            s.AchievementsStartedOn ??= medalDates.Select(date => DateOnly.TryParseExact(date, "yyyy-MM-dd",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var recorded) ? recorded : (DateOnly?)null).Min();
             s.AchievementHistoryInitialized = true;
-            _settingsService.Save();
+            _settingsService.SaveAchievementProgress();
         }
         catch (Exception ex)
         {
@@ -327,7 +322,7 @@ public partial class AchievementsWindow
 
         if (changed)
         {
-            try { _settingsService?.Save(); } catch { /* non-critical */ }
+            try { _settingsService?.SaveAchievementProgress(); } catch { /* non-critical */ }
         }
     }
 

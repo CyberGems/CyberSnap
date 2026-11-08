@@ -1704,6 +1704,8 @@
   "Reset": "Restablecer",
   "Reset progress": "Reiniciar progreso",
   "Reset achievements?": "¿Reiniciar los logros?",
+  "Could not reset achievements": "No se pudieron reiniciar los logros",
+  "CyberSnap could not save the new achievement period. Try again.": "CyberSnap no pudo guardar el nuevo período de logros. Inténtalo de nuevo.",
   "This clears achievement counters, streaks and medals and starts a new period.": "Se borrarán los contadores, las rachas y las medallas de Logros y comenzará un nuevo período.",
   "Start date: {0}": "Fecha de inicio: {0}",
   "Not recorded": "No registrada",

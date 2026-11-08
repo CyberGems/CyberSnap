@@ -64,6 +64,7 @@ public partial class AchievementsWindow
             return;
 
         var s = _settingsService.Settings;
+        var progress = s.AchievementProgress;
         int count = s.CelebrationCaptureCount;
         var values = CelebrationMilestones.Values;
 
@@ -82,14 +83,15 @@ public partial class AchievementsWindow
         {
             LayoutRail();
 
-            if (reveal && isNew && s.CelebrationsEnabled)
+            if (reveal && isNew && s.CelebrationsEnabled &&
+                ReferenceEquals(progress, _settingsService.Settings.AchievementProgress))
             {
                 if (!Motion.Disabled)
                     PlayRailNewState();
 
                 // Stamp as seen so the next reveal is calm; persist (Save is debounced).
                 s.LastSeenMilestone = highestAchieved;
-                try { _settingsService.Save(); } catch { /* non-critical */ }
+                try { _settingsService.SaveAchievementProgress(); } catch { /* non-critical */ }
             }
         }));
     }

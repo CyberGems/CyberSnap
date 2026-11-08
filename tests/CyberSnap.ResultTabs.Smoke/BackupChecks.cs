@@ -42,6 +42,8 @@ internal static partial class Program
             TimeZoneInfo.CreateCustomTimeZone("Backup test", TimeSpan.FromHours(-6), "Backup test", "Backup test"));
         using var service = new AutomaticBackupService(settings, clock);
         settings.Settings.ScreenshotCount = 42;
+        var achievementDate = new DateOnly(2025, 11, 5);
+        settings.Settings.AchievementsStartedOn = achievementDate;
         settings.Settings.CurrentStreak = 5;
         settings.Settings.HasFirstOcr = true;
         settings.Settings.GoogleTranslateApiKey = "backup-test-secret";
@@ -135,6 +137,7 @@ internal static partial class Program
         restorePoint = BackupAwait(service.ListBackupsAsync()).Single(file => file.FilePath == legacyPath);
         Assert(restorePoint.IsValid, "backups with the previous filename format remain discoverable and valid");
         settings.Settings.ScreenshotCount = 99;
+        settings.Settings.AchievementsStartedOn = achievementDate.AddDays(3);
         settings.Settings.GoogleTranslateApiKey = "current-test-key";
         settings.Settings.AutomaticBackup.MaxBackups = 5;
         settings.Save();
@@ -153,13 +156,22 @@ internal static partial class Program
         using (var reloaded = new SettingsService(Path.Combine(root, "settings.json")))
         {
             reloaded.Load();
-            Assert(reloaded.Settings.ScreenshotCount == 42 && reloaded.Settings.GoogleTranslateApiKey == "current-test-key",
+            Assert(reloaded.Settings.ScreenshotCount == 42 && reloaded.Settings.AchievementsStartedOn == achievementDate
+                && reloaded.Settings.GoogleTranslateApiKey == "current-test-key",
                 "restored settings are durable and credentials remain protected on disk");
         }
         using (var locked = new FileStream(Path.Combine(root, "settings.json"), FileMode.Open, FileAccess.Read, FileShare.None))
             ExpectBackupFailure(() => BackupAwait(service.RestoreBackupAsync(recovery.FilePath)),
                 "restoration fails safely when settings cannot be replaced");
         Assert(settings.Settings.ScreenshotCount == 42, "failed durable replacement leaves current settings intact");
+        var settingsFile = Path.Combine(root, "settings.json");
+        byte[] previousSettings = File.ReadAllBytes(settingsFile);
+        using (var locked = new FileStream(Path.ChangeExtension(settingsFile, ".achievements.json"),
+                   FileMode.Open, FileAccess.Read, FileShare.None))
+            ExpectBackupFailure(() => BackupAwait(service.RestoreBackupAsync(recovery.FilePath)),
+                "restoration fails safely when the achievement record cannot be replaced");
+        Assert(settings.Settings.ScreenshotCount == 42 && File.ReadAllBytes(settingsFile).SequenceEqual(previousSettings),
+            "a failed achievement restore rolls back the settings file");
         ExpectBackupFailure(() => BackupAwait(service.DeleteBackupAsync(unrelated)), "deleting an unrelated file is rejected");
         string outside = Path.Combine(root, Path.GetFileName(restorePoint.FilePath));
         File.Copy(restorePoint.FilePath, outside);
@@ -280,14 +292,23 @@ internal static partial class Program
                     settings.Settings.AutomaticBackup.CustomDirectory = workingFolder;
                     settings.Save();
                     var uiService = (AutomaticBackupService)Field(window, "_backupService");
+                    BackupFileInfo? created = null;
                     BackupAwait((Task)Call(window, "RunAutomaticBackupOperationAsync",
-                        new Func<Task>(() => uiService.CreateBackupAsync()))!);
+                        new Func<Task>(async () => created = await uiService.CreateBackupAsync()))!);
+                    var createdFile = created ?? throw new InvalidOperationException("The UI did not create a backup.");
                     var page = Element<ScrollViewer>(window, "BackupDataPanel");
                     page.ScrollToTop();
-                    Pump();
                     var backupList = Element<ItemsControl>(window, "AutomaticBackupsList");
+                    object? backupRow = null;
+                    AwaitCondition(() =>
+                    {
+                        backupRow = backupList.Items.Cast<object>().FirstOrDefault(item =>
+                            item.GetType().GetProperty("File")?.GetValue(item) is BackupFileInfo file
+                            && file.FilePath == createdFile.FilePath);
+                        return backupRow is not null;
+                    }, "The backup list did not refresh after creating a backup");
                     backupList.UpdateLayout();
-                    var row = (UIElement)backupList.ItemContainerGenerator.ContainerFromIndex(0);
+                    var row = (UIElement)backupList.ItemContainerGenerator.ContainerFromItem(backupRow!);
                     double beforeWheel = page.VerticalOffset;
                     row.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, -120)
                     {
@@ -297,12 +318,11 @@ internal static partial class Program
                     Assert(page.VerticalOffset > beforeWheel,
                         "the page keeps scrolling when the mouse wheel is over an available backup in " + language);
                     var title = (TextBlock)backupList.ItemTemplate.FindName("BackupDisplayNameText", (ContentPresenter)row);
-                    var listed = BackupAwait(uiService.ListBackupsAsync());
-                    Assert(title.Text == listed[0].FileName,
+                    Assert(title.Text == createdFile.FileName,
                         "the list displays the actual backup filename in " + language);
                     var description = (TextBlock)backupList.ItemTemplate.FindName("BackupDescriptionText", (ContentPresenter)row);
                     Assert(description.Text.Contains(string.Format(LocalizationService.Translate("Backup from {0}"),
-                        listed[0].CreatedUtc.ToLocalTime().ToString("G"))) && description.Text.Contains("KB"),
+                        createdFile.CreatedUtc.ToLocalTime().ToString("G"))) && description.Text.Contains("KB"),
                         "backup dates and sizes remain visible and localized in " + language);
                     var delete = BackupVisualButtons(row).Single(button => Equals(button.Content, LocalizationService.Translate("Delete")));
                     var refresh = Element<Button>(window, "RefreshBackupsBtn");

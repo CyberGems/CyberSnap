@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.IO;
+using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -14,13 +16,17 @@ internal static partial class Program
         LocalizationService.ApplyCurrentCulture("es");
         using var history = new HistoryService();
         var oldDate = new DateTime(2026, 5, 10);
-        var galleryItem = new HistoryEntry { Kind = HistoryKind.Image, CapturedAt = oldDate };
+        var galleryItem = new HistoryEntry { Kind = HistoryKind.Image, CapturedAt = oldDate.AddDays(-5) };
         SetField(history, "_entries", new List<HistoryEntry> { galleryItem });
+        settings.Settings.AchievementsStartedOn = DateOnly.FromDateTime(oldDate);
+        settings.Settings.CelebrationCaptureCount = settings.Settings.ScreenshotCount = 240;
+        settings.Settings.HasFirstEditor = true;
+        settings.Settings.FirstEditorAt = oldDate.AddDays(3).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        settings.Settings.CurrentStreak = settings.Settings.LongestStreak = 3;
+        settings.Settings.LastCelebrationDate = oldDate.AddDays(10).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        settings.Save();
+        settings.Load();
         var progress = settings.Settings;
-        progress.HasFirstEditor = true;
-        progress.FirstEditorAt = oldDate.AddDays(3).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        progress.CurrentStreak = progress.LongestStreak = 3;
-        progress.LastCelebrationDate = oldDate.AddDays(10).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
         var window = new AchievementsWindow(settings, history);
         try
@@ -31,8 +37,8 @@ internal static partial class Program
             var label = Element<TextBlock>(window, "AchievementsStartDate");
             var reset = Element<Button>(window, "ResetAchievementsButton");
             Assert(progress.AchievementsStartedOn == DateOnly.FromDateTime(oldDate)
-                && progress.CelebrationCaptureCount == 1 && progress.ScreenshotCount == 1,
-                "existing achievement progress uses the earliest recorded date");
+                && progress.CelebrationCaptureCount == 240 && progress.ScreenshotCount == 240,
+                "migration preserves the previously recorded start date and capture counts");
             Assert(label.Text == "Fecha de inicio: Mayo 10, 2026" && reset.Content is "Reiniciar progreso",
                 "the Spanish start date shows a capitalized full month first and the reset action is localized");
             Render(window, renders, "achievements-start-date.png");
@@ -44,8 +50,23 @@ internal static partial class Program
             progress.InterfaceLanguage = "es";
             window.RefreshLocalization();
 
+            SetField(history, "_entries", new List<HistoryEntry>());
+            window.RefreshAchievementContent(revealRail: false);
+            Assert(label.Text == "Fecha de inicio: Mayo 10, 2026", "removing older captures leaves the start date intact");
+            SetField(history, "_entries", new List<HistoryEntry> { galleryItem });
+
+            settings.FlushPendingWrites();
+            RewriteSettingsAsLegacy(0);
+            using (var downgraded = new SettingsService(settingsPath))
+            {
+                downgraded.Load();
+                Assert(downgraded.Settings.AchievementsStartedOn == DateOnly.FromDateTime(oldDate)
+                    && downgraded.Settings.ScreenshotCount == 240 && downgraded.Settings.HasFirstEditor,
+                    "loading after an older settings write preserves the migrated date, counters and medals");
+            }
+
             RespondToConfirmation(false);
-            Assert(progress.CelebrationCaptureCount == 1 && progress.HasFirstEditor && progress.LongestStreak == 3,
+            Assert(progress.CelebrationCaptureCount == 240 && progress.HasFirstEditor && progress.LongestStreak == 3,
                 "canceling the confirmation preserves progress");
 
             RespondToConfirmation(true);
@@ -59,11 +80,24 @@ internal static partial class Program
             Assert(history.Entries.Count == 1 && ReferenceEquals(galleryItem, history.Entries[0]),
                 "reset preserves the Gallery and never reimports its older activity");
 
+            settings.FlushPendingWrites();
+            RewriteSettingsAsLegacy(240);
             using var reloaded = new SettingsService(settingsPath);
             reloaded.Load();
             Assert(reloaded.Settings.AchievementHistoryInitialized && reloaded.Settings.AchievementsStartedOn == today
-                && reloaded.Settings.CelebrationCaptureCount == 0 && !reloaded.Settings.HasFirstEditor,
-                "the new period and zero progress survive a settings reload");
+                && reloaded.Settings.CelebrationCaptureCount == 0 && reloaded.Settings.ScreenshotCount == 0
+                && !reloaded.Settings.HasFirstEditor,
+                "the new period and zero progress survive an older build repopulating settings from the Gallery");
+
+            void RewriteSettingsAsLegacy(int galleryCount)
+            {
+                var legacy = JsonNode.Parse(File.ReadAllText(settingsPath))!.AsObject();
+                legacy.Remove(nameof(AppSettings.AchievementsStartedOn));
+                legacy.Remove(nameof(AppSettings.AchievementHistoryInitialized));
+                legacy[nameof(AppSettings.CelebrationCaptureCount)] = galleryCount;
+                legacy[nameof(AppSettings.ScreenshotCount)] = galleryCount;
+                File.WriteAllText(settingsPath, legacy.ToJsonString());
+            }
 
             void RespondToConfirmation(bool accepted)
             {
