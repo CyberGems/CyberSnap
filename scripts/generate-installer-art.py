@@ -2,7 +2,7 @@
 
 Produces, from the app icon:
   - <name>.bmp / <name>.png   (164x314) NSIS sidebar and Inno Setup wizard image
-  - installerWizardSmall.bmp  (55x58)   Inno Setup small wizard image (--small)
+  - installerWizardSmall.bmp  (160x160) Inno Setup header artwork (--small)
 
 The plate (pale gradient, brand arc and constellation dots) reproduces the
 look used by the apps that ship their own illustration, so every installer
@@ -19,7 +19,8 @@ import sys
 from PIL import Image, ImageDraw, ImageFilter
 
 SIDEBAR_SIZE = (164, 314)
-SMALL_SIZE = (55, 58)
+SMALL_SIZE = (160, 160)
+SMALL_PADDING = 6
 
 PLATE_TOP = (255, 255, 255)
 PLATE_BOTTOM = (232, 241, 252)
@@ -116,7 +117,10 @@ def compose_sidebar(icon_path):
 def compose_small(icon_path):
     canvas = Image.new("RGB", SMALL_SIZE, "#FFFFFF")
     icon = load_icon(icon_path)
-    scale = min((SMALL_SIZE[0] - 4) / icon.width, (SMALL_SIZE[1] - 4) / icon.height)
+    scale = min(
+        (SMALL_SIZE[0] - 2 * SMALL_PADDING) / icon.width,
+        (SMALL_SIZE[1] - 2 * SMALL_PADDING) / icon.height,
+    )
     icon = icon.resize((max(1, int(icon.width * scale)), max(1, int(icon.height * scale))), Image.Resampling.LANCZOS)
     flat = Image.new("RGBA", icon.size, (255, 255, 255, 255))
     flat.alpha_composite(icon)
