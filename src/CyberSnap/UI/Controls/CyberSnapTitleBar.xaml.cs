@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
@@ -19,7 +20,7 @@ public partial class CyberSnapTitleBar : UserControl
             nameof(Title),
             typeof(string),
             typeof(CyberSnapTitleBar),
-            new PropertyMetadata(string.Empty));
+            new PropertyMetadata(string.Empty, OnTitleChanged));
 
     public static readonly DependencyProperty ShowPinButtonProperty =
         DependencyProperty.Register(
@@ -46,6 +47,11 @@ public partial class CyberSnapTitleBar : UserControl
     public event EventHandler? PinRequested;
 
     private Window? _subscribedWindow;
+    private readonly DispatcherTimer _titleClickTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime),
+    };
+    private System.Windows.Point? _titlePress;
     /// <summary>
     /// Explicit open tracking per burger menu. ContextMenu.IsOpen alone is not reliable:
     /// the popup can die silently (activation shifts, topmost overlays) without Closed
@@ -67,6 +73,12 @@ public partial class CyberSnapTitleBar : UserControl
     public CyberSnapTitleBar()
     {
         InitializeComponent();
+        _titleClickTimer.Tick += (_, _) =>
+        {
+            _titleClickTimer.Stop();
+            if (OwnerWindow is { IsActive: true })
+                OpenTitleAbout();
+        };
         AttachTactileFeedback();
         Loaded += (s, e) =>
         {
@@ -82,10 +94,15 @@ public partial class CyberSnapTitleBar : UserControl
                     _subscribedWindow.StateChanged += Window_StateChanged;
                 }
             }
+            TitleText.Text = WindowTitles.FeatureTitle(Title);
+            bool opensAbout = OwnerWindow is not AboutWindow;
+            TitleAboutButton.IsHitTestVisible = opensAbout;
+            TitleAboutButton.Focusable = opensAbout;
             RefreshIcons();
         };
         Unloaded += (s, e) =>
         {
+            _titleClickTimer.Stop();
             if (_subscribedWindow != null)
             {
                 _subscribedWindow.StateChanged -= Window_StateChanged;
@@ -104,6 +121,12 @@ public partial class CyberSnapTitleBar : UserControl
     {
         get => (string)GetValue(TitleProperty);
         set => SetValue(TitleProperty, value);
+    }
+
+    private static void OnTitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is CyberSnapTitleBar { TitleText: { } text })
+            text.Text = WindowTitles.FeatureTitle((string)e.NewValue);
     }
 
     public bool ShowPinButton
@@ -148,6 +171,9 @@ public partial class CyberSnapTitleBar : UserControl
     /// </summary>
     public void RefreshTooltips()
     {
+        string? aboutHint = OwnerWindow is AboutWindow ? null : LocalizationService.Translate(WindowTitles.AboutTooltip);
+        TitleAboutButton.ToolTip = aboutHint;
+        System.Windows.Automation.AutomationProperties.SetHelpText(TitleAboutButton, aboutHint ?? string.Empty);
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         MinimizeBtn.ToolTip = Services.LocalizationService.Translate("Minimize");
         MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
@@ -197,9 +223,7 @@ public partial class CyberSnapTitleBar : UserControl
 
         // About is a compact info window — no maximize (same idea as Toast / widget chrome).
         // Fixed tool popups do not expose minimize/maximize actions.
-        MaximizeBtn.Visibility = OwnerWindow is AboutWindow or ColorDetailWindow or PinSourceWindow
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        MaximizeBtn.Visibility = CanToggleMaximize ? Visibility.Visible : Visibility.Collapsed;
         MinimizeBtn.Visibility = OwnerWindow is ColorDetailWindow or PinSourceWindow
             ? Visibility.Collapsed
             : Visibility.Visible;
@@ -831,6 +855,65 @@ public partial class CyberSnapTitleBar : UserControl
 
     private Window? OwnerWindow => Window.GetWindow(this);
 
+    private bool CanToggleMaximize => OwnerWindow is { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip } and not AboutWindow;
+
+    private void TitleAboutButton_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2 && _titleClickTimer.IsEnabled)
+        {
+            _titleClickTimer.Stop();
+            _titlePress = null;
+            e.Handled = true;
+            ToggleMaximize();
+            return;
+        }
+        _titlePress = e.GetPosition(TitleAboutButton);
+    }
+
+    private void TitleAboutButton_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_titlePress is null || !TitleAboutButton.IsMouseCaptured) return;
+        _titlePress = null;
+        TitleAboutButton.ReleaseMouseCapture();
+        e.Handled = true;
+        if (!TitleAboutButton.IsMouseOver) return;
+
+        if (CanToggleMaximize)
+        {
+            _titleClickTimer.Stop();
+            _titleClickTimer.Start();
+        }
+        else
+            OpenTitleAbout();
+    }
+
+    private void TitleAboutButton_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_titlePress is not { } origin || !TitleAboutButton.IsMouseCaptured || e.LeftButton != MouseButtonState.Pressed)
+            return;
+        var point = e.GetPosition(TitleAboutButton);
+        if (Math.Abs(point.X - origin.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(point.Y - origin.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        _titleClickTimer.Stop();
+        _titlePress = null;
+        TitleAboutButton.ReleaseMouseCapture();
+        e.Handled = true;
+        try { OwnerWindow?.DragMove(); } catch (InvalidOperationException) { }
+    }
+
+    private void TitleAboutButton_LostMouseCapture(object sender, MouseEventArgs e) => _titlePress = null;
+
+    private void TitleAboutButton_Click(object sender, RoutedEventArgs e) => OpenTitleAbout();
+
+    private void OpenTitleAbout()
+    {
+        _titleClickTimer.Stop();
+        if (OwnerWindow is not AboutWindow && System.Windows.Application.Current is App app)
+            app.ShowAbout();
+    }
+
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left)
@@ -838,8 +921,7 @@ public partial class CyberSnapTitleBar : UserControl
 
         if (e.ClickCount == 2)
         {
-            if (OwnerWindow is not AboutWindow and not ColorDetailWindow and not PinSourceWindow)
-                ToggleMaximize();
+            ToggleMaximize();
             return;
         }
 
@@ -867,7 +949,7 @@ public partial class CyberSnapTitleBar : UserControl
 
     private void ToggleMaximize()
     {
-        if (OwnerWindow is not { } window || window is AboutWindow or ColorDetailWindow or PinSourceWindow)
+        if (!CanToggleMaximize || OwnerWindow is not { } window)
             return;
 
         window.WindowState = window.WindowState == WindowState.Maximized

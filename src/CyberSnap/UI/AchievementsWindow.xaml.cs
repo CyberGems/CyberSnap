@@ -20,7 +20,7 @@ public partial class AchievementsWindow : Window
         _openMonitorPoint = System.Windows.Forms.Cursor.Position;
         InitializeComponent();
         Opacity = 0;
-        CyberSnapWindowChrome.Apply(this);
+        CyberSnapWindowChrome.Apply(this, fitMaximizedToWorkArea: true);
         Theme.Refresh();
         Theme.ApplyTo(Application.Current.Resources);
         ApplyThemeColors();

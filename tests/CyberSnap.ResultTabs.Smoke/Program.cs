@@ -32,7 +32,8 @@ internal static partial class Program
         // from physical input on the shared desktop; all test edits are explicit.
         InputManager.Current.PreProcessInput += (_, e) =>
         {
-            if (e.StagingItem.Input is KeyEventArgs or TextCompositionEventArgs or MouseButtonEventArgs or MouseWheelEventArgs)
+            if (!args.Contains("--editor-title-about-only")
+                && e.StagingItem.Input is KeyEventArgs or TextCompositionEventArgs or MouseButtonEventArgs or MouseWheelEventArgs)
                 e.Cancel();
         };
         XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";

@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Shell;
 using System.Windows.Threading;
+using System.Runtime.InteropServices;
 using CyberSnap.Native;
 using CyberSnap.Services;
 
@@ -175,7 +176,7 @@ public static class CyberSnapWindowChrome
         }
     }
 
-    public static void Apply(Window window)
+    public static void Apply(Window window, bool fitMaximizedToWorkArea = false)
     {
         WindowChrome.SetWindowChrome(window, new WindowChrome
         {
@@ -187,6 +188,29 @@ public static class CyberSnapWindowChrome
         });
 
         ApplyRoundedCorners(window, DefaultCornerRadius);
+        if (fitMaximizedToWorkArea)
+            window.SourceInitialized += (_, _) => ((HwndSource?)PresentationSource.FromVisual(window))?.AddHook(FitMaximizedBounds);
+
+        IntPtr FitMaximizedBounds(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (message != 0x0024) return IntPtr.Zero; // WM_GETMINMAXINFO
+            var monitor = User32.MonitorFromWindow(hwnd, User32.MONITOR_DEFAULTTONEAREST);
+            var monitorInfo = new User32.MONITORINFO { cbSize = Marshal.SizeOf<User32.MONITORINFO>() };
+            if (monitor == IntPtr.Zero || !User32.GetMonitorInfo(monitor, ref monitorInfo))
+                return IntPtr.Zero;
+
+            var info = Marshal.PtrToStructure<User32.MINMAXINFO>(lParam);
+            info.ptMaxPosition.X = monitorInfo.rcWork.Left - monitorInfo.rcMonitor.Left;
+            info.ptMaxPosition.Y = monitorInfo.rcWork.Top - monitorInfo.rcMonitor.Top;
+            info.ptMaxSize.X = monitorInfo.rcWork.Right - monitorInfo.rcWork.Left;
+            info.ptMaxSize.Y = monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top;
+            var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window);
+            info.ptMinTrackSize.X = Math.Max(info.ptMinTrackSize.X, (int)Math.Ceiling(window.MinWidth * dpi.DpiScaleX));
+            info.ptMinTrackSize.Y = Math.Max(info.ptMinTrackSize.Y, (int)Math.Ceiling(window.MinHeight * dpi.DpiScaleY));
+            Marshal.StructureToPtr(info, lParam, false);
+            handled = true;
+            return IntPtr.Zero;
+        }
     }
 
     public static void ApplyRoundedCorners(Window window, double radius)

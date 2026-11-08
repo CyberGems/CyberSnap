@@ -121,23 +121,47 @@
             Background="Transparent"
             MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
         <Grid>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Image x:Name="TitleLogo"
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="TitleAboutButton" HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Style="{x:Null}" Background="Transparent" Padding="0,4,6,4" Cursor="Hand"
+                    AutomationProperties.Name="{Binding Text, ElementName=TitleText}"
+                    PreviewMouseLeftButtonDown="TitleAboutButton_PreviewMouseLeftButtonDown"
+                    PreviewMouseLeftButtonUp="TitleAboutButton_PreviewMouseLeftButtonUp"
+                    PreviewMouseMove="TitleAboutButton_PreviewMouseMove"
+                    LostMouseCapture="TitleAboutButton_LostMouseCapture" Click="TitleAboutButton_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="6">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="{DynamicResource ChromeButtonHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+                <DockPanel>
+                    <Image x:Name="TitleLogo" DockPanel.Dock="Left"
                        Height="17"
                        Width="17"
                        Margin="0,0,8,0"
                        Stretch="Uniform"
                        RenderOptions.BitmapScalingMode="HighQuality"
                        VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                    <TextBlock x:Name="TitleText" TextTrimming="CharacterEllipsis"
                            FontSize="12"
                            FontWeight="SemiBold"
                            FontFamily="Segoe UI Variable Text"
                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                            VerticalAlignment="Center"/>
-            </StackPanel>
+                </DockPanel>
+            </Button>
 
-            <StackPanel Orientation="Horizontal"
+            <StackPanel Grid.Column="1" Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top">
                 <Border x:Name="DonateBtn"

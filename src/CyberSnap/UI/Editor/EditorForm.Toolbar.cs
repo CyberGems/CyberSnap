@@ -49,6 +49,7 @@ public sealed partial class EditorForm
     private EditorChromeButton? _minimizeButton;
     private EditorChromeButton? _menuButton;
     private Button _editorTitleButton = null!;
+    private System.Windows.Threading.DispatcherTimer? _editorTitleClickTimer;
     private EditorCommandButton _galleryButton = null!;
     private EditorCommandButton _captureButton = null!;
     private EditorCommandButton _newCommandButton = null!;
@@ -100,7 +101,6 @@ public sealed partial class EditorForm
     internal const int StatusControlHeight = 38;
     private const int TitleStatusIndicatorSize = 14;
     private const int TitleStatusIndicatorGap = 8;
-    private const string EditorAboutTooltipKey = "Editor About tooltip";
 
     private void ShowColorPickerPopup(EditorColorButton button)
     {
@@ -653,7 +653,7 @@ public sealed partial class EditorForm
         };
         _titleBarPanel.MouseDown += BeginWindowDrag;
 
-        _editorTitleButton = new Button
+        _editorTitleButton = new EditorTitleButton
         {
             Dock = DockStyle.Left,
             FlatStyle = FlatStyle.Flat,
@@ -667,21 +667,50 @@ public sealed partial class EditorForm
         UpdateControlTheme(_editorTitleButton);
         UpdateEditorTitleText();
         _editorTitleButton.Click += OpenEditorAbout;
-        RegisterHoverTooltip(_editorTitleButton, EditorAboutTooltipKey, above: false);
+        RegisterHoverTooltip(_editorTitleButton, WindowTitles.AboutTooltip, above: false);
+
+        var clickTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime),
+        };
+        _editorTitleClickTimer = clickTimer;
+        clickTimer.Tick += (_, _) =>
+        {
+            clickTimer.Stop();
+            OpenEditorAbout(_editorTitleButton, EventArgs.Empty);
+        };
 
         Rectangle dragBounds = Rectangle.Empty;
+        Rectangle doubleClickBounds = Rectangle.Empty;
+        bool doubleClick = false;
         _editorTitleButton.MouseDown += (_, e) =>
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button != MouseButtons.Left) return;
+            doubleClick = clickTimer.IsEnabled && doubleClickBounds.Contains(_editorTitleButton.PointToScreen(e.Location));
+            if (doubleClick)
             {
-                Size size = SystemInformation.DragSize;
-                dragBounds = new Rectangle(e.X - size.Width / 2, e.Y - size.Height / 2, size.Width, size.Height);
+                clickTimer.Stop();
+                ToggleWindowState();
+                return;
             }
+            Size size = SystemInformation.DragSize;
+            dragBounds = new Rectangle(e.X - size.Width / 2, e.Y - size.Height / 2, size.Width, size.Height);
+        };
+        _editorTitleButton.MouseClick += (_, e) =>
+        {
+            if (e.Button != MouseButtons.Left || doubleClick) return;
+            var point = _editorTitleButton.PointToScreen(e.Location);
+            var size = SystemInformation.DoubleClickSize;
+            doubleClickBounds = new Rectangle(point.X - size.Width / 2, point.Y - size.Height / 2, size.Width, size.Height);
+            DismissVisibleHoverTooltips();
+            clickTimer.Stop();
+            clickTimer.Start();
         };
         _editorTitleButton.MouseMove += (_, e) =>
         {
-            if (e.Button == MouseButtons.Left && _editorTitleButton.Capture && !dragBounds.Contains(e.Location))
+            if (!doubleClick && e.Button == MouseButtons.Left && _editorTitleButton.Capture && !dragBounds.Contains(e.Location))
             {
+                clickTimer.Stop();
                 DismissVisibleHoverTooltips();
                 BeginWindowDrag(_editorTitleButton, e);
                 if (_editorTitleButton.Focused)
@@ -981,7 +1010,7 @@ public sealed partial class EditorForm
     private void UpdateEditorTitleText()
     {
         _editorTitleButton.Text = LocalizationService.Translate("Annotations Editor");
-        _editorTitleButton.AccessibleDescription = LocalizationService.Translate(EditorAboutTooltipKey);
+        _editorTitleButton.AccessibleDescription = LocalizationService.Translate(WindowTitles.AboutTooltip);
         UpdateEditorTitleLayout();
     }
 
@@ -3114,6 +3143,45 @@ internal sealed class EditorZoomHostPanel : TableLayoutPanel
     {
         using var fill = new SolidBrush(EditorColors.TitleBar);
         e.Graphics.FillRectangle(fill, ClientRectangle);
+    }
+}
+
+internal sealed class EditorTitleButton : Button
+{
+    private bool _pointerFocus;
+    private bool _handlingMouseUp;
+
+    protected override bool ShowFocusCues => !_pointerFocus && base.ShowFocusCues;
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg is 0x0201 or 0x0203) // WM_LBUTTONDOWN / WM_LBUTTONDBLCLK
+        {
+            _pointerFocus = true;
+            Invalidate();
+        }
+        if (m.Msg != 0x0202) // WM_LBUTTONUP
+        {
+            base.WndProc(ref m);
+            return;
+        }
+
+        _handlingMouseUp = true;
+        try { base.WndProc(ref m); }
+        finally { _handlingMouseUp = false; }
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        // The mouse has its own handler so keyboard and automation clicks remain immediate.
+        if (!_handlingMouseUp)
+            base.OnClick(e);
+    }
+
+    protected override void OnLostFocus(EventArgs e)
+    {
+        _pointerFocus = false;
+        base.OnLostFocus(e);
     }
 }
 

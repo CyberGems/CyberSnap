@@ -104,7 +104,7 @@ namespace CyberSnap.UI
             TimeSlider.AddHandler(UIElement.PreviewMouseUpEvent,
                 new MouseButtonEventHandler(TimeSlider_PreviewMouseUp), true);
 
-            CyberSnapWindowChrome.Apply(this);
+            CyberSnapWindowChrome.Apply(this, fitMaximizedToWorkArea: true);
             UiScale.Set(settingsService.Settings.UiScale);
             UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
             

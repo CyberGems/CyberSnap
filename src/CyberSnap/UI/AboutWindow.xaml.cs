@@ -354,6 +354,7 @@ public partial class AboutWindow : Window
         UpdateBadge.Visibility = Visibility.Visible;
         AboutUpdateIcon.SetResourceReference(TextBlock.ForegroundProperty, "ThemeAccentBrush");
         UpdatePeekPanel.Visibility = highlights.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateActions.Visibility = Visibility.Visible;
         ViewReleaseBtn.Visibility = Visibility.Visible;
         SkipVersionBtn.Visibility = Visibility.Visible;
     }
@@ -368,6 +369,7 @@ public partial class AboutWindow : Window
         AboutUpdateIcon.ClearValue(TextBlock.ForegroundProperty);
         UpdatePeekPanel.Visibility = Visibility.Collapsed;
         UpdateHighlightsList.ItemsSource = null;
+        UpdateActions.Visibility = Visibility.Collapsed;
         ViewReleaseBtn.Visibility = Visibility.Collapsed;
         SkipVersionBtn.Visibility = Visibility.Collapsed;
     }

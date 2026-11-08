@@ -33,6 +33,7 @@ internal static partial class Program
             editor.Show();
             AwaitCondition(() => editor.Opacity == 1, "Editor did not finish opening");
             var work = Forms.Screen.FromControl(editor).WorkingArea;
+            SetField(editor, "_isManualMaximized", false);
             editor.Bounds = new Rectangle(work.Location + new Size(40, 40), editor.MinimumSize);
             editor.Activate();
             AwaitCondition(() => GetForegroundWindow() == editor.Handle, "The fixture could not activate the Editor", 5000);
@@ -45,40 +46,39 @@ internal static partial class Program
                 "the pointer is on the test Editor title before sending mouse input", false);
 
             Point originalLocation = editor.Location;
-            Task? move = null;
-            EditorMouseEvent(0x0002, 0, 0, 0, 0); // MOUSEEVENTF_LEFTDOWN
-            try
-            {
-                AwaitCondition(() => title.Capture, "The title did not capture the press", 5000);
-                move = Task.Run(() =>
-                {
-                    try
-                    {
-                        Forms.Cursor.Position = start + new Size(30, 0);
-                        Thread.Sleep(250);
-                        Forms.Cursor.Position = start + new Size(90, 40);
-                        Thread.Sleep(100);
-                    }
-                    finally { EditorMouseEvent(0x0004, 0, 0, 0, 0); } // MOUSEEVENTF_LEFTUP
-                });
-                AwaitCondition(() => move.IsCompleted, "The title drag did not complete", 5000);
-                move.GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (move is null)
-                    EditorMouseEvent(0x0004, 0, 0, 0, 0);
-            }
+            DragTitle(start, () => title.Capture);
             Assert(editor.Location != originalLocation && !title.Focused && ZoomAppField(app, "_aboutWindow") is null,
                 "dragging the title moves the Editor without opening About");
 
-            Forms.Cursor.Position = title.PointToScreen(titleCenter);
-            var position = (IntPtr)((titleCenter.Y << 16) | titleCenter.X);
-            SendMessageW(title.Handle, 0x0201, (IntPtr)1, position);
-            SendMessageW(title.Handle, 0x0202, IntPtr.Zero, position);
+            void ClickTitle()
+            {
+                Forms.Cursor.Position = title.PointToScreen(titleCenter);
+                var position = (IntPtr)((titleCenter.Y << 16) | titleCenter.X);
+                SendMessageW(title.Handle, 0x0201, (IntPtr)1, position);
+                SendMessageW(title.Handle, 0x0202, IntPtr.Zero, position);
+            }
+            ClickTitle();
+            ClickTitle();
+            Assert(GetField<bool>(editor, "_isManualMaximized") && ZoomAppField(app, "_aboutWindow") is null,
+                "double-clicking the Editor title maximizes without opening About");
+            Thread.Sleep(Math.Max(350, Forms.SystemInformation.DoubleClickTime));
+            ClickTitle();
+            ClickTitle();
+            Assert(!GetField<bool>(editor, "_isManualMaximized") && ZoomAppField(app, "_aboutWindow") is null,
+                "double-clicking the Editor title again restores it");
+
+            ClickTitle();
+            Assert(GetField<System.Windows.Threading.DispatcherTimer>(editor, "_editorTitleClickTimer").IsEnabled,
+                "a single title click waits for the double-click interval", false);
+            Assert(!(bool)title.GetType().GetProperty("ShowFocusCues", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(title)!,
+                "a pointer click does not paint a keyboard focus rectangle", false);
             AwaitCondition(() => ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
                 "Clicking the title did not open About", 5000);
             var about = (AboutWindow)ZoomAppField(app, "_aboutWindow")!;
+            var checkNow = Element<System.Windows.Controls.Button>(about, "UpdateBtn");
+            Assert(ReferenceEquals(checkNow.Parent, Element<System.Windows.Controls.Grid>(about, "UpdateHeader"))
+                && System.Windows.Controls.Grid.GetColumn(checkNow) == 3,
+                "Check Now is in the update description row");
             var aboutHandle = new System.Windows.Interop.WindowInteropHelper(about).Handle;
             AwaitCondition(() => GetForegroundWindow() == aboutHandle, "About did not come to the foreground", 5000);
             Console.WriteLine("PASS: clicking the Editor title opens About in front.");
@@ -97,6 +97,103 @@ internal static partial class Program
             instance.SetValue(null, null);
             editor.Close();
             Forms.Cursor.Position = originalCursor;
+        }
+        CheckSharedTitleAbout(app);
+    }
+
+    private static void CheckSharedTitleAbout(CyberSnap.App app)
+    {
+        var titleBar = new CyberSnap.UI.Controls.CyberSnapTitleBar
+            { Title = "Gallery ⋅ CyberSnap", VerticalAlignment = System.Windows.VerticalAlignment.Top };
+        var window = new System.Windows.Window { Content = titleBar, Width = 640, Height = 320, AllowsTransparency = true,
+            WindowStyle = System.Windows.WindowStyle.None, WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
+            Background = System.Windows.Media.Brushes.White };
+        CyberSnapWindowChrome.Apply(window, fitMaximizedToWorkArea: true);
+        Point originalPointer = Forms.Cursor.Position;
+        try
+        {
+            window.Show();
+            window.Activate();
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+            AwaitCondition(() => GetForegroundWindow() == hwnd, "The shared-title fixture did not activate", 5000);
+            var title = (System.Windows.Controls.Button)titleBar.FindName("TitleAboutButton");
+            var text = (System.Windows.Controls.TextBlock)titleBar.FindName("TitleText");
+            Assert(text.Text == "Gallery" && (string)title.ToolTip == LocalizationService.Translate("Title About tooltip"),
+                "the shared title displays the feature name and its About tooltip");
+
+            Point PointAtTitle()
+            {
+                window.UpdateLayout();
+                var p = title.PointToScreen(new System.Windows.Point(title.ActualWidth / 2, title.ActualHeight / 2));
+                Forms.Cursor.Position = new Point((int)p.X, (int)p.Y);
+                GetWindowRect(hwnd, out var bounds);
+                var screen = Forms.Screen.FromHandle(hwnd);
+                AwaitCondition(() => EditorWindowAtPoint(Forms.Cursor.Position) == hwnd,
+                    $"Pointer did not reach the shared title ({window.WindowState}, target {p}, cursor {Forms.Cursor.Position}, hit {EditorWindowAtPoint(Forms.Cursor.Position)}, window {hwnd}/{bounds.Rectangle}, screen {screen.Bounds}, work {screen.WorkingArea})", 3000);
+                Assert(Forms.Control.MouseButtons == Forms.MouseButtons.None, "no mouse button is held before the shared-title click", false);
+                return Forms.Cursor.Position;
+            }
+            void ClickTitle()
+            {
+                PointAtTitle();
+                EditorMouseEvent(0x0002, 0, 0, 0, 0);
+                EditorMouseEvent(0x0004, 0, 0, 0, 0);
+                Pump();
+            }
+            var location = (window.Left, window.Top);
+            DragTitle(PointAtTitle(), () => title.IsMouseCaptured);
+            Assert(location != (window.Left, window.Top) && ZoomAppField(app, "_aboutWindow") is null,
+                "dragging the shared title moves its window without opening About");
+            Thread.Sleep(Forms.SystemInformation.DoubleClickTime);
+            ClickTitle();
+            ClickTitle();
+            AwaitCondition(() => window.WindowState == System.Windows.WindowState.Maximized,
+                "Double-clicking the shared title did not maximize", 5000);
+            Assert(ZoomAppField(app, "_aboutWindow") is null, "the shared title maximizes without opening About");
+            Thread.Sleep(Forms.SystemInformation.DoubleClickTime);
+            ClickTitle();
+            ClickTitle();
+            AwaitCondition(() => window.WindowState == System.Windows.WindowState.Normal,
+                "Double-clicking the shared title did not restore", 5000);
+            Thread.Sleep(Forms.SystemInformation.DoubleClickTime);
+            ClickTitle();
+            AwaitCondition(() => ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
+                "Clicking the shared title did not open About", 5000);
+            Console.WriteLine("PASS: the shared title restores on double-click and opens About on single click.");
+        }
+        finally
+        {
+            (ZoomAppField(app, "_aboutWindow") as AboutWindow)?.Close();
+            window.Close();
+            Forms.Cursor.Position = originalPointer;
+        }
+    }
+
+    private static void DragTitle(Point start, Func<bool> pressCaptured)
+    {
+        Task? move = null;
+        EditorMouseEvent(0x0002, 0, 0, 0, 0); // MOUSEEVENTF_LEFTDOWN
+        try
+        {
+            AwaitCondition(pressCaptured, "The title did not capture the press", 5000);
+            move = Task.Run(() =>
+            {
+                try
+                {
+                    Forms.Cursor.Position = start + new Size(30, 0);
+                    Thread.Sleep(250);
+                    Forms.Cursor.Position = start + new Size(90, 40);
+                    Thread.Sleep(100);
+                }
+                finally { EditorMouseEvent(0x0004, 0, 0, 0, 0); } // MOUSEEVENTF_LEFTUP
+            });
+            AwaitCondition(() => move.IsCompleted, "The title drag did not complete", 5000);
+            move.GetAwaiter().GetResult();
+        }
+        finally
+        {
+            if (move is null)
+                EditorMouseEvent(0x0004, 0, 0, 0, 0);
         }
     }
 
