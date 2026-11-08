@@ -8,6 +8,71 @@ using Forms = System.Windows.Forms;
 
 internal static partial class Program
 {
+    private static void CheckEditorScaleMenuTooltip()
+    {
+        Forms.Application.SetUnhandledExceptionMode(Forms.UnhandledExceptionMode.ThrowException);
+        using var bitmap = new Bitmap(128, 128);
+        using var editor = new EditorForm(bitmap);
+        var savePlacement = typeof(EditorForm).GetMethod("OnFormClosing",
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!
+            .CreateDelegate<Forms.FormClosingEventHandler>(editor);
+        editor.FormClosing -= savePlacement;
+
+        Point originalPointer = Forms.Cursor.Position;
+        using var other = new Forms.Form { Size = new Size(240, 160), StartPosition = Forms.FormStartPosition.Manual };
+        try
+        {
+            editor.SetShowTooltips(true);
+            editor.Show();
+            AwaitCondition(() => editor.Opacity == 1, "Editor did not finish opening");
+            editor.Activate();
+            AwaitCondition(() => GetForegroundWindow() == editor.Handle, "The fixture could not activate the Editor", 5000);
+
+            var scale = GetField<Forms.Button>(editor, "_scaleButton");
+            var menuOpen = scale.GetType().GetProperty("MenuOpen")!;
+            var tick = typeof(EditorForm).GetMethod("TooltipTimer_Tick", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .CreateDelegate<EventHandler>(editor);
+            GetField<Forms.Timer>(editor, "_tooltipTimer").Stop();
+            bool MenuIsOpen() => (bool)menuOpen.GetValue(scale)!;
+            bool TipIsVisible() => Field(editor, "_hoverToolTip") is Forms.Form { Visible: true };
+            Point anchor = scale.PointToScreen(new Point(scale.Width / 2, scale.Height / 2));
+            Forms.Cursor.Position = anchor;
+            Assert(scale.RectangleToScreen(scale.ClientRectangle).Contains(Forms.Cursor.Position),
+                $"the pointer reaches the Scale button (expected {anchor}, actual {Forms.Cursor.Position})", false);
+            bool TickUntilVisible()
+            {
+                tick(null, EventArgs.Empty);
+                return TipIsVisible();
+            }
+            AwaitCondition(TickUntilVisible, "The Scale hover tooltip did not open", 5000);
+            Assert(GetForegroundWindow() == editor.Handle, "showing the Scale tooltip keeps the Editor in the foreground");
+
+            scale.PerformClick();
+            Assert(MenuIsOpen() && !TipIsVisible(), "the Scale menu dismisses its visible tooltip");
+            for (int i = 0; i < 8; i++)
+                tick(null, EventArgs.Empty);
+            Assert(MenuIsOpen() && !TipIsVisible(), "the Scale menu stays open past the tooltip dwell time");
+
+            other.Location = editor.Location + new Size(30, 80);
+            other.Show();
+            other.Activate();
+            AwaitCondition(() => GetForegroundWindow() == other.Handle && !MenuIsOpen(),
+                "Switching windows did not dismiss the Scale menu", 5000);
+            editor.Activate();
+            AwaitCondition(() => GetForegroundWindow() == editor.Handle, "The fixture could not reactivate the Editor", 5000);
+            Forms.Cursor.Position = scale.PointToScreen(new Point(scale.Width / 2, scale.Height / 2));
+            AwaitCondition(TickUntilVisible, "The Scale tooltip did not return after the Editor regained focus", 5000);
+            Assert(GetForegroundWindow() == editor.Handle, "the reused Scale tooltip keeps the Editor in the foreground");
+            other.Activate();
+            Assert(GetForegroundWindow() == other.Handle && !TipIsVisible(), "switching windows immediately hides the Scale tooltip");
+        }
+        finally
+        {
+            editor.Close();
+            Forms.Cursor.Position = originalPointer;
+        }
+    }
+
     private static void CheckEditorDpi(string? renders)
     {
         Forms.Application.SetUnhandledExceptionMode(Forms.UnhandledExceptionMode.ThrowException);

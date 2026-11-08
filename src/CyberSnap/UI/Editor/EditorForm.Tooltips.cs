@@ -67,6 +67,20 @@ public sealed partial class EditorForm
 
     private void TooltipTimer_Tick(object? sender, EventArgs e)
     {
+        if (IsDisposed || !Visible || !_showTooltips || WindowState == FormWindowState.Minimized
+            || GetForegroundWindow() != Handle
+            || _scaleButton is { MenuOpen: true }
+            || _burgerMenu is { Visible: true }
+            || _canvasMenu is { Visible: true }
+            || _imageMenu is { Visible: true }
+            || _emojiPicker is { Visible: true }
+            || _shareMenu is { Visible: true }
+            || _exportMenu is { Visible: true })
+        {
+            DismissVisibleHoverTooltips();
+            return;
+        }
+
         // Never change tooltip visibility while a mouse button is held. Showing a tooltip
         // window mid-click — e.g. right after a click activates the editor (the emoji picker
         // was the foreground window) and the cursor sits on a tooltip-bearing tool button —
@@ -75,40 +89,6 @@ public sealed partial class EditorForm
         if (Control.MouseButtons != MouseButtons.None)
         {
             HideResizeTip();
-            return;
-        }
-
-        if (!_showTooltips)
-        {
-            DismissVisibleHoverTooltips();
-            return;
-        }
-
-        if (WindowState == FormWindowState.Minimized)
-        {
-            DismissVisibleHoverTooltips();
-            return;
-        }
-
-        var fg = GetForegroundWindow();
-        // Keep the tooltip visible while it is the foreground window (TopMost quirk); otherwise
-        // the timer would hide and re-show it every tick. Minimize/restore is handled explicitly.
-        bool isWindowActive = fg == Handle
-            || (_hoverToolTip is { Visible: true } tip && fg == tip.Handle);
-        bool isAnyMenuOpen = (_burgerMenu != null && _burgerMenu.Visible)
-            || (_canvasMenu != null && _canvasMenu.Visible)
-            || (_imageMenu != null && _imageMenu.Visible)
-            || (_emojiPicker != null && _emojiPicker.Visible)
-            || (_shareMenu != null && _shareMenu.Visible)
-            || (_exportMenu != null && _exportMenu.Visible);
-
-        if (IsDisposed || !Visible || !isWindowActive || isAnyMenuOpen)
-        {
-            HideResizeTip();
-            if (_hoverAnchor is not null)
-            {
-                HideHoverTooltip(_hoverAnchor);
-            }
             return;
         }
 
@@ -224,7 +204,7 @@ public sealed partial class EditorForm
         var screenRect = _canvas.RectangleToScreen(rect);
         string text = LocalizationService.Translate(
             _canvas.ResizeHandlesScaleContent ? "Drag to scale the image" : "Drag to resize the canvas");
-        _hoverToolTip ??= new WindowsToolTip();
+        _hoverToolTip ??= new WindowsToolTip(managedTopMost: false);
         _hoverToolTip.ShowNear(this, text, screenRect, above: true);
         _resizeTipShown = true;
     }
@@ -253,7 +233,7 @@ public sealed partial class EditorForm
             && _hoverToolTip is { Visible: true, IsDisposed: false })
             return;
 
-        _hoverToolTip ??= new WindowsToolTip();
+        _hoverToolTip ??= new WindowsToolTip(managedTopMost: false);
         _hoverAnchor = anchor;
         _hoverTooltipText = text;
         _hoverTooltipBounds = bounds;

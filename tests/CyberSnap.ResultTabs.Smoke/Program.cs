@@ -61,6 +61,11 @@ internal static partial class Program
                 CheckEditorDpi(args.FirstOrDefault(a => !a.StartsWith("--")));
                 return 0;
             }
+            if (args.Contains("--editor-scale-menu-only"))
+            {
+                CheckEditorScaleMenuTooltip();
+                return 0;
+            }
             if (args.Contains("--gallery-focus-only"))
             {
                 CheckGalleryFocus((CyberSnap.App)app, settings);

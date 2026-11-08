@@ -562,16 +562,19 @@ public sealed partial class EditorForm : Form, IMessageFilter
         PerformLayout();
 
         FormClosing += OnFormClosing;
-        Activated += (_, _) =>
+        Deactivate += (_, _) => DismissVisibleHoverTooltips();
+        void RefreshActivatedEditor(object? sender, EventArgs e)
         {
             if (IsDisposed || Disposing || !Visible || _canvas.IsDisposed)
                 return;
             if (_silentPresentation && WindowState != FormWindowState.Minimized)
                 ScheduleEndSilentPresentation();
             RefreshUi();
-        };
+        }
+        Activated += RefreshActivatedEditor;
         FormClosed += (_, _) =>
         {
+            Activated -= RefreshActivatedEditor;
             _saveStatusTimer.Stop();
             _saveStatusTimer.Dispose();
             _clipboardMonitorTimer.Stop();

@@ -30,11 +30,15 @@ public sealed class WindowsToolTip : Form
     private string _text = "";
     private bool _singleLine;
 
-    public WindowsToolTip()
+    public WindowsToolTip() : this(managedTopMost: true) { }
+
+    internal WindowsToolTip(bool managedTopMost)
     {
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
-        TopMost = true;
+        // WinForms may focus a managed TopMost form on creation or show even with
+        // ShowWithoutActivation. The Editor uses only the native, non-activating raise below.
+        TopMost = managedTopMost;
         StartPosition = FormStartPosition.Manual;
         DoubleBuffered = true;
         BackColor = UiChrome.SurfaceTooltip;

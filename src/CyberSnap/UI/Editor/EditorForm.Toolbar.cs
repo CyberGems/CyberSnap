@@ -1689,7 +1689,7 @@ public sealed partial class EditorForm
 
     private void ShowScaleMenu()
     {
-        if (_scaleButton is null || _activeDocument is null || _canvas.IsDisposed)
+        if (_scaleButton is null || _scaleButton.MenuOpen || _activeDocument is null || _canvas.IsDisposed)
             return;
         if (DateTime.UtcNow - _scaleMenuLastClosed < TimeSpan.FromMilliseconds(200))
             return;
@@ -3169,22 +3169,6 @@ internal sealed class EditorZoomHostPanel : TableLayoutPanel
     {
         using var fill = new SolidBrush(EditorColors.TitleBar);
         e.Graphics.FillRectangle(fill, ClientRectangle);
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
-        if (rect.Width <= 0 || rect.Height <= 0)
-            return;
-
-        using var path = EditorPaint.RoundedRect(rect, 8);
-        using var glow = new Pen(Color.FromArgb(42, EditorColors.Accent), 3f);
-        using var border = new Pen(EditorColors.Border);
-        e.Graphics.DrawPath(glow, path);
-        e.Graphics.DrawPath(border, path);
     }
 }
 
