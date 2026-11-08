@@ -589,12 +589,12 @@ public sealed partial class EditorForm
 
             var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
             SplitEditorBrandTitle(titleText, out var feature, out var brand);
-            // Mirrors the shared CyberSnapTitleBar proportions: 17px logo beside 12px
-            // (9pt) text, so the brand row reads like the Gallery and Settings windows.
-            using var featureFont = EditorFonts.Chrome(9f, FontStyle.Bold, DeviceDpi);
+            // Mirrors the shared CyberSnapTitleBar proportions (17px logo, 12px text) with
+            // the text a pinch larger for the 44px editor title bar.
+            using var featureFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
             // The brand suffix matches the feature title's typeface and size; the secondary
             // color keeps it subordinate without shrinking it into a caption.
-            using var brandFont = EditorFonts.Chrome(9f, FontStyle.Bold, DeviceDpi);
+            using var brandFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
             var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
             int textX = leftPad + iconSize + textGap;
             int h = brandPanel.Height;
@@ -907,8 +907,8 @@ public sealed partial class EditorForm
         var titleText = WindowTitles.Taskbar(WindowTitles.Editor, SettingsService.LoadStatic()?.InterfaceLanguage ?? "en");
         SplitEditorBrandTitle(titleText, out var feature, out var brand);
         var flags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
-        using var featureFont = EditorFonts.Chrome(9f, FontStyle.Bold, DeviceDpi);
-        using var brandFont = EditorFonts.Chrome(9f, FontStyle.Bold, DeviceDpi);
+        using var featureFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
+        using var brandFont = EditorFonts.Chrome(9.5f, FontStyle.Bold, DeviceDpi);
         int textW = 0;
         if (!string.IsNullOrEmpty(feature))
             textW += TextRenderer.MeasureText(feature, featureFont, Size.Empty, flags).Width;
