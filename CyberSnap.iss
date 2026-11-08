@@ -11,6 +11,7 @@ DisableProgramGroupPage=yes
 OutputDir=.
 OutputBaseFilename=CyberSnap-Setup-{#AppVersion}
 SetupIconFile=.\src\CyberSnap\CyberSnap.ico
+UninstallDisplayIcon={app}\CyberSnap.exe,0
 WizardSmallImageFile=.\installer\installerWizardSmall.bmp
 WizardImageFile=.\installer\installerWizard.bmp
 Compression=lzma
@@ -32,12 +33,14 @@ english.CyberSnapShortcut=CyberSnap
 english.EditorShortcut=Annotation Editor
 english.OptionsGroup=Options:
 english.RunAtStartup=Run CyberSnap when Windows starts
+english.CloseBeforeUninstall=CyberSnap is still running. Choose Exit from the CyberSnap icon menu in the notification area, then click Retry.
 
 spanish.CreateShortcutGroup=Crear accesos directos para:
 spanish.CyberSnapShortcut=CyberSnap
 spanish.EditorShortcut=Editor de Anotaciones
 spanish.OptionsGroup=Opciones:
 spanish.RunAtStartup=Ejecutar CyberSnap al iniciar Windows
+spanish.CloseBeforeUninstall=CyberSnap sigue abierto. Elige Salir en el menú del icono de CyberSnap en la bandeja del sistema y haz clic en Reintentar.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CyberSnapShortcut}"; GroupDescription: "{cm:CreateShortcutGroup}"
@@ -71,6 +74,22 @@ Root: HKA; Subkey: "Software\Classes\CyberSnap.Project\shell\open\command"; Valu
 Filename: "{app}\CyberSnap.exe"; Description: "{cm:LaunchProgram,CyberSnap}"; Flags: nowait postinstall
 
 [Code]
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep <> usUninstall then
+    Exit;
+
+  { Check the single-instance mutex from App.Startup.cs after confirmation, before removal. }
+  while CheckForMutexes('CyberSnapScreenshotTool_SingleInstance') do
+  begin
+    Log('CyberSnap is running. Close it before uninstalling.');
+    if UninstallSilent then
+      Abort;
+    if MsgBox(CustomMessage('CloseBeforeUninstall'), mbInformation, MB_RETRYCANCEL) <> IDRETRY then
+      Abort;
+  end;
+end;
+
 function GetStartupPreference(Param: String): String;
 begin
   if WizardIsTaskSelected('startup') then

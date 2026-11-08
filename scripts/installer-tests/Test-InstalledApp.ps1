@@ -28,11 +28,11 @@ function Get-StartupCommand {
     $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Run')
     try { if ($key) { $key.GetValue('CyberSnap') } } finally { if ($key) { $key.Dispose() } }
 }
-function Invoke-InstallerProcess([string]$Path, [string]$Arguments) {
+function Invoke-InstallerProcess([string]$Path, [string]$Arguments, [bool]$ExpectSuccess = $true) {
     $manifest = [InstallerTestSession]::Manifest($Path)
     $manifest | Set-Content "$output\$([IO.Path]::GetFileName($Path)).manifest.xml"
     Assert-Test ($manifest -match 'requestedExecutionLevel\s+level="asInvoker"') "Executable manifest requests asInvoker: $([IO.Path]::GetFileName($Path))"
-    $process = Start-Process -FilePath $Path -ArgumentList $Arguments -PassThru
+    $process = Start-Process -FilePath $Path -ArgumentList $Arguments -WindowStyle Hidden -PassThru
     $elevated = [InstallerTestSession]::IsElevated($process)
     $processes.Add([ordered]@{ Path = $Path; PID = $process.Id; Elevated = $elevated })
     Assert-Test (-not $elevated) "Process uses a non-elevated token: $([IO.Path]::GetFileName($Path))"
@@ -43,7 +43,7 @@ function Invoke-InstallerProcess([string]$Path, [string]$Arguments) {
         if ([DateTime]::UtcNow -ge $deadline) { $process.Kill(); throw "Process timed out: $Path" }
     }
     Assert-Test (-not $consentSeen) "No consent.exe process appeared: $([IO.Path]::GetFileName($Path))"
-    Assert-Test ($process.ExitCode -eq 0) "Process exits successfully: $([IO.Path]::GetFileName($Path)) ($($process.ExitCode))"
+    Assert-Test (($process.ExitCode -eq 0) -eq $ExpectSuccess) "Process exit matches expected success ($ExpectSuccess): $([IO.Path]::GetFileName($Path)) ($($process.ExitCode))"
 }
 function Stop-TestApp {
     if ($installedExe) {
@@ -151,8 +151,19 @@ try {
         ($Scenario -eq 'disabled' -and [string]::IsNullOrEmpty($startupAfterLaunch))) 'App preserves the installer startup selection'
     $uninstallEntries = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
         Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -match '^CyberSnap(?:\s|$)' })
-    $uninstallEntries | Select-Object PSChildName, UninstallString | ConvertTo-Json | Set-Content "$output\uninstall-entries.json"
+    $uninstallEntries | Select-Object PSChildName, UninstallString, DisplayIcon | ConvertTo-Json | Set-Content "$output\uninstall-entries.json"
     Assert-Test ($uninstallEntries.Count -eq 1) 'Windows lists CyberSnap exactly once in installed applications'
+    Assert-Test ($uninstallEntries.Count -eq 1 -and $uninstallEntries[0].PSObject.Properties['DisplayIcon'] -and
+        $uninstallEntries[0].DisplayIcon -eq "$installedExe,0") 'Installed apps uses the icon from the installed CyberSnap executable'
+    $uninstaller = Join-Path $installDir 'unins000.exe'
+    $blockedLog = Join-Path $output 'uninstall-running.log'
+    Invoke-InstallerProcess $uninstaller "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$blockedLog`"" -ExpectSuccess $false
+    Assert-Test ((Get-Content -LiteralPath $blockedLog -Raw) -match 'CyberSnap is running. Close it before uninstalling.') 'Silent uninstall stops because CyberSnap is running'
+    $app.Refresh()
+    Assert-Test (-not $app.HasExited -and (Test-Path -LiteralPath $installedExe) -and $uninstallEntries.Count -eq 1 -and
+        (Test-Path -LiteralPath $uninstallEntries[0].PSPath) -and
+        (Test-Path -LiteralPath 'HKCU:\Software\Classes\CyberSnap.Project') -and
+        (Get-StartupCommand) -eq $startupAfterLaunch) 'A blocked uninstall leaves the running app and its Windows registration intact'
     Stop-TestApp
     $settingsFile = "$settingsDirectory\settings.json"
     $settings = Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
@@ -186,6 +197,7 @@ finally {
                 Start-Sleep -Seconds 3
                 Assert-Test (-not (Test-Path -LiteralPath $installedExe)) 'Uninstaller removes the installed executable'
                 Assert-Test (-not (Test-Path -LiteralPath (Split-Path -Parent $installedExe))) 'Uninstaller removes the installation directory'
+                Assert-Test (Test-Path -LiteralPath (Join-Path $settingsDirectory 'settings.json')) 'Uninstaller preserves the user settings file'
                 Assert-Test ([string]::IsNullOrEmpty((Get-StartupCommand))) 'Uninstaller removes the startup entry'
                 Assert-Test (-not (Test-Path 'HKCU:\Software\Classes\CyberSnap.Project')) 'Uninstaller removes the project association'
                 $remaining = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
