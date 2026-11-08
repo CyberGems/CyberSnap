@@ -248,22 +248,15 @@ Only needed if you want to work on CyberSnap or build it yourself; regular users
 
 .NET 10 SDK, Windows 10 SDK (10.0.19041.0+), Visual Studio 2026 or `dotnet` CLI
 
-
+To try changes locally, choose **Exit** from the CyberSnap tray menu and run the following command from the repository root.
 
 ```powershell
-# Build (Debug). This exe needs the .NET 10 Desktop Runtime on the machine where it runs.
-dotnet build src/CyberSnap/CyberSnap.csproj
-
-# Publish self-contained for x64. This is what a clean PC can run.
-dotnet publish src/CyberSnap/CyberSnap.csproj `
-  -c Release -r win-x64 `
-  --self-contained true `
-  -p:PublishSingleFile=true `
-  -o ./publish-win64
-
-# Place the pinned ffmpeg.exe, license, and notice next to that publish.
-./scripts/Get-BundledFfmpeg.ps1 -Destination ./publish-win64
+./scripts/Start-Dev.ps1
 ```
+
+Dev opens Settings using the same Release x64 publish command as CI, with the .NET Desktop Runtime and pinned FFmpeg included. It runs from `src/CyberSnap/bin/dev/publish` using your usual CyberSnap settings. Exit dev from the tray before running the command again after an edit. Use `-PrepareOnly` to build the payload without opening the app.
+
+To prepare the release payload in `publish-win64`, run `./scripts/Publish-CyberSnap.ps1`.
 
 Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later by running `scripts/Build-Installer.ps1` with `-AppVersion` (a numeric version or a `v`-prefixed tag). The script rejects compiler warnings, verifies the installer's numeric file version, and is also used by CI. `CyberSnap.iss` packs whatever is in `publish-win64`, including `ffmpeg.exe`.
 
