@@ -49,7 +49,7 @@ Name: "startup"; Description: "{cm:RunAtStartup}"; GroupDescription: "{cm:Option
 
 [Files]
 ; publish-win64 comes from a self-contained publish plus scripts/Get-BundledFfmpeg.ps1.
-; That places ffmpeg.exe, its license, and the .NET runtime inside this folder.
+; That places ffmpeg.exe, ffprobe.exe and their license and notice files next to CyberSnap.exe.
 Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]

@@ -423,10 +423,13 @@ public static class InstallService
         if (entries.Length == 0)
             return false;
 
+        // Keep in sync with GetOptionalPayloadEntries(): every allowed file
+        // except CyberSnap.exe must be copied by the minimal-payload branch.
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "CyberSnap.exe",
             "ffmpeg.exe",
+            "ffprobe.exe",
             "FFmpeg-LICENSE.txt",
             "FFmpeg-NOTICE.txt"
         };
@@ -437,6 +440,7 @@ public static class InstallService
     private static IEnumerable<string> GetOptionalPayloadEntries()
     {
         yield return "ffmpeg.exe";
+        yield return "ffprobe.exe";
         yield return "FFmpeg-LICENSE.txt";
         yield return "FFmpeg-NOTICE.txt";
     }
