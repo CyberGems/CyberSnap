@@ -45,6 +45,8 @@ public partial class App
         if (Interlocked.CompareExchange(ref _settingsWindowOpening, 1, 0) != 0)
             return;
 
+        var openMonitorPoint = System.Windows.Forms.Cursor.Position;
+
         // STA-thread splash (own message loop) — stays smooth while Settings builds on the UI thread.
         WindowStartupSplash? splash = null;
         try
@@ -76,7 +78,7 @@ public partial class App
                             return;
                         }
 
-                        ShowSettingsWindow(historyService, imageSearchIndexService, navigateTo);
+                        ShowSettingsWindow(historyService, imageSearchIndexService, openMonitorPoint, navigateTo);
                     }
                     catch (Exception ex)
                     {
@@ -397,9 +399,10 @@ public partial class App
         }
     }
 
-    private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService, string? navigateTo = null)
+    private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService,
+        System.Drawing.Point openMonitorPoint, string? navigateTo)
     {
-        var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
+        var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService, openMonitorPoint);
 
         var activeEditor = UI.Editor.EditorForm.ActiveInstance;
         if (activeEditor != null)

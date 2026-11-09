@@ -251,7 +251,7 @@ Para probar cambios locales, elige **Salir** en el menú de CyberSnap en la band
 ./scripts/Start-Dev.ps1
 ```
 
-Dev abre Configuración con el mismo comando de publicación Release x64 que usa CI, con .NET Desktop Runtime y la versión fijada de FFmpeg incluidos. Se ejecuta desde `src/CyberSnap/bin/dev/publish` y usa tu configuración habitual de CyberSnap. Sal de dev desde la bandeja antes de volver a ejecutar el comando tras un cambio. Usa `-PrepareOnly` para compilar el paquete sin abrir la aplicación.
+Dev arranca en la bandeja y usa el mismo comando de publicación Release x64 que CI, con .NET Desktop Runtime y la versión fijada de FFmpeg incluidos. Se ejecuta desde `src/CyberSnap/bin/dev/publish` y usa tu configuración habitual de CyberSnap. Para comparar Configuración con la misma escala de Windows, ábrela desde el mismo monitor en ambas copias. Sal de dev desde la bandeja antes de volver a ejecutar el comando tras un cambio. Usa `-PrepareOnly` para compilar el paquete sin abrir la aplicación.
 
 Para preparar el paquete de release en `publish-win64`, ejecuta `./scripts/Publish-CyberSnap.ps1`.
 

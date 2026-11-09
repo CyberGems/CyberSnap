@@ -25,5 +25,5 @@ if (-not $PrepareOnly) {
 if (-not $PrepareOnly) {
     Assert-CyberSnapClosed
     $output = (Resolve-Path -LiteralPath $output).Path
-    Start-Process -FilePath (Join-Path $output 'CyberSnap.exe') -WorkingDirectory $output -ArgumentList '--settings'
+    Start-Process -FilePath (Join-Path $output 'CyberSnap.exe') -WorkingDirectory $output
 }

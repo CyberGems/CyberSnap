@@ -60,11 +60,17 @@ public partial class SettingsWindow : Window
     public event Action? LocalizationChanged;
 
     public SettingsWindow(SettingsService settingsService, HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
+        : this(settingsService, historyService, imageSearchIndexService, System.Windows.Forms.Cursor.Position)
+    {
+    }
+
+    internal SettingsWindow(SettingsService settingsService, HistoryService historyService,
+        ImageSearchIndexService imageSearchIndexService, System.Drawing.Point openMonitorPoint)
     {
         _settingsService = settingsService;
         _historyService = historyService;
         _imageSearchIndexService = imageSearchIndexService;
-        _openMonitorPoint = System.Windows.Forms.Cursor.Position;
+        _openMonitorPoint = openMonitorPoint;
         // The tray quick-panel persists section visibility through static saves that
         // bypass this instance; reload here so a later Save() cannot clobber those
         // flags with stale values (same merge-with-latest pattern as App.Capture saves).
