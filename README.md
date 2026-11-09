@@ -83,7 +83,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 |---|---|
 | Capture anything | Area, window, full screen, scroll capture, MP4/GIF recording |
 | Edit and annotate | Full-featured editor with shapes, text, rulers, colors, frames |
-| Extract text from images | Multilingual OCR with Tesseract + integrated translation |
+| Extract text from images | Multilingual Windows OCR + integrated translation |
 | Find past captures | Local SQLite index with full-text search across OCR content |
 | Multi-destination export | FTP, SFTP, S3, ImgBB, Imgur, Webhook, or CyberSnap Share |
 | Work efficiently | Configurable hotkeys, floating widget, auto-start, system tray |
@@ -113,7 +113,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **Pan Mode**: With optional object lock
 
 ### 🔤 OCR & Translation
-- **Multilingual OCR**: Extract text from images with Tesseract
+- **Multilingual OCR**: Extract text from images using the Windows OCR engine and the recognizer languages installed on your system
 - **Tabbed Results**: Keep successive OCR and QR/barcode results grouped in their respective windows
 - **Language Auto-Detection**: Based on Windows display language
 - **Integrated Translation**: Translate OCR-extracted text with configurable source/target languages
@@ -204,10 +204,10 @@ You can verify the file independently: compare the SHA with the GitHub release, 
 
 - **Platform:** Windows 10 (build 19041) or later. Published installer and portable packages are x64.
 - **Framework:** .NET 10 + WPF (PerMonitorV2 high DPI). The installer and the [portable zip](https://github.com/CyberGems/CyberSnap/releases/latest) include the required .NET Desktop Runtime.
-- **Recording:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, with libx264), shipped beside the app. See [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+- **Recording:** FFmpeg 9.0.2 essentials (`ffmpeg.exe` and `ffprobe.exe`, with libx264), shipped beside the app with its license and notice files. See [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Database:** SQLite (local history and search index)
 - **Capture:** DirectX via Vortice.Direct2D1 / Vortice.Direct3D11
-- **OCR:** Tesseract
+- **OCR:** Windows OCR (Windows.Media.Ocr)
 - **Barcode:** ZXing.Net
 - **Installer:** Inno Setup
 
@@ -218,7 +218,7 @@ CyberSnap/
 │   │   ├── App.xaml/.cs        Application definition & main entry
 │   │   ├── Capture/            Capture overlay, recording, scrolling capture
 │   │   ├── Services/           Business logic services
-│   │   │   ├── Upload/         Upload providers (FTP, SFTP, S3, ImgBB, Imgur, Webhook)
+│   │   │   ├── Upload/         Upload providers (FTP, SFTP, S3-compatible, ImgBB, Imgur, Webhook, CyberSnap Share)
 │   │   │   ├── History/        History management
 │   │   │   ├── HotkeyService.cs
 │   │   │   ├── OcrService.cs
@@ -291,7 +291,7 @@ Capture, recording, and tools expose configurable global hotkeys in **Settings �
 | Zoom | Not set |
 | Pin to Screen | Not set |
 
-During capture, `Tab` / `Shift+Tab` moves through visible toolbar buttons; `Space` or `Enter` activates the focused button. Annotation shortcuts and confirmation controls belong to their own stage: for example, `R` retries and `P` toggles Preview during confirmation.
+During capture, `Tab` / `Shift+Tab` moves through visible toolbar buttons; `Space` activates the focused button, while `Enter` confirms the capture. Annotation shortcuts and confirmation controls belong to their own stage: for example, `R` retries and `P` toggles Preview during confirmation.
 
 During confirmation, the annotation toolbar logo and More → **Annotate and confirm** open contextual help for capture, Pin, and Zoom. The guide explains crop adjustment, annotations, and finishing the capture, with shortcuts and instructions that follow the current stage and annotation toolbar visibility.
 
@@ -309,7 +309,7 @@ Contributions are welcome. Please open an issue describing the change before sta
 
 Originally forked from [OddSnap](https://github.com/jasperdevs/odd-snap) by [jasperdevs](https://github.com/jasperdevs). CyberSnap has since been extensively rewritten and expanded by [CyberGems](https://cybergems.org/).
 
-This project also builds on open-source components including Tesseract OCR, ZXing, SQLite, FFmpeg, x264, and Inno Setup, thanks to their authors and maintainers. The FFmpeg binary shipped with CyberSnap is the GPLv3 essentials build documented in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+This project also builds on open-source components including ZXing, SQLite, FFmpeg, x264, and Inno Setup, thanks to their authors and maintainers. The FFmpeg binaries shipped with CyberSnap are the GPLv3 essentials build documented in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ---
 

@@ -83,7 +83,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 |---|---|
 | Captura cualquier cosa | Área, ventana, pantalla completa, captura con desplazamiento, grabación MP4/GIF |
 | Edita y anota | Editor completo con formas, texto, reglas, colores y marcos |
-| Extrae texto de imágenes | OCR multilingüe con Tesseract + traducción integrada |
+| Extrae texto de imágenes | OCR multilingüe de Windows + traducción integrada |
 | Encuentra capturas pasadas | Índice SQLite local con búsqueda de texto completo en el contenido de OCR |
 | Exportación a múltiples destinos | FTP, SFTP, S3, ImgBB, Imgur, Webhook o CyberSnap Share |
 | Trabaja eficientemente | Atajos configurables, widget flotante, inicio automático, bandeja del sistema |
@@ -113,7 +113,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 - **Modo de desplazamiento**: con bloqueo de objetos opcional
 
 ### 🔤 OCR y traducción
-- **OCR multilingüe**: extrae texto de imágenes con Tesseract
+- **OCR multilingüe**: extrae texto de imágenes con el motor Windows OCR y los idiomas de reconocimiento instalados en el sistema
 - **Resultados con pestañas**: agrupa los resultados sucesivos de OCR y QR/códigos de barras en sus respectivas ventanas
 - **Detección automática de idioma**: basada en el idioma de visualización de Windows
 - **Traducción integrada**: traduce el texto extraído con OCR con idiomas de origen/destino configurables
@@ -201,10 +201,10 @@ Puedes verificar el archivo de forma independiente: compara el SHA con el releas
 
 - **Plataforma:** Windows 10 (compilación 19041) o posterior. El instalador y el paquete portable publicados son x64.
 - **Framework:** .NET 10 + WPF (alto DPI PerMonitorV2). El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) incluyen el .NET Desktop Runtime necesario.
-- **Grabación:** FFmpeg 9.0.2 essentials (`ffmpeg.exe`, con libx264), incluido junto a la app. Ver [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+- **Grabación:** FFmpeg 9.0.2 essentials (`ffmpeg.exe` y `ffprobe.exe`, con libx264), incluidos junto a la app con sus archivos de licencia y aviso. Ver [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 - **Base de datos:** SQLite (historial local e índice de búsqueda)
 - **Captura:** DirectX mediante Vortice.Direct2D1 / Vortice.Direct3D11
-- **OCR:** Tesseract
+- **OCR:** Windows OCR (Windows.Media.Ocr)
 - **Códigos de barras:** ZXing.Net
 - **Instalador:** Inno Setup
 
@@ -215,7 +215,7 @@ CyberSnap/
 │   │   ├── App.xaml/.cs        Definición de la aplicación y entrada principal
 │   │   ├── Capture/            Captura, superposición, grabación, captura con desplazamiento
 │   │   ├── Services/           Servicios de lógica de negocio
-│   │   │   ├── Upload/         Proveedores de subida (FTP, SFTP, S3, ImgBB, Imgur, Webhook)
+│   │   │   ├── Upload/         Proveedores de subida (FTP, SFTP, compatible con S3, ImgBB, Imgur, Webhook, CyberSnap Share)
 │   │   │   ├── History/        Gestión del historial
 │   │   │   ├── HotkeyService.cs
 │   │   │   ├── OcrService.cs
@@ -288,7 +288,7 @@ Las capturas, la grabación y las herramientas exponen atajos globales configura
 | Zoom | Sin asignar |
 | Fijar en pantalla | Sin asignar |
 
-Durante la captura, `Tab` / `Shift+Tab` recorre los botones visibles de la barra; `Espacio` o `Enter` activa el botón enfocado. Los atajos de anotación y los controles de confirmación actúan en su propia etapa: por ejemplo, `R` reintenta y `P` alterna Vista previa durante la confirmación.
+Durante la captura, `Tab` / `Shift+Tab` recorre los botones visibles de la barra; `Espacio` activa el botón enfocado y `Enter` confirma la captura. Los atajos de anotación y los controles de confirmación actúan en su propia etapa: por ejemplo, `R` reintenta y `P` alterna Vista previa durante la confirmación.
 
 Durante la confirmación, el logo de la barra de anotaciones y Más → **Anotar y confirmar** abren ayuda contextual para captura, Pin y Zoom. La guía explica cómo ajustar el recorte, anotar y finalizar, con atajos e instrucciones que corresponden a la etapa actual y a la visibilidad de la barra de anotaciones.
 
@@ -306,7 +306,7 @@ Las contribuciones son bienvenidas. Abre un issue describiendo el cambio antes d
 
 Originalmente hace un fork de [OddSnap](https://github.com/jasperdevs/odd-snap) de [jasperdevs](https://github.com/jasperdevs). Desde entonces, CyberSnap ha sido reescrito y ampliado extensamente por [CyberGems](https://cybergems.org/).
 
-Este proyecto también se construye sobre componentes de código abierto como Tesseract OCR, ZXing, SQLite, FFmpeg, x264 e Inno Setup, gracias a sus autores y mantenedores. El binario de FFmpeg incluido con CyberSnap es la build essentials GPLv3 documentada en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+Este proyecto también se construye sobre componentes de código abierto como ZXing, SQLite, FFmpeg, x264 e Inno Setup, gracias a sus autores y mantenedores. Los binarios de FFmpeg incluidos con CyberSnap son la build essentials GPLv3 documentada en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ---
 
