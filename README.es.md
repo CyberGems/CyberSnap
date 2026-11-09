@@ -167,9 +167,9 @@ Desde la versión 1.20.1, CyberSnap se instala para el usuario actual en `%Local
 El instalador y el [zip portable](https://github.com/CyberGems/CyberSnap/releases/latest) funcionan por sí solos:
 
 - **.NET Desktop Runtime** está dentro de `CyberSnap.exe`. Instalar .NET por separado solo es necesario cuando compilas CyberSnap desde el código fuente.
-- **FFmpeg** es el archivo `ffmpeg.exe` situado junto a `CyberSnap.exe`. Lo usan la grabación MP4, la codificación GIF, el recortador de vídeo y las formas de onda de audio. No necesitas instalar FFmpeg tú mismo, ni añadirlo al `PATH`.
+- **FFmpeg** son los archivos `ffmpeg.exe` y `ffprobe.exe` situados junto a `CyberSnap.exe`. Los usan la grabación MP4, la codificación GIF, el recortador de vídeo y las formas de onda de audio. No necesitas instalar FFmpeg tú mismo, ni añadirlo al `PATH`.
 
-Si Windows muestra **«You must install .NET Desktop Runtime to run this application»** para `CyberSnap.exe`, esa copia se compiló sin el runtime incluido. `dotnet build` produce ese tipo de ejecutable, y también un publish que omite `--self-contained true`. En un PC que ya tiene el .NET 10 Desktop Runtime, ambas copias arrancan, así que el runtime faltante solo se muestra en una máquina limpia. La build de release se comprueba para confirmar el runtime incrustado antes de empaquetarse. Los detalles del archivo FFmpeg, su licencia y cómo reemplazarlo están en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+Si Windows muestra **«You must install .NET Desktop Runtime to run this application»** para `CyberSnap.exe`, esa copia se compiló sin el runtime incluido. `dotnet build` produce ese tipo de ejecutable, y también un publish que omite `--self-contained true`. En un PC que ya tiene el .NET 10 Desktop Runtime, ambas copias arrancan, así que el runtime faltante solo se muestra en una máquina limpia. La build de release se comprueba para confirmar el runtime incrustado antes de empaquetarse. Los detalles de los archivos FFmpeg, su licencia y cómo reemplazarlos están en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ### 🛡️ Windows SmartScreen
 
@@ -255,7 +255,7 @@ Dev arranca en la bandeja y usa el mismo comando de publicación Release x64 que
 
 Para preparar el paquete de release en `publish-win64`, ejecuta `./scripts/Publish-CyberSnap.ps1`.
 
-Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 o posterior ejecutando `scripts/Build-Installer.ps1` con `-AppVersion` (una versión numérica o una etiqueta con prefijo `v`). El script rechaza los avisos del compilador, verifica la versión numérica del archivo instalador y también se usa en CI. `CyberSnap.iss` empaqueta lo que haya en `publish-win64`, incluido `ffmpeg.exe`.
+Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 o posterior ejecutando `scripts/Build-Installer.ps1` con `-AppVersion` (una versión numérica o una etiqueta con prefijo `v`). El script rechaza los avisos del compilador, verifica la versión numérica del archivo instalador y también se usa en CI. `CyberSnap.iss` empaqueta lo que haya en `publish-win64`, incluidos `ffmpeg.exe` y `ffprobe.exe`.
 
 Ejecuta manualmente [Verify Windows installer](https://github.com/CyberGems/CyberSnap/actions/workflows/verify-installer.yml) para comprobar la instalación, el inicio automático al abrir una sesión real de Windows y la desinstalación en una VM desechable. Las comprobaciones usan cuentas estándar con las solicitudes de credenciales de UAC activadas y conservan el instalador y los registros durante siete días como artefactos de Actions, sin crear una release. El parámetro opcional `installer_run_id` reutiliza un instalador de prueba anterior únicamente si no han cambiado las fuentes del empaquetado. `scripts/Test-Installer.ps1` está pensado exclusivamente para esas VM alojadas y rechaza su ejecución local normal.
 

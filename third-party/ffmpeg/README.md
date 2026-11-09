@@ -17,9 +17,9 @@ Upstream source: [FFmpeg commit 946fcce07b](https://github.com/FFmpeg/FFmpeg/com
 
 Archive SHA256: `60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba`
 
-This build is GPLv3 because it includes [x264](https://www.videolan.org/developers/x264.html). CyberSnap's MP4 recorder calls `libx264` and AAC. GIF encoding calls `palettegen` and `paletteuse`. The trimmer and the audio waveform use the same executable. The essentials archive also contains `ffplay.exe`; it is not shipped. `ffprobe.exe` from the same archive is included.
+This build is GPLv3 because it includes [x264](https://www.videolan.org/developers/x264.html). CyberSnap's MP4 recorder calls `libx264` and AAC. GIF encoding calls `palettegen` and `paletteuse`. The trimmer and the audio waveform use the same encoder. The essentials archive also contains `ffplay.exe`; it is not shipped. `ffprobe.exe` from the same archive is included.
 
-A smaller private build would drop codecs CyberSnap never calls. That binary would be ours to rebuild for every FFmpeg security fix. The essentials executable is a published, checksummed build of a known source commit, and the extra download size is about 30 MB on top of the existing installer.
+A smaller private build would drop codecs CyberSnap never calls. That binary would be ours to rebuild for every FFmpeg security fix. The essentials archive is a published, checksummed build of a known source commit; its two shipped executables account for about 78 MB of the compressed portable package.
 
 ## How CyberSnap finds it
 
