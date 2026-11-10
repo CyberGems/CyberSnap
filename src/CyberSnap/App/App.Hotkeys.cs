@@ -146,7 +146,7 @@ public partial class App
     }
 
 
-    private void OnFullscreenHotkeyPressed()
+    internal void OnFullscreenHotkeyPressed()
     {
         if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_fullscreen")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
@@ -157,7 +157,10 @@ public partial class App
     private void OnActiveWindowHotkeyPressed()
         => OnActiveWindowHotkeyPressed(null);
 
-    private void OnActiveWindowHotkeyPressed(IntPtr? preferredWindow)
+    internal IntPtr SnapshotActiveCaptureTarget() =>
+        _trayIcon?.ResolveCaptureTarget(Native.User32.GetForegroundWindow()) ?? IntPtr.Zero;
+
+    internal void OnActiveWindowHotkeyPressed(IntPtr? preferredWindow)
     {
         if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_activeWindow")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;

@@ -77,14 +77,7 @@ public partial class SettingsWindow : Window
         _settingsService.Load();
         _backupService = (Application.Current as App)?.BackupService ?? new AutomaticBackupService(_settingsService);
         _ownsBackupService = Application.Current is not App;
-        var latestPanelState = SettingsService.LoadStatic();
-        if (latestPanelState != null)
-        {
-            _settingsService.Settings.QuickPanelCompact = latestPanelState.QuickPanelCompact;
-            _settingsService.Settings.QuickPanelShowRecording = latestPanelState.QuickPanelShowRecording;
-            _settingsService.Settings.QuickPanelShowTools = latestPanelState.QuickPanelShowTools;
-            _settingsService.Settings.QuickPanelShowGallery = latestPanelState.QuickPanelShowGallery;
-        }
+        _settingsService.RefreshQuickPanelPreferences();
         InitializeComponent();
         // The assign button owns its content in code (icon + explicit target): set it here
         // so it never keeps the English XAML default, even if a later sync path is skipped.

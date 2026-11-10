@@ -86,6 +86,8 @@ internal static partial class Program
             widget.Show(); Pump();
             GetField<DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
             widget.IsHitTestVisible = true;
+            settings.Settings.WidgetShowCaptureModes = false;
+            widget.RefreshLayout();
             Call(widget, "ExpandWidget");
             AwaitCondition(() => !widget.HasAnimatedProperties, "Widget expansion did not settle for hit testing");
             Pump();

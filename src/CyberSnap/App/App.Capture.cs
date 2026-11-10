@@ -545,7 +545,7 @@ public partial class App
         Bitmap? bmp = null;
         try
         {
-            // A tray request carries its own target, even if that target no longer exists.
+            // A panel request carries its own target, even if that target no longer exists.
             var hwnd = preferredWindow ?? Native.User32.GetForegroundWindow();
             var windowRect = preferredWindow.HasValue
                 ? WindowDetector.GetTrayCaptureBounds(hwnd)

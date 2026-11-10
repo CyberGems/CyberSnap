@@ -353,6 +353,15 @@ public sealed class SettingsService : IDisposable
             Helpers.WidgetPreferences.FromSettings(current).ApplyTo(Settings);
     }
 
+    internal void RefreshQuickPanelPreferences()
+    {
+        if (LoadStatic(_settingsPath) is not { } current) return;
+        Settings.QuickPanelCompact = current.QuickPanelCompact;
+        Settings.QuickPanelShowRecording = current.QuickPanelShowRecording;
+        Settings.QuickPanelShowTools = current.QuickPanelShowTools;
+        Settings.QuickPanelShowGallery = current.QuickPanelShowGallery;
+    }
+
     internal void RefreshPreviewPreferences()
     {
         var current = LoadStatic(_settingsPath);

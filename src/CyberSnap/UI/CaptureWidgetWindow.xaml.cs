@@ -357,6 +357,9 @@ public partial class CaptureWidgetWindow : Window
 
         string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureDot";
         BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, IconPx(23.1));
+        FullscreenModeIcon.Source = Helpers.FluentIcons.RenderWpf("fullscreen", normalIconColor, IconPx(16));
+        WindowModeIcon.Source = Helpers.FluentIcons.RenderWpf("activeWindow", normalIconColor, IconPx(16));
+        RepeatModeIcon.Source = Helpers.FluentIcons.RenderWpf("captureBack", normalIconColor, IconPx(16));
 
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, IconPx(22));
         GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, IconPx(22));
@@ -417,6 +420,8 @@ public partial class CaptureWidgetWindow : Window
         RefreshUpdateBadge();
 
         RefreshToolTips();
+        CaptureModeButtons.Visibility = AreaModeLabel.Visibility = _settings.WidgetShowCaptureModes
+            ? Visibility.Visible : Visibility.Collapsed;
 
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
@@ -1265,6 +1270,7 @@ public partial class CaptureWidgetWindow : Window
         menu.Items.Add(BuildActivationDelaySubmenu());
 
         menu.Items.Add(BuildWidgetAlwaysOnTopItem());
+        menu.Items.Add(BuildWidgetCaptureModesItem());
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
@@ -1292,6 +1298,7 @@ public partial class CaptureWidgetWindow : Window
             widgetMenu.DropDownItems.Add(screenMenu);
         widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
         widgetMenu.DropDownItems.Add(BuildWidgetAlwaysOnTopItem());
+        widgetMenu.DropDownItems.Add(BuildWidgetCaptureModesItem());
         widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         widgetMenu.DropDownItems.Add(BuildDisableItem());
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
@@ -1584,6 +1591,19 @@ public partial class CaptureWidgetWindow : Window
     {
         TriggerAppCapture(_settings.DefaultCaptureMode);
     }
+
+    private void FullscreenMode_Click(object sender, RoutedEventArgs e) =>
+        HideAndLaunch(app => app.OnFullscreenHotkeyPressed());
+
+    private void WindowMode_Click(object sender, RoutedEventArgs e)
+    {
+        var app = (App)System.Windows.Application.Current;
+        var target = app.SnapshotActiveCaptureTarget();
+        HideAndLaunch(app => app.OnActiveWindowHotkeyPressed(target));
+    }
+
+    private void RepeatMode_Click(object sender, RoutedEventArgs e) =>
+        HideAndLaunch(app => app.OnRepeatLastAreaHotkeyPressedProxy());
 
     private void ScrollCapture_Click(object sender, RoutedEventArgs e)
     {

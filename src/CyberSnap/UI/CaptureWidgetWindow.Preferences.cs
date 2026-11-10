@@ -34,6 +34,21 @@ public partial class CaptureWidgetWindow
         return item;
     }
 
+    private Forms.ToolStripMenuItem BuildWidgetCaptureModesItem()
+    {
+        var item = WindowsMenuRenderer.Item(LocalizationService.Translate(_settings.InterfaceLanguage, "Capture modes"));
+        BindWidgetOption(item, settings => settings.WidgetShowCaptureModes, toggle: true);
+        item.Click += (_, _) =>
+        {
+            _settingsService.RefreshQuickPanelPreferences();
+            SaveWidgetPreferences(settings => settings.WidgetShowCaptureModes = !settings.WidgetShowCaptureModes);
+            // The tray writes these same settings from a separate service, synchronously.
+            try { _settingsService.FlushPendingWrites(); }
+            catch (Exception ex) { AppDiagnostics.LogWarning("widget.capture-modes-save", ex.Message, ex); }
+        };
+        return item;
+    }
+
     private void BindWidgetOption(Forms.ToolStripMenuItem item, Func<AppSettings, bool> get, bool toggle)
     {
         _widgetMenuOptions.Add(item, (get, toggle));

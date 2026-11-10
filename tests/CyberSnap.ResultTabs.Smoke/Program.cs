@@ -25,7 +25,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        Application app = args.Contains("--gallery-focus-only") || args.Contains("--editor-title-about-only") || args.Contains("--preview-margin-only") || args.Contains("--preview-outline-only") || args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--widget-session-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
+        Application app = args.Contains("--gallery-focus-only") || args.Contains("--editor-title-about-only") || args.Contains("--preview-margin-only") || args.Contains("--preview-outline-only") || args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--widget-session-only") || args.Contains("--widget-capture-modes-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
@@ -273,6 +273,12 @@ internal static partial class Program
                 CheckWidgetSessionRestore(settings);
                 CheckWidgetFullscreen(settings);
                 Console.WriteLine($"PASS: {_checks} widget capture-session and fullscreen checks.");
+                return 0;
+            }
+            if (args.Contains("--widget-capture-modes-only"))
+            {
+                CheckWidgetCaptureModes(settings, temp);
+                Console.WriteLine($"PASS: {_checks} widget capture mode checks.");
                 return 0;
             }
             if (args.Contains("--widget-popup-only"))

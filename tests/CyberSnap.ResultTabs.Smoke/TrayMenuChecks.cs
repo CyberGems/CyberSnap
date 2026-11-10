@@ -151,7 +151,7 @@ internal static partial class Program
             var taskbar = FindTrayTestWindow("Shell_TrayWnd", null);
             Assert(taskbar != IntPtr.Zero && Bounds(taskbar).IsEmpty,
                 "the actual Windows taskbar is excluded from tray window capture");
-            Assert((IntPtr)Call(tray, "ResolveCaptureTargetBeforeMenu", taskbar)! == target,
+            Assert((IntPtr)Call(tray, "ResolveCaptureTarget", taskbar)! == target,
                 "taskbar focus before the tray menu preserves the preceding application window");
 
             fixture.WindowState = WindowState.Minimized;

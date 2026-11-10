@@ -365,7 +365,7 @@ public sealed class TrayIcon : IDisposable
             _lastCaptureWindow = hwnd;
     }
 
-    private IntPtr ResolveCaptureTargetBeforeMenu(IntPtr foreground)
+    internal IntPtr ResolveCaptureTarget(IntPtr foreground)
     {
         RememberCaptureWindow(foreground);
         return WindowDetector.GetTrayCaptureBounds(_lastCaptureWindow).IsEmpty ? IntPtr.Zero : _lastCaptureWindow;
@@ -375,7 +375,7 @@ public sealed class TrayIcon : IDisposable
     {
         try
         {
-            _foregroundWindowBeforeMenu = ResolveCaptureTargetBeforeMenu(Native.User32.GetForegroundWindow());
+            _foregroundWindowBeforeMenu = ResolveCaptureTarget(Native.User32.GetForegroundWindow());
             try
             {
                 _activeWpfMenu?.Close();

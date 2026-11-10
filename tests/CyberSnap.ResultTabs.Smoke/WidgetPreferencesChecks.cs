@@ -24,6 +24,7 @@ internal static partial class Program
             widgetSettings.Settings.InterfaceLanguage = language;
             widgetSettings.Settings.DisableAnimations = true;
             widgetSettings.Settings.WidgetDockPositionOffset = 0.23;
+            widgetSettings.Settings.QuickPanelCompact = true;
             AutoCopyPreferences.SetKindEnabled(widgetSettings.Settings, AutoCopyKind.Image, false);
             AutoCopyPreferences.SetKindEnabled(widgetSettings.Settings, AutoCopyKind.Video, true);
             AutoCopyPreferences.SetKindEnabled(widgetSettings.Settings, AutoCopyKind.Ocr, true);
@@ -52,11 +53,24 @@ internal static partial class Program
                 var position = Find("Position");
                 var delay = Find("Activation delay");
                 var topmost = Find("Always on top");
+                var captureModes = Find("Capture modes");
                 var screen = options.DropDownItems.OfType<Forms.ToolStripMenuItem>()
                     .SingleOrDefault(item => item.Text == LocalizationService.Translate(language, "Screen"));
                 int screenCount = Forms.Screen.AllScreens.Length;
                 string[] edgeLabels = ["Top", "Bottom", "Left", "Right"];
                 int[] delays = [0, 100, 250, 500, 1000];
+
+                Assert(captureModes.Image is not null && Element<FrameworkElement>(widget, "CaptureModeButtons").Visibility == Visibility.Visible,
+                    "the capture modes start visible even when the tray panel is compact");
+                using var traySettings = new SettingsService(path);
+                traySettings.Load();
+                traySettings.Settings.QuickPanelCompact = false;
+                traySettings.Save();
+                traySettings.FlushPendingWrites();
+                Step(expected with { ShowCaptureModes = false }, () => captureModes.PerformClick(), "hide widget capture modes");
+                Step(expected with { ShowCaptureModes = true }, () => captureModes.PerformClick(), "show widget capture modes");
+                traySettings.Load();
+                Assert(!traySettings.Settings.QuickPanelCompact, "toggling widget modes preserves the latest tray preference");
 
                 foreach (var edge in Enum.GetValues<CaptureDockSide>())
                 {
@@ -120,6 +134,7 @@ internal static partial class Program
                     Step(expected with { AlwaysOnTop = false }, () => topmost.PerformClick(), "restart topmost");
                 if (screen is not null)
                     Step(expected with { MonitorIndex = -2 }, () => screen.DropDownItems[1].PerformClick(), "restart cursor following");
+                Step(expected with { ShowCaptureModes = false }, () => captureModes.PerformClick(), "restart with widget capture modes hidden");
                 Render(config, renderDirectory, "widget-preferences-settings-" + language + ".png");
                 Console.WriteLine("PASS: widget/Settings placement, monitor, delay, topmost, reset and drag synchronize in both directions in " + language + ".");
 
@@ -189,6 +204,9 @@ internal static partial class Program
                                 && (screen.DropDownItems[monitor == -1 ? 0 : monitor == -2 ? 1 : monitor + 3].Image is not null) == (monitor == expected.MonitorIndex),
                                 "an existing widget menu reflects external monitor changes: " + context, false);
                     Assert((topmost.Image is not null) == expected.AlwaysOnTop, "the existing menu's topmost checkmark updates: " + context, false);
+                    Assert((captureModes.Image is not null) == expected.ShowCaptureModes
+                        && (Element<FrameworkElement>(widget, "CaptureModeButtons").Visibility == Visibility.Visible) == expected.ShowCaptureModes,
+                        "the widget menu checkmark and capture modes update together: " + context, false);
                     foreach (var service in new[] { widgetSettings, configSettings })
                     {
                         Assert(CopyFlags(service.Settings).SequenceEqual(copy) && DeliveryWindowFlags(service.Settings).SequenceEqual(windows)
@@ -256,6 +274,8 @@ internal static partial class Program
                 Pump();
                 Assert(WidgetPreferences.FromSettings(configSettings.Settings) == expected && widget.Topmost == expected.AlwaysOnTop,
                     "fresh windows restore the saved values and topmost state", false);
+                Assert((Element<FrameworkElement>(widget, "CaptureModeButtons").Visibility == Visibility.Visible) == expected.ShowCaptureModes,
+                    "the capture modes restore their saved visibility", false);
                 Assert(Element<ComboBox>(config, "WidgetDockEdgeCombo").SelectedIndex == (int)expected.DockEdge
                     && (string)((ComboBoxItem)Element<ComboBox>(config, "WidgetHoverDelayCombo").SelectedItem).Tag == expected.HoverDelayMs.ToString()
                     && Element<CheckBox>(config, "WidgetAlwaysOnTopCheck").IsChecked == expected.AlwaysOnTop,
