@@ -1,8 +1,11 @@
 [CmdletBinding()]
-param([switch]$PrepareOnly)
+param(
+    [switch]$Packaged,
+    [switch]$PrepareOnly
+)
 
 $ErrorActionPreference = 'Stop'
-$output = Join-Path $PSScriptRoot '../src/CyberSnap/bin/dev/publish'
+$projectDirectory = Join-Path $PSScriptRoot '../src/CyberSnap'
 
 function Assert-CyberSnapClosed {
     $mutex = $null
@@ -20,10 +23,21 @@ if (-not $PrepareOnly) {
     Assert-CyberSnapClosed
 }
 
-& "$PSScriptRoot/Publish-CyberSnap.ps1" -OutputDirectory $output
+if ($Packaged -or $PrepareOnly) {
+    $output = Join-Path $projectDirectory 'bin/dev/publish'
+    & "$PSScriptRoot/Publish-CyberSnap.ps1" -OutputDirectory $output
+} else {
+    $output = Join-Path $projectDirectory 'bin/dev/quick'
+    $project = Join-Path $projectDirectory 'CyberSnap.csproj'
+    dotnet build $project -c Debug -o $output
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet build failed (exit code $LASTEXITCODE)."
+    }
+}
 
 if (-not $PrepareOnly) {
     Assert-CyberSnapClosed
     $output = (Resolve-Path -LiteralPath $output).Path
+    # Start the native apphost directly so Windows applies its PerMonitorV2 manifest.
     Start-Process -FilePath (Join-Path $output 'CyberSnap.exe') -WorkingDirectory $output
 }

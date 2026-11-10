@@ -251,7 +251,9 @@ Para probar cambios locales, elige **Salir** en el menú de CyberSnap en la band
 ./scripts/Start-Dev.ps1
 ```
 
-Dev arranca en la bandeja y usa el mismo comando de publicación Release x64 que CI, con .NET Desktop Runtime y la versión fijada de FFmpeg incluidos. Se ejecuta desde `src/CyberSnap/bin/dev/publish` y usa tu configuración habitual de CyberSnap. Para comparar Configuración con la misma escala de Windows, ábrela desde el mismo monitor en ambas copias. Sal de dev desde la bandeja antes de volver a ejecutar el comando tras un cambio. Usa `-PrepareOnly` para compilar el paquete sin abrir la aplicación.
+Esto compila Debug de forma incremental y abre el ejecutable directamente en la bandeja con tu configuración habitual. El arranque directo conserva PerMonitorV2 en equipos con monitores de distintas escalas donde `dotnet run` puede iniciar el mismo ejecutable con un modo de DPI diferente.
+
+Usa `./scripts/Start-Dev.ps1 -Packaged` para ejecutar la compilación Release x64 con .NET Desktop Runtime y FFmpeg incluidos. Usa `-PrepareOnly` para preparar ese paquete sin abrir la aplicación.
 
 Para preparar el paquete de release en `publish-win64`, ejecuta `./scripts/Publish-CyberSnap.ps1`.
 

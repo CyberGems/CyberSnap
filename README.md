@@ -254,7 +254,9 @@ To try changes locally, choose **Exit** from the CyberSnap tray menu and run the
 ./scripts/Start-Dev.ps1
 ```
 
-Dev starts in the tray and uses the same Release x64 publish command as CI, with the .NET Desktop Runtime and pinned FFmpeg included. It runs from `src/CyberSnap/bin/dev/publish` using your usual CyberSnap settings. To compare Settings at the same Windows scale, open it from the same monitor in both copies. Exit dev from the tray before running the command again after an edit. Use `-PrepareOnly` to build the payload without opening the app.
+This builds Debug incrementally and starts the executable directly in the tray with your usual settings. Direct startup preserves PerMonitorV2 on mixed-DPI setups where `dotnet run` can start the same executable with different DPI awareness.
+
+Use `./scripts/Start-Dev.ps1 -Packaged` to run the packaged Release x64 build with the bundled .NET Desktop Runtime and FFmpeg. Use `-PrepareOnly` to prepare that package without opening the app.
 
 To prepare the release payload in `publish-win64`, run `./scripts/Publish-CyberSnap.ps1`.
 
