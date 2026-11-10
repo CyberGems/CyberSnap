@@ -240,12 +240,12 @@ public partial class App
                 Dispatcher.BeginInvoke(() =>
                 {
                     var action = NormalizeAfterCaptureAction(settings.AfterCapture);
-                    // Skip the duplicate write when the preview already did the eager copy
-                    // for this same capture (auto-copy ON + preview shown). Otherwise the
-                    // clipboard gets stamped twice — visible in Win+V as a duplicated entry.
+                    // Reuse the eager copy unless saving added a file to the image payload.
                     bool explicitCopy = commitAction == RegionOverlayForm.ConfirmCommitAction.Copy;
+                    bool addedClipboardFile = persisted.FilePath is not null
+                        && !string.Equals(persisted.FilePath, alreadySavedPath, StringComparison.OrdinalIgnoreCase);
                     bool shouldTryCopy = explicitCopy
-                        || (!clipboardAlreadyCopied
+                        || ((!clipboardAlreadyCopied || addedClipboardFile)
                             && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyPreferences.ForImageCapture(captureKind)));
                     bool copied;
                     if (shouldTryCopy)
@@ -1100,8 +1100,7 @@ public partial class App
     {
         try
         {
-            ClipboardService.CopyToClipboard(output, filePath);
-            return true;
+            return ClipboardService.CopyToClipboard(output, filePath);
         }
         catch (Exception ex)
         {

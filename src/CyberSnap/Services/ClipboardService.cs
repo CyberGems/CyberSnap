@@ -6,7 +6,7 @@ namespace CyberSnap.Services;
 
 public static class ClipboardService
 {
-    public static void CopyToClipboard(Bitmap bitmap, string? filePath = null)
+    public static bool CopyToClipboard(Bitmap bitmap, string? filePath = null)
     {
         var dataObject = new System.Windows.Forms.DataObject();
 
@@ -28,7 +28,7 @@ public static class ClipboardService
             dataObject.SetData("Preferred DropEffect", ms);
         }
 
-        SetClipboardWithRetry(dataObject);
+        return SetClipboardWithRetry(dataObject);
     }
 
     public static void CopyFileToClipboard(string filePath)
@@ -87,7 +87,7 @@ public static class ClipboardService
         SetClipboardWithRetry(dataObject);
     }
 
-    private static void SetClipboardWithRetry(System.Windows.Forms.DataObject dataObject, int maxRetries = 3)
+    private static bool SetClipboardWithRetry(System.Windows.Forms.DataObject dataObject, int maxRetries = 3)
     {
         Exception? lastError = null;
         for (int i = 0; i < maxRetries; i++)
@@ -95,7 +95,7 @@ public static class ClipboardService
             try
             {
                 System.Windows.Forms.Clipboard.SetDataObject(dataObject, true);
-                return;
+                return true;
             }
             catch (Exception) when (i < maxRetries - 1)
             {
@@ -110,5 +110,6 @@ public static class ClipboardService
 
         if (lastError is not null)
             AppDiagnostics.LogWarning("clipboard.set", "Failed to write to clipboard after retries.", lastError);
+        return false;
     }
 }

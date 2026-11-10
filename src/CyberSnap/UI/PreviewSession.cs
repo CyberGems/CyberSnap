@@ -50,6 +50,8 @@ internal sealed class PreviewSession : IDisposable
         get => _savedFilePath;
         set
         {
+            if (!string.Equals(_savedFilePath, value, StringComparison.OrdinalIgnoreCase))
+                _copiedRevision = -1;
             _savedFilePath = value;
             _savedRevision = value is null ? -1 : _revision;
         }

@@ -2554,20 +2554,7 @@ namespace CyberSnap.UI
                     return;
                 }
 
-                var chosenFormat = Path.GetExtension(dialog.FileName).ToLowerInvariant() switch
-                {
-                    ".jpg" or ".jpeg" => CaptureImageFormat.Jpeg,
-                    ".bmp" => CaptureImageFormat.Bmp,
-                    _ => CaptureImageFormat.Png
-                };
-                CaptureOutputService.SaveBitmap(source, dialog.FileName, chosenFormat, settings.JpegQuality);
-                _savedFilePath = dialog.FileName;
-                UpdateTabStrip();
-                UpdateOptionalActionsAvailability();
-                ToastWindow.Show(
-                    LocalizationService.Translate("Image saved"),
-                    Path.GetFileName(dialog.FileName),
-                    dialog.FileName);
+                SavePreviewAs(dialog.FileName);
             }
             catch (Exception ex)
             {
@@ -2578,25 +2565,55 @@ namespace CyberSnap.UI
             }
         }
 
+        private void SavePreviewAs(string filePath)
+        {
+            var format = CaptureOutputService.GetFormatForPath(filePath, CaptureImageFormat.Png);
+            CaptureOutputService.SaveBitmap(EffectiveBitmap, filePath, format, _settingsService.Settings.JpegQuality);
+            _savedFilePath = filePath;
+            UpdateTabStrip();
+            UpdateOptionalActionsAvailability();
+
+            string title = CurrentOutcome.Clipboard && !TryCopyPreviewImage(out _)
+                ? "Saved; clipboard copy failed"
+                : "Image saved";
+            ToastWindow.Show(LocalizationService.Translate(title), Path.GetFileName(filePath), filePath);
+        }
+
         private void CopyBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isClosing)
                 return;
             CancelAutoCloseOnInteraction();
-            try
+            if (TryCopyPreviewImage(out var error))
             {
-                Services.ClipboardService.CopyToClipboard(EffectiveBitmap, _active.CurrentSavedFilePath);
-                _active.MarkCopied();
                 ToastWindow.Show(
                     LocalizationService.Translate("Copied to clipboard"),
                     LocalizationService.Translate("Image copied to clipboard."));
             }
+            else
+            {
+                ToastWindow.ShowError(LocalizationService.Translate("Copy failed"), error!);
+            }
+        }
+
+        private bool TryCopyPreviewImage(out string? error)
+        {
+            try
+            {
+                if (ClipboardService.CopyToClipboard(EffectiveBitmap, _active.CurrentSavedFilePath))
+                {
+                    _active.MarkCopied();
+                    error = null;
+                    return true;
+                }
+                error = LocalizationService.Translate("Clipboard copy failed.");
+            }
             catch (Exception ex)
             {
-                ToastWindow.ShowError(
-                    LocalizationService.Translate("Copy failed"),
-                    ex.Message);
+                AppDiagnostics.LogWarning("preview.copy", ex.Message, ex);
+                error = ex.Message;
             }
+            return false;
         }
 
         private void EditBtn_Click(object sender, RoutedEventArgs e)
