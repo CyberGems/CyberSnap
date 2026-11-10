@@ -870,15 +870,7 @@ public partial class App
                             var settings = _settingsService!.Settings;
                             if (settings.ShowCapturePreview)
                             {
-                                bool copiedEarly = false;
-                                if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
-                                {
-                                    copiedEarly = TryCopyCaptureOutputToClipboard(cropped, null);
-                                }
-
-                                // Save is immediate when the path is known (same timing as auto-copy).
-                                string? earlySavePath = TrySaveCaptureFileEarly(cropped, settings);
-                                PresentCapturePreview(cropped, monitorPoint, earlySavePath, copiedEarly);
+                                PresentCapturePreview(cropped, monitorPoint);
                             }
                             else
                             {
@@ -1202,13 +1194,7 @@ public partial class App
             var monitorPoint = System.Windows.Forms.Cursor.Position;
             UI.PopupWindowHelper.SetMonitorHintPoint(monitorPoint);
 
-            var settings = _settingsService!.Settings;
-            bool copiedEarly = false;
-            if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
-                copiedEarly = TryCopyCaptureOutputToClipboard(bmp, null);
-
-            string? earlySavePath = TrySaveCaptureFileEarly(bmp, settings);
-            PresentCapturePreview(bmp, monitorPoint, earlySavePath, copiedEarly);
+            PresentCapturePreview(bmp, monitorPoint);
         }
         catch (Exception ex)
         {

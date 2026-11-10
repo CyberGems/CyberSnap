@@ -21,19 +21,23 @@ public partial class App
     private void PresentCapturePreview(
         Bitmap bitmap,
         System.Drawing.Point? monitorPoint,
-        string? earlySavePath,
-        bool copiedEarly,
         CaptureKind captureKind = CaptureKind.Screenshot)
     {
         if (!Dispatcher.CheckAccess())
         {
             _ = Dispatcher.BeginInvoke(() =>
-                PresentCapturePreview(bitmap, monitorPoint, earlySavePath, copiedEarly, captureKind));
+                PresentCapturePreview(bitmap, monitorPoint, captureKind));
             return;
         }
 
         try
         {
+            var settings = _settingsService!.Settings;
+            // The eager copy can include FileDrop only after the saved capture exists.
+            string? earlySavePath = TrySaveCaptureFileEarly(bitmap, settings);
+            bool copiedEarly = AutoCopyPreferences.ShouldCopy(settings, AutoCopyPreferences.ForImageCapture(captureKind))
+                && TryCopyCaptureOutputToClipboard(bitmap, earlySavePath);
+
             if (_activePreviewDialog is { } existing && existing.CanAcceptSessions)
             {
                 _previewHiddenForCapture = false;
@@ -148,17 +152,7 @@ public partial class App
 
         try
         {
-            bool copiedEarly = false;
-            if (outcome.Clipboard)
-                copiedEarly = TryCopyCaptureOutputToClipboard(capture, null);
-
-            string? earlySavePath = TrySaveCaptureFileEarly(capture, settings);
-            PresentCapturePreview(
-                capture,
-                monitorPoint: null,
-                earlySavePath,
-                copiedEarly,
-                CaptureKind.ScrollCapture);
+            PresentCapturePreview(capture, monitorPoint: null, CaptureKind.ScrollCapture);
         }
         catch (Exception ex)
         {
@@ -1102,7 +1096,7 @@ public partial class App
         return true;
     }
 
-    private static bool TryCopyCaptureOutputToClipboard(Bitmap output, string? filePath = null)
+    private static bool TryCopyCaptureOutputToClipboard(Bitmap output, string? filePath)
     {
         try
         {

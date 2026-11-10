@@ -115,12 +115,7 @@ public partial class App
             PopupWindowHelper.SetMonitorHintPoint(monitor);
             var settings = _settingsService!.Settings;
             if (settings.ShowCapturePreview && action == RegionOverlayForm.ConfirmCommitAction.Default)
-            {
-                bool copied = Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image)
-                    && TryCopyCaptureOutputToClipboard(result, null);
-                var saved = TrySaveCaptureFileEarly(result, settings);
-                PresentCapturePreview(result, monitor, saved, copied);
-            }
+                PresentCapturePreview(result, monitor);
             else HandleCaptureResult(result, action);
         }
         catch (Exception ex)
