@@ -34,17 +34,25 @@ public partial class CaptureWidgetWindow
         return item;
     }
 
-    private Forms.ToolStripMenuItem BuildWidgetCaptureModesItem()
+    private Forms.ToolStripMenuItem BuildWidgetCaptureModesItem() => BuildWidgetSectionItem("Capture modes",
+        settings => settings.WidgetShowCaptureModes,
+        settings => settings.WidgetShowCaptureModes = !settings.WidgetShowCaptureModes);
+
+    private Forms.ToolStripMenuItem BuildWidgetGalleryEditorItem() => BuildWidgetSectionItem("Gallery and editor",
+        settings => settings.WidgetShowGalleryEditor,
+        settings => settings.WidgetShowGalleryEditor = !settings.WidgetShowGalleryEditor);
+
+    private Forms.ToolStripMenuItem BuildWidgetSectionItem(string label, Func<AppSettings, bool> isVisible, Action<AppSettings> toggle)
     {
-        var item = WindowsMenuRenderer.Item(LocalizationService.Translate(_settings.InterfaceLanguage, "Capture modes"));
-        BindWidgetOption(item, settings => settings.WidgetShowCaptureModes, toggle: true);
+        var item = WindowsMenuRenderer.Item(LocalizationService.Translate(_settings.InterfaceLanguage, label));
+        BindWidgetOption(item, isVisible, toggle: true);
         item.Click += (_, _) =>
         {
             _settingsService.RefreshQuickPanelPreferences();
-            SaveWidgetPreferences(settings => settings.WidgetShowCaptureModes = !settings.WidgetShowCaptureModes);
+            SaveWidgetPreferences(toggle);
             // The tray writes these same settings from a separate service, synchronously.
             try { _settingsService.FlushPendingWrites(); }
-            catch (Exception ex) { AppDiagnostics.LogWarning("widget.capture-modes-save", ex.Message, ex); }
+            catch (Exception ex) { AppDiagnostics.LogWarning("widget.section-preference-save", ex.Message, ex); }
         };
         return item;
     }

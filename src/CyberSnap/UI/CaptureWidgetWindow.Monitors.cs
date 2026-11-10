@@ -151,7 +151,7 @@ public partial class CaptureWidgetWindow
         bool rebase = oldDevice != _dragMonitorDevice || oldArea != _dragWorkingArea || !oldDpi.Equals(_dragDpi);
         var point = new Point(cursor.X, cursor.Y);
         var (edge, offset) = CalculateDragPosition(_dragWorkingArea, _dragDpi, point,
-            _dragStartPoint, _dragStartOffset, _settings.WidgetDockEdge, rebase);
+            _dragStartPoint, _dragStartOffset, _settings.WidgetDockEdge, rebase, PanelHeight);
         if (rebase || edge != _settings.WidgetDockEdge)
         {
             _dragStartPoint = point;
@@ -166,7 +166,7 @@ public partial class CaptureWidgetWindow
 
     private static (CaptureDockSide Edge, double Offset) CalculateDragPosition(
         Rect physicalWork, DpiScale dpi, Point cursorPixels, Point startPixels,
-        double startOffset, CaptureDockSide current, bool rebase)
+        double startOffset, CaptureDockSide current, bool rebase, double panelHeight)
     {
         // Both points use the target monitor's LOCAL DIPs. Dividing global desktop
         // origins by different monitor scales mixes coordinate systems and causes jumps.
@@ -174,12 +174,13 @@ public partial class CaptureWidgetWindow
         var cursor = new Point((cursorPixels.X - physicalWork.X) / dpi.DpiScaleX,
             (cursorPixels.Y - physicalWork.Y) / dpi.DpiScaleY);
         var edge = ResolvePreferredDockEdge(work, cursor, current);
-        if (rebase || edge != current)
-            return (edge, OffsetAlongEdgeFromCursor(work, edge, cursor));
-
         var scale = UiScale.Normalize(UiScale.Current);
+        var scaledPanelHeight = Math.Min(panelHeight * scale, work.Height);
+        if (rebase || edge != current)
+            return (edge, OffsetAlongEdgeFromCursor(work, edge, cursor, scaledPanelHeight));
+
         bool horizontal = edge is CaptureDockSide.Top or CaptureDockSide.Bottom;
-        double travel = horizontal ? work.Width - PanelWidth * scale : work.Height - PanelHeight * scale;
+        double travel = horizontal ? work.Width - PanelWidth * scale : work.Height - scaledPanelHeight;
         double delta = horizontal ? (cursorPixels.X - startPixels.X) / dpi.DpiScaleX
             : (cursorPixels.Y - startPixels.Y) / dpi.DpiScaleY;
         return (edge, travel > 0 ? Math.Clamp(startOffset + delta / travel, 0, 1) : 0.5);

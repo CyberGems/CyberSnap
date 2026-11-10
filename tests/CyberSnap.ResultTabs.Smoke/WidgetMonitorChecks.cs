@@ -173,7 +173,7 @@ internal static partial class Program
                 };
                 Assert(Math.Abs(edgeError) <= tolerance, "the widget touches its selected physical edge: " + context, false);
                 double expectedWidth = (expanded || edge is CaptureDockSide.Top or CaptureDockSide.Bottom ? 196 : 9) * uiScale * scaleX;
-                double expectedHeight = (expanded || edge is CaptureDockSide.Left or CaptureDockSide.Right ? 332 : 9) * uiScale * scaleY;
+                double expectedHeight = (expanded || edge is CaptureDockSide.Left or CaptureDockSide.Right ? 372 : 9) * uiScale * scaleY;
                 Assert(Math.Abs(end.X - start.X - expectedWidth) <= tolerance
                     && Math.Abs(end.Y - start.Y - expectedHeight) <= tolerance,
                     "the native widget size uses its target monitor's DPI: " + context, false);
@@ -206,6 +206,7 @@ internal static partial class Program
         try
         {
             UiScale.Set(1);
+            foreach (double panelHeight in new[] { 332.0, 372.0 })
             foreach (double scale in new[] { 1.0, 1.25, 1.5, 1.75, 2.0 })
             foreach (var origin in new[] { new Point(0, 0), new Point(-2560, -600), new Point(1920, 240) })
             foreach (var edge in Enum.GetValues<CaptureDockSide>())
@@ -216,14 +217,14 @@ internal static partial class Program
                 bool horizontal = edge is CaptureDockSide.Top or CaptureDockSide.Bottom;
                 var cursor = horizontal ? Pixel(900, 500) : Pixel(800, 600);
                 var actual = WidgetStatic<(CaptureDockSide Edge, double Offset)>("CalculateDragPosition",
-                    work, new DpiScale(scale, scale), cursor, start, 0.25, edge, false);
+                    work, new DpiScale(scale, scale), cursor, start, 0.25, edge, false, panelHeight);
                 var baseline = WidgetStatic<(CaptureDockSide Edge, double Offset)>("CalculateDragPosition",
                     new Rect(0, 0, 1600, 1000), new DpiScale(1, 1),
-                    horizontal ? new Point(900, 500) : new Point(800, 600), new Point(800, 500), 0.25, edge, false);
+                    horizontal ? new Point(900, 500) : new Point(800, 600), new Point(800, 500), 0.25, edge, false, panelHeight);
                 Assert(actual.Edge == edge && Math.Abs(actual.Offset - baseline.Offset) < 0.000001 && actual.Offset > 0.25,
                     "equivalent DIP drags are invariant across monitor scales and desktop origins", false);
                 var center = WidgetStatic<(CaptureDockSide Edge, double Offset)>("CalculateDragPosition",
-                    work, new DpiScale(scale, scale), start, new Point(-9999, -9999), 0.91, edge, true);
+                    work, new DpiScale(scale, scale), start, new Point(-9999, -9999), 0.91, edge, true, panelHeight);
                 Assert(center.Edge == edge && Math.Abs(center.Offset - 0.5) < 0.000001,
                     "crossing onto another DPI rebases the grip under the cursor, independently of the old origin", false);
                 var nearEdge = edge switch
@@ -234,7 +235,7 @@ internal static partial class Program
                     _ => Pixel(2, 500)
                 };
                 var snapped = WidgetStatic<(CaptureDockSide Edge, double Offset)>("CalculateDragPosition",
-                    work, new DpiScale(scale, scale), nearEdge, start, 0.5, edge, true);
+                    work, new DpiScale(scale, scale), nearEdge, start, 0.5, edge, true, panelHeight);
                 Assert(snapped.Edge != edge && Math.Abs(snapped.Offset - 0.5) < 0.000001,
                     "edge snapping survives mixed DPI and negative desktop origins", false);
             }

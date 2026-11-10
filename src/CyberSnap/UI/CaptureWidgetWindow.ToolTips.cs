@@ -12,9 +12,11 @@ public partial class CaptureWidgetWindow
         SetToolTip(CaptureButton, _settings.DefaultCaptureMode == Models.CaptureMode.Center
             ? CaptureToolTipKind.Center : CaptureToolTipKind.Area);
         AreaModeLabel.Text = Services.LocalizationService.Translate(_settings.InterfaceLanguage, "Area");
-        SetCaptureModeLabel(FullscreenModeButton, FullscreenModeLabel, "Fullscreen short", CaptureToolTipKind.Fullscreen);
-        SetCaptureModeLabel(WindowModeButton, WindowModeLabel, "Active window short", CaptureToolTipKind.Window);
-        SetCaptureModeLabel(RepeatModeButton, RepeatModeLabel, "Repeat short", CaptureToolTipKind.Repeat);
+        SetActionLabel(FullscreenModeButton, FullscreenModeLabel, "Fullscreen short", CaptureToolTipKind.Fullscreen);
+        SetActionLabel(WindowModeButton, WindowModeLabel, "Active window short", CaptureToolTipKind.Window);
+        SetActionLabel(RepeatModeButton, RepeatModeLabel, "Repeat short", CaptureToolTipKind.Repeat);
+        SetActionLabel(GalleryShortcutButton, GalleryShortcutLabel, "Gallery", CaptureToolTipKind.Gallery);
+        SetActionLabel(EditorShortcutButton, EditorShortcutLabel, "Editor", CaptureToolTipKind.Editor);
         SetToolTip(ScrollToolButton, CaptureToolTipKind.Scrolling);
         SetToolTip(VideoToolButton, CaptureToolTipKind.Video);
         SetToolTip(GifToolButton, CaptureToolTipKind.Gif);
@@ -27,7 +29,7 @@ public partial class CaptureWidgetWindow
         SetToolTip(WidgetMoreButton, CaptureToolTipKind.More);
     }
 
-    private void SetCaptureModeLabel(FrameworkElement button, TextBlock label, string key, CaptureToolTipKind kind)
+    private void SetActionLabel(FrameworkElement button, TextBlock label, string key, CaptureToolTipKind kind)
     {
         label.Text = Services.LocalizationService.Translate(_settings.InterfaceLanguage, key);
         AutomationProperties.SetName(button, label.Text);

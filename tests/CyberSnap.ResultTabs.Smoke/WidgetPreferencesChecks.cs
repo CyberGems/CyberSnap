@@ -54,6 +54,7 @@ internal static partial class Program
                 var delay = Find("Activation delay");
                 var topmost = Find("Always on top");
                 var captureModes = Find("Capture modes");
+                var galleryEditor = Find("Gallery and editor");
                 var screen = options.DropDownItems.OfType<Forms.ToolStripMenuItem>()
                     .SingleOrDefault(item => item.Text == LocalizationService.Translate(language, "Screen"));
                 int screenCount = Forms.Screen.AllScreens.Length;
@@ -65,12 +66,22 @@ internal static partial class Program
                 using var traySettings = new SettingsService(path);
                 traySettings.Load();
                 traySettings.Settings.QuickPanelCompact = false;
+                traySettings.Settings.QuickPanelShowGallery = false;
                 traySettings.Save();
                 traySettings.FlushPendingWrites();
                 Step(expected with { ShowCaptureModes = false }, () => captureModes.PerformClick(), "hide widget capture modes");
+                Call(widget, "ExpandWidget");
+                Step(expected with { ShowGalleryEditor = false }, () => galleryEditor.PerformClick(), "hide widget gallery and editor");
+                Assert(Math.Abs(Element<Border>(widget, "MainPanelBorder").ActualHeight - 332) < 1,
+                    "hiding Gallery and Editor removes the height of the row and separator");
                 Step(expected with { ShowCaptureModes = true }, () => captureModes.PerformClick(), "show widget capture modes");
+                Step(expected with { ShowGalleryEditor = true }, () => galleryEditor.PerformClick(), "show widget gallery and editor");
+                Assert(Math.Abs(Element<Border>(widget, "MainPanelBorder").ActualHeight - 372) < 1,
+                    "showing Gallery and Editor restores the full panel height");
+                widget.CollapseImmediately();
                 traySettings.Load();
-                Assert(!traySettings.Settings.QuickPanelCompact, "toggling widget modes preserves the latest tray preference");
+                Assert(!traySettings.Settings.QuickPanelCompact && !traySettings.Settings.QuickPanelShowGallery,
+                    "toggling widget sections preserves the latest tray preferences");
 
                 foreach (var edge in Enum.GetValues<CaptureDockSide>())
                 {
@@ -135,6 +146,7 @@ internal static partial class Program
                 if (screen is not null)
                     Step(expected with { MonitorIndex = -2 }, () => screen.DropDownItems[1].PerformClick(), "restart cursor following");
                 Step(expected with { ShowCaptureModes = false }, () => captureModes.PerformClick(), "restart with widget capture modes hidden");
+                Step(expected with { ShowGalleryEditor = false }, () => galleryEditor.PerformClick(), "restart with widget gallery and editor hidden");
                 Render(config, renderDirectory, "widget-preferences-settings-" + language + ".png");
                 Console.WriteLine("PASS: widget/Settings placement, monitor, delay, topmost, reset and drag synchronize in both directions in " + language + ".");
 
@@ -207,6 +219,9 @@ internal static partial class Program
                     Assert((captureModes.Image is not null) == expected.ShowCaptureModes
                         && (Element<FrameworkElement>(widget, "CaptureModeButtons").Visibility == Visibility.Visible) == expected.ShowCaptureModes,
                         "the widget menu checkmark and capture modes update together: " + context, false);
+                    Assert((galleryEditor.Image is not null) == expected.ShowGalleryEditor
+                        && (Element<FrameworkElement>(widget, "GalleryEditorBlock").Visibility == Visibility.Visible) == expected.ShowGalleryEditor,
+                        "the widget menu checkmark and Gallery/Editor row update together: " + context, false);
                     foreach (var service in new[] { widgetSettings, configSettings })
                     {
                         Assert(CopyFlags(service.Settings).SequenceEqual(copy) && DeliveryWindowFlags(service.Settings).SequenceEqual(windows)
@@ -276,6 +291,8 @@ internal static partial class Program
                     "fresh windows restore the saved values and topmost state", false);
                 Assert((Element<FrameworkElement>(widget, "CaptureModeButtons").Visibility == Visibility.Visible) == expected.ShowCaptureModes,
                     "the capture modes restore their saved visibility", false);
+                Assert((Element<FrameworkElement>(widget, "GalleryEditorBlock").Visibility == Visibility.Visible) == expected.ShowGalleryEditor,
+                    "the Gallery and Editor row restores its saved visibility", false);
                 Assert(Element<ComboBox>(config, "WidgetDockEdgeCombo").SelectedIndex == (int)expected.DockEdge
                     && (string)((ComboBoxItem)Element<ComboBox>(config, "WidgetHoverDelayCombo").SelectedItem).Tag == expected.HoverDelayMs.ToString()
                     && Element<CheckBox>(config, "WidgetAlwaysOnTopCheck").IsChecked == expected.AlwaysOnTop,

@@ -56,7 +56,9 @@ public partial class CaptureWidgetWindow : Window
 
     // Layout constants
     private const double PanelWidth = 196;
-    private const double PanelHeight = 332; // keep both panel dimensions aligned at common fractional display DPIs
+    private const double BasePanelHeight = 332;
+    private const double GalleryEditorBlockHeight = 40;
+    private double PanelHeight => BasePanelHeight + (_settings.WidgetShowGalleryEditor ? GalleryEditorBlockHeight : 0);
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
@@ -360,6 +362,8 @@ public partial class CaptureWidgetWindow : Window
         FullscreenModeIcon.Source = Helpers.FluentIcons.RenderWpf("fullscreen", normalIconColor, IconPx(16));
         WindowModeIcon.Source = Helpers.FluentIcons.RenderWpf("activeWindow", normalIconColor, IconPx(16));
         RepeatModeIcon.Source = Helpers.FluentIcons.RenderWpf("captureBack", normalIconColor, IconPx(16));
+        GalleryShortcutIcon.Source = Helpers.FluentIcons.RenderWpf("history", normalIconColor, IconPx(16));
+        EditorShortcutIcon.Source = Helpers.FluentIcons.RenderWpf("compose", normalIconColor, IconPx(16));
 
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, IconPx(22));
         GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, IconPx(22));
@@ -420,8 +424,10 @@ public partial class CaptureWidgetWindow : Window
         RefreshUpdateBadge();
 
         RefreshToolTips();
-        CaptureModeButtons.Visibility = AreaModeLabel.Visibility = _settings.WidgetShowCaptureModes
+        CaptureModeButtons.Visibility = AreaModeCaption.Visibility = _settings.WidgetShowCaptureModes
             ? Visibility.Visible : Visibility.Collapsed;
+        CaptureButton.Padding = new Thickness(0, 0, 0, _settings.WidgetShowCaptureModes ? 20 : 0);
+        GalleryEditorBlock.Visibility = _settings.WidgetShowGalleryEditor ? Visibility.Visible : Visibility.Collapsed;
 
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
@@ -643,12 +649,15 @@ public partial class CaptureWidgetWindow : Window
 
         var phys = GetPhysicalWorkingArea(targetScreen);
         var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(phys.X + phys.Width / 2, phys.Y + phys.Height / 2));
+        var panelHeight = Math.Min(PanelHeight, phys.Height / (targetDpi.Y * UiScale.Current));
+        MainPanelBorder.MaxHeight = panelHeight;
         var localBounds = CalculateWidgetBounds(
             new Rect(0, 0, phys.Width / targetDpi.X, phys.Height / targetDpi.Y),
             _settings.WidgetDockEdge,
             _settings.WidgetDockPositionOffset,
             expanded,
-            UiScale.Current);
+            UiScale.Current,
+            panelHeight);
         var targetHalo = ShadowHalo(_settings.WidgetDockEdge);
         // Include the shadow halo and reserve whole pixels so the outer panel border
         // is not clipped at fractional UI/display scales. Keep right/bottom docks flush.
@@ -839,13 +848,14 @@ public partial class CaptureWidgetWindow : Window
         CaptureDockSide dockEdge,
         double dockOffset,
         bool isExpanded,
-        double uiScale)
+        double uiScale,
+        double panelHeight)
     {
         var scale = UiScale.Normalize(uiScale);
         var offset = Math.Clamp(double.IsFinite(dockOffset) ? dockOffset : 0.5, 0.0, 1.0);
         var peekSize = PeekSize * scale;
         var panelWidth = PanelWidth * scale;
-        var panelHeight = PanelHeight * scale;
+        panelHeight *= scale;
 
         double width, height;
         if (isExpanded)
@@ -1140,11 +1150,11 @@ public partial class CaptureWidgetWindow : Window
     private static double OffsetAlongEdgeFromCursor(
         Rect workingArea,
         CaptureDockSide edge,
-        System.Windows.Point cursor)
+        System.Windows.Point cursor,
+        double panelHeight)
     {
         var scale = UiScale.Normalize(UiScale.Current);
         var panelWidth = PanelWidth * scale;
-        var panelHeight = PanelHeight * scale;
         // Use the expanded panel footprint for offset so the grip lands under the cursor
         // even when the widget is still collapsed (peek-sized).
         if (edge == CaptureDockSide.Top || edge == CaptureDockSide.Bottom)
@@ -1271,6 +1281,7 @@ public partial class CaptureWidgetWindow : Window
 
         menu.Items.Add(BuildWidgetAlwaysOnTopItem());
         menu.Items.Add(BuildWidgetCaptureModesItem());
+        menu.Items.Add(BuildWidgetGalleryEditorItem());
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
@@ -1299,6 +1310,7 @@ public partial class CaptureWidgetWindow : Window
         widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
         widgetMenu.DropDownItems.Add(BuildWidgetAlwaysOnTopItem());
         widgetMenu.DropDownItems.Add(BuildWidgetCaptureModesItem());
+        widgetMenu.DropDownItems.Add(BuildWidgetGalleryEditorItem());
         widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         widgetMenu.DropDownItems.Add(BuildDisableItem());
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
@@ -1317,11 +1329,7 @@ public partial class CaptureWidgetWindow : Window
         // Open the annotation editor directly from the widget
         var editorItem = Helpers.WindowsMenuRenderer.Item(
             LocalizationService.Translate("Annotations Editor..."), iconId: "compose");
-        editorItem.Click += (s, ev) =>
-        {
-            CollapseWidget();
-            UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
-        };
+        editorItem.Click += (_, _) => OpenWidgetEditor();
         menu.Items.Add(editorItem);
 
         // Jump straight to the widget's section in the Config window.
@@ -1604,6 +1612,20 @@ public partial class CaptureWidgetWindow : Window
 
     private void RepeatMode_Click(object sender, RoutedEventArgs e) =>
         HideAndLaunch(app => app.OnRepeatLastAreaHotkeyPressedProxy());
+
+    private void GalleryShortcut_Click(object sender, RoutedEventArgs e)
+    {
+        CollapseWidget();
+        ((App)System.Windows.Application.Current).ShowHistory();
+    }
+
+    private void EditorShortcut_Click(object sender, RoutedEventArgs e) => OpenWidgetEditor();
+
+    private void OpenWidgetEditor()
+    {
+        CollapseWidget();
+        UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
+    }
 
     private void ScrollCapture_Click(object sender, RoutedEventArgs e)
     {

@@ -710,6 +710,7 @@ public sealed class AppSettings
     public bool ShowCaptureWidget { get; set; } = true;
     public bool WidgetAlwaysOnTop { get; set; } = true;
     public bool WidgetShowCaptureModes { get; set; } = true;
+    public bool WidgetShowGalleryEditor { get; set; } = true;
     /// <summary>When true, the floating widget hides itself for the duration of any capture
     /// session (overlay, recording, standalone tool) and returns when the session ends.</summary>
     public bool WidgetHideDuringCapture { get; set; } = true;

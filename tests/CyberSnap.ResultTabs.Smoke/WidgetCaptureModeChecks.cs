@@ -9,6 +9,7 @@ using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI;
+using CyberSnap.UI.Editor;
 using Drawing = System.Drawing;
 
 internal static partial class Program
@@ -39,21 +40,45 @@ internal static partial class Program
             Call(widget, "ExpandWidget");
             AwaitCondition(() => !widget.HasAnimatedProperties, "the widget did not expand", 3000);
 
-            foreach (var (language, labels) in new[] { ("en", new[] { "Fullscreen", "Window", "Repeat" }), ("es", new[] { "Pantalla", "Ventana", "Repetir" }) })
+            var languages = new[]
             {
+                ("en", new[] { "Fullscreen", "Window", "Repeat", "Gallery", "Editor" }),
+                ("es", new[] { "Pantalla", "Ventana", "Repetir", "Galería", "Editor" })
+            };
+            foreach (var screen in WidgetScreens())
+            foreach (var (language, labels) in languages)
+            {
+                Call(widget, "PositionWindowOnScreen", screen);
                 preferences.InterfaceLanguage = language;
                 widget.RefreshLocalization();
                 widget.UpdateLayout();
-                string[] modes = ["Fullscreen", "Window", "Repeat"];
-                for (int i = 0; i < modes.Length; i++)
+                string[] actions = ["FullscreenMode", "WindowMode", "RepeatMode", "GalleryShortcut", "EditorShortcut"];
+                for (int i = 0; i < actions.Length; i++)
                 {
-                    var button = Element<Button>(widget, modes[i] + "ModeButton");
-                    var label = Element<TextBlock>(widget, modes[i] + "ModeLabel");
+                    var button = Element<Button>(widget, actions[i] + "Button");
+                    var label = Element<TextBlock>(widget, actions[i] + "Label");
                     var bounds = label.TransformToAncestor(button).TransformBounds(new Rect(label.RenderSize));
                     Assert(button.IsVisible && label.Text == labels[i] && AutomationProperties.GetName(button) == labels[i]
                         && bounds.Right <= button.ActualWidth, "the localized widget label fits and names its button: " + labels[i]);
                 }
+                var area = Element<TextBlock>(widget, "AreaModeLabel");
+                var repeatLabel = Element<TextBlock>(widget, "RepeatModeLabel");
+                var areaCenter = area.TranslatePoint(new Point(0, area.ActualHeight / 2), widget).Y;
+                var repeatCenter = repeatLabel.TranslatePoint(new Point(0, repeatLabel.ActualHeight / 2), widget).Y;
+                Assert(Math.Abs(areaCenter - repeatCenter) <= 1, "the Area and Repeat captions align on " + screen.DeviceName);
             }
+
+            var viewport = Element<ScrollViewer>(widget, "ControlsViewport");
+            Assert(viewport.ScrollableHeight <= 1, "the full panel fits at normal monitor heights");
+            Element<Border>(widget, "MainPanelBorder").MaxHeight = 270;
+            widget.UpdateLayout();
+            viewport.ScrollToBottom();
+            widget.UpdateLayout();
+            var galleryButton = Element<Button>(widget, "GalleryShortcutButton");
+            var galleryBounds = galleryButton.TransformToAncestor(viewport).TransformBounds(new Rect(galleryButton.RenderSize));
+            Assert(viewport.VerticalOffset > 0 && galleryBounds.Top >= 0 && galleryBounds.Bottom <= viewport.ActualHeight,
+                "a short work area lets users scroll to Gallery and Editor");
+            widget.RefreshLayout();
 
             var targetHwnd = new WindowInteropHelper(target).Handle;
             var otherHwnd = new WindowInteropHelper(other).Handle;
@@ -83,6 +108,8 @@ internal static partial class Program
             Capture("Fullscreen");
             Assert(Directory.GetFiles(preferences.SaveDirectory, "*.png").Length == 2,
                 "Fullscreen completes through the regular capture pipeline with disk delivery disabled");
+
+            CheckWidgetGalleryEditorShortcuts(app, settings, widget);
         }
         finally
         {
@@ -104,6 +131,42 @@ internal static partial class Program
                 mode + " did not complete and restore the widget", 10000);
             var errors = app.Windows.OfType<ToastWindow>().Select(toast => Element<TextBlock>(toast, "BodyText").Text);
             Assert(preferences.ScreenshotCount == count + 1, $"{mode} completed the screenshot. {string.Join(" ", errors)}".TrimEnd());
+        }
+    }
+
+    private static void CheckWidgetGalleryEditorShortcuts(CyberSnap.App app, SettingsService settings, CaptureWidgetWindow widget)
+    {
+        using var history = new HistoryService();
+        using var search = new ImageSearchIndexService();
+        SetZoomAppField(app, "_historyService", history);
+        SetZoomAppField(app, "_imageSearchIndexService", search);
+        SetZoomAppField(app, "_historyMaintenanceScheduled", true);
+        settings.Settings.AutoIndexImages = false;
+        var editorInstance = typeof(EditorForm).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic)!;
+        try
+        {
+            Click("Gallery");
+            AwaitCondition(() => ZoomAppField(app, "_historyWindow") is HistoryWindow { IsVisible: true },
+                "the widget shortcut did not open Gallery", 10000);
+            Assert(!GetField<bool>(widget, "_isExpanded"), "the widget collapses after opening Gallery");
+
+            Click("Editor");
+            AwaitCondition(() => editorInstance.GetValue(null) is EditorForm { Visible: true },
+                "the widget shortcut did not open Editor", 10000);
+            Assert(!GetField<bool>(widget, "_isExpanded"), "the widget collapses after opening Editor");
+        }
+        finally
+        {
+            (editorInstance.GetValue(null) as EditorForm)?.Close();
+            (ZoomAppField(app, "_historyWindow") as HistoryWindow)?.Close();
+            SetZoomAppField(app, "_historyService", null);
+            SetZoomAppField(app, "_imageSearchIndexService", null);
+        }
+
+        void Click(string shortcut)
+        {
+            Call(widget, "ExpandWidget");
+            Element<Button>(widget, shortcut + "ShortcutButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         }
     }
 }
