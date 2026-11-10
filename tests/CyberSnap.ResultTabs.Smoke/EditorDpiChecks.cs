@@ -38,6 +38,9 @@ internal static partial class Program
             editor.Activate();
             AwaitCondition(() => GetForegroundWindow() == editor.Handle, "The fixture could not activate the Editor", 5000);
             var title = GetField<Forms.Button>(editor, "_editorTitleButton");
+            var hover = Theme.TitleHover;
+            Assert(title.FlatAppearance.MouseOverBackColor == Color.FromArgb(hover.R, hover.G, hover.B),
+                "the Editor title uses the shared subtle hover color");
             GetField<Forms.Timer>(editor, "_tooltipTimer").Stop();
             var titleCenter = new Point(title.Width / 2, title.Height / 2);
             var start = title.PointToScreen(titleCenter);
@@ -114,6 +117,7 @@ internal static partial class Program
 
     private static void CheckSharedTitleAbout(CyberSnap.App app)
     {
+        Theme.ApplyTo(app.Resources);
         var titleBar = new CyberSnap.UI.Controls.CyberSnapTitleBar
             { Title = "Gallery ⋅ CyberSnap", VerticalAlignment = System.Windows.VerticalAlignment.Top };
         var window = new System.Windows.Window { Content = titleBar, Width = 640, Height = 320, AllowsTransparency = true,
@@ -129,6 +133,9 @@ internal static partial class Program
             AwaitCondition(() => GetForegroundWindow() == hwnd, "The shared-title fixture did not activate", 5000);
             var title = (System.Windows.Controls.Button)titleBar.FindName("TitleAboutButton");
             var text = (System.Windows.Controls.TextBlock)titleBar.FindName("TitleText");
+            var surface = (System.Windows.Controls.Border)title.Template.FindName("TitleSurface", title);
+            // Settings and Gallery can apply an accent to unstyled buttons when refreshing their theme.
+            title.Background = Theme.Brush(Theme.AccentSubtle);
             Assert(text.Text == "Gallery" && (string)title.ToolTip == LocalizationService.Translate("Title About tooltip"),
                 "the shared title displays the feature name and its About tooltip");
 
@@ -144,6 +151,15 @@ internal static partial class Program
                 Assert(Forms.Control.MouseButtons == Forms.MouseButtons.None, "no mouse button is held before the shared-title click", false);
                 return Forms.Cursor.Position;
             }
+            PointAtTitle();
+            AwaitCondition(() => surface.Background is System.Windows.Media.SolidColorBrush brush && brush.Color == Theme.TitleHover,
+                "The shared title did not show the subtle hover color");
+            var away = window.PointToScreen(new System.Windows.Point(window.ActualWidth / 2, window.ActualHeight / 2));
+            Forms.Cursor.Position = new Point((int)away.X, (int)away.Y);
+            AwaitCondition(() => surface.Background is System.Windows.Media.SolidColorBrush { Color.A: 0 },
+                "The shared title retained a fill after the pointer left");
+            Console.WriteLine("PASS: shared title hover clears even when the window supplies an accent background.");
+
             void ClickTitle()
             {
                 PointAtTitle();

@@ -74,9 +74,11 @@ internal static partial class Program
             var titleBar = Element<FrameworkElement>(gallery, "SettingsTitleBar");
             var titleButton = (Button)titleBar.FindName("TitleAboutButton");
             titleButton.ApplyTemplate();
+            var expectedFill = titleButton.IsMouseOver && !titleButton.IsMouseCaptured ? Theme.TitleHover : Colors.Transparent;
             Assert(titleButton.OverridesDefaultStyle
-                && VisualTreeHelper.GetChild(titleButton, 0) is Border { Background: SolidColorBrush { Color.A: 0 } },
-                "the shared title stays transparent without theme button chrome");
+                && VisualTreeHelper.GetChild(titleButton, 0) is Border { Background: SolidColorBrush fill }
+                && fill.Color == expectedFill,
+                "the Gallery title uses only its explicit hover state for the fill");
 
             var focusVisual = new Control { Style = titleButton.FocusVisualStyle };
             focusVisual.ApplyTemplate();

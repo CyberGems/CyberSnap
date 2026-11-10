@@ -146,9 +146,18 @@
                 </Button.FocusVisualStyle>
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="TitleSurface" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="4">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsMouseCaptured" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="TitleSurface" Property="Background" Value="{DynamicResource ChromeTitleHoverBrush}"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Button.Template>
                 <DockPanel>

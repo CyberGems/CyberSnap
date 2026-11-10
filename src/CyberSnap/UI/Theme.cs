@@ -55,6 +55,7 @@ public static class Theme
 
     // Window chrome
     public static Color TitleBar => P(C(18, 20, 23), C(10, 12, 18), C(220, 223, 232));
+    public static Color TitleHover => P(C(30, 32, 35), C(21, 23, 31), C(218, 221, 229));
     public static Color WindowBorder => P(CA(255, 255, 255, 40), CA(0, 255, 255, 75), CA(0, 0, 0, 20));
     public static Color CardBg => P(C(36, 39, 43), C(23, 26, 40), C(236, 239, 246));
     public static Color TabActiveBg => P(CA(255, 255, 255, 22), CA(0, 255, 255, 25), CA(0, 0, 0, 16));
@@ -86,6 +87,7 @@ public static class Theme
         resources["ChromeButtonForeground"] = Brush(TextPrimary);
         resources["ChromeButtonBorderBrush"] = Brush(BorderSubtle);
         resources["ChromeButtonHoverBrush"] = Brush(BgHover);
+        resources["ChromeTitleHoverBrush"] = Brush(TitleHover);
         resources["ThemeBgHoverBrush"] = Brush(BgHover);
         resources["ChromeButtonPressedBrush"] = Brush(SelectionBg);
         resources["ChromeDangerButtonBackground"] = Brush(IsDark ? CA(196, 43, 28, 42) : CA(196, 43, 28, 24));

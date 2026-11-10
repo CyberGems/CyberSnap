@@ -878,8 +878,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             _editorTitleButton.BackColor = EditorColors.TitleBar;
             _editorTitleButton.ForeColor = EditorColors.TextPrimary;
-            _editorTitleButton.FlatAppearance.MouseOverBackColor = EditorColors.BgHover;
-            _editorTitleButton.FlatAppearance.MouseDownBackColor = EditorColors.BgHover;
+            var hover = Theme.TitleHover;
+            var hoverColor = Color.FromArgb(hover.R, hover.G, hover.B);
+            _editorTitleButton.FlatAppearance.MouseOverBackColor = hoverColor;
+            _editorTitleButton.FlatAppearance.MouseDownBackColor = hoverColor;
             return;
         }
 
