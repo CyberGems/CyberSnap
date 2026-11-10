@@ -154,6 +154,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 - **28 idiomas**: localización completa de la interfaz (incluidos inglés y español)
 - **4 temas**: oscuro de firma, escala de grises, claro y siguiendo al sistema
 - **Escala de interfaz ajustable**: adapta a cualquier pantalla
+- **Monitores con distintas escalas**: Configuración y Galería se abren centradas en el monitor elegido, y los avisos respetan la posición configurada desde que aparecen
 ---
 
 ## 🚀 Primeros pasos
@@ -161,6 +162,8 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 ### Instalación
 
 Descarga el [instalador de Inno Setup](https://github.com/CyberGems/CyberSnap/releases/latest) y sigue el asistente. El instalador registra las asociaciones de archivos `.csnp`, crea accesos directos y ofrece iniciar con Windows.
+
+Si CyberSnap está abierto al desinstalarlo, elige **Salir** en el menú del icono de la bandeja y luego **Reintentar** en el desinstalador. El aviso aparece antes de eliminar los archivos del programa.
 
 Desde la versión 1.20.1, CyberSnap se instala para el usuario actual en `%LocalAppData%\Programs\CyberSnap` sin solicitar permisos de administrador. Los accesos directos, las asociaciones de archivos y el inicio automático se aplican a ese usuario. Si antes instalaste CyberSnap para todos los usuarios en Program Files, desinstala esa copia antes de cambiar al instalador por usuario; este no actualiza la instalación de equipo en su ubicación anterior.
 

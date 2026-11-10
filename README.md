@@ -155,6 +155,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **28 Languages**: Full UI localization (including English and Spanish)
 - **4 Themes**: Signature dark, grayscale, light, and system-following
 - **Adjustable UI Scale**: Adapt to any display
+- **Mixed-DPI Monitors**: Settings and Gallery open centered on the selected monitor, and notifications use the configured position from their first appearance
 
 ---
 
@@ -163,6 +164,8 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 ### Install
 
 Download the [Inno Setup installer](https://github.com/CyberGems/CyberSnap/releases/latest) and follow the wizard. The installer registers `.csnp` file associations, creates shortcuts, and offers to start with Windows.
+
+If CyberSnap is running when you uninstall it, choose **Exit** from the tray icon menu and then **Retry** in the uninstaller. The prompt appears before program files are removed.
 
 Starting with version 1.20.1, CyberSnap installs for the current user in `%LocalAppData%\Programs\CyberSnap` without requesting administrator privileges. Shortcuts, file associations, and startup registration apply to that user. If you previously installed CyberSnap for all users in Program Files, uninstall that copy before switching to the per-user installer; it does not upgrade the machine-wide installation in place.
 
