@@ -645,7 +645,8 @@ public partial class HistoryWindow
                 }
 
                 using var bmp = BitmapPerf.LoadDetached(vm.Entry.FilePath);
-                Services.ClipboardService.CopyToClipboard(bmp);
+                if (!ClipboardService.CopyToClipboard(bmp, vm.Entry.FilePath))
+                    throw new InvalidOperationException(LocalizationService.Translate("Clipboard copy failed."));
                 ToastWindow.Show("Copied", $"{vm.Dimensions} screenshot copied");
             }
             catch (Exception ex)

@@ -299,7 +299,8 @@ public partial class HistoryWindow
                 else
                 {
                     using var bmp = BitmapPerf.LoadDetached(entry.FilePath);
-                    ClipboardService.CopyToClipboard(bmp);
+                    if (!ClipboardService.CopyToClipboard(bmp, entry.FilePath))
+                        throw new InvalidOperationException(LocalizationService.Translate("Clipboard copy failed."));
                     ToastWindow.Show("Copied", "Image copied");
                 }
             }

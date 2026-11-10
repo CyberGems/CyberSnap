@@ -8,12 +8,19 @@ public static class ClipboardService
 {
     public static bool CopyToClipboard(Bitmap bitmap, string? filePath = null)
     {
+        using var pngStream = new MemoryStream();
+        CaptureOutputService.WritePng(bitmap, pngStream);
+        return CopyBitmapToClipboard(bitmap, pngStream, filePath, includeDib: false);
+    }
+
+    private static bool CopyBitmapToClipboard(Bitmap bitmap, MemoryStream pngStream, string? filePath, bool includeDib)
+    {
         var dataObject = new System.Windows.Forms.DataObject();
 
         dataObject.SetData(System.Windows.Forms.DataFormats.Bitmap, bitmap);
+        if (includeDib)
+            dataObject.SetData(System.Windows.Forms.DataFormats.Dib, false, ToDibStream(bitmap));
 
-        using var pngStream = new MemoryStream();
-        CaptureOutputService.WritePng(bitmap, pngStream);
         if (pngStream.TryGetBuffer(out var pngBuffer))
             dataObject.SetData("PNG", false, new MemoryStream(pngBuffer.Array!, pngBuffer.Offset, pngBuffer.Count, writable: false, publiclyVisible: true));
         else
@@ -47,25 +54,65 @@ public static class ClipboardService
     }
 
     /// <summary>
-    /// Image only, no file references: Bitmap + DIB + PNG. DIB is what picky
-    /// targets like Photoshop paste reliably; omitting FileDrop keeps Explorer
-    /// and friends from preferring the file over the pixels.
+    /// Copies the current editor pixels and a matching PNG file for Explorer.
+    /// Retains DIB for image editors that use it.
     /// </summary>
-    public static void CopyImageToClipboard(Bitmap bitmap)
+    public static bool CopyImageToClipboard(Bitmap bitmap)
     {
-        var dataObject = new System.Windows.Forms.DataObject();
-
-        dataObject.SetData(System.Windows.Forms.DataFormats.Bitmap, bitmap);
-        dataObject.SetData(System.Windows.Forms.DataFormats.Dib, false, ToDibStream(bitmap));
-
         using var pngStream = new MemoryStream();
         CaptureOutputService.WritePng(bitmap, pngStream);
-        if (pngStream.TryGetBuffer(out var pngBuffer))
-            dataObject.SetData("PNG", false, new MemoryStream(pngBuffer.Array!, pngBuffer.Offset, pngBuffer.Count, writable: false, publiclyVisible: true));
-        else
-            dataObject.SetData("PNG", false, new MemoryStream(pngStream.ToArray(), writable: false));
 
-        SetClipboardWithRetry(dataObject);
+        string directory = Path.Combine(Path.GetTempPath(), "CyberSnap", "clipboard-images");
+        Directory.CreateDirectory(directory);
+        string id = Guid.NewGuid().ToString("N");
+        string path = Path.Combine(directory, $"CyberSnap-{DateTime.Now:yyyyMMdd-HHmmssfff}-{id[..8]}.png");
+        bool created = false;
+        bool copied = false;
+        try
+        {
+            using (var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write))
+            {
+                created = true;
+                pngStream.WriteTo(file);
+            }
+
+            copied = CopyBitmapToClipboard(bitmap, pngStream, path, includeDib: true);
+        }
+        finally
+        {
+            if (created && !copied)
+                TryDeleteClipboardImage(path);
+        }
+
+        if (copied)
+            PruneStaleClipboardImages(directory);
+        return copied;
+    }
+
+    private static void PruneStaleClipboardImages(string directory)
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-7);
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(directory, "CyberSnap-*.png"))
+            {
+                if (File.GetLastWriteTimeUtc(file) < cutoff)
+                    TryDeleteClipboardImage(file);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppDiagnostics.LogWarning("clipboard.cleanup", "Could not prune temporary clipboard images.", ex);
+        }
+    }
+
+    private static void TryDeleteClipboardImage(string path)
+    {
+        try { File.Delete(path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppDiagnostics.LogWarning("clipboard.cleanup", "Could not delete a temporary clipboard image.", ex);
+        }
     }
 
     /// <summary>DIB is a BMP without its 14-byte file header.</summary>

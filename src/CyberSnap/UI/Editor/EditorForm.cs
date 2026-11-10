@@ -1790,9 +1790,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         try
         {
             using var output = _canvas.RenderFinal();
-            // Image only (no file reference) so pixel targets like Photoshop
-            // paste the bitmap instead of receiving a file. See DoCopyFile.
-            ClipboardService.CopyImageToClipboard(output);
+            if (!ClipboardService.CopyImageToClipboard(output))
+                throw new InvalidOperationException(LocalizationService.Translate("Clipboard copy failed."));
 
             var toastTitle = LocalizationService.Translate("System Message");
             var toastBody = LocalizationService.Translate("Copied image to clipboard");
