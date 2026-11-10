@@ -128,11 +128,9 @@ public partial class App : Application
 
     private void RunAfterPreviewChromeHidden(Action action)
     {
-        // The overlay paints a desktop frame captured on another thread. A WPF Hide()
-        // can precede the corresponding DWM frame, leaving the widget baked into the
-        // overlay background even though its own window never becomes visible again.
-        bool widgetHidden = _settingsService?.Settings.WidgetHideDuringCapture == true
-            && _widgetWindow is { IsVisible: false };
+        // A WPF Hide() can precede the corresponding DWM frame. This also applies
+        // when a widget action hides its own chrome with WidgetHideDuringCapture off.
+        bool widgetHidden = _widgetWindow is { IsVisible: false };
         if (!_previewHiddenForCapture && !widgetHidden)
         {
             action();

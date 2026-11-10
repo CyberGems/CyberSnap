@@ -482,7 +482,7 @@ public partial class App
         Bitmap? bmp = null;
         try
         {
-            (bmp, _) = ScreenCapture.CaptureAllScreens(_settingsService!.Settings.ShowCursor);
+            (bmp, _) = ScreenCapture.CaptureAllScreens(_settingsService!.Settings.ShowCursor, _captureFrameNotBefore);
             HandleCaptureResult(bmp);
             bmp = null;
         }
@@ -558,7 +558,7 @@ public partial class App
                 return;
             }
 
-            (bmp, var bounds) = ScreenCapture.CaptureAllScreens(_settingsService!.Settings.ShowCursor);
+            (bmp, var bounds) = ScreenCapture.CaptureAllScreens(_settingsService!.Settings.ShowCursor, _captureFrameNotBefore);
             var crop = new Rectangle(windowRect.Left - bounds.X, windowRect.Top - bounds.Y, windowRect.Width, windowRect.Height);
             crop.Intersect(new Rectangle(System.Drawing.Point.Empty, bmp.Size));
             if (crop.Width <= 1 || crop.Height <= 1)

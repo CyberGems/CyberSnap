@@ -45,12 +45,15 @@ internal static partial class Program
                     Assert(owners.Length == 15, "the widget tooltips include brief help for its three labeled capture modes", false);
                     foreach (var owner in owners)
                     {
+                        Assert(ToolTipService.GetInitialShowDelay(owner) == 900 && ToolTipService.GetBetweenShowDelay(owner) == 0,
+                            "all widget tooltips wait for a deliberate hover", false);
                         // Exercise WPF's real popup service, including the shared two-line template.
                         show.Invoke(service, new object[] { owner, false }); Pump();
                         var tip = (ToolTip)current.GetValue(service)!;
                         var widgetHwnd = new WindowInteropHelper(widget).Handle;
                         var tipHwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
                         Assert(tip.IsOpen && tipHwnd != IntPtr.Zero, "WPF opens a native widget tooltip", false);
+                        CheckWidgetToolTipPlacement(widget, tipHwnd);
                         Assert(Equals(tip.Content, (owner.ToolTip as ToolTip)?.Content ?? owner.ToolTip),
                             "the tooltip preserves its localized content", false);
                         if (tip.Content is ActionToolTipContent)
@@ -114,11 +117,42 @@ internal static partial class Program
                     settings.Settings.InterfaceLanguage = language == "en" ? "es" : "en";
                     widget.RefreshLocalization();
                     CheckPinToolTipText((ToolTip)Element<Button>(widget, "PinToolButton").ToolTip, settings.Settings.InterfaceLanguage);
+
+                    if (topmost && language == "en")
+                    {
+                        var owner = Element<Button>(widget, "WindowModeButton");
+                        foreach (var screen in WidgetScreens())
+                        foreach (var edge in Enum.GetValues<CaptureDockSide>())
+                        {
+                            settings.Settings.WidgetDockEdge = edge;
+                            widget.RefreshLayout();
+                            Call(widget, "PositionWindowOnScreen", screen);
+                            Pump();
+                            show.Invoke(service, new object[] { owner, false });
+                            Pump();
+                            var tip = (ToolTip)owner.ToolTip;
+                            Assert(tip.IsOpen, "window help remains available on " + screen.DeviceName + " at " + edge);
+                            var hwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
+                            CheckWidgetToolTipPlacement(widget, hwnd);
+                            CloseFixtureToolTip(tip, () =>
+                            {
+                                var press = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+                                {
+                                    RoutedEvent = Mouse.PreviewMouseDownEvent
+                                };
+                                owner.RaiseEvent(press);
+                                Assert(!press.Handled && !tip.IsOpen && !IsWidgetToolTipWindowVisible(hwnd),
+                                    "mouse-down removes the popup immediately and preserves the button's input");
+                            });
+                            dismiss.Invoke(service, null);
+                        }
+                    }
                 }
                 finally
                 {
                     dismiss.Invoke(service, null);
                     widget.Close(); Pump();
+                    settings.Settings.WidgetDockEdge = originalPreferences.DockEdge;
                 }
             }
         }
@@ -131,6 +165,25 @@ internal static partial class Program
             settings.Settings.DefaultCaptureMode = originalMode;
         }
     }
+
+    private static void CheckWidgetToolTipPlacement(CaptureWidgetWindow widget, IntPtr hwnd)
+    {
+        var panel = Element<Border>(widget, "MainPanelBorder");
+        var start = panel.PointToScreen(new Point());
+        var end = panel.PointToScreen(new Point(panel.ActualWidth, panel.ActualHeight));
+        var work = System.Windows.Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).WorkingArea;
+        Assert(GetWindowRect(hwnd, out var rect) && work.Contains(rect.Rectangle)
+            && !new Rect(start, end).IntersectsWith(new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)),
+            "the native widget tooltip stays on the widget monitor outside its controls", false);
+        Assert((GetWidgetToolTipExStyle(hwnd, -20) & 0x20) != 0, "the native tooltip lets mouse input through", false);
+    }
+
+    [DllImport("user32.dll", EntryPoint = "IsWindowVisible")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWidgetToolTipWindowVisible(IntPtr hwnd);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+    private static extern int GetWidgetToolTipExStyle(IntPtr hwnd, int index);
 
     private static void CheckActionToolTip(ToolTip tip)
     {

@@ -151,7 +151,7 @@ public partial class App
         if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_fullscreen")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
-        LaunchWithDelay(CaptureFullscreenNow);
+        LaunchWithDelay(() => RunAfterPreviewChromeHidden(CaptureFullscreenNow));
     }
 
     private void OnActiveWindowHotkeyPressed()
@@ -165,7 +165,7 @@ public partial class App
         if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_activeWindow")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;
         HideSettingsForCapture();
-        LaunchWithDelay(() => CaptureActiveWindowNow(preferredWindow));
+        LaunchWithDelay(() => RunAfterPreviewChromeHidden(() => CaptureActiveWindowNow(preferredWindow)));
     }
 
     private void OnRepeatLastAreaHotkeyPressed()

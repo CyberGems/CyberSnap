@@ -22,6 +22,7 @@ internal static partial class Program
         preferences.CelebrationsEnabled = false;
         preferences.SaveToFile = true;
         preferences.SaveHistory = false;
+        preferences.WidgetHideDuringCapture = false;
         preferences.SaveInMonthlyFolders = false;
         preferences.SaveDirectory = Path.Combine(temp, "widget-captures");
         AutoCopyPreferences.SetKindEnabled(preferences, AutoCopyKind.Image, false);
@@ -124,13 +125,30 @@ internal static partial class Program
         {
             int count = preferences.ScreenshotCount;
             Call(widget, "ExpandWidget");
-            Element<Button>(widget, mode + "ModeButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var button = Element<Button>(widget, mode + "ModeButton");
+            IntPtr tooltipHwnd = IntPtr.Zero;
+            bool verifyComposition = mode is "Window" or "Fullscreen";
+            if (verifyComposition)
+            {
+                AwaitCondition(() => !widget.HasAnimatedProperties && button.IsVisible, "the widget did not expand for " + mode, 3000);
+                var tip = (ToolTip)button.ToolTip;
+                tip.IsOpen = true;
+                AwaitCondition(() => tip.IsOpen && PresentationSource.FromVisual(tip) is HwndSource,
+                    "the widget tooltip did not open for " + mode, 3000);
+                tooltipHwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
+                CheckWidgetToolTipPlacement(widget, tooltipHwnd);
+            }
+            button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert(!widget.IsVisible, mode + " hides the widget before capture starts");
+            if (verifyComposition)
+                Assert(!IsWidgetToolTipWindowVisible(tooltipHwnd), mode + " hides the tooltip HWND before capture starts");
             afterClick?.Invoke();
             AwaitCondition(() => !app.IsSessionBusy() && widget.IsVisible && widget.Opacity == 1,
                 mode + " did not complete and restore the widget", 10000);
             var errors = app.Windows.OfType<ToastWindow>().Select(toast => Element<TextBlock>(toast, "BodyText").Text);
             Assert(preferences.ScreenshotCount == count + 1, $"{mode} completed the screenshot. {string.Join(" ", errors)}".TrimEnd());
+            if (verifyComposition)
+                Assert((long)ZoomAppField(app, "_captureFrameNotBefore")! > 0, mode + " waits for the widget's hidden frame before capture");
         }
     }
 

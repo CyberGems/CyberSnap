@@ -86,6 +86,7 @@ public partial class CaptureWidgetWindow : Window
     {
         _settingsService = settingsService;
         InitializeComponent();
+        AddHandler(PreviewMouseDownEvent, new MouseButtonEventHandler(Widget_PreviewMouseDown), handledEventsToo: true);
         SizeToContent = SizeToContent.Manual;
 
         // Re-rasterize icons when the render DPI changes (monitor moves), but AFTER the
@@ -511,13 +512,13 @@ public partial class CaptureWidgetWindow : Window
             UpdateLed.Visibility = updateAvailable ? Visibility.Visible : Visibility.Collapsed;
             if (updateAvailable)
             {
-                UpdateLed.ToolTip = LocalizationService.Translate(lang, "Update available");
-                WidgetBrandingBtn.ToolTip = $"{LocalizationService.Translate(lang, "About tooltip")} ({LocalizationService.Translate(lang, "Update available")})";
+                SetToolTipContent(UpdateLed, LocalizationService.Translate(lang, "Update available"));
+                SetToolTipContent(WidgetBrandingBtn, $"{LocalizationService.Translate(lang, "About tooltip")} ({LocalizationService.Translate(lang, "Update available")})");
             }
             else
             {
                 UpdateLed.ToolTip = null;
-                WidgetBrandingBtn.ToolTip = LocalizationService.Translate(lang, "About tooltip");
+                SetToolTipContent(WidgetBrandingBtn, LocalizationService.Translate(lang, "About tooltip"));
             }
         }
         catch (Exception ex)
