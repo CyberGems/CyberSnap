@@ -182,7 +182,7 @@ public partial class AboutWindow : Window
     {
         try
         {
-            AboutDescriptionText.Text = LocalizationService.Translate("CyberSnap is a professional screen capture suite for fast workflows — local OCR, instant translation, and a full gallery.");
+            AboutDescriptionText.Text = LocalizationService.Translate(LocalizationService.GetSourceText(AboutDescriptionText));
             AboutUpdatesSectionLabel.Text = LocalizationService.Translate("Updates & Maintenance");
             AboutAutoUpdateTitle.Text = LocalizationService.Translate("Check for updates on startup");
             AboutAutoUpdateDesc.Text = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
