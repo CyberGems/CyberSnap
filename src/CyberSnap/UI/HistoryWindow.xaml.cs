@@ -64,14 +64,24 @@ public partial class HistoryWindow : Window
     private bool _historyTabLoadPreserveTransientState;
     private string? _pendingNavigateToPath;
     private WindowState _lastNonMinimizedState = WindowState.Normal;
+    private readonly System.Drawing.Point _openMonitorPoint;
 
     public HistoryWindow(SettingsService settingsService, HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
+        : this(settingsService, historyService, imageSearchIndexService, System.Windows.Forms.Cursor.Position)
+    {
+    }
+
+    internal HistoryWindow(SettingsService settingsService, HistoryService historyService,
+        ImageSearchIndexService imageSearchIndexService, System.Drawing.Point openMonitorPoint)
     {
         _settingsService = settingsService;
         _historyService = historyService;
         _imageSearchIndexService = imageSearchIndexService;
+        _openMonitorPoint = openMonitorPoint;
 
         InitializeComponent();
+        Opacity = 0;
+        ContentRendered += HistoryWindow_ContentRendered;
         BuildGalleryTabs();
         ApplyIdleSearchBorder();
         // Clicking outside the search row releases the caret: most gallery surfaces
@@ -401,14 +411,28 @@ public partial class HistoryWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        // Always open centered on the screen where the user triggered it (the monitor under
-        // the cursor), regardless of where it was when last closed. Physical-pixel centering:
-        // DIP placement drifts on mixed-DPI setups when the window starts on another monitor.
-        // EnsureWindowFitsWorkArea then clamps it inside the work area as a safety net.
-        PopupWindowHelper.CenterWindowOnPhysicalMonitor(this);
-        EnsureWindowFitsWorkArea();
         var source = PresentationSource.FromVisual(this) as HwndSource;
         source?.AddHook(WndProc);
+        PopupWindowHelper.CenterWindowOnPhysicalMonitor(this, _openMonitorPoint);
+    }
+
+    private void HistoryWindow_ContentRendered(object? sender, EventArgs e)
+    {
+        ContentRendered -= HistoryWindow_ContentRendered;
+        // The first move can change the window DPI. Center again after WPF lays out
+        // at that DPI, keeping position in physical pixels throughout.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
+        {
+            try
+            {
+                if (IsVisible && WindowState == WindowState.Normal)
+                    PopupWindowHelper.CenterWindowOnPhysicalMonitor(this, _openMonitorPoint);
+            }
+            finally
+            {
+                Opacity = 1;
+            }
+        }));
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -474,38 +498,6 @@ public partial class HistoryWindow : Window
         mmi.ptMinTrackSize.Y = (int)Math.Ceiling(MinHeight * dpi.DpiScaleY);
 
         Marshal.StructureToPtr(mmi, lParam, true);
-    }
-
-    private void EnsureWindowFitsWorkArea()
-    {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        var screen = hwnd != IntPtr.Zero
-            ? System.Windows.Forms.Screen.FromHandle(hwnd)
-            : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position);
-
-        if (hwnd == IntPtr.Zero)
-        {
-            var workArea = SystemParameters.WorkArea;
-            if (Left + 100 > workArea.Right || Left + Width - 100 < workArea.Left ||
-                Top + 50 > workArea.Bottom || Top < workArea.Top)
-            {
-                Left = workArea.Left + (workArea.Width - Width) / 2;
-                Top = workArea.Top + (workArea.Height - Height) / 2;
-            }
-            return;
-        }
-
-        // Use same DIP conversion as CenterOnCurrentScreen for consistency.
-        var wa = PopupWindowHelper.ScreenWorkingAreaToDips(screen);
-
-        const double screenMargin = 12d;
-        var minLeft = wa.Left + screenMargin;
-        var minTop = wa.Top + screenMargin;
-        var maxLeft = wa.Right - Width - screenMargin;
-        var maxTop = wa.Bottom - Height - screenMargin;
-
-        Left = Math.Min(Math.Max(Left, minLeft), Math.Max(minLeft, maxLeft));
-        Top = Math.Min(Math.Max(Top, minTop), Math.Max(minTop, maxTop));
     }
 
     private void HistoryService_Changed()

@@ -35,11 +35,22 @@ internal static partial class Program
             editor.Activate();
             AwaitCondition(() => GetForegroundWindow() == editor.Handle, "The fixture could not activate the Editor", 5000);
             var galleryButton = GetField<Forms.Button>(editor, "_galleryButton");
+            var openingMonitor = MonitorFromPoint(Forms.Cursor.Position, 2);
             galleryButton.PerformClick();
             HistoryWindow? gallery = null;
-            AwaitCondition(() => (gallery = ZoomAppField(app, "_historyWindow") as HistoryWindow) is { IsVisible: true },
+            AwaitCondition(() => (gallery = ZoomAppField(app, "_historyWindow") as HistoryWindow) is { IsVisible: true, Opacity: 1 },
                 "The Editor's Gallery button did not open the Gallery");
             IntPtr galleryHandle = new WindowInteropHelper(gallery!).Handle;
+            var monitorInfo = new TrayMonitorInfo { Size = Marshal.SizeOf<TrayMonitorInfo>() };
+            Assert(GetMonitorInfo(openingMonitor, ref monitorInfo), "the Gallery's opening monitor has a work area");
+            Assert(GetWindowRect(galleryHandle, out var galleryBounds), "the Gallery has a physical window rectangle");
+            var work = monitorInfo.Work.Rectangle;
+            var bounds = galleryBounds.Rectangle;
+            int expectedLeft = work.Left + Math.Max(0, (work.Width - bounds.Width) / 2);
+            int expectedTop = work.Top + Math.Max(0, (work.Height - bounds.Height) / 2);
+            Assert(Math.Abs(bounds.Left - expectedLeft) <= 1 && Math.Abs(bounds.Top - expectedTop) <= 1,
+                $"the Gallery centers on its opening monitor at {GetDpiForWindow(galleryHandle)} DPI, "
+                + $"actual={bounds}, expected origin=({expectedLeft}, {expectedTop})");
             Assert(ReadGalleryWindow(galleryHandle, 4 /* GW_OWNER */) == IntPtr.Zero && !gallery!.Topmost,
                 "the Gallery opens as an independent window");
             AwaitCondition(() => GetForegroundWindow() == galleryHandle, "The new Gallery did not come to the foreground", 5000);

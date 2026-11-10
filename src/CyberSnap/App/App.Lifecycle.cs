@@ -466,6 +466,8 @@ public partial class App
         if (Interlocked.CompareExchange(ref _historyWindowOpening, 1, 0) != 0)
             return;
 
+        var openMonitorPoint = System.Windows.Forms.Cursor.Position;
+
         // STA-thread splash (own message loop) — stays smooth while Gallery builds on the UI thread.
         WindowStartupSplash? splash = null;
         try
@@ -498,7 +500,7 @@ public partial class App
                             return;
                         }
 
-                        ShowHistoryWindow(historyService, imageSearchIndexService, navigateToFilePath);
+                        ShowHistoryWindow(historyService, imageSearchIndexService, openMonitorPoint, navigateToFilePath);
                     }
                     catch (Exception ex)
                     {
@@ -525,9 +527,10 @@ public partial class App
         });
     }
 
-    private void ShowHistoryWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService, string? navigateToFilePath = null)
+    private void ShowHistoryWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService,
+        System.Drawing.Point openMonitorPoint, string? navigateToFilePath)
     {
-        var win = new HistoryWindow(_settingsService!, historyService, imageSearchIndexService);
+        var win = new HistoryWindow(_settingsService!, historyService, imageSearchIndexService, openMonitorPoint);
 
         win.Closed += (_, _) =>
         {
