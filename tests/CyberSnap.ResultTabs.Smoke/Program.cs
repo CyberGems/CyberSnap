@@ -271,7 +271,8 @@ internal static partial class Program
             if (args.Contains("--widget-session-only"))
             {
                 CheckWidgetSessionRestore(settings);
-                Console.WriteLine($"PASS: {_checks} widget capture-session checks.");
+                CheckWidgetFullscreen(settings);
+                Console.WriteLine($"PASS: {_checks} widget capture-session and fullscreen checks.");
                 return 0;
             }
             if (args.Contains("--widget-popup-only"))

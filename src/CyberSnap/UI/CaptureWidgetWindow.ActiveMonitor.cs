@@ -68,6 +68,7 @@ public partial class CaptureWidgetWindow
         CloseMenuOutsideForeground();
         UpdateMonitorPointerObserver();
         if (!IsVisible || !IsLoaded) return;
+        RefreshFullscreenSuppression();
         if (_settings.WidgetMonitorIndex == WidgetPreferences.FollowCursor)
         {
             FollowCursorOnMonitor(Forms.Control.MousePosition);
@@ -182,7 +183,7 @@ public partial class CaptureWidgetWindow
     }
 
     private bool CanFollowMonitor() => IsVisible && IsLoaded
-        && !_mouseInWindow && !_isExpanded && !_contextMenuOpen && !_isDragArmed && !_isDragging
+        && !_mouseInWindow && (!_isExpanded || _fullscreenSuppressed) && !_contextMenuOpen && !_isDragArmed && !_isDragging
         && !_suppressHoverExpand && !_awaitingSessionRestore && !_sessionRestoreInProgress;
 
     private void FollowCursorOnMonitor(System.Drawing.Point cursor)

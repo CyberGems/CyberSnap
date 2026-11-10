@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Interop;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI;
@@ -86,6 +87,89 @@ internal static partial class Program
             SetZoomAppField(app, "_isCapturing", 0);
             SetZoomAppField(app, "_widgetWindow", null);
             widget.Close(); Pump();
+        }
+    }
+
+    private static void CheckWidgetFullscreen(SettingsService settings)
+    {
+        var app = (CyberSnap.App)Application.Current;
+        var screens = WidgetScreens();
+        var screen = screens.FirstOrDefault(item => !item.Primary) ?? screens[0];
+        var otherScreen = screens.FirstOrDefault(item => item.DeviceName != screen.DeviceName);
+        var original = WidgetPreferences.FromSettings(settings.Settings);
+        settings.Settings.WidgetMonitorIndex = Array.IndexOf(screens, screen);
+        settings.Settings.WidgetAlwaysOnTop = true;
+        using var normal = new Forms.Form
+        {
+            StartPosition = Forms.FormStartPosition.Manual,
+            Bounds = new Drawing.Rectangle(screen.WorkingArea.Location, new Drawing.Size(400, 300)),
+            Text = "Widget maximized window fixture"
+        };
+        using var fullscreen = new Forms.Form
+        {
+            AutoScaleMode = Forms.AutoScaleMode.None,
+            FormBorderStyle = Forms.FormBorderStyle.None,
+            StartPosition = Forms.FormStartPosition.Manual,
+            Bounds = screen.Bounds,
+            Text = "Widget fullscreen fixture"
+        };
+        var widget = new CaptureWidgetWindow(settings) { IsHitTestVisible = false };
+        var region = CreateRectRgn(0, 0, 0, 0);
+        SetZoomAppField(app, "_widgetWindow", widget);
+        try
+        {
+            normal.Show();
+            normal.WindowState = Forms.FormWindowState.Maximized;
+            widget.Show();
+            var hwnd = new WindowInteropHelper(widget).Handle;
+            int RegionKind() => GetWindowRgn(hwnd, region);
+            Call(widget, "FollowActiveMonitorTick", null!, EventArgs.Empty);
+            Assert(RegionKind() == 0, "a maximized window leaves the widget visible");
+
+            normal.Hide();
+            fullscreen.Show();
+            var bounds = screen.Bounds;
+            Assert(SetShadowTestWindowPos(fullscreen.Handle, IntPtr.Zero, bounds.X, bounds.Y,
+                bounds.Width, bounds.Height, 0x0014), "the fixture covers the physical monitor after DPI changes");
+            AwaitCondition(() => RegionKind() == 1, "the widget timer did not clip the HWND on the fullscreen monitor", 3000);
+
+            if (otherScreen is not null)
+            {
+                normal.WindowState = Forms.FormWindowState.Normal;
+                normal.Location = otherScreen.WorkingArea.Location;
+                normal.Show();
+                normal.Activate();
+                AwaitCondition(() => GetForegroundWindow() != fullscreen.Handle, "the fullscreen fixture remained in the foreground", 3000);
+                Call(widget, "FollowActiveMonitorTick", null!, EventArgs.Empty);
+                Assert(RegionKind() == 1, "a visible fullscreen window keeps the widget hidden without foreground focus");
+
+                Call(widget, "PositionWindowOnScreen", otherScreen);
+                Assert(Forms.Screen.FromHandle(hwnd).DeviceName == otherScreen.DeviceName && RegionKind() == 0,
+                    "the widget stays available on the monitor without a fullscreen window");
+                Call(widget, "PositionWindowOnScreen", screen);
+                Assert(RegionKind() == 1, "moving back to the fullscreen monitor clips the widget before it appears");
+            }
+
+            SetZoomAppField(app, "_isCapturing", 1);
+            Call(widget, "HideForExternalSession", app);
+            SetZoomAppField(app, "_isCapturing", 0);
+            Call(widget, "FinishSessionRestore");
+            AwaitCondition(() => widget.IsVisible && widget.Opacity == 1 && !GetField<bool>(widget, "_awaitingSessionRestore"),
+                "the capture-session restore did not finish while fullscreen was active", 3000);
+            Assert(RegionKind() == 1, "ending a capture leaves the widget clipped while fullscreen is active");
+
+            fullscreen.Bounds = new Drawing.Rectangle(bounds.Location, new Drawing.Size(480, 300));
+            AwaitCondition(() => RegionKind() == 0, "the widget did not return when the app left fullscreen", 3000);
+            Console.WriteLine($"PASS: fullscreen widget visibility on {screens.Length} connected display(s), including capture restore.");
+        }
+        finally
+        {
+            SetZoomAppField(app, "_isCapturing", 0);
+            SetZoomAppField(app, "_widgetWindow", null);
+            widget.Close();
+            DeleteObject(region);
+            original.ApplyTo(settings.Settings);
+            Pump();
         }
     }
 

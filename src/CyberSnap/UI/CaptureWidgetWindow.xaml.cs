@@ -42,7 +42,7 @@ public partial class CaptureWidgetWindow : Window
     private bool _awaitingSessionRestore;
     private bool _sessionRestoreInProgress;
     private int _sessionRestoreGeneration;
-    private bool _restoreRegionClipped;
+    private bool _widgetRegionClipped;
 
     // Topmost watchdog: WPF sets WS_EX_TOPMOST once, but Windows can demote the HWND
     // within the topmost Z-band over time (other topmost windows, UAC/fullscreen,
@@ -179,7 +179,7 @@ public partial class CaptureWidgetWindow : Window
             return;
         }
 
-        if (!_settings.WidgetAlwaysOnTop) return;
+        if (!_settings.WidgetAlwaysOnTop || _fullscreenSuppressed) return;
         if (!IsLoaded) return;
         try
         {
@@ -596,12 +596,18 @@ public partial class CaptureWidgetWindow : Window
     private void PositionWindowOnScreen(Screen targetScreen)
     {
         if (!IsLoaded) return;
+        bool checkFullscreen = !_isDragging && !_isDragArmed && _placementMonitorDevice != targetScreen.DeviceName;
+        bool fullscreenOnTarget = checkFullscreen && HasFullscreenWindow(targetScreen);
+        if (fullscreenOnTarget) SetFullscreenSuppressed(true);
         var previousBounds = _monitorMoveBounds;
         try
         {
             if (TryGetWindowPlacement(_isExpanded, out var left, out var top, out var width, out var height,
                 out var halo, targetScreen, keepMoveBounds: true))
+            {
                 ApplyWindowPlacement(left, top, width, height, halo, _isExpanded, animate: false);
+                if (checkFullscreen && !fullscreenOnTarget) SetFullscreenSuppressed(false);
+            }
         }
         finally
         {
@@ -1005,7 +1011,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void ExpandWidget()
     {
-        if (_isExpanded) return;
+        if (_isExpanded || _fullscreenSuppressed) return;
         _isExpanded = true;
 
         // Refresh update status when reopening the panel.
@@ -1768,35 +1774,24 @@ public partial class CaptureWidgetWindow : Window
         Hide();
     }
 
-    private void ClipRestoreWindow()
+    // An empty HWND region hides the widget and lets input through without changing WPF visibility.
+    private bool SetWidgetRegionClipped(bool clip)
     {
+        if (_widgetRegionClipped == clip) return true;
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero) return;
-        var emptyRegion = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
-        if (emptyRegion == IntPtr.Zero) return;
-        if (Native.User32.SetWindowRgn(hwnd, emptyRegion, true) != 0)
+        if (hwnd == IntPtr.Zero) return false;
+        var region = clip ? Native.Gdi32.CreateRectRgn(0, 0, 0, 0) : IntPtr.Zero;
+        if (clip && region == IntPtr.Zero) return false;
+        if (Native.User32.SetWindowRgn(hwnd, region, true) != 0)
         {
-            // SetWindowRgn owns emptyRegion after success.
-            _restoreRegionClipped = true;
-            return;
+            // SetWindowRgn owns the region after success.
+            _widgetRegionClipped = clip;
+            return true;
         }
 
-        Native.Gdi32.DeleteObject(emptyRegion);
-        AppDiagnostics.LogWarning("widget.restore-clip", "Windows could not clip the widget before Show.");
-    }
-
-    private bool RevealRestoreWindow()
-    {
-        if (!_restoreRegionClipped) return true;
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero || Native.User32.SetWindowRgn(hwnd, IntPtr.Zero, true) == 0)
-        {
-            AppDiagnostics.LogWarning("widget.restore-clip", "Windows could not reveal the widget window region.");
-            return false;
-        }
-
-        _restoreRegionClipped = false;
-        return true;
+        if (clip) Native.Gdi32.DeleteObject(region);
+        AppDiagnostics.LogWarning("widget.window-region", "Windows could not update the widget window region.");
+        return false;
     }
 
     internal void HideForExternalSession(App app)
@@ -1868,7 +1863,7 @@ public partial class CaptureWidgetWindow : Window
         {
             // Still Hidden + Opacity 0: lock peek geometry before the first composed frame.
             CollapseImmediately();
-            ClipRestoreWindow();
+            SetWidgetRegionClipped(true);
             if (!IsVisible)
                 Show();
             AssertWidgetTopmost();
@@ -1953,7 +1948,8 @@ public partial class CaptureWidgetWindow : Window
                         return;
                     }
 
-                    if (RevealRestoreWindow())
+                    RefreshFullscreenSuppression();
+                    if (SetWidgetRegionClipped(_fullscreenSuppressed))
                         CancelSessionRestore();
                     else
                         _sessionRestoreInProgress = false; // polling retries the reveal

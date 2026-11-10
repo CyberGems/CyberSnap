@@ -574,7 +574,7 @@ public static class WindowDetector
     private static User32.POINT ToScreenPoint(Point overlayPoint, Rectangle virtualBounds)
         => new(overlayPoint.X + virtualBounds.X, overlayPoint.Y + virtualBounds.Y);
 
-    private static bool IsIgnoredWindowHandle(nint hwnd)
+    internal static bool IsIgnoredWindowHandle(nint hwnd)
     {
         if (hwnd == 0) return false;
         lock (IgnoredHandleLock)

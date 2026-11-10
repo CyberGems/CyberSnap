@@ -60,6 +60,8 @@ internal static partial class User32
     public const int GWL_EXSTYLE = -20;
     public const int GWL_HWNDPARENT = -8;
     public const int WS_CHILD = unchecked((int)0x40000000);
+    public const int WS_CAPTION = 0x00C00000;
+    public const int WS_THICKFRAME = 0x00040000;
     public const int WS_DISABLED = 0x08000000;
     public const int WS_EX_TOOLWINDOW = 0x80;
     public const int WS_EX_APPWINDOW = 0x40000;
