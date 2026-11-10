@@ -1,7 +1,9 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
 using CyberSnap.Services;
 using CyberSnap.UI;
 using CyberSnap.UI.Editor;
@@ -57,9 +59,26 @@ internal static partial class Program
             AwaitCondition(() => gallery.WindowState != WindowState.Minimized && GetForegroundWindow() == galleryHandle,
                 "The Editor's Gallery button did not restore the minimized Gallery");
             Assert(IsAbove(galleryHandle, editor.Handle), "the minimized Gallery restores in front of the Editor");
+
+            var titleBar = Element<FrameworkElement>(gallery, "SettingsTitleBar");
+            var titleButton = (Button)titleBar.FindName("TitleAboutButton");
+            titleButton.ApplyTemplate();
+            Assert(titleButton.OverridesDefaultStyle
+                && VisualTreeHelper.GetChild(titleButton, 0) is Border { Background: SolidColorBrush { Color.A: 0 } },
+                "the shared title stays transparent without theme button chrome");
+
+            var focusVisual = new Control { Style = titleButton.FocusVisualStyle };
+            focusVisual.ApplyTemplate();
+            Assert(VisualTreeHelper.GetChild(focusVisual, 0) is Border { Background: null, BorderThickness.Left: > 0 },
+                "keyboard focus outlines the shared title without filling it");
+
+            titleButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert(ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
+                "the shared title still opens About");
         }
         finally
         {
+            (ZoomAppField(app, "_aboutWindow") as AboutWindow)?.Close();
             (ZoomAppField(app, "_historyWindow") as HistoryWindow)?.Close();
             instance.SetValue(null, null);
             SetZoomAppField(app, "_historyService", null);

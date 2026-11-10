@@ -126,15 +126,27 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Button x:Name="TitleAboutButton" HorizontalAlignment="Left" VerticalAlignment="Center"
-                    Style="{x:Null}" Background="Transparent" Padding="0,4,6,4" Cursor="Hand"
+                    Style="{x:Null}" OverridesDefaultStyle="True" Padding="0,4,6,4" Cursor="Hand"
                     AutomationProperties.Name="{Binding Text, ElementName=TitleText}"
                     PreviewMouseLeftButtonDown="TitleAboutButton_PreviewMouseLeftButtonDown"
                     PreviewMouseLeftButtonUp="TitleAboutButton_PreviewMouseLeftButtonUp"
                     PreviewMouseMove="TitleAboutButton_PreviewMouseMove"
                     LostMouseCapture="TitleAboutButton_LostMouseCapture" Click="TitleAboutButton_Click">
+                <Button.FocusVisualStyle>
+                    <Style TargetType="Control">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Control">
+                                    <Border BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="1"
+                                            CornerRadius="4" IsHitTestVisible="False"/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.FocusVisualStyle>
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
