@@ -254,7 +254,7 @@ To try changes locally, choose **Exit** from the CyberSnap tray menu and run the
 ./scripts/Start-Dev.ps1
 ```
 
-This builds Debug incrementally and starts the executable directly in the tray with your usual settings. Direct startup preserves PerMonitorV2 on mixed-DPI setups where `dotnet run` can start the same executable with different DPI awareness.
+This builds Debug incrementally and opens the same executable in `bin/Debug` that `dotnet run` uses. Keeping its path lets Windows reuse your tray icon preference. Opening the executable directly preserves PerMonitorV2 on mixed-DPI setups.
 
 Use `./scripts/Start-Dev.ps1 -Packaged` to run the packaged Release x64 build with the bundled .NET Desktop Runtime and FFmpeg. Use `-PrepareOnly` to prepare that package without opening the app.
 

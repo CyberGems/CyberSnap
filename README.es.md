@@ -251,7 +251,7 @@ Para probar cambios locales, elige **Salir** en el menú de CyberSnap en la band
 ./scripts/Start-Dev.ps1
 ```
 
-Esto compila Debug de forma incremental y abre el ejecutable directamente en la bandeja con tu configuración habitual. El arranque directo conserva PerMonitorV2 en equipos con monitores de distintas escalas donde `dotnet run` puede iniciar el mismo ejecutable con un modo de DPI diferente.
+Esto compila Debug de forma incremental y abre el mismo ejecutable de `bin/Debug` que usa `dotnet run`. Al conservar su ruta, Windows puede reutilizar tu preferencia de visibilidad del icono en la bandeja. Abrir el ejecutable directamente conserva PerMonitorV2 en equipos con monitores de distintas escalas.
 
 Usa `./scripts/Start-Dev.ps1 -Packaged` para ejecutar la compilación Release x64 con .NET Desktop Runtime y FFmpeg incluidos. Usa `-PrepareOnly` para preparar ese paquete sin abrir la aplicación.
 
