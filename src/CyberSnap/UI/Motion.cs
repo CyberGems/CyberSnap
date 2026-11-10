@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 
 namespace CyberSnap.UI;
@@ -44,4 +45,20 @@ internal static class Motion
     {
         EasingFunction = Ease(easing ?? SmoothInOut)
     };
+
+    internal static void AnimateCaptureMarkHover(ScaleTransform mark, bool hovered)
+    {
+        double scale = hovered ? 1.04 : 1.0;
+        if (Disabled)
+        {
+            mark.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            mark.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            mark.ScaleX = mark.ScaleY = scale;
+            return;
+        }
+
+        var animation = To(scale, hovered ? 120 : 160, SmoothOut);
+        mark.BeginAnimation(ScaleTransform.ScaleXProperty, animation);
+        mark.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
+    }
 }

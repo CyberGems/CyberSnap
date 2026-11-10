@@ -31,7 +31,7 @@ public partial class CaptureWidgetWindow
         if (suppress)
         {
             _contextMenu?.Close();
-            if (_openToolTip is { } tip) tip.IsOpen = false;
+            DismissWidgetToolTip();
             _mouseInWindow = false;
             _hoverDelayTimer.Stop();
             _collapseTimer.Stop();

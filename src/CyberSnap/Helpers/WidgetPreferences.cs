@@ -5,7 +5,7 @@ namespace CyberSnap.Helpers;
 /// <summary>The widget's layout and activation preferences, independent of capture delivery.</summary>
 public readonly record struct WidgetPreferences(
     bool AlwaysOnTop, CaptureDockSide DockEdge, int MonitorIndex, double PositionOffset, int HoverDelayMs,
-    bool ShowCaptureModes, bool ShowGalleryEditor)
+    bool ShowCaptureModes, bool ShowRecording, bool ShowTools, bool ShowGalleryEditor)
 {
     public const int FollowActiveMonitor = -1;
     public const int FollowCursor = -2;
@@ -13,7 +13,7 @@ public readonly record struct WidgetPreferences(
     public static WidgetPreferences FromSettings(AppSettings settings) => new(
         settings.WidgetAlwaysOnTop, settings.WidgetDockEdge, settings.WidgetMonitorIndex,
         settings.WidgetDockPositionOffset, settings.WidgetHoverDelayMs, settings.WidgetShowCaptureModes,
-        settings.WidgetShowGalleryEditor);
+        settings.WidgetShowRecording, settings.WidgetShowTools, settings.WidgetShowGalleryEditor);
 
     public void ApplyTo(AppSettings settings)
     {
@@ -23,6 +23,8 @@ public readonly record struct WidgetPreferences(
         settings.WidgetDockPositionOffset = PositionOffset;
         settings.WidgetHoverDelayMs = HoverDelayMs;
         settings.WidgetShowCaptureModes = ShowCaptureModes;
+        settings.WidgetShowRecording = ShowRecording;
+        settings.WidgetShowTools = ShowTools;
         settings.WidgetShowGalleryEditor = ShowGalleryEditor;
     }
 }

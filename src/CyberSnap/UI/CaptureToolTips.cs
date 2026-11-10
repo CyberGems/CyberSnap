@@ -30,8 +30,8 @@ internal static class CaptureToolTips
             CaptureToolTipKind.More => ("More", "Adjust basic capture, recording, and tool options."),
             CaptureToolTipKind.Gallery => ("Gallery", "Browse and manage your captures"),
             CaptureToolTipKind.Editor => ("Annotations Editor", "Annotate an image before saving or sharing it."),
-            CaptureToolTipKind.Fullscreen => ("Fullscreen capture", "Capture the full screen without selecting an area."),
-            CaptureToolTipKind.Window => ("Active window", "Capture a window without the rest of the desktop."),
+            CaptureToolTipKind.Fullscreen => ("Fullscreen capture", "Capture all connected monitors in one image."),
+            CaptureToolTipKind.Window => ("Active window", "Capture the last active app window."),
             CaptureToolTipKind.Repeat => ("Repeat last area", "Take a new screenshot of the previously selected area."),
             CaptureToolTipKind.Panel => ("Panel options", "Choose which sections are visible and enable compact mode."),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))

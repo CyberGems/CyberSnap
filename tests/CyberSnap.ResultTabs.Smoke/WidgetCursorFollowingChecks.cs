@@ -120,6 +120,10 @@ internal static partial class Program
                     "the whole capture tile uses the tray-style hover surface in " + theme);
                 Render(widget, renders, "widget-capture-tile-" + theme + ".png");
             }
+            CheckCapturePanelHover(widget, button);
+            settings.Settings.WidgetShowCaptureModes = true;
+            widget.RefreshLayout();
+            CheckWidgetToolTipHandoff(widget);
         }
         finally
         {
@@ -128,6 +132,66 @@ internal static partial class Program
             Theme.SetMode(AppThemeMode.Dark);
         }
         string Here() => Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName;
+    }
+
+    private static void CheckCapturePanelHover(CaptureWidgetWindow widget, Button area)
+    {
+        var tray = new TrayContextMenuWindow(null!, Forms.Cursor.Position);
+        var motion = typeof(CaptureWidgetWindow).Assembly.GetType("CyberSnap.UI.Motion")!
+            .GetProperty("Disabled", BindingFlags.Static | BindingFlags.NonPublic)!;
+        bool originalDisabled = (bool)motion.GetValue(null)!;
+        try
+        {
+            Assert(ReferenceEquals(Element<Button>(widget, "VideoToolButton").Template, Element<Button>(tray, "VideoRecordBtn").Template)
+                && ReferenceEquals(Element<Button>(widget, "WidgetMoreButton").Template, Element<Button>(tray, "PanelMenuBtn").Template),
+                "the widget and tray share their action and header hover templates");
+            var widgetMark = (ScaleTransform)area.Template.FindName("CaptureMarkScale", area);
+            var trayMark = Element<ScaleTransform>(tray, "AreaMarkHoverScale");
+            var mouse = new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount);
+            foreach (bool disabled in new[] { false, true })
+            {
+                motion.SetValue(null, disabled);
+                Call(widget, "AnimateCaptureButton", true);
+                Call(tray, "AreaCapture_MouseEnter", tray, mouse);
+                AwaitCondition(() => IsScaled(1.04), "the two Area marks did not reach their shared 4% hover scale", 3000);
+                Call(widget, "AnimateCaptureButton", false);
+                Call(tray, "AreaCapture_MouseLeave", tray, mouse);
+                AwaitCondition(() => IsScaled(1), "the two Area marks did not return to their idle scale", 3000);
+            }
+            Console.WriteLine("PASS: both Area marks share a 4% hover grow and return, with animations on and off.");
+
+            bool IsScaled(double expected) => Math.Abs(widgetMark.ScaleX - expected) < 0.001
+                && Math.Abs(widgetMark.ScaleY - expected) < 0.001 && Math.Abs(trayMark.ScaleX - expected) < 0.001
+                && Math.Abs(trayMark.ScaleY - expected) < 0.001;
+        }
+        finally
+        {
+            motion.SetValue(null, originalDisabled);
+            tray.Close();
+        }
+    }
+
+    private static void CheckWidgetToolTipHandoff(CaptureWidgetWindow widget)
+    {
+        var area = Element<Button>(widget, "CaptureButton");
+        var window = Element<Button>(widget, "WindowModeButton");
+        var gallery = Element<Button>(widget, "GalleryShortcutButton");
+        var areaTip = (ToolTip)area.ToolTip;
+        var windowTip = (ToolTip)window.ToolTip;
+
+        Hover(gallery);
+        Pump();
+        Hover(area);
+        Assert(area.IsMouseOver, "the hover fixture enters Area from a different control");
+        AwaitCondition(() => areaTip.IsOpen, "Area did not show its hover tooltip after entering from Gallery", 3000);
+        Hover(window);
+        Assert(!areaTip.IsOpen, "moving directly to Window dismisses Area's tooltip");
+        AwaitCondition(() => windowTip.IsOpen, "Window did not show its own hover help", 3000);
+        Hover(gallery);
+        Assert(!windowTip.IsOpen && gallery.ToolTip is null,
+            "the previous tooltip also closes when hovering a labeled button without help");
+
+        static void Hover(Button button) => MovePickerPointer(button, new Point(button.ActualWidth / 2, button.ActualHeight / 2));
     }
 
     private static void CheckPausedCursorCrossings(CaptureWidgetWindow widget, Forms.Screen[] screens)

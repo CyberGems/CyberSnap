@@ -926,6 +926,12 @@ public partial class TrayContextMenuWindow : Window
         catch { }
     }
 
+    private void AreaCapture_MouseEnter(object sender, WpfMouseEventArgs e) =>
+        Motion.AnimateCaptureMarkHover(AreaMarkHoverScale, hovered: true);
+
+    private void AreaCapture_MouseLeave(object sender, WpfMouseEventArgs e) =>
+        Motion.AnimateCaptureMarkHover(AreaMarkHoverScale, hovered: false);
+
     private void AreaCapture_Click(object sender, RoutedEventArgs e)
     {
         try { CloseMenu(); _trayIcon.TriggerCapture(); }

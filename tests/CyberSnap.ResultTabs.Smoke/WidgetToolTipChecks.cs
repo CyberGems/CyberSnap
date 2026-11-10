@@ -42,7 +42,7 @@ internal static partial class Program
                     widget.PositionWindow(); Pump();
                     var owners = VisualDescendants(widget).OfType<Button>()
                         .Where(button => button.ToolTip is not null).ToArray();
-                    Assert(owners.Length == 12, "all nine tools, capture and header buttons are covered", false);
+                    Assert(owners.Length == 15, "the widget tooltips include brief help for its three labeled capture modes", false);
                     foreach (var owner in owners)
                     {
                         // Exercise WPF's real popup service, including the shared two-line template.
@@ -64,9 +64,13 @@ internal static partial class Program
                                 if (topmost) Render(tip, renders, "widget-pin-tooltip-" + language + ".png");
                             }
                         }
-                        else
+                        else if (owner.Name == "WidgetBrandingBtn")
                             Assert(Equals(tip.Content, language == "en" ? "About CyberSnap" : "Abrir Acerca de CyberSnap"),
                                 "About retains the agreed single-line tooltip", false);
+                        else
+                            Assert(Equals(tip.Content, System.Windows.Automation.AutomationProperties.GetHelpText(owner))
+                                && !Equals(tip.Content, System.Windows.Automation.AutomationProperties.GetName(owner)),
+                                "capture modes give context without repeating their visible labels", false);
                         Assert(IsWidgetToolTipAbove(tipHwnd, widgetHwnd), "the tooltip initially appears above its widget", false);
                         for (int tick = 0; tick < 3; tick++)
                         {
@@ -84,7 +88,21 @@ internal static partial class Program
                         widget.SyncTopmostFromSettings(); Pump();
                         Assert(tip.IsOpen && IsWidgetToolTipAbove(tipHwnd, widgetHwnd),
                             "restoring always-on-top keeps the open tooltip readable", false);
-                        CloseFixtureToolTip(tip, () => dismiss.Invoke(service, null));
+                        if (owner.Name == "CaptureButton")
+                        {
+                            // A neighbor can still be inside the framework tooltip's safe area.
+                            // Exercise our owner-leave handler before dismissing via the WPF service.
+                            Assert(ReferenceEquals(Field(widget, "_openToolTipOwner"), owner),
+                                "the widget tracks which control owns the visible tooltip", false);
+                            CloseFixtureToolTip(tip, () => owner.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, Environment.TickCount)
+                            {
+                                RoutedEvent = Mouse.MouseLeaveEvent
+                            }));
+                            Assert(Field(widget, "_openToolTip") is null,
+                                "leaving Area immediately dismisses its tooltip without requiring help on the next control");
+                            dismiss.Invoke(service, null);
+                        }
+                        else CloseFixtureToolTip(tip, () => dismiss.Invoke(service, null));
                         Assert(!tip.IsOpen, "the tooltip closes normally after reading", false);
                     }
                     settings.Settings.DefaultCaptureMode = CaptureMode.Center;
@@ -131,8 +149,9 @@ internal static partial class Program
         Assert(tip.ActualWidth <= 343 && tip.ActualWidth > 20 && tip.ActualHeight > 30,
             "the tooltip stays compact with room for both lines", false);
         var hwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
-        Assert(GetWindowRect(hwnd, out var bounds) && System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea.Contains(bounds.Rectangle),
-            "the complete tooltip stays inside the monitor's work area", false);
+        var work = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;
+        Assert(GetWindowRect(hwnd, out var bounds) && work.Contains(bounds.Rectangle),
+            $"the complete tooltip stays inside the monitor's work area ({content.Title}, bounds={bounds.Rectangle}, work={work}, cursor={System.Windows.Forms.Cursor.Position})", false);
     }
 
     private static void CheckPinToolTipText(ToolTip tip, string language)

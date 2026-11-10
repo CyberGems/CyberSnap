@@ -74,28 +74,8 @@
             <Setter Property="Height" Value="38"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="ui:PressFeedback.Enabled" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Template" Value="{StaticResource CapturePanelActionTemplate}"/>
         </Style>
 
         <!-- Compact header action (Settings beside the close button). -->
@@ -110,25 +90,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="ui:PressFeedback.Enabled" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Template" Value="{StaticResource CapturePanelHeaderTemplate}"/>
         </Style>
 
         <!-- Exit button style — chromeless at rest (icon is the only red element); hover/press
@@ -372,12 +334,16 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <!-- Area Capture -->
-                    <Button x:Name="AreaCaptureBtn" Grid.Column="0" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
+                    <Button x:Name="AreaCaptureBtn" Grid.Column="0" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click"
+                            MouseEnter="AreaCapture_MouseEnter" MouseLeave="AreaCapture_MouseLeave">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Grid Width="100" Height="100" Margin="0,0,0,8"
                                   RenderTransformOrigin="0.5,0.5">
                                 <Grid.RenderTransform>
-                                    <ScaleTransform ScaleX="0.85" ScaleY="0.85"/>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="0.85" ScaleY="0.85"/>
+                                        <ScaleTransform x:Name="AreaMarkHoverScale"/>
+                                    </TransformGroup>
                                 </Grid.RenderTransform>
                                 <!-- Reuse the widget's vector capture mark instead of scaling a bitmap. -->
                                 <Path x:Name="AreaCaptureRing"

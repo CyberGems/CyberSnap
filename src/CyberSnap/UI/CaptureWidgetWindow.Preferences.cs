@@ -42,6 +42,14 @@ public partial class CaptureWidgetWindow
         settings => settings.WidgetShowGalleryEditor,
         settings => settings.WidgetShowGalleryEditor = !settings.WidgetShowGalleryEditor);
 
+    private Forms.ToolStripMenuItem BuildWidgetRecordingItem() => BuildWidgetSectionItem("Recording",
+        settings => settings.WidgetShowRecording,
+        settings => settings.WidgetShowRecording = !settings.WidgetShowRecording);
+
+    private Forms.ToolStripMenuItem BuildWidgetToolsItem() => BuildWidgetSectionItem("Tools",
+        settings => settings.WidgetShowTools,
+        settings => settings.WidgetShowTools = !settings.WidgetShowTools);
+
     private Forms.ToolStripMenuItem BuildWidgetSectionItem(string label, Func<AppSettings, bool> isVisible, Action<AppSettings> toggle)
     {
         var item = WindowsMenuRenderer.Item(LocalizationService.Translate(_settings.InterfaceLanguage, label));

@@ -52,7 +52,7 @@ internal static partial class Program
             (float)(buttonEnd.X - buttonOrigin.X), (float)(buttonEnd.Y - buttonOrigin.Y));
         Assert(openMenu.Visible && GetField<bool>(widget, "_moreMenuOpen") && GetField<bool>(widget, "_contextMenuOpen"),
             $"More opens exactly one tracked menu ({language}, {settings.Settings.WidgetDockEdge}, closed={initialCloseReason})", false);
-        Assert(button.Background == (Brush)widget.FindResource("WidgetButtonHoverBg"),
+        Assert(button.Background == (Brush)widget.FindResource("ThemeTabHoverBrush"),
             "More keeps its highlighted background while the menu is open", false);
         Assert(!openMenu.Bounds.IntersectsWith(System.Drawing.Rectangle.Ceiling(buttonBounds))
             && Forms.Screen.FromRectangle(openMenu.Bounds).WorkingArea.Contains(openMenu.Bounds),

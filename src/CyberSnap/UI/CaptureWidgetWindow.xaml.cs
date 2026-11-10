@@ -57,8 +57,15 @@ public partial class CaptureWidgetWindow : Window
     // Layout constants
     private const double PanelWidth = 196;
     private const double BasePanelHeight = 332;
+    private const double ActionButtonHeight = 36;
+    private const double ActionButtonMargin = 3;
+    private const double ScrollingOnlyRowHeight = 32;
+    private const double ToolsBlockHeight = 99;
     private const double GalleryEditorBlockHeight = 40;
-    private double PanelHeight => BasePanelHeight + (_settings.WidgetShowGalleryEditor ? GalleryEditorBlockHeight : 0);
+    private double PanelHeight => BasePanelHeight
+        - (_settings.WidgetShowRecording ? 0 : ActionButtonHeight + 2 * ActionButtonMargin - ScrollingOnlyRowHeight)
+        - (_settings.WidgetShowTools ? 0 : ToolsBlockHeight)
+        + (_settings.WidgetShowGalleryEditor ? GalleryEditorBlockHeight : 0);
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
@@ -151,6 +158,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        DismissWidgetToolTip();
         SettingsService.AutoCopyPreferencesChanged -= OnDeliveryPreferencesChanged;
         SettingsService.SettingsChanged -= OnDeliveryPreferencesChanged;
         SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;
@@ -194,18 +202,6 @@ public partial class CaptureWidgetWindow : Window
             AssertToolTipTopmost();
         }
         catch { /* best-effort: watchdog retries */ }
-    }
-
-    private void WidgetToolTip_Opened(object sender, RoutedEventArgs e)
-    {
-        _openToolTip = (System.Windows.Controls.ToolTip)sender;
-        AssertToolTipTopmost();
-    }
-
-    private void WidgetToolTip_Closed(object sender, RoutedEventArgs e)
-    {
-        if (ReferenceEquals(_openToolTip, sender))
-            _openToolTip = null;
     }
 
     private void AssertToolTipTopmost()
@@ -308,6 +304,7 @@ public partial class CaptureWidgetWindow : Window
     private void ApplyTheme()
     {
         Theme.Refresh();
+        Theme.ApplyTo(Resources);
         
         // Match the contextual menu surface in grayscale while preserving the established
         // CyberSnap dark/light backgrounds.
@@ -317,29 +314,21 @@ public partial class CaptureWidgetWindow : Window
                 ? System.Windows.Media.Color.FromRgb(13, 15, 26)
                 : System.Windows.Media.Color.FromRgb(223, 226, 234);
         var accent = Theme.Accent;
-        var accentHover = Theme.IsGray ? System.Windows.Media.Color.FromRgb(214, 218, 224) : Theme.IsDark ? System.Windows.Media.Color.FromRgb(128, 255, 255) : System.Windows.Media.Color.FromRgb(50, 150, 240);
         var text = Theme.TextPrimary;
         var textMuted = Theme.TextSecondary;
         var border = Theme.IsGray ? System.Windows.Media.Color.FromArgb(32, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(32, 0, 255, 255) : System.Windows.Media.Color.FromArgb(22, 0, 0, 0);
         var borderActive = Theme.IsGray ? System.Windows.Media.Color.FromArgb(128, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(128, 0, 255, 255) : System.Windows.Media.Color.FromArgb(80, 0, 120, 215);
         var peekGripBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(38, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(38, 0, 255, 255) : System.Windows.Media.Color.FromArgb(38, 0, 120, 215);
-        var hoverBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(21, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(21, 0, 255, 255) : System.Windows.Media.Color.FromArgb(21, 0, 120, 215);
-        var pressedBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(48, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(48, 0, 255, 255) : System.Windows.Media.Color.FromArgb(48, 0, 120, 215);
 
         Resources["WidgetBg"] = new SolidColorBrush(bg);
         Resources["WidgetAccent"] = new SolidColorBrush(accent);
-        Resources["WidgetAccentHover"] = new SolidColorBrush(accentHover);
         Resources["WidgetText"] = new SolidColorBrush(text);
         Resources["WidgetTextMuted"] = new SolidColorBrush(textMuted);
         Resources["WidgetBorder"] = new SolidColorBrush(border);
         Resources["WidgetBorderActive"] = new SolidColorBrush(borderActive);
         Resources["WidgetSeparator"] = Theme.Brush(Theme.Separator);
         Resources["WidgetPeekGripBg"] = new SolidColorBrush(peekGripBg);
-        Resources["WidgetButtonHoverBg"] = new SolidColorBrush(hoverBg);
-        Resources["WidgetCaptureHoverBg"] = Theme.Brush(Theme.BgCard);
-        Resources["WidgetButtonPressedBg"] = new SolidColorBrush(pressedBg);
         Resources["WidgetAccentColor"] = accent;
-        Resources["WidgetGlowOpacity"] = Theme.IsDark ? 0.6 : 0.35;
     }
 
     private ImageSource? _widgetLogoColor;
@@ -384,8 +373,7 @@ public partial class CaptureWidgetWindow : Window
         // Idle keeps 40% of the logo's color instead of the old full grayscale.
         _widgetLogoIdle = ThemedLogo.SquareSaturated(IconPx(11), 0.4);
         WidgetLogoImage.Source = _widgetLogoIdle;
-        WidgetLogoImage.Opacity = 0.7;
-        WidgetBrandText.Opacity = 0.65;
+        WidgetLogoImage.Opacity = 0.75;
         WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetTextMuted");
     }
 
@@ -427,6 +415,11 @@ public partial class CaptureWidgetWindow : Window
         CaptureModeButtons.Visibility = AreaModeCaption.Visibility = _settings.WidgetShowCaptureModes
             ? Visibility.Visible : Visibility.Collapsed;
         CaptureButton.Padding = new Thickness(0, 0, 0, _settings.WidgetShowCaptureModes ? 20 : 0);
+        VideoToolButton.Visibility = GifToolButton.Visibility = _settings.WidgetShowRecording ? Visibility.Visible : Visibility.Collapsed;
+        Grid.SetColumn(ScrollToolButton, _settings.WidgetShowRecording ? 0 : 1);
+        ScrollToolButton.Height = _settings.WidgetShowRecording ? ActionButtonHeight : ScrollingOnlyRowHeight;
+        ScrollToolButton.Margin = new Thickness(_settings.WidgetShowRecording ? ActionButtonMargin : 0);
+        ToolsBlock.Visibility = _settings.WidgetShowTools ? Visibility.Visible : Visibility.Collapsed;
         GalleryEditorBlock.Visibility = _settings.WidgetShowGalleryEditor ? Visibility.Visible : Visibility.Collapsed;
 
         // Apply scaling
@@ -484,64 +477,16 @@ public partial class CaptureWidgetWindow : Window
         PeekGrip.Visibility = _isExpanded ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private const int WidgetCapturePopMs = 120;
-    private const int WidgetCaptureSettleMs = 180;
-
     private void CaptureButton_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) =>
         AnimateCaptureButton(hovered: true);
 
     private void CaptureButton_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) =>
         AnimateCaptureButton(hovered: false);
 
-    /// <summary>
-    /// Hover pop for the big capture mark (ring + center + glow), Motion-aware.
-    /// </summary>
     private void AnimateCaptureButton(bool hovered)
     {
-        try
-        {
-            CaptureButton.ApplyTemplate();
-            var ring = CaptureButton.Template.FindName("RingScale", CaptureButton) as ScaleTransform;
-            var center = CaptureButton.Template.FindName("CenterScale", CaptureButton) as ScaleTransform;
-            var glow = CaptureButton.Template.FindName("CenterGlow", CaptureButton) as System.Windows.Media.Effects.DropShadowEffect;
-            if (ring is null || center is null)
-                return;
-
-            double ringTarget = hovered ? 1.06 : 1.0;
-            double centerTarget = hovered ? 1.30 : 1.0;
-            double blurTarget = hovered ? 22.0 : 10.0;
-            double glowTarget = hovered ? 1.0 : 0.8;
-            int ms = hovered ? WidgetCapturePopMs : WidgetCaptureSettleMs;
-
-            if (Motion.Disabled)
-            {
-                ring.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-                ring.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-                center.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-                center.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-                ring.ScaleX = ring.ScaleY = ringTarget;
-                center.ScaleX = center.ScaleY = centerTarget;
-                if (glow is not null)
-                {
-                    glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, null);
-                    glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
-                    glow.BlurRadius = blurTarget;
-                    glow.Opacity = glowTarget;
-                }
-                return;
-            }
-
-            ring.BeginAnimation(ScaleTransform.ScaleXProperty, Motion.To(ringTarget, ms, Motion.SmoothOut));
-            ring.BeginAnimation(ScaleTransform.ScaleYProperty, Motion.To(ringTarget, ms, Motion.SmoothOut));
-            center.BeginAnimation(ScaleTransform.ScaleXProperty, Motion.To(centerTarget, ms, Motion.SmoothOut));
-            center.BeginAnimation(ScaleTransform.ScaleYProperty, Motion.To(centerTarget, ms, Motion.SmoothOut));
-            if (glow is not null)
-            {
-                glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, Motion.To(blurTarget, ms, Motion.SmoothOut));
-                glow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, Motion.To(glowTarget, ms, Motion.SmoothOut));
-            }
-        }
-        catch { /* hover pop is decorative; ring highlight still applies via template */ }
+        if (CaptureButton.Template.FindName("CaptureMarkScale", CaptureButton) is ScaleTransform mark)
+            Motion.AnimateCaptureMarkHover(mark, hovered);
     }
 
     /// <summary>
@@ -934,6 +879,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        DismissWidgetToolTip();
         _mouseInWindow = false;
         ActivatorSurface_MouseLeave(sender, e);
         
@@ -1048,6 +994,7 @@ public partial class CaptureWidgetWindow : Window
     private void CollapseWidget()
     {
         if (!_isExpanded) return;
+        DismissWidgetToolTip();
 
         _isExpanded = false;
         MainPanelBorder.Visibility = Visibility.Visible;
@@ -1066,6 +1013,7 @@ public partial class CaptureWidgetWindow : Window
 
     public void CollapseImmediately()
     {
+        DismissWidgetToolTip();
         _isExpanded = false;
         MainPanelBorder.Visibility = Visibility.Visible;
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Hand;
@@ -1281,6 +1229,8 @@ public partial class CaptureWidgetWindow : Window
 
         menu.Items.Add(BuildWidgetAlwaysOnTopItem());
         menu.Items.Add(BuildWidgetCaptureModesItem());
+        menu.Items.Add(BuildWidgetRecordingItem());
+        menu.Items.Add(BuildWidgetToolsItem());
         menu.Items.Add(BuildWidgetGalleryEditorItem());
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
@@ -1310,6 +1260,8 @@ public partial class CaptureWidgetWindow : Window
         widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
         widgetMenu.DropDownItems.Add(BuildWidgetAlwaysOnTopItem());
         widgetMenu.DropDownItems.Add(BuildWidgetCaptureModesItem());
+        widgetMenu.DropDownItems.Add(BuildWidgetRecordingItem());
+        widgetMenu.DropDownItems.Add(BuildWidgetToolsItem());
         widgetMenu.DropDownItems.Add(BuildWidgetGalleryEditorItem());
         widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         widgetMenu.DropDownItems.Add(BuildDisableItem());
@@ -1534,6 +1486,7 @@ public partial class CaptureWidgetWindow : Window
     // flip submenus inward near a screen edge, and force foreground so click-away dismissal works.
     private void ShowThemedMenu(System.Windows.Forms.ContextMenuStrip menu, bool fromMoreButton = false)
     {
+        DismissWidgetToolTip();
         var previousMenu = _contextMenu;
         previousMenu?.Close();
         // Close has finished processing here. Release the previous native popup
@@ -1581,7 +1534,7 @@ public partial class CaptureWidgetWindow : Window
     {
         _moreMenuOpen = open;
         if (open)
-            WidgetMoreButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "WidgetButtonHoverBg");
+            WidgetMoreButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "ThemeTabHoverBrush");
         else
             WidgetMoreButton.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
     }
@@ -1685,7 +1638,6 @@ public partial class CaptureWidgetWindow : Window
             WidgetLogoImage.Source = _widgetLogoColor;
         WidgetLogoImage.Opacity = 1.0;
 
-        WidgetBrandText.Opacity = 1.0;
         WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetText");
     }
 
@@ -1693,9 +1645,7 @@ public partial class CaptureWidgetWindow : Window
     {
         if (_widgetLogoIdle != null)
             WidgetLogoImage.Source = _widgetLogoIdle;
-        WidgetLogoImage.Opacity = 0.7;
-
-        WidgetBrandText.Opacity = 0.65;
+        WidgetLogoImage.Opacity = 0.75;
         WidgetBrandText.SetResourceReference(TextBlock.ForegroundProperty, "WidgetTextMuted");
     }
 
