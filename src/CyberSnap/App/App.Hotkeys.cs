@@ -155,9 +155,9 @@ public partial class App
     }
 
     private void OnActiveWindowHotkeyPressed()
-        => OnActiveWindowHotkeyPressed(IntPtr.Zero);
+        => OnActiveWindowHotkeyPressed(null);
 
-    private void OnActiveWindowHotkeyPressed(IntPtr preferredWindow)
+    private void OnActiveWindowHotkeyPressed(IntPtr? preferredWindow)
     {
         if (RegionOverlayForm.TryRunCurrentOverlayCaptureAction("_activeWindow")) return;
         if (!TryClaimCaptureSlotAllowingPreviewReplace()) return;

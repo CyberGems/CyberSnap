@@ -465,13 +465,38 @@ public static class WindowDetector
         return largestInset >= 12 ? rawRect : dwmRect;
     }
 
-    private static Rectangle GetSnappableBounds(IntPtr hwnd)
+    internal static Rectangle GetSnappableBounds(IntPtr hwnd)
     {
         var dwmRect = Dwm.GetExtendedFrameBounds(hwnd);
         if (!User32.GetWindowRect(hwnd, out var rawRect))
             return dwmRect;
 
         return ChoosePreferredBounds(dwmRect, rawRect.ToRectangle());
+    }
+
+    internal static Rectangle GetTrayCaptureBounds(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || IsIgnoredWindowHandle(hwnd) || !User32.IsWindowVisible(hwnd)
+            || User32.IsIconic(hwnd) || Dwm.IsWindowCloaked(hwnd))
+            return Rectangle.Empty;
+
+        string windowClass = GetClassName(hwnd);
+        // Taskbars can be snapped deliberately in the overlay. They and their popups
+        // must never replace the last application window when opening the tray menu.
+        if (IsTaskbarClass(windowClass) || windowClass is "SHELLDLL_DefView" or "TaskListThumbnailWnd"
+            or "TaskSwitcherWnd" or "MultitaskingViewFrame" or "TopLevelWindowForOverflowXamlIsland")
+            return Rectangle.Empty;
+
+        var bounds = GetSnappableBounds(hwnd);
+        if (bounds.Width <= 2 || bounds.Height <= 2)
+            return Rectangle.Empty;
+
+        int style = User32.GetWindowLongA(hwnd, User32.GWL_STYLE);
+        int exStyle = User32.GetWindowLongA(hwnd, User32.GWL_EXSTYLE);
+        string title = GetWindowTitle(hwnd);
+        return !IsLikelyTaskbarChrome(exStyle, title, bounds)
+            && IsSnappableWindowCandidate(style, exStyle, windowClass, title, bounds)
+            ? bounds : Rectangle.Empty;
     }
 
     private static Rectangle GetControlRectAtPoint(IntPtr parentHwnd, Point screenPoint, Rectangle virtualBounds)

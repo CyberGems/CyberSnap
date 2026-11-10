@@ -540,37 +540,25 @@ public partial class App
         }
     }
 
-    private void CaptureActiveWindowNow(IntPtr preferredWindow = default)
+    private void CaptureActiveWindowNow(IntPtr? preferredWindow = null)
     {
         Bitmap? bmp = null;
         try
         {
-            (bmp, var bounds) = ScreenCapture.CaptureAllScreens(_settingsService!.Settings.ShowCursor);
-            // The tray menu takes focus while it is open, so use the window that was
-            // foreground before the menu appeared instead of capturing the taskbar/menu.
-            var hwnd = preferredWindow != IntPtr.Zero && Native.User32.IsWindow(preferredWindow)
-                ? preferredWindow
-                : Native.User32.GetForegroundWindow();
-            if (hwnd == IntPtr.Zero)
-            {
-                bmp.Dispose();
-                ResetCapturing();
-                ToastWindow.ShowError("Capture error", "Couldn't find the active window. Focus a visible window and try again.");
-                return;
-            }
-
-            var dwmRect = Native.Dwm.GetExtendedFrameBounds(hwnd);
-            var windowRect = Native.User32.GetWindowRect(hwnd, out var rawRect)
-                ? WindowDetector.ChoosePreferredBounds(dwmRect, rawRect.ToRectangle())
-                : dwmRect;
+            // A tray request carries its own target, even if that target no longer exists.
+            var hwnd = preferredWindow ?? Native.User32.GetForegroundWindow();
+            var windowRect = preferredWindow.HasValue
+                ? WindowDetector.GetTrayCaptureBounds(hwnd)
+                : WindowDetector.GetSnappableBounds(hwnd);
             if (windowRect.Width <= 1 || windowRect.Height <= 1)
             {
-                bmp.Dispose();
                 ResetCapturing();
-                ToastWindow.ShowError("Capture error", "Couldn't find the active window. Focus a visible window and try again.");
+                ToastWindow.ShowError(LocalizationService.Translate("Capture error"),
+                    LocalizationService.Translate("Couldn't find the active window. Focus a visible window and try again."));
                 return;
             }
 
+            (bmp, var bounds) = ScreenCapture.CaptureAllScreens(_settingsService!.Settings.ShowCursor);
             var crop = new Rectangle(windowRect.Left - bounds.X, windowRect.Top - bounds.Y, windowRect.Width, windowRect.Height);
             crop.Intersect(new Rectangle(System.Drawing.Point.Empty, bmp.Size));
             if (crop.Width <= 1 || crop.Height <= 1)

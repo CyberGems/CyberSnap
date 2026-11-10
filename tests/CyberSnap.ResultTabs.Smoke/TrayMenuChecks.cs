@@ -36,9 +36,13 @@ internal static partial class Program
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hwnd, out TrayRect rect);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "FindWindowW")]
+    private static extern IntPtr FindTrayTestWindow(string className, string? windowName);
+
     private static void CheckTrayMenuMonitors(string? renderDirectory = null)
     {
         CheckSimulatedTrayPlacement();
+        CheckTrayWindowCaptureTarget();
         string originalLanguage = LocalizationService.CurrentLanguageSetting;
         try
         {
@@ -126,6 +130,35 @@ internal static partial class Program
             }
         }
         finally { LocalizationService.ApplyCurrentCulture(originalLanguage); }
+    }
+
+    private static void CheckTrayWindowCaptureTarget()
+    {
+        using var tray = new CyberSnap.UI.TrayIcon();
+        var fixture = new Window { Title = "Tray capture fixture", Width = 320, Height = 200 };
+        var detector = typeof(CyberSnap.Capture.WindowDetector).GetMethod("GetTrayCaptureBounds",
+            BindingFlags.Static | BindingFlags.NonPublic)!;
+        Drawing.Rectangle Bounds(IntPtr hwnd) => (Drawing.Rectangle)detector.Invoke(null, [hwnd])!;
+        IntPtr target;
+        try
+        {
+            fixture.Show();
+            target = new WindowInteropHelper(fixture).Handle;
+            fixture.Activate();
+            AwaitCondition(() => (IntPtr)Field(tray, "_lastCaptureWindow") == target,
+                "the foreground hook observes activation of a real application window", 5000);
+
+            var taskbar = FindTrayTestWindow("Shell_TrayWnd", null);
+            Assert(taskbar != IntPtr.Zero && Bounds(taskbar).IsEmpty,
+                "the actual Windows taskbar is excluded from tray window capture");
+            Assert((IntPtr)Call(tray, "ResolveCaptureTargetBeforeMenu", taskbar)! == target,
+                "taskbar focus before the tray menu preserves the preceding application window");
+
+            fixture.WindowState = WindowState.Minimized;
+            Assert(Bounds(target).IsEmpty, "a target minimized before capture is rejected");
+        }
+        finally { fixture.Close(); }
+        Assert(Bounds(target).IsEmpty, "a target closed before capture is rejected");
     }
 
     private static void ChangeTrayDpi(Window menu, double scale)

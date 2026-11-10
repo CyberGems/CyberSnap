@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
@@ -24,6 +25,9 @@ public sealed class TrayIcon : IDisposable
     private bool _blinkLedVisible = true;
     private DispatcherTimer? _recordingBlinkTimer;
     private TrayContextMenuWindow? _activeWpfMenu;
+    private readonly Native.User32.WinEventProc _foregroundChanged;
+    private IntPtr _foregroundHook;
+    private IntPtr _lastCaptureWindow;
     private IntPtr _foregroundWindowBeforeMenu;
 
     public event Action? OnCapture;
@@ -92,6 +96,18 @@ public sealed class TrayIcon : IDisposable
 
         _menu = CreateThemedMenu();
         _notifyIcon.ContextMenuStrip = null; // Use custom WPF menu instead
+
+        _foregroundChanged = (_, _, hwnd, _, _, _, _) =>
+        {
+            try { RememberCaptureWindow(hwnd); }
+            catch (Exception ex) { AppDiagnostics.LogWarning("tray.foreground-window", ex.Message, ex); }
+        };
+        _foregroundHook = Native.User32.SetWinEventHook(Native.User32.EVENT_SYSTEM_FOREGROUND,
+            Native.User32.EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _foregroundChanged, 0, 0,
+            Native.User32.WINEVENT_OUTOFCONTEXT);
+        if (_foregroundHook == IntPtr.Zero)
+            AppDiagnostics.LogWarning("tray.foreground-hook", "Could not observe foreground-window changes.");
+        RememberCaptureWindow(Native.User32.GetForegroundWindow());
     }
 
     public void RefreshTooltip()
@@ -339,10 +355,27 @@ public sealed class TrayIcon : IDisposable
         return parts.ToString();
     }
 
+    private void RememberCaptureWindow(IntPtr hwnd)
+    {
+        if (_activeWpfMenu is { IsVisible: true } menu
+            && new System.Windows.Interop.WindowInteropHelper(menu).Handle == hwnd)
+            return;
+
+        if (!WindowDetector.GetTrayCaptureBounds(hwnd).IsEmpty)
+            _lastCaptureWindow = hwnd;
+    }
+
+    private IntPtr ResolveCaptureTargetBeforeMenu(IntPtr foreground)
+    {
+        RememberCaptureWindow(foreground);
+        return WindowDetector.GetTrayCaptureBounds(_lastCaptureWindow).IsEmpty ? IntPtr.Zero : _lastCaptureWindow;
+    }
+
     private void ShowMenu()
     {
         try
         {
+            _foregroundWindowBeforeMenu = ResolveCaptureTargetBeforeMenu(Native.User32.GetForegroundWindow());
             try
             {
                 _activeWpfMenu?.Close();
@@ -350,7 +383,6 @@ public sealed class TrayIcon : IDisposable
             catch { }
 
             // Capture physical cursor position immediately upon tray click
-            _foregroundWindowBeforeMenu = Native.User32.GetForegroundWindow();
             var clickPoint = System.Windows.Forms.Cursor.Position;
 
             _activeWpfMenu = new TrayContextMenuWindow(this, clickPoint);
@@ -624,6 +656,11 @@ public sealed class TrayIcon : IDisposable
 
     public void Dispose()
     {
+        if (_foregroundHook != IntPtr.Zero)
+        {
+            Native.User32.UnhookWinEvent(_foregroundHook);
+            _foregroundHook = IntPtr.Zero;
+        }
         StopRecordingBlink();
         if (_recordingBlinkTimer != null)
         {

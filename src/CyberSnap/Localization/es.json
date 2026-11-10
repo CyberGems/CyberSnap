@@ -1069,6 +1069,7 @@
   "Let CyberSnap reassign hotkeys already in use by another tool.": "Permite que CyberSnap reasigne atajos ya usados por otra herramienta.",
   "{0} — already in use by another app": "{0} — ya está en uso por otra aplicación",
   "Capture error": "Error de captura",
+  "Couldn't find the active window. Focus a visible window and try again.": "No se encontró la ventana activa. Activa una ventana visible y vuelve a intentarlo.",
   "Recording error": "Error de grabación",
   "Scroll capture error": "Error de captura con desplazamiento",
   "OCR error": "Error de OCR",

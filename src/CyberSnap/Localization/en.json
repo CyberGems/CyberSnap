@@ -852,6 +852,7 @@
   "Let CyberSnap reassign hotkeys already in use by another tool.": "Let CyberSnap reassign hotkeys already in use by another tool.",
   "{0} — already in use by another app": "{0} — already in use by another app",
   "Capture error": "Capture error",
+  "Couldn't find the active window. Focus a visible window and try again.": "Couldn't find the active window. Focus a visible window and try again.",
   "Recording error": "Recording error",
   "Scroll capture error": "Scroll capture error",
   "OCR error": "OCR error",
