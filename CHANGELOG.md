@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.24.2] - 2026-11-09
+
+### Fixed
+
+- Position notifications from the first display using the target monitor's work area in physical pixels.
+- Keep Settings and Gallery centered on the monitor where they were opened, even while layout adapts to its DPI.
+- Prevent partial uninstalls while CyberSnap is running by prompting the user to close it before removing files.
+- Preserve both FFmpeg executables when copying an installation payload.
+
+### Improved
+
+- Align update actions to the right in About, with **Update now** last.
+- Use a softer hover for interactive window titles, with a transparent background at rest.
+- Refresh the installer header and sidebar with the current CyberSnap artwork.
+- Launch the standard Debug executable directly for faster local UI checks with the same per-monitor DPI behavior.
+
 ## [1.24.1] - 2026-11-08
 
 ### Added
@@ -50,5 +66,6 @@
 
 Earlier versions are documented in the [GitHub release history](https://github.com/CyberGems/CyberSnap/releases).
 
+[1.24.2]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.24.2
 [1.24.1]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.24.1
 [1.23.0]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.23.0
