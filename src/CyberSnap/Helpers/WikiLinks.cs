@@ -14,6 +14,7 @@ public static class WikiLinks
     // Page names must match the wiki files in docs/wiki exactly.
     public const string HomePage = "Home";
     public const string CapturePage = "Capture";
+    public const string CaptureWidgetPage = "Capture-Widget";
     public const string CapturePreviewPage = "Capture-Preview";
     public const string AnnotationEditorPage = "Annotation-Editor";
     public const string ScreenRecordingPage = "Screen-Recording";

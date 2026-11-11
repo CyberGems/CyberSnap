@@ -1266,11 +1266,13 @@ public partial class CaptureWidgetWindow : Window
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
-        // Open the annotation editor directly from the widget
-        var editorItem = Helpers.WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Annotations Editor..."), iconId: "compose");
-        editorItem.Click += (_, _) => OpenWidgetEditor();
-        menu.Items.Add(editorItem);
+        var achievementsItem = Helpers.WindowsMenuRenderer.Item("Achievements", iconId: "trophy");
+        achievementsItem.Click += (_, _) =>
+        {
+            CollapseWidget();
+            ((App)System.Windows.Application.Current).ShowAchievements();
+        };
+        menu.Items.Add(achievementsItem);
 
         // Jump straight to the widget's section in the Config window.
         var settingsItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
@@ -1284,13 +1286,12 @@ public partial class CaptureWidgetWindow : Window
         // ── Help submenu: wiki / homepage / updates / about ──
         var helpSubmenu = BuildLazyWidgetSubmenu("Help", "question", helpSubmenu =>
         {
-            var wikiItem = Helpers.WindowsMenuRenderer.Item(
-                LocalizationService.Translate("Wiki: Capture..."), iconId: "question");
-            wikiItem.ToolTipText = LocalizationService.Translate("Open the Capture page in the CyberSnap wiki.");
+            var wikiItem = Helpers.WindowsMenuRenderer.Item("Widget guide", iconId: "question");
             wikiItem.Click += (s, ev) =>
             {
                 CollapseWidget();
-                WikiLinks.Open(WikiLinks.CapturePage);
+                var language = LocalizationService.ResolveLanguageCode(_settings.InterfaceLanguage);
+                WikiLinks.Open(language == "es" ? WikiLinks.CaptureWidgetPage + "-es" : WikiLinks.CaptureWidgetPage);
             };
 
             var homepageItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("CyberGems Website..."), iconId: "home");

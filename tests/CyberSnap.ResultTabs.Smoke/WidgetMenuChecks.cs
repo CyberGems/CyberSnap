@@ -20,7 +20,7 @@ internal static partial class Program
         using (var menu = (Forms.ContextMenuStrip)Call(widget, "BuildMoreMenu")!)
         {
             Assert(menu.Items.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
-                new[] { "Widget", "Image capture", "Scrolling capture", "Video (MP4)", "GIF", "OCR", "Color picker", "QR and Barcodes", "Annotations Editor...", "Configuration...", "Help" }.Select(Tr)),
+                new[] { "Widget", "Image capture", "Scrolling capture", "Video (MP4)", "GIF", "OCR", "Color picker", "QR and Barcodes", "Achievements", "Configuration...", "Help" }.Select(Tr)),
                 "widget More groups widget options first and image capture second in " + language, false);
             Assert(menu.Items[1] is Forms.ToolStripSeparator && menu.Items[9] is Forms.ToolStripSeparator,
                 "Widget, capture modes and application commands are separated", false);
