@@ -48,6 +48,7 @@ internal static partial class Program
                 Pump();
                 using var more = (Forms.ContextMenuStrip)Call(widget, "BuildMoreMenu")!;
                 var options = (Forms.ToolStripMenuItem)more.Items[0];
+                PrepareWidgetSubmenu(options);
                 Forms.ToolStripMenuItem Find(string key) => options.DropDownItems.OfType<Forms.ToolStripMenuItem>()
                     .Single(item => item.Text == LocalizationService.Translate(language, key));
                 var position = Find("Position");
@@ -60,6 +61,9 @@ internal static partial class Program
                 var screen = options.DropDownItems.OfType<Forms.ToolStripMenuItem>()
                     .SingleOrDefault(item => item.Text == LocalizationService.Translate(language, "Screen"));
                 int screenCount = Forms.Screen.AllScreens.Length;
+                PrepareWidgetSubmenu(position);
+                PrepareWidgetSubmenu(delay);
+                if (screen is not null) PrepareWidgetSubmenu(screen);
                 string[] edgeLabels = ["Top", "Bottom", "Left", "Right"];
                 int[] delays = [0, 100, 250, 500, 1000];
 

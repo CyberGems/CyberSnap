@@ -19,15 +19,17 @@ public partial class CaptureWidgetWindow
             AutoCopyKind.Scan => "scan",
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
-        var menu = WindowsMenuRenderer.Submenu(LocalizationService.Translate(label), showImages: true, iconId: iconId);
-        AddDeliveryOptions(menu, kind);
-        if (kind is AutoCopyKind.Video or AutoCopyKind.Gif)
+        return BuildLazyWidgetSubmenu(label, iconId, menu =>
         {
-            menu.DropDownItems.Add(new Forms.ToolStripSeparator());
-            menu.DropDownItems.Add(BuildCursorCaptureToggle(kind));
-        }
-        WindowsMenuRenderer.NormalizeDropDownWidths(menu, minWidth: 240);
-        return menu;
+            _settingsService.RefreshResultDeliveryPreferences();
+            _settingsService.RefreshCursorCapturePreferences();
+            AddDeliveryOptions(menu, kind);
+            if (kind is AutoCopyKind.Video or AutoCopyKind.Gif)
+            {
+                menu.DropDownItems.Add(new Forms.ToolStripSeparator());
+                menu.DropDownItems.Add(BuildCursorCaptureToggle(kind));
+            }
+        });
     }
 
     private void AddDeliveryOptions(Forms.ToolStripMenuItem menu, AutoCopyKind kind)

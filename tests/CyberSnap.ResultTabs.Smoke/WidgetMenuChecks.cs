@@ -9,6 +9,10 @@ using Forms = System.Windows.Forms;
 
 internal static partial class Program
 {
+    // Exercise the opening phase without a native popup for menu-content checks.
+    private static void PrepareWidgetSubmenu(Forms.ToolStripMenuItem item) =>
+        Call(item, "OnDropDownShow", EventArgs.Empty);
+
     private static void CheckWidgetMenu(CaptureWidgetWindow widget, SettingsService settings, string? renderDirectory)
     {
         string language = settings.Settings.InterfaceLanguage;
@@ -21,11 +25,13 @@ internal static partial class Program
             Assert(menu.Items[1] is Forms.ToolStripSeparator && menu.Items[9] is Forms.ToolStripSeparator,
                 "Widget, capture modes and application commands are separated", false);
             var widgetOptions = (Forms.ToolStripMenuItem)menu.Items[0];
+            PrepareWidgetSubmenu(widgetOptions);
             Assert(menu.ShowImageMargin && menu.Items.OfType<Forms.ToolStripMenuItem>()
                 .Concat(widgetOptions.DropDownItems.OfType<Forms.ToolStripMenuItem>().Where(item => item.HasDropDownItems))
                 .All(item => item.Image is not null && item.ImageScaling == Forms.ToolStripItemImageScaling.None),
                 "every widget More entry and Widget submenu has its own unscaled icon", false);
             var capture = (Forms.ToolStripMenuItem)menu.Items[2];
+            PrepareWidgetSubmenu(capture);
             Assert(capture.DropDownItems.OfType<Forms.ToolStripMenuItem>().Select(item => item.Text).SequenceEqual(
                 new[] { "Auto-copy", "Show preview after capture", "Capture cursor", "Show magnifier", "Show selection size", "Show crosshair guides", "Detect windows" }.Select(Tr)),
                 "image capture submenu contains delivery choices and all five localized capture options", false);

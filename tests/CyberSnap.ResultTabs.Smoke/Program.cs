@@ -194,6 +194,17 @@ internal static partial class Program
                 Console.WriteLine($"PASS: {_checks} unified hotkey and toolbar keyboard checks.");
                 return 0;
             }
+            if (args.Contains("--widget-more-timings-only"))
+            {
+                MeasureWidgetMoreMenu(settings);
+                return 0;
+            }
+            if (args.Contains("--widget-lazy-menus-only"))
+            {
+                CheckWidgetLazyMenus(settings);
+                Console.WriteLine($"PASS: {_checks} lazy widget submenu checks.");
+                return 0;
+            }
             if (args.Contains("--widget-tooltips-only"))
             {
                 CheckWidgetToolTips(settings, args.FirstOrDefault(a => !a.StartsWith("--")));

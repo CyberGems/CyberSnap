@@ -128,6 +128,7 @@ internal static partial class Program
                         if (!command.HasDropDownItems) continue;
                         command.Select();
                         command.ShowDropDown();
+                        KeepVisibleForMeasurement(command.DropDown);
                         Pump();
                         Inspect(command.DropDown, path + "/" + command.Text);
                         command.HideDropDown();

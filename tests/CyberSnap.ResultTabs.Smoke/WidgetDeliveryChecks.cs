@@ -46,8 +46,13 @@ internal static partial class Program
         settings.OpenInSystemViewerAfterCapture, settings.AutoShareAfterCapture, settings.SaveVideoToFile,
         settings.SaveGifToFile, settings.ShowVideoRecordingNotification, settings.ShowGifRecordingNotification);
 
-    private static Forms.ToolStripMenuItem WidgetModeMenu(Forms.ContextMenuStrip menu, string language, AutoCopyKind kind) =>
-        menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == LocalizationService.Translate(language, WidgetModeLabels[kind]));
+    private static Forms.ToolStripMenuItem WidgetModeMenu(Forms.ContextMenuStrip menu, string language, AutoCopyKind kind)
+    {
+        var item = menu.Items.OfType<Forms.ToolStripMenuItem>()
+            .Single(item => item.Text == LocalizationService.Translate(language, WidgetModeLabels[kind]));
+        PrepareWidgetSubmenu(item);
+        return item;
+    }
 
     private static void ClickWidgetDelivery(CaptureWidgetWindow widget, string language, AutoCopyKind kind, int option)
     {

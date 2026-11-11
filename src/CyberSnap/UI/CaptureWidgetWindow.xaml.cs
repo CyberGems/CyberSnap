@@ -1246,27 +1246,26 @@ public partial class CaptureWidgetWindow : Window
     // More menu: widget options, delivery by mode, editor, configuration and help.
     private System.Windows.Forms.ContextMenuStrip BuildMoreMenu()
     {
-        _settingsService.RefreshResultDeliveryPreferences();
-        _settingsService.RefreshCursorCapturePreferences();
-        _settingsService.RefreshWidgetPreferences();
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
         // "Widget" submenu mirrors the right-click context menu options.
-        var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"), showImages: true, iconId: "activeWindow");
-        widgetMenu.DropDownItems.Add(BuildPositionSubmenu());
+        var widgetMenu = BuildLazyWidgetSubmenu("Widget", "activeWindow", widgetMenu =>
+        {
+            _settingsService.RefreshWidgetPreferences();
+            widgetMenu.DropDownItems.Add(BuildPositionSubmenu());
 
-        var screenMenu = BuildScreenSubmenu();
-        if (screenMenu != null)
-            widgetMenu.DropDownItems.Add(screenMenu);
-        widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
-        widgetMenu.DropDownItems.Add(BuildWidgetAlwaysOnTopItem());
-        widgetMenu.DropDownItems.Add(BuildWidgetCaptureModesItem());
-        widgetMenu.DropDownItems.Add(BuildWidgetRecordingItem());
-        widgetMenu.DropDownItems.Add(BuildWidgetToolsItem());
-        widgetMenu.DropDownItems.Add(BuildWidgetGalleryEditorItem());
-        widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
-        widgetMenu.DropDownItems.Add(BuildDisableItem());
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
+            var screenMenu = BuildScreenSubmenu();
+            if (screenMenu != null)
+                widgetMenu.DropDownItems.Add(screenMenu);
+            widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
+            widgetMenu.DropDownItems.Add(BuildWidgetAlwaysOnTopItem());
+            widgetMenu.DropDownItems.Add(BuildWidgetCaptureModesItem());
+            widgetMenu.DropDownItems.Add(BuildWidgetRecordingItem());
+            widgetMenu.DropDownItems.Add(BuildWidgetToolsItem());
+            widgetMenu.DropDownItems.Add(BuildWidgetGalleryEditorItem());
+            widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+            widgetMenu.DropDownItems.Add(BuildDisableItem());
+        });
         menu.Items.Add(widgetMenu);
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add(BuildImageCaptureSubmenu());
@@ -1295,71 +1294,71 @@ public partial class CaptureWidgetWindow : Window
         menu.Items.Add(settingsItem);
 
         // ── Help submenu: wiki / homepage / updates / about ──
-        var helpSubmenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true, iconId: "question");
-
-        var wikiItem = Helpers.WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Wiki: Capture..."), iconId: "question");
-        wikiItem.ToolTipText = LocalizationService.Translate("Open the Capture page in the CyberSnap wiki.");
-        wikiItem.Click += (s, ev) =>
+        var helpSubmenu = BuildLazyWidgetSubmenu("Help", "question", helpSubmenu =>
         {
-            CollapseWidget();
-            WikiLinks.Open(WikiLinks.CapturePage);
-        };
+            var wikiItem = Helpers.WindowsMenuRenderer.Item(
+                LocalizationService.Translate("Wiki: Capture..."), iconId: "question");
+            wikiItem.ToolTipText = LocalizationService.Translate("Open the Capture page in the CyberSnap wiki.");
+            wikiItem.Click += (s, ev) =>
+            {
+                CollapseWidget();
+                WikiLinks.Open(WikiLinks.CapturePage);
+            };
 
-        var homepageItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("CyberGems Website..."), iconId: "home");
-        homepageItem.ToolTipText = LocalizationService.Translate("Visit CyberGems website");
-        homepageItem.Click += (s, ev) => WikiLinks.OpenUrl(WikiLinks.HomepageUrl);
+            var homepageItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("CyberGems Website..."), iconId: "home");
+            homepageItem.ToolTipText = LocalizationService.Translate("Visit CyberGems website");
+            homepageItem.Click += (s, ev) => WikiLinks.OpenUrl(WikiLinks.HomepageUrl);
 
-        var updatesItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Check for Updates..."), iconId: "redo");
-        updatesItem.ToolTipText = LocalizationService.Translate("Check for the latest version");
-        updatesItem.Click += (s, ev) =>
-        {
-            CollapseWidget();
-            ((App)System.Windows.Application.Current).ShowAboutAndCheckForUpdates();
-        };
+            var updatesItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Check for Updates..."), iconId: "redo");
+            updatesItem.ToolTipText = LocalizationService.Translate("Check for the latest version");
+            updatesItem.Click += (s, ev) =>
+            {
+                CollapseWidget();
+                ((App)System.Windows.Application.Current).ShowAboutAndCheckForUpdates();
+            };
 
-        var aboutItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap"), iconId: "info");
-        aboutItem.Click += (s, ev) =>
-        {
-            CollapseWidget();
-            ((App)System.Windows.Application.Current).ShowAbout();
-        };
+            var aboutItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap"), iconId: "info");
+            aboutItem.Click += (s, ev) =>
+            {
+                CollapseWidget();
+                ((App)System.Windows.Application.Current).ShowAbout();
+            };
 
-        helpSubmenu.DropDownItems.Add(wikiItem);
-        helpSubmenu.DropDownItems.Add(homepageItem);
-        helpSubmenu.DropDownItems.Add(updatesItem);
-        helpSubmenu.DropDownItems.Add(aboutItem);
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(helpSubmenu);
+            helpSubmenu.DropDownItems.Add(wikiItem);
+            helpSubmenu.DropDownItems.Add(homepageItem);
+            helpSubmenu.DropDownItems.Add(updatesItem);
+            helpSubmenu.DropDownItems.Add(aboutItem);
+        });
         menu.Items.Add(helpSubmenu);
-
-        Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 240);
 
         return menu;
     }
 
     private System.Windows.Forms.ToolStripMenuItem BuildImageCaptureSubmenu()
     {
-        var captureMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Image capture"), showImages: true, iconId: "captureRect");
-        AddDeliveryOptions(captureMenu, AutoCopyKind.Image);
-        captureMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
-        captureMenu.DropDownItems.Add(BuildCursorCaptureToggle(AutoCopyKind.Image));
-        captureMenu.DropDownItems.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
-            () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
-        captureMenu.DropDownItems.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
-            () => _settings.ShowSelectionSize = !_settings.ShowSelectionSize));
-        captureMenu.DropDownItems.Add(BuildCaptureToggle("Show crosshair guides", _settings.ShowCrosshairGuides,
-            () => _settings.ShowCrosshairGuides = !_settings.ShowCrosshairGuides));
-        // The overlay reads WindowDetection, rather than the legacy DetectWindows bool.
-        captureMenu.DropDownItems.Add(BuildCaptureToggle("Detect windows",
-            _settings.WindowDetection != Models.WindowDetectionMode.Off,
-            () =>
-            {
-                bool turningOn = _settings.WindowDetection == Models.WindowDetectionMode.Off;
-                _settings.WindowDetection = turningOn ? Models.WindowDetectionMode.WindowOnly : Models.WindowDetectionMode.Off;
-                _settings.DetectWindows = turningOn;
-            }));
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(captureMenu, minWidth: 240);
-        return captureMenu;
+        return BuildLazyWidgetSubmenu("Image capture", "captureRect", captureMenu =>
+        {
+            _settingsService.RefreshResultDeliveryPreferences();
+            _settingsService.RefreshCursorCapturePreferences();
+            AddDeliveryOptions(captureMenu, AutoCopyKind.Image);
+            captureMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+            captureMenu.DropDownItems.Add(BuildCursorCaptureToggle(AutoCopyKind.Image));
+            captureMenu.DropDownItems.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
+                () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
+            captureMenu.DropDownItems.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
+                () => _settings.ShowSelectionSize = !_settings.ShowSelectionSize));
+            captureMenu.DropDownItems.Add(BuildCaptureToggle("Show crosshair guides", _settings.ShowCrosshairGuides,
+                () => _settings.ShowCrosshairGuides = !_settings.ShowCrosshairGuides));
+            // The overlay reads WindowDetection, rather than the legacy DetectWindows bool.
+            captureMenu.DropDownItems.Add(BuildCaptureToggle("Detect windows",
+                _settings.WindowDetection != Models.WindowDetectionMode.Off,
+                () =>
+                {
+                    bool turningOn = _settings.WindowDetection == Models.WindowDetectionMode.Off;
+                    _settings.WindowDetection = turningOn ? Models.WindowDetectionMode.WindowOnly : Models.WindowDetectionMode.Off;
+                    _settings.DetectWindows = turningOn;
+                }));
+        });
     }
 
     // A capture-setting toggle row: shows a checkmark when on (matching the editor's burger menu),
@@ -1394,23 +1393,24 @@ public partial class CaptureWidgetWindow : Window
         if (screens.Length <= 1)
             return null;
 
-        var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"), showImages: true, iconId: "fullscreen");
-        monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow active monitor", settings => settings.WidgetMonitorIndex == -1,
-            settings => settings.WidgetMonitorIndex = -1));
-        monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow cursor", settings => settings.WidgetMonitorIndex == WidgetPreferences.FollowCursor,
-            settings => settings.WidgetMonitorIndex = WidgetPreferences.FollowCursor));
-        monitorMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
-        for (int i = 0; i < screens.Length; i++)
+        return BuildLazyWidgetSubmenu("Screen", "fullscreen", monitorMenu =>
         {
-            var idx = i;
-            var s = screens[i];
-            var label = FormatMonitorLabel(i, s.Primary, _settings.InterfaceLanguage);
-            var item = BuildWidgetChoice(label, settings => settings.WidgetMonitorIndex == idx,
-                settings => settings.WidgetMonitorIndex = idx);
-            monitorMenu.DropDownItems.Add(item);
-        }
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(monitorMenu, minWidth: 200);
-        return monitorMenu;
+            _settingsService.RefreshWidgetPreferences();
+            monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow active monitor", settings => settings.WidgetMonitorIndex == -1,
+                settings => settings.WidgetMonitorIndex = -1));
+            monitorMenu.DropDownItems.Add(BuildWidgetChoice("Follow cursor", settings => settings.WidgetMonitorIndex == WidgetPreferences.FollowCursor,
+                settings => settings.WidgetMonitorIndex = WidgetPreferences.FollowCursor));
+            monitorMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+            for (int i = 0; i < screens.Length; i++)
+            {
+                var idx = i;
+                var s = screens[i];
+                var label = FormatMonitorLabel(i, s.Primary, _settings.InterfaceLanguage);
+                var item = BuildWidgetChoice(label, settings => settings.WidgetMonitorIndex == idx,
+                    settings => settings.WidgetMonitorIndex = idx);
+                monitorMenu.DropDownItems.Add(item);
+            }
+        });
     }
 
     internal static string FormatMonitorLabel(int zeroBasedIndex, bool isPrimary, string? language = null)
@@ -1425,17 +1425,18 @@ public partial class CaptureWidgetWindow : Window
 
     private System.Windows.Forms.ToolStripMenuItem BuildActivationDelaySubmenu()
     {
-        var delayMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Activation delay"), showImages: true, iconId: "clock");
-        var delays = new[] { 0, 100, 250, 500, 1000 };
-        foreach (var d in delays)
+        return BuildLazyWidgetSubmenu("Activation delay", "clock", delayMenu =>
         {
-            var delayMs = d;
-            var item = BuildWidgetChoice($"{d} ms", settings => settings.WidgetHoverDelayMs == delayMs,
-                settings => settings.WidgetHoverDelayMs = delayMs);
-            delayMenu.DropDownItems.Add(item);
-        }
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(delayMenu, minWidth: 150);
-        return delayMenu;
+            _settingsService.RefreshWidgetPreferences();
+            var delays = new[] { 0, 100, 250, 500, 1000 };
+            foreach (var d in delays)
+            {
+                var delayMs = d;
+                var item = BuildWidgetChoice($"{d} ms", settings => settings.WidgetHoverDelayMs == delayMs,
+                    settings => settings.WidgetHoverDelayMs = delayMs);
+                delayMenu.DropDownItems.Add(item);
+            }
+        });
     }
 
     private System.Windows.Forms.ToolStripMenuItem BuildDisableItem()
@@ -1456,31 +1457,32 @@ public partial class CaptureWidgetWindow : Window
 
     private System.Windows.Forms.ToolStripMenuItem BuildPositionSubmenu()
     {
-        var positionMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Position"), showImages: true, iconId: "position");
-
-        // Dock edge items: Top, Bottom, Left, Right
-        var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
-        var edgeLabels = new[] { "Top", "Bottom", "Left", "Right" };
-        for (int i = 0; i < edges.Length; i++)
+        return BuildLazyWidgetSubmenu("Position", "position", positionMenu =>
         {
-            var ed = edges[i];
-            var item = BuildWidgetChoice(edgeLabels[i], settings => settings.WidgetDockEdge == ed,
-                settings => settings.WidgetDockEdge = ed);
-            positionMenu.DropDownItems.Add(item);
-        }
+            _settingsService.RefreshWidgetPreferences();
 
-        positionMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+            // Dock edge items: Top, Bottom, Left, Right
+            var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
+            var edgeLabels = new[] { "Top", "Bottom", "Left", "Right" };
+            for (int i = 0; i < edges.Length; i++)
+            {
+                var ed = edges[i];
+                var item = BuildWidgetChoice(edgeLabels[i], settings => settings.WidgetDockEdge == ed,
+                    settings => settings.WidgetDockEdge = ed);
+                positionMenu.DropDownItems.Add(item);
+            }
 
-        // Reset position item
-        var resetItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Reset position"), iconId: "redo");
-        resetItem.Click += (s, ev) =>
-        {
-            SaveWidgetPreferences(settings => settings.WidgetDockPositionOffset = 0.5);
-        };
-        positionMenu.DropDownItems.Add(resetItem);
+            positionMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
 
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(positionMenu, minWidth: 180);
-        return positionMenu;
+            // Reset position item
+            var resetItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Reset position"), iconId: "redo");
+            resetItem.Click += (s, ev) =>
+            {
+                SaveWidgetPreferences(settings => settings.WidgetDockPositionOffset = 0.5);
+            };
+            positionMenu.DropDownItems.Add(resetItem);
+
+        });
     }
 
     // Shared menu presentation: keep the widget expanded while open, clamp to the working area,

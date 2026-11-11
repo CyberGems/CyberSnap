@@ -6,6 +6,30 @@ namespace CyberSnap.UI;
 
 public partial class CaptureWidgetWindow
 {
+    private static Forms.ToolStripMenuItem BuildLazyWidgetSubmenu(string label, string iconId,
+        Action<Forms.ToolStripMenuItem> populate)
+    {
+        var item = WindowsMenuRenderer.Submenu(label, showImages: true, iconId: iconId);
+        // Keep the submenu arrow available before its contents have been built.
+        item.DropDownItems.Add(new Forms.ToolStripSeparator());
+        bool populated = false;
+        item.DropDownOpening += (_, _) =>
+        {
+            if (populated) return;
+            item.DropDown.SuspendLayout();
+            try
+            {
+                var previousItems = item.DropDownItems.Cast<Forms.ToolStripItem>().ToArray();
+                item.DropDownItems.Clear();
+                foreach (var previous in previousItems) previous.Dispose();
+                populate(item);
+                populated = true;
+            }
+            finally { item.DropDown.ResumeLayout(true); }
+        };
+        return item;
+    }
+
     private void ShowMenuOnWidgetMonitor(Forms.ContextMenuStrip menu, bool fromMoreButton)
     {
         var screen = Forms.Screen.FromHandle(new System.Windows.Interop.WindowInteropHelper(this).Handle);
@@ -62,15 +86,16 @@ public partial class CaptureWidgetWindow
         {
             ApplyMetrics(_root);
             _root.Show(RootLocation(_root.PreferredSize));
+            // The root can be rescaled by WinForms until Show returns.
             Arrange(_root, null);
         }
 
         private void Configure(Forms.ToolStripDropDown menu, Forms.ToolStripMenuItem? owner)
         {
-            ApplyMetrics(menu);
             // WinForms can adopt a different native DPI when a popup first opens.
             // Reapply explicit metrics afterwards, then clamp its FINAL native bounds.
-            menu.Opened += (_, _) => Arrange(menu, owner);
+            if (owner is not null)
+                menu.Opened += (_, _) => Arrange(menu, owner);
             menu.Layout += (_, _) =>
             {
                 if (!_arranging && menu.Visible) Position(menu, owner);
@@ -78,9 +103,15 @@ public partial class CaptureWidgetWindow
             foreach (var item in menu.Items.OfType<Forms.ToolStripMenuItem>())
             {
                 if (!item.HasDropDownItems) continue;
-                Configure(item.DropDown, item);
+                bool configured = false;
                 item.DropDownOpening += (_, _) =>
                 {
+                    // The population handler runs first, including for nested lazy menus.
+                    if (!configured)
+                    {
+                        Configure(item.DropDown, item);
+                        configured = true;
+                    }
                     ApplyMetrics(item.DropDown);
                     item.DropDownDirection = CanOpenRight(item.Owner!.Bounds, item.DropDown.PreferredSize.Width)
                         ? Forms.ToolStripDropDownDirection.Right : Forms.ToolStripDropDownDirection.Left;
