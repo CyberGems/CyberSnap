@@ -75,12 +75,7 @@ public partial class CaptureWidgetWindow
     private static void RefreshWidgetOption(Forms.ToolStripMenuItem item, bool selected, bool toggle)
     {
         if (!toggle) item.Tag = selected;
-        var oldImage = item.Image;
-        item.Image = selected ? FluentIcons.RenderBitmap("check",
-            System.Drawing.Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R,
-                UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 20, true) : null;
-        item.ImageScaling = Forms.ToolStripItemImageScaling.None;
-        oldImage?.Dispose();
+        WindowsMenuRenderer.SetMenuCheckmark(item, selected);
         item.Invalidate();
     }
 

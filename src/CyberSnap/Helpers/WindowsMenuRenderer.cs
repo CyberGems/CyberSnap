@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 namespace CyberSnap.Helpers;
@@ -9,12 +10,15 @@ public static class WindowsMenuRenderer
 {
     public const int DefaultWidth = 340;
     public const int RowHeight = 38;
+    private const int DefaultIconSize = 20;
+    private sealed record MenuIcon(string Id, int Size, bool Active, Color? ColorOverride);
+    private static readonly ConditionalWeakTable<ToolStripItem, MenuIcon> MenuIcons = new();
 
     // Opt-in for popups with an explicit physical monitor target. Other menus
     // retain their current sizing until their own presenters opt in.
     internal static void SetPhysicalScale(ToolStripDropDown menu, double scale)
     {
-        if (menu.Renderer is Renderer renderer) renderer.Scale = scale;
+        if (menu.Renderer is Renderer renderer) renderer.PhysicalScale = scale;
         menu.Invalidate();
     }
 
@@ -113,7 +117,7 @@ public static class WindowsMenuRenderer
         bool active = false,
         bool danger = false,
         Color? customColor = null,
-        int iconSize = 20,
+        int iconSize = DefaultIconSize,
         bool dangerIconOnly = false)
     {
         text = CyberSnap.Services.LocalizationService.Translate(text);
@@ -126,13 +130,12 @@ public static class WindowsMenuRenderer
             : ToDrawingColor(CyberSnap.UI.Theme.TextPrimary));
         var textPrimary = ToDrawingColor(CyberSnap.UI.Theme.TextPrimary);
         var textSecondary = ToDrawingColor(CyberSnap.UI.Theme.TextSecondary);
-        var imageColor = customColor ?? (danger
-            ? dangerColor
-            : active
+        Color? colorOverride = customColor ?? (danger ? dangerColor : null);
+        var imageColor = colorOverride ?? (active
                 ? Color.FromArgb(255, textPrimary.R, textPrimary.G, textPrimary.B)
                 : Color.FromArgb(215, textSecondary.R, textSecondary.G, textSecondary.B));
 
-        return new ToolStripMenuItem(text)
+        var item = new ToolStripMenuItem(text)
         {
             AutoSize = false,
             Height = RowHeight,
@@ -143,6 +146,22 @@ public static class WindowsMenuRenderer
             ShortcutKeyDisplayString = shortcut ?? string.Empty,
             Tag = active
         };
+        if (iconId is not null && item.Image is not null)
+            MenuIcons.Add(item, new MenuIcon(iconId, iconSize, active, colorOverride));
+        return item;
+    }
+
+    internal static void SetMenuCheckmark(ToolStripMenuItem item, bool isChecked)
+    {
+        if (isChecked == (item.Image is not null)) return;
+
+        var previous = item.Image;
+        item.Image = isChecked ? FluentIcons.RenderBitmap("check", ToDrawingColor(CyberSnap.UI.Theme.TextPrimary), DefaultIconSize, active: true) : null;
+        MenuIcons.Remove(item);
+        if (item.Image is not null)
+            MenuIcons.Add(item, new MenuIcon("check", DefaultIconSize, Active: true, ColorOverride: null));
+        previous?.Dispose();
+        item.Invalidate();
     }
 
     public static int NormalizeItemWidths(ContextMenuStrip menu, int minWidth = DefaultWidth, int? itemHeight = null)
@@ -230,7 +249,8 @@ public static class WindowsMenuRenderer
         private readonly Color _border;
         private readonly Color _accent;
         private readonly bool _showImages;
-        public double Scale { get; set; } = 1;
+        public double? PhysicalScale { get; set; }
+        private double Scale => PhysicalScale ?? 1;
         private int P(int value) => (int)Math.Round(value * Scale);
         private float F(float value) => (float)(value * Scale);
 
@@ -314,10 +334,21 @@ public static class WindowsMenuRenderer
             if (e.Image is null)
                 return;
 
+            MenuIcon? icon = null;
+            if (PhysicalScale.HasValue)
+                MenuIcons.TryGetValue(e.Item, out icon);
+
             int indent = e.Item.Padding.Left;
-            int size = Math.Min(P(24), Math.Min(e.Item.Height - P(9), P(e.Image.Width)));
+            int size = Math.Min(P(24), Math.Min(e.Item.Height - P(9), P(icon?.Size ?? e.Image.Width)));
+            if (size <= 0) return;
             int x = P(10) + indent + (P(24) - size) / 2;
             int y = e.Item.ContentRectangle.Y + (e.Item.Height - size) / 2;
+            if (icon is not null)
+            {
+                StreamlineIcons.DrawIconUnscaled(e.Graphics, icon.Id, icon.ColorOverride ?? _fg, size, x, y, icon.Active);
+                return;
+            }
+
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
             e.Graphics.DrawImage(e.Image, new Rectangle(x, y, size, size));
         }

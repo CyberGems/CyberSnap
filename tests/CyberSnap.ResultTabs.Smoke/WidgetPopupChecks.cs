@@ -23,6 +23,110 @@ internal static partial class Program
     private static Forms.Screen[] WidgetScreens() => (Forms.Screen[])typeof(CaptureWidgetWindow).Assembly.GetType("CyberSnap.UI.PopupWindowHelper")!
         .GetMethod("GetSortedScreens")!.Invoke(null, null)!;
 
+    private static void CheckWidgetMenuIcons(SettingsService settings, string? output)
+    {
+        settings.Settings.InterfaceLanguage = "es";
+        settings.Settings.WidgetDockEdge = CaptureDockSide.Right;
+        settings.Settings.WidgetAlwaysOnTop = true;
+        settings.Settings.DisableAnimations = true;
+        Theme.SetMode(AppThemeMode.Dark);
+        UiScale.Set(UiScale.Default);
+        settings.Save();
+        var widget = new CaptureWidgetWindow(settings) { IsHitTestVisible = false };
+        try
+        {
+            widget.Show();
+            GetField<DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
+            var hwnd = new WindowInteropHelper(widget).Handle;
+            foreach (var screen in WidgetScreens())
+            {
+                Call(widget, "PositionWindowOnScreen", screen);
+                Pump();
+                if (GetDpiForWindow(hwnd) == 144) break;
+            }
+            Assert(GetDpiForWindow(hwnd) == 144, "the widget and its popups use a real 150% display");
+            SetField(widget, "_contextMenuOpen", true);
+            GetField<DispatcherTimer>(widget, "_collapseTimer").Stop();
+            Call(widget, "ExpandWidget");
+            AwaitCondition(() => !widget.HasAnimatedProperties, "Widget expansion did not settle");
+            var menu = (Forms.ContextMenuStrip)Call(widget, "BuildMoreMenu")!;
+            KeepVisibleForMeasurement(menu);
+            Call(widget, "ShowThemedMenu", menu, true);
+            Pump();
+            Assert(menu.Visible, "More opens on the 150% display");
+            Assert(Element<ScrollViewer>(widget, "ControlsViewport").IsVisible, "the expanded widget remains visible behind More");
+            if (output is not null) RenderNativeWidget(widget, output, "widget-150.png");
+
+            var textColor = Theme.TextPrimary;
+            var iconColor = System.Drawing.Color.FromArgb(textColor.A, textColor.R, textColor.G, textColor.B);
+            var scrolling = Find(menu, "Scrolling capture");
+            CheckIcon(scrolling, "scrollCapture", iconColor);
+            SaveMenu(menu, "mas-150.png");
+
+            var options = Find(menu, "Widget");
+            Open(options);
+            CheckIcon(Find(options.DropDown, "Position"), "position", iconColor);
+            CheckIcon(Find(options.DropDown, "Always on top"), "check", iconColor, active: true);
+            CheckIcon(Find(options.DropDown, "Disable Widget"), "signOut", System.Drawing.Color.FromArgb(239, 68, 68));
+            SaveMenu(options.DropDown, "widget-menu-150.png");
+            var position = Find(options.DropDown, "Position");
+            Open(position);
+            CheckIcon(Find(position.DropDown, "Right"), "check", iconColor, active: true);
+            SaveMenu(position.DropDown, "posicion-150.png");
+            position.HideDropDown();
+            options.HideDropDown();
+
+            var help = Find(menu, "Help");
+            Open(help);
+            CheckIcon(Find(help.DropDown, "Widget guide"), "question", iconColor);
+            SaveMenu(help.DropDown, "ayuda-150.png");
+            menu.Close();
+            Pump();
+        }
+        finally { widget.Close(); }
+
+        static Forms.ToolStripMenuItem Find(Forms.ToolStripDropDown menu, string label) =>
+            menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == LocalizationService.Translate("es", label));
+
+        static void Open(Forms.ToolStripMenuItem item)
+        {
+            item.ShowDropDown();
+            KeepVisibleForMeasurement(item.DropDown);
+            Pump();
+            Assert(item.DropDown.Visible, "submenu opens at 150%: " + item.Text, false);
+        }
+
+        static void CheckIcon(Forms.ToolStripMenuItem item, string id, System.Drawing.Color color, bool active = false)
+        {
+            // 20 DIPs × CyberSnap's default layout scale × the monitor DPI gives 33 pixels.
+            using var glyph = FluentIcons.RenderBitmap(id, color, 33, active)!;
+            using var expected = new System.Drawing.Bitmap(glyph.Width, glyph.Height);
+            using (var graphics = System.Drawing.Graphics.FromImage(expected)) graphics.DrawImageUnscaled(glyph, 0, 0);
+            using var actual = new System.Drawing.Bitmap(item.Width, item.Height);
+            using (var graphics = System.Drawing.Graphics.FromImage(actual))
+                item.Owner!.Renderer.DrawItemImage(new Forms.ToolStripItemImageRenderEventArgs(graphics, item, System.Drawing.Rectangle.Empty));
+            Assert(Ink(expected).SequenceEqual(Ink(actual)), "the menu paints the glyph at 33 pixels with the expected contrast: " + item.Text);
+
+            static IEnumerable<int> Ink(System.Drawing.Bitmap image)
+            {
+                for (int y = 0; y < image.Height; y++)
+                for (int x = 0; x < image.Width; x++)
+                {
+                    var pixel = image.GetPixel(x, y);
+                    if (pixel.A != 0) yield return pixel.ToArgb();
+                }
+            }
+        }
+
+        void SaveMenu(Forms.ToolStripDropDown menu, string name)
+        {
+            if (output is null) return;
+            using var image = new System.Drawing.Bitmap(menu.Width, menu.Height);
+            menu.DrawToBitmap(image, new System.Drawing.Rectangle(0, 0, image.Width, image.Height));
+            image.Save(Path.Combine(output, name));
+        }
+    }
+
     private static void CheckWidgetPopups(SettingsService settings, string? output)
     {
         var original = WidgetPreferences.FromSettings(settings.Settings);

@@ -112,15 +112,8 @@ public partial class CaptureWidgetWindow
         {
             foreach (var item in items.OfType<Forms.ToolStripMenuItem>())
             {
-                if (item.Tag is Func<AppSettings, bool> get && get(_settings) != (item.Image is not null))
-                {
-                    var oldImage = item.Image;
-                    item.Image = get(_settings) ? FluentIcons.RenderBitmap("check",
-                        System.Drawing.Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R,
-                            UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 20, true) : null;
-                    item.ImageScaling = Forms.ToolStripItemImageScaling.None;
-                    oldImage?.Dispose();
-                }
+                if (item.Tag is Func<AppSettings, bool> get)
+                    WindowsMenuRenderer.SetMenuCheckmark(item, get(_settings));
                 RefreshItems(item.DropDownItems);
             }
         }

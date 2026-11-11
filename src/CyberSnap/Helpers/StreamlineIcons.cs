@@ -91,6 +91,14 @@ public static class StreamlineIcons
 
     public static bool HasIcon(string id) => FluentIconData.Icons.ContainsKey(id);
 
+    internal static void DrawIconUnscaled(DrawingGraphics graphics, string id, DrawingColor color,
+        int size, int x, int y, bool active)
+    {
+        var bitmap = GetCachedGdiBitmap(id, color, size, active);
+        if (bitmap is not null)
+            graphics.DrawImageUnscaled(bitmap, x, y);
+    }
+
     public static void DrawIcon(DrawingGraphics g, string id, RectangleF bounds, DrawingColor color, float iconInset = 7f, bool active = false, bool flipHorizontal = false)
     {
         int width = Math.Max(1, (int)Math.Ceiling(bounds.Width - iconInset * 2f));

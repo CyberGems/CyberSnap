@@ -1355,15 +1355,7 @@ public partial class CaptureWidgetWindow : Window
     private System.Windows.Forms.ToolStripMenuItem BuildCaptureToggle(string label, bool isChecked, Action toggle, bool publishDelivery = false)
     {
         var item = Helpers.WindowsMenuRenderer.Item(label);
-        if (isChecked)
-        {
-            var checkColor = System.Drawing.Color.FromArgb(255,
-                Helpers.UiChrome.SurfaceTextPrimary.R,
-                Helpers.UiChrome.SurfaceTextPrimary.G,
-                Helpers.UiChrome.SurfaceTextPrimary.B);
-            item.Image = Helpers.FluentIcons.RenderBitmap("check", checkColor, 20, true);
-            item.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-        }
+        Helpers.WindowsMenuRenderer.SetMenuCheckmark(item, isChecked);
         item.Click += (s, ev) =>
         {
             toggle();
