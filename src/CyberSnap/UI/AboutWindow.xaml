@@ -263,22 +263,21 @@
         <ScrollViewer x:Name="AboutScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled" Padding="18,12,18,18">
             <StackPanel>
-                <!-- Hero: one card, logo and name beside the description -->
-                <Border Margin="0,4,0,18"
+                <Border x:Name="AboutIntroCard" Margin="0,4,0,18"
                         Background="{DynamicResource ThemeCardBrush}"
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                         BorderThickness="1" CornerRadius="12" Padding="18,16">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Image x:Name="AboutLogoImage" Width="72" Height="72" Stretch="Uniform"
-                               VerticalAlignment="Center"
-                               Source="pack://application:,,,/Assets/CyberSnap_square.png"
-                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                        <StackPanel Grid.Column="1" Margin="18,0,0,0" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image x:Name="AboutLogoImage" Width="56" Height="56" Stretch="Uniform"
+                                   VerticalAlignment="Center"
+                                   Source="pack://application:,,,/Assets/CyberSnap_square.png"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <WrapPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
                                 <TextBlock FontSize="28" FontWeight="Bold" FontFamily="Segoe UI Variable Display" VerticalAlignment="Center">
                                     <Run Text="Cyber" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/><Run Text="Snap" Foreground="#6ACBDC"/>
                                 </TextBlock>
@@ -288,20 +287,20 @@
                                     <TextBlock x:Name="AboutVersionText" FontSize="12.5" FontWeight="SemiBold"
                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                 </Border>
-                            </StackPanel>
-                            <TextBlock x:Name="AboutDescriptionText"
-                                       Margin="0,8,0,0"
+                            </WrapPanel>
+                        </Grid>
+                        <TextBlock x:Name="AboutDescriptionText"
+                                       Margin="0,12,0,0"
                                        FontSize="13"
                                        FontFamily="Segoe UI Variable Text"
                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                        Opacity="0.78"
-                                       LineHeight="22"
+                                       LineHeight="20"
                                        LineStackingStrategy="BlockLineHeight"
                                        TextWrapping="Wrap"
                                        TextOptions.TextFormattingMode="Display"
                                        Services:LocalizationService.SourceText="Capture regions, windows, and scrolling pages, or record your screen as MP4 or GIF. Edit and annotate images, trim recordings, and extract text with local OCR for translation. Scan QR codes and barcodes or sample colors. Search the gallery by file name or by the text in your captures, and share them directly."/>
-                        </StackPanel>
-                    </Grid>
+                    </StackPanel>
                 </Border>
 
                 <TextBlock x:Name="AboutUpdatesSectionLabel" Text="Updates &amp; Maintenance" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Updates &amp; Maintenance"/>

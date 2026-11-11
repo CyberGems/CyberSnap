@@ -250,6 +250,7 @@ internal static partial class Program
             }
             if (args.Contains("--about-only"))
             {
+                Theme.SetMode(settings.Settings.ThemeMode);
                 CheckAboutUpdates(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} About update layout checks.");
                 return 0;

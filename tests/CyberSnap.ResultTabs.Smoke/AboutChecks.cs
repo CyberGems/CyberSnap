@@ -47,6 +47,15 @@ internal static partial class Program
                     Pump();
                     Assert(Math.Abs(window.ActualWidth - width) < 1,
                         "the About fixture uses the requested window width after monitor centering: " + context);
+                    var card = AboutBounds(Element<Border>(window, "AboutIntroCard"), window);
+                    var logo = AboutBounds(Element<Image>(window, "AboutLogoImage"), window);
+                    var description = Element<TextBlock>(window, "AboutDescriptionText");
+                    var copy = AboutBounds(description, window);
+                    Assert(Math.Abs(copy.Left - logo.Left) < 1 && copy.Top > logo.Bottom && card.Contains(copy),
+                        "the description uses the card width below the logo and heading: " + context, false);
+                    Assert(description.Text == LocalizationService.Translate(LocalizationService.GetSourceText(description)),
+                        "the layout preserves the full localized description: " + context, false);
+                    if (render) Render(window, renderDirectory, "about-description-" + suffix + ".png");
                     var available = new UpdateCheckResult(new Version(1, 20, 1), new Version(1, 21, 0), "v1.21.0",
                         "https://example.invalid/release", null, null, null, null, true,
                         string.Format(LocalizationService.Translate("Update {0} available"), "v1.21.0"), notes);
