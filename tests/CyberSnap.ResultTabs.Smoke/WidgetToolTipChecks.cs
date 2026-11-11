@@ -53,7 +53,7 @@ internal static partial class Program
                         var widgetHwnd = new WindowInteropHelper(widget).Handle;
                         var tipHwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
                         Assert(tip.IsOpen && tipHwnd != IntPtr.Zero, "WPF opens a native widget tooltip", false);
-                        CheckWidgetToolTipPlacement(widget, tipHwnd);
+                        CheckWidgetToolTipPlacement(widget, owner, tipHwnd);
                         Assert(Equals(tip.Content, (owner.ToolTip as ToolTip)?.Content ?? owner.ToolTip),
                             "the tooltip preserves its localized content", false);
                         if (tip.Content is ActionToolTipContent)
@@ -120,7 +120,7 @@ internal static partial class Program
 
                     if (topmost && language == "en")
                     {
-                        var owner = Element<Button>(widget, "WindowModeButton");
+                        var anchors = new[] { Element<Button>(widget, "WindowModeButton"), Element<Button>(widget, "WidgetMoreButton") };
                         foreach (var screen in WidgetScreens())
                         foreach (var edge in Enum.GetValues<CaptureDockSide>())
                         {
@@ -128,23 +128,26 @@ internal static partial class Program
                             widget.RefreshLayout();
                             Call(widget, "PositionWindowOnScreen", screen);
                             Pump();
-                            show.Invoke(service, new object[] { owner, false });
-                            Pump();
-                            var tip = (ToolTip)owner.ToolTip;
-                            Assert(tip.IsOpen, "window help remains available on " + screen.DeviceName + " at " + edge);
-                            var hwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
-                            CheckWidgetToolTipPlacement(widget, hwnd);
-                            CloseFixtureToolTip(tip, () =>
+                            foreach (var owner in anchors)
                             {
-                                var press = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+                                show.Invoke(service, new object[] { owner, false });
+                                Pump();
+                                var tip = (ToolTip)owner.ToolTip;
+                                Assert(tip.IsOpen, $"{owner.Name} help remains available on {screen.DeviceName} at {edge}");
+                                var hwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
+                                CheckWidgetToolTipPlacement(widget, owner, hwnd);
+                                CloseFixtureToolTip(tip, () =>
                                 {
-                                    RoutedEvent = Mouse.PreviewMouseDownEvent
-                                };
-                                owner.RaiseEvent(press);
-                                Assert(!press.Handled && !tip.IsOpen && !IsWidgetToolTipWindowVisible(hwnd),
-                                    "mouse-down removes the popup immediately and preserves the button's input");
-                            });
-                            dismiss.Invoke(service, null);
+                                    var press = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+                                    {
+                                        RoutedEvent = Mouse.PreviewMouseDownEvent
+                                    };
+                                    owner.RaiseEvent(press);
+                                    Assert(!press.Handled && !tip.IsOpen && !IsWidgetToolTipWindowVisible(hwnd),
+                                        "mouse-down removes the popup immediately and preserves the button's input");
+                                });
+                                dismiss.Invoke(service, null);
+                            }
                         }
                     }
                 }
@@ -166,15 +169,28 @@ internal static partial class Program
         }
     }
 
-    private static void CheckWidgetToolTipPlacement(CaptureWidgetWindow widget, IntPtr hwnd)
+    private static void CheckWidgetToolTipPlacement(CaptureWidgetWindow widget, FrameworkElement owner, IntPtr hwnd)
     {
-        var panel = Element<Border>(widget, "MainPanelBorder");
-        var start = panel.PointToScreen(new Point());
-        var end = panel.PointToScreen(new Point(panel.ActualWidth, panel.ActualHeight));
+        var start = owner.PointToScreen(new Point());
+        var end = owner.PointToScreen(new Point(owner.ActualWidth, owner.ActualHeight));
+        var anchor = new Rect(new Point(Math.Floor(start.X), Math.Floor(start.Y)), new Point(Math.Ceiling(end.X), Math.Ceiling(end.Y)));
         var work = System.Windows.Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).WorkingArea;
         Assert(GetWindowRect(hwnd, out var rect) && work.Contains(rect.Rectangle)
-            && !new Rect(start, end).IntersectsWith(new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)),
-            "the native widget tooltip stays on the widget monitor outside its controls", false);
+            && !anchor.IntersectsWith(new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)),
+            $"the tooltip stays within the monitor work area and leaves {owner.Name} clear", false);
+
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(owner);
+        double gap = Math.Ceiling(6 * dpi.DpiScaleY);
+        if (anchor.Top - work.Top >= rect.Rectangle.Height + gap)
+            Assert(Math.Abs(anchor.Top - rect.Bottom - gap) <= 1, $"the tooltip opens immediately above {owner.Name} when there is room", false);
+        else if (work.Bottom - anchor.Bottom >= rect.Rectangle.Height + gap)
+            Assert(Math.Abs(rect.Top - anchor.Bottom - gap) <= 1, $"the tooltip opens immediately below {owner.Name} at the top edge", false);
+        else
+        {
+            gap = Math.Ceiling(6 * dpi.DpiScaleX);
+            Assert(Math.Abs(rect.Left - anchor.Right - gap) <= 1 || Math.Abs(anchor.Left - rect.Right - gap) <= 1,
+                $"the tooltip opens next to {owner.Name} when vertical space is limited", false);
+        }
         Assert((GetWidgetToolTipExStyle(hwnd, -20) & 0x20) != 0, "the native tooltip lets mouse input through", false);
     }
 

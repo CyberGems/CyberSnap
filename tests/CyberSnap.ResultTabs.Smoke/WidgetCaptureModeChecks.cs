@@ -136,7 +136,7 @@ internal static partial class Program
                 AwaitCondition(() => tip.IsOpen && PresentationSource.FromVisual(tip) is HwndSource,
                     "the widget tooltip did not open for " + mode, 3000);
                 tooltipHwnd = ((HwndSource)PresentationSource.FromVisual(tip)).Handle;
-                CheckWidgetToolTipPlacement(widget, tooltipHwnd);
+                CheckWidgetToolTipPlacement(widget, button, tooltipHwnd);
             }
             button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert(!widget.IsVisible, mode + " hides the widget before capture starts");
