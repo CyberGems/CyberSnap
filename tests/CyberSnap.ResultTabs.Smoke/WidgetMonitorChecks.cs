@@ -22,6 +22,68 @@ internal static partial class Program
     private static T WidgetStatic<T>(string name, params object[] args)
         => (T)typeof(CaptureWidgetWindow).GetMethod(name, BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)!.Invoke(null, args)!;
 
+    private static void CheckWidgetSectionHeight(SettingsService settings)
+    {
+        var screens = WidgetScreens();
+        var helper = typeof(CaptureWidgetWindow).Assembly.GetType("CyberSnap.UI.PopupWindowHelper")!;
+        var getScale = helper.GetMethod("GetScaleForPoint", BindingFlags.Static | BindingFlags.NonPublic)!;
+        int monitor = Array.FindIndex(screens, screen =>
+        {
+            var work = WidgetStatic<System.Drawing.Rectangle>("GetPhysicalWorkingArea", screen);
+            var center = new System.Drawing.Point(work.X + work.Width / 2, work.Y + work.Height / 2);
+            var dpi = ((double X, double Y))getScale.Invoke(null, [center])!;
+            return Math.Abs(dpi.Y - 1.5) < 0.01;
+        });
+        Assert(monitor >= 0, "a monitor at 150% is available for the widget height check");
+        var preferences = settings.Settings;
+        preferences.WidgetMonitorIndex = monitor;
+        preferences.WidgetDockEdge = CaptureDockSide.Right;
+        preferences.InterfaceLanguage = "es";
+        preferences.DisableAnimations = true;
+        settings.Save();
+        var widget = new CaptureWidgetWindow(settings) { IsHitTestVisible = false };
+        try
+        {
+            widget.Show();
+            GetField<System.Windows.Threading.DispatcherTimer>(widget, "_activeMonitorTimer").Stop();
+            SetField(widget, "_contextMenuOpen", true);
+            Call(widget, "ExpandWidget");
+            AwaitCondition(() => !widget.HasAnimatedProperties, "Widget expansion did not settle");
+            var panel = Element<Border>(widget, "MainPanelBorder");
+            var controls = Element<Grid>(widget, "ControlsGrid");
+            var viewport = Element<ScrollViewer>(widget, "ControlsViewport");
+            var gallery = Element<FrameworkElement>(widget, "GalleryEditorBlock");
+            var actions = Element<FrameworkElement>(widget, "QuickActionsGrid");
+            foreach (double scale in new[] { UiScale.Default, UiScale.Max })
+            foreach (var edge in new[] { CaptureDockSide.Right, CaptureDockSide.Bottom })
+            foreach (bool galleryVisible in new[] { true, false })
+            foreach (bool toolsVisible in new[] { false, true })
+            foreach (bool recordingVisible in new[] { true, false })
+            foreach (bool captureModesVisible in new[] { true, false })
+            {
+                UiScale.Set(scale);
+                preferences.WidgetDockEdge = edge;
+                preferences.WidgetShowTools = toolsVisible;
+                preferences.WidgetShowRecording = recordingVisible;
+                preferences.WidgetShowCaptureModes = captureModesVisible;
+                preferences.WidgetShowGalleryEditor = galleryVisible;
+                widget.RefreshLayout();
+                Pump();
+                Assert(GetDpiForWindow(new WindowInteropHelper(widget).Handle) == 144,
+                    "the widget uses the physical monitor's 150% scale", false);
+                var lastSection = galleryVisible ? gallery : actions;
+                double bottom = lastSection.TranslatePoint(new Point(0, lastSection.ActualHeight), panel).Y;
+                double padding = controls.Margin.Bottom + panel.BorderThickness.Bottom;
+                string context = $"{edge}, UI={scale}, gallery={galleryVisible}, tools={toolsVisible}, recording={recordingVisible}, capture modes={captureModesVisible}";
+                Assert(Math.Abs(panel.ActualHeight - bottom - padding) <= 1.5,
+                    $"only bottom padding follows the last visible section: {context}, gap={panel.ActualHeight - bottom:F2}, padding={padding:F2}", false);
+                Assert(viewport.ComputedVerticalScrollBarVisibility == Visibility.Collapsed,
+                    $"all visible sections fit without scrolling on the 150% monitor: {context}, extent={viewport.ExtentHeight:F2}, viewport={viewport.ViewportHeight:F2}", false);
+            }
+        }
+        finally { widget.Close(); }
+    }
+
     private static void CheckWidgetMonitors(SettingsService settings)
     {
         CheckWidgetCollapseAppearance(settings, null);
@@ -173,7 +235,8 @@ internal static partial class Program
                 };
                 Assert(Math.Abs(edgeError) <= tolerance, "the widget touches its selected physical edge: " + context, false);
                 double expectedWidth = (expanded || edge is CaptureDockSide.Top or CaptureDockSide.Bottom ? 196 : 9) * uiScale * scaleX;
-                double expectedHeight = (expanded || edge is CaptureDockSide.Left or CaptureDockSide.Right ? 372 : 9) * uiScale * scaleY;
+                double expectedHeight = (expanded || edge is CaptureDockSide.Left or CaptureDockSide.Right
+                    ? Math.Min(panel.Height, panel.MaxHeight) : 9) * uiScale * scaleY;
                 Assert(Math.Abs(end.X - start.X - expectedWidth) <= tolerance
                     && Math.Abs(end.Y - start.Y - expectedHeight) <= tolerance,
                     "the native widget size uses its target monitor's DPI: " + context, false);

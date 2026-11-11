@@ -231,7 +231,7 @@
                     </Grid>
 
                     <!-- Three capture actions, followed by two rows of utility tools. -->
-                    <Grid x:Name="QuickActionsGrid" Grid.Row="2" Margin="0,0,0,10">
+                    <Grid x:Name="QuickActionsGrid" Grid.Row="2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
@@ -281,7 +281,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel x:Name="GalleryEditorBlock" Grid.Row="3" TextBlock.FontSize="12" TextBlock.FontWeight="SemiBold">
+                    <StackPanel x:Name="GalleryEditorBlock" Grid.Row="3" Margin="0,10,0,0" TextBlock.FontSize="12" TextBlock.FontWeight="SemiBold">
                         <Border Height="1" Margin="4,0,4,7" Background="{DynamicResource WidgetSeparator}"/>
                         <UniformGrid Columns="2">
                             <Button x:Name="GalleryShortcutButton" Style="{StaticResource WidgetCaptureModeButton}"

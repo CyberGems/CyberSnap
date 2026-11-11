@@ -56,16 +56,11 @@ public partial class CaptureWidgetWindow : Window
 
     // Layout constants
     private const double PanelWidth = 196;
-    private const double BasePanelHeight = 332;
     private const double ActionButtonHeight = 36;
     private const double ActionButtonMargin = 3;
     private const double ScrollingOnlyRowHeight = 32;
-    private const double ToolsBlockHeight = 99;
-    private const double GalleryEditorBlockHeight = 40;
-    private double PanelHeight => BasePanelHeight
-        - (_settings.WidgetShowRecording ? 0 : ActionButtonHeight + 2 * ActionButtonMargin - ScrollingOnlyRowHeight)
-        - (_settings.WidgetShowTools ? 0 : ToolsBlockHeight)
-        + (_settings.WidgetShowGalleryEditor ? GalleryEditorBlockHeight : 0);
+    private const double PanelBorderThickness = 1;
+    private double _panelHeight;
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
@@ -422,6 +417,9 @@ public partial class CaptureWidgetWindow : Window
         ScrollToolButton.Margin = new Thickness(_settings.WidgetShowRecording ? ActionButtonMargin : 0);
         ToolsBlock.Visibility = _settings.WidgetShowTools ? Visibility.Visible : Visibility.Collapsed;
         GalleryEditorBlock.Visibility = _settings.WidgetShowGalleryEditor ? Visibility.Visible : Visibility.Collapsed;
+        // Placement measures immediately, before WPF propagates the rows' layout changes.
+        QuickActionsGrid.InvalidateMeasure();
+        ControlsGrid.InvalidateMeasure();
 
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
@@ -434,7 +432,6 @@ public partial class CaptureWidgetWindow : Window
         }
 
         MainPanelBorder.Width = PanelWidth;
-        MainPanelBorder.Height = PanelHeight;
         MainPanelBorder.Margin = new Thickness(0);
         MainPanelBorder.Cursor = _isExpanded ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand;
         MainPanelBorder.Visibility = Visibility.Visible;
@@ -595,7 +592,13 @@ public partial class CaptureWidgetWindow : Window
 
         var phys = GetPhysicalWorkingArea(targetScreen);
         var targetDpi = PopupWindowHelper.GetScaleForPoint(new System.Drawing.Point(phys.X + phys.Width / 2, phys.Y + phys.Height / 2));
-        var panelHeight = Math.Min(PanelHeight, phys.Height / (targetDpi.Y * UiScale.Current));
+        // Measure the controls independently of the scroll viewport and the collapsed peek.
+        // The grid's desired height includes the margins of its visible rows.
+        var borderWidth = Math.Round(PanelBorderThickness * targetDpi.X) / targetDpi.X;
+        var borderHeight = Math.Round(PanelBorderThickness * targetDpi.Y) / targetDpi.Y;
+        ControlsGrid.Measure(new System.Windows.Size(PanelWidth - 2 * borderWidth, double.PositiveInfinity));
+        _panelHeight = ControlsGrid.DesiredSize.Height + 2 * borderHeight;
+        var panelHeight = Math.Min(_panelHeight, phys.Height / (targetDpi.Y * UiScale.Current));
         MainPanelBorder.MaxHeight = panelHeight;
         var localBounds = CalculateWidgetBounds(
             new Rect(0, 0, phys.Width / targetDpi.X, phys.Height / targetDpi.Y),
@@ -672,7 +675,7 @@ public partial class CaptureWidgetWindow : Window
 
         if (!animate || Motion.Disabled)
         {
-            ControlsGrid.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+            ControlsViewport.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
             MainPanelBorder.Effect = expanded ? _panelShadow : null;
             UpdateMainPanelBorderAlignment();
             Left = left;
@@ -686,7 +689,7 @@ public partial class CaptureWidgetWindow : Window
         // so the panel never flashes empty mid-animation.
         if (expanded)
         {
-            ControlsGrid.Visibility = Visibility.Visible;
+            ControlsViewport.Visibility = Visibility.Visible;
             MainPanelBorder.Effect = _panelShadow;
             UpdateMainPanelBorderAlignment();
         }
@@ -710,7 +713,7 @@ public partial class CaptureWidgetWindow : Window
             Height = height;
             if (!expanded)
             {
-                ControlsGrid.Visibility = Visibility.Collapsed;
+                ControlsViewport.Visibility = Visibility.Collapsed;
                 MainPanelBorder.Effect = null;
                 UpdateMainPanelBorderAlignment();
             }
@@ -765,10 +768,10 @@ public partial class CaptureWidgetWindow : Window
         var edge = _settings.WidgetDockEdge;
         bool horizontal = edge is CaptureDockSide.Top or CaptureDockSide.Bottom;
         MainPanelBorder.Width = _isExpanded || horizontal ? PanelWidth : PeekSize;
-        MainPanelBorder.Height = _isExpanded || !horizontal ? PanelHeight : PeekSize;
+        MainPanelBorder.Height = _isExpanded || !horizontal ? _panelHeight : PeekSize;
         MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
         MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
-        MainPanelBorder.BorderThickness = _isExpanded ? new Thickness(1) : edge switch
+        MainPanelBorder.BorderThickness = _isExpanded ? new Thickness(PanelBorderThickness) : edge switch
         {
             CaptureDockSide.Top => new Thickness(1, 0, 1, 1),
             CaptureDockSide.Bottom => new Thickness(1, 1, 1, 0),

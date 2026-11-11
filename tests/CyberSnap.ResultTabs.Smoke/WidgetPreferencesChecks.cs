@@ -79,18 +79,19 @@ internal static partial class Program
                 traySettings.FlushPendingWrites();
                 Step(expected with { ShowCaptureModes = false }, () => captureModes.PerformClick(), "hide widget capture modes");
                 Call(widget, "ExpandWidget");
+                var panel = Element<Border>(widget, "MainPanelBorder");
                 Step(expected with { ShowGalleryEditor = false }, () => galleryEditor.PerformClick(), "hide widget gallery and editor");
-                Assert(Math.Abs(Element<Border>(widget, "MainPanelBorder").ActualHeight - 332) < 1,
-                    "hiding Gallery and Editor removes the height of the row and separator");
+                double heightWithoutGallery = panel.ActualHeight;
                 Step(expected with { ShowCaptureModes = true }, () => captureModes.PerformClick(), "show widget capture modes");
                 Step(expected with { ShowGalleryEditor = true }, () => galleryEditor.PerformClick(), "show widget gallery and editor");
-                Assert(Math.Abs(Element<Border>(widget, "MainPanelBorder").ActualHeight - 372) < 1,
-                    "showing Gallery and Editor restores the full panel height");
+                double fullHeight = panel.ActualHeight;
+                Assert(fullHeight > heightWithoutGallery, "Gallery and Editor resize the panel when toggled");
                 Step(expected with { ShowRecording = false }, () => recording.PerformClick(), "hide widget recording");
-                Assert(Math.Abs(Element<Border>(widget, "MainPanelBorder").ActualHeight - 362) < 1,
+                double heightWithoutRecording = panel.ActualHeight;
+                Assert(heightWithoutRecording < fullHeight,
                     "hiding recording leaves a compact scrolling action");
                 Step(expected with { ShowTools = false }, () => tools.PerformClick(), "hide widget tools");
-                Assert(Math.Abs(Element<Border>(widget, "MainPanelBorder").ActualHeight - 263) < 1,
+                Assert(panel.ActualHeight < heightWithoutRecording,
                     "hiding tools removes both rows and their separator");
                 Step(expected with { ShowRecording = true }, () => recording.PerformClick(), "show widget recording independently");
                 Step(expected with { ShowTools = true }, () => tools.PerformClick(), "show widget tools");

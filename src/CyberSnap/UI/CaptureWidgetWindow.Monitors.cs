@@ -151,7 +151,7 @@ public partial class CaptureWidgetWindow
         bool rebase = oldDevice != _dragMonitorDevice || oldArea != _dragWorkingArea || !oldDpi.Equals(_dragDpi);
         var point = new Point(cursor.X, cursor.Y);
         var (edge, offset) = CalculateDragPosition(_dragWorkingArea, _dragDpi, point,
-            _dragStartPoint, _dragStartOffset, _settings.WidgetDockEdge, rebase, PanelHeight);
+            _dragStartPoint, _dragStartOffset, _settings.WidgetDockEdge, rebase, _panelHeight);
         if (rebase || edge != _settings.WidgetDockEdge)
         {
             _dragStartPoint = point;

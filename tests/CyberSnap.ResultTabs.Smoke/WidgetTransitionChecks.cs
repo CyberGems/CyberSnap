@@ -260,12 +260,13 @@ internal static partial class Program
                 Call(widget, "PositionWindowOnScreen", screen);
                 var peek = Element<Border>(widget, "PeekGrip");
                 var panel = Element<Border>(widget, "MainPanelBorder");
-                var controls = Element<Grid>(widget, "ControlsGrid");
+                var controls = Element<ScrollViewer>(widget, "ControlsViewport");
                 var background = panel.Background;
                 string context = $"{screen.DeviceName}, {edge}, UI={scale}";
                 motion.SetValue(null, false);
                 SetField(widget, "_isExpanded", true);
                 widget.PositionWindow(); Pump();
+                double expandedHeight = panel.ActualHeight;
                 Call(widget, "CollapseWidget");
                 Assert(peek.Visibility == Visibility.Collapsed && controls.Visibility == Visibility.Visible,
                     "the cyan peek stays hidden while the expanded panel begins collapsing: " + context, false);
@@ -283,7 +284,7 @@ internal static partial class Program
                 motion.SetValue(null, false);
                 Call(widget, "CollapseWidget");
                 Call(widget, "ExpandWidget");
-                WaitForWidgetAnimation(() => Math.Abs(panel.ActualWidth - 196) < 1 && Math.Abs(panel.ActualHeight - 372) < 1);
+                WaitForWidgetAnimation(() => Math.Abs(panel.ActualWidth - 196) < 1 && Math.Abs(panel.ActualHeight - expandedHeight) < 1);
                 WaitForWidgetAnimation(() => !widget.HasAnimatedProperties);
                 Assert(peek.Visibility == Visibility.Collapsed && controls.Visibility == Visibility.Visible,
                     "interrupting collapse keeps the cyan peek out of the expanded panel: " + context, false);

@@ -171,7 +171,7 @@ internal static partial class Program
                 Pump();
                 widget.UpdateLayout();
                 var panel = Element<Border>(widget, "MainPanelBorder");
-                Assert(Element<Grid>(widget, "ControlsGrid").Visibility == Visibility.Visible,
+                Assert(Element<ScrollViewer>(widget, "ControlsViewport").Visibility == Visibility.Visible,
                     "the expanded layout fixture renders its action controls: " + language + ", " + edge, false);
                 var panelClip = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutClip(panel);
                 if (scale == 1.1)

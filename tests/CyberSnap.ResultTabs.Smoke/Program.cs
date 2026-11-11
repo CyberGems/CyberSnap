@@ -299,6 +299,12 @@ internal static partial class Program
                 Console.WriteLine($"PASS: {_checks} widget popup, peek and foreground checks.");
                 return 0;
             }
+            if (args.Contains("--widget-height-only"))
+            {
+                CheckWidgetSectionHeight(settings);
+                Console.WriteLine($"PASS: {_checks} widget section height checks.");
+                return 0;
+            }
             if (args.Contains("--widget-monitors-only"))
             {
                 CheckWidgetMonitors(settings);
