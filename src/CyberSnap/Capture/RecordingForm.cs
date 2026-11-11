@@ -1354,16 +1354,23 @@ public sealed partial class RecordingForm : Form
             return;
 
         bar.Dispatcher.BeginInvoke(() =>
+            ResolveRecordingBarPlacement(bar), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    internal void ResolveRecordingBarPlacement(RecordingControlBarWindow bar, Action? afterPlacement = null)
+    {
+        if (IsDisposed || Disposing || !IsHandleCreated)
+            return;
+        if (InvokeRequired)
         {
-            if (IsDisposed || Disposing || !IsHandleCreated)
-                return;
-            BeginInvoke(new Action(() =>
-            {
-                if (IsDisposed || Disposing || _state is not (State.PreRecording or State.Starting or State.Recording))
-                    return;
-                ResolveBarPillsCollision();
-            }));
-        }, System.Windows.Threading.DispatcherPriority.Loaded);
+            try { BeginInvoke(() => ResolveRecordingBarPlacement(bar, afterPlacement)); }
+            catch (InvalidOperationException) when (IsDisposed || Disposing || !IsHandleCreated) { }
+            return;
+        }
+        if (!ReferenceEquals(_controlBarWpf, bar) || _state is not (State.PreRecording or State.Starting or State.Recording))
+            return;
+        ResolveBarPillsCollision();
+        afterPlacement?.Invoke();
     }
 
     /// <summary>

@@ -107,6 +107,9 @@ public sealed partial class RecordingControlBarWindow : Window
 
     /// <summary>True once the bar became visible at its settled placement (see ctor).</summary>
     private bool _revealedAtFinalPlacement;
+    private bool _hasRenderedContent;
+    private bool _placementQueued;
+    private int _placementRevision;
 
     private System.Drawing.Point _dragCursorStart;
     private System.Drawing.Point _dragWindowStart;
@@ -166,7 +169,7 @@ public sealed partial class RecordingControlBarWindow : Window
                     new WindowInteropHelper(this).Owner = OwnerWinFormsForm.Handle;
 
                 User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, 0, 0, 0, 0,
-                    User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
+                    User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE);
             }
         };
 
@@ -198,20 +201,15 @@ public sealed partial class RecordingControlBarWindow : Window
         // correct per-monitor DPI). SourceInitialized fires before Loaded.
         SourceInitialized += (_, _) => PositionAboveRegion(captureRegion);
 
-        // That first placement can read an inflated GetWindowRect: at SourceInitialized the
-        // window still carries the pre-measure size (SizeToContent + the UiScale
-        // LayoutTransform settle after layout), so the visible bar parks left of the region
-        // center until the next explicit reposition. Re-center whenever the settled size
-        // differs, unless the user owns the position or the mini surface manages placement.
-        // The bar stays transparent until the settled placement is in: revealing at the
-        // pre-measure rect showed a two-step "appear here, snap into place" opening.
-        Opacity = 0;
-        SizeChanged += (_, _) =>
+        // SizeChanged can fire before the HWND exists or while WPF is still resizing it.
+        // Keep the bar transparent until positioning uses the measured native rectangle.
+        UpdateBarVisibility();
+        SizeChanged += (_, _) => QueueMeasuredPlacement();
+        ContentRendered += (_, _) =>
         {
-            Reposition(_lastCaptureRegion);
-            RevealAfterPlacementSettles();
+            _hasRenderedContent = true;
+            QueueMeasuredPlacement();
         };
-        ContentRendered += (_, _) => RevealAfterPlacementSettles();
 
         // Briefly introduce the ready control once the final layout is visible.
         Loaded += (_, _) =>
@@ -322,8 +320,7 @@ public sealed partial class RecordingControlBarWindow : Window
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => SetDragInProgress(dragging)); return; }
         _isDragInProgress = dragging;
-        Opacity = dragging ? 0.0 : 1.0;
-        IsHitTestVisible = !dragging;
+        UpdateBarVisibility();
         if (!dragging)
             AssertBarTopmost();
     }
@@ -338,8 +335,7 @@ public sealed partial class RecordingControlBarWindow : Window
         if (_isDragInProgress)
         {
             _isDragInProgress = false;
-            Opacity = 1.0;
-            IsHitTestVisible = true;
+            UpdateBarVisibility();
         }
         AssertBarTopmost();
         Dispatcher.BeginInvoke(AssertBarTopmost, DispatcherPriority.Loaded);
@@ -431,16 +427,44 @@ public sealed partial class RecordingControlBarWindow : Window
         PositionAboveRegion(captureRegion);
     }
 
-    /// <summary>
-    /// Makes the bar visible after its size settled and the size-driven re-centering ran
-    /// (first SizeChanged), or after the first frame when the pre-measure rect was already
-    /// final (ContentRendered). Idempotent; later size changes are already visible.
-    /// </summary>
-    private void RevealAfterPlacementSettles()
+    private void QueueMeasuredPlacement()
     {
-        if (_revealedAtFinalPlacement) return;
+        if (!_hasRenderedContent || _placementQueued) return;
+        _placementQueued = true;
+        Dispatcher.BeginInvoke(() =>
+        {
+            _placementQueued = false;
+            var bounds = GetScreenBounds();
+            if (!IsVisible || bounds.Width <= 0 || bounds.Height <= 0) return;
+
+            Reposition(_lastCaptureRegion);
+            if (_revealedAtFinalPlacement) return;
+
+            int revision = ++_placementRevision;
+            if (OwnerWinFormsForm is RecordingForm owner)
+                owner.ResolveRecordingBarPlacement(this, () => RevealAtFinalPlacement(revision));
+            else
+                RevealAtFinalPlacement(revision);
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void RevealAtFinalPlacement(int revision)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => RevealAtFinalPlacement(revision), DispatcherPriority.Loaded);
+            return;
+        }
+        if (_revealedAtFinalPlacement || _placementQueued || revision != _placementRevision || !IsVisible) return;
         _revealedAtFinalPlacement = true;
-        Opacity = 1;
+        UpdateBarVisibility();
+    }
+
+    private void UpdateBarVisibility()
+    {
+        bool visible = _revealedAtFinalPlacement && !_isDragInProgress;
+        IsHitTestVisible = visible;
+        Opacity = visible ? 1 : 0;
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -476,7 +500,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
         var hwnd = new WindowInteropHelper(this).Handle;
         int barWidthPhys, barHeightPhys;
-        if (hwnd != IntPtr.Zero && User32.GetWindowRect(hwnd, out var wr))
+        if (hwnd != IntPtr.Zero && User32.GetWindowRect(hwnd, out var wr) && wr.Width > 0 && wr.Height > 0)
         {
             barWidthPhys = wr.Right - wr.Left;
             barHeightPhys = wr.Bottom - wr.Top;
@@ -536,14 +560,13 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void MoveBarToPhysical(int x, int y)
     {
-        var hwnd = new WindowInteropHelper(this).Handle;
+        var hwnd = _nativeHwnd;
         if (hwnd == IntPtr.Zero)
             return;
 
-        // SWP_SHOWWINDOW + no NOZORDER flag → re-asserts HWND_TOPMOST each call,
-        // so the bar stays above the fullscreen overlay even mid drag.
+        // Re-assert HWND_TOPMOST without changing the window's visibility.
         User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, x, y, 0, 0,
-            User32.SWP_NOSIZE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
+            User32.SWP_NOSIZE | User32.SWP_NOACTIVATE);
     }
 
     /// <summary>
@@ -1676,13 +1699,7 @@ public sealed partial class RecordingControlBarWindow : Window
         {
             Show();
             // Re-assert topmost after Show so the bar stays above the overlay + trimmer.
-            Dispatcher.BeginInvoke(() =>
-            {
-                var hwnd = new WindowInteropHelper(this).Handle;
-                if (hwnd != IntPtr.Zero)
-                    User32.SetWindowPos(hwnd, User32.HWND_TOPMOST, 0, 0, 0, 0,
-                        User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
-            }, DispatcherPriority.Loaded);
+            Dispatcher.BeginInvoke(AssertBarTopmost, DispatcherPriority.Loaded);
         });
     }
 

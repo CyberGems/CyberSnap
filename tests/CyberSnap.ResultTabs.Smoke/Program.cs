@@ -293,6 +293,12 @@ internal static partial class Program
                 Console.WriteLine($"PASS: {_checks} widget capture mode checks.");
                 return 0;
             }
+            if (args.Contains("--recording-bar-placement-only"))
+            {
+                CheckRecordingBarPlacement(temp);
+                Console.WriteLine($"PASS: {_checks} recording bar placement checks.");
+                return 0;
+            }
             if (args.Contains("--widget-menu-icons-only"))
             {
                 CheckWidgetMenuIcons(settings, args.FirstOrDefault(a => !a.StartsWith("--")));

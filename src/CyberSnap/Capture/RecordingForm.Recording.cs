@@ -325,7 +325,6 @@ public sealed partial class RecordingForm
             }
         };
         _controlBarWpf.ShowSafely();
-        ScheduleRecordingChromeRelayout();
     }
 
     private async void StartActualRecording()
