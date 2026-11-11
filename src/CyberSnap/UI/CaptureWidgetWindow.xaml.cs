@@ -1218,32 +1218,33 @@ public partial class CaptureWidgetWindow : Window
 
     private void ShowWidgetContextMenu()
     {
-        _settingsService.RefreshWidgetPreferences();
         // Built with WindowsMenuRenderer so it is pixel-identical to the tray icon menu
         // (dark rounded surface, accent hover bar) instead of the default WPF look.
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        AddWidgetOptions(menu.Items);
+        Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 220);
+        ShowThemedMenu(menu);
+    }
 
-        menu.Items.Add(BuildPositionSubmenu());
+    private void AddWidgetOptions(ToolStripItemCollection items)
+    {
+        _settingsService.RefreshWidgetPreferences();
+        items.Add(BuildWidgetAlwaysOnTopItem());
+        items.Add(BuildPositionSubmenu());
 
         var screenMenu = BuildScreenSubmenu();
         if (screenMenu != null)
-            menu.Items.Add(screenMenu);
+            items.Add(screenMenu);
+        items.Add(BuildActivationDelaySubmenu());
 
-        menu.Items.Add(BuildActivationDelaySubmenu());
+        items.Add(new ToolStripSeparator());
+        items.Add(BuildWidgetCaptureModesItem());
+        items.Add(BuildWidgetRecordingItem());
+        items.Add(BuildWidgetToolsItem());
+        items.Add(BuildWidgetGalleryEditorItem());
+        items.Add(new ToolStripSeparator());
 
-        menu.Items.Add(BuildWidgetAlwaysOnTopItem());
-        menu.Items.Add(BuildWidgetCaptureModesItem());
-        menu.Items.Add(BuildWidgetRecordingItem());
-        menu.Items.Add(BuildWidgetToolsItem());
-        menu.Items.Add(BuildWidgetGalleryEditorItem());
-
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-
-        menu.Items.Add(BuildDisableItem());
-
-        Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 220);
-
-        ShowThemedMenu(menu);
+        items.Add(BuildDisableItem());
     }
 
     // More menu: widget options, delivery by mode, editor, configuration and help.
@@ -1251,24 +1252,8 @@ public partial class CaptureWidgetWindow : Window
     {
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
-        // "Widget" submenu mirrors the right-click context menu options.
         var widgetMenu = BuildLazyWidgetSubmenu("Widget", "activeWindow", widgetMenu =>
-        {
-            _settingsService.RefreshWidgetPreferences();
-            widgetMenu.DropDownItems.Add(BuildPositionSubmenu());
-
-            var screenMenu = BuildScreenSubmenu();
-            if (screenMenu != null)
-                widgetMenu.DropDownItems.Add(screenMenu);
-            widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
-            widgetMenu.DropDownItems.Add(BuildWidgetAlwaysOnTopItem());
-            widgetMenu.DropDownItems.Add(BuildWidgetCaptureModesItem());
-            widgetMenu.DropDownItems.Add(BuildWidgetRecordingItem());
-            widgetMenu.DropDownItems.Add(BuildWidgetToolsItem());
-            widgetMenu.DropDownItems.Add(BuildWidgetGalleryEditorItem());
-            widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
-            widgetMenu.DropDownItems.Add(BuildDisableItem());
-        });
+            AddWidgetOptions(widgetMenu.DropDownItems));
         menu.Items.Add(widgetMenu);
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add(BuildImageCaptureSubmenu());
