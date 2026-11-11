@@ -526,12 +526,8 @@ namespace CyberSnap.UI
 
         private MenuItem CreateTabMenuItem(string label, string iconId, Action onClick, bool danger = false)
         {
-            var c = Theme.TextPrimary;
-            var color = danger
-                ? System.Drawing.Color.FromArgb(239, 68, 68)
-                : System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
-            var icon = FluentIcons.RenderWpf(iconId, color, 28, active: false);
-            return CreateMoreMenuItem(LocalizationService.Translate(label), icon, onClick);
+            var color = danger ? System.Windows.Media.Color.FromRgb(239, 68, 68) : (System.Windows.Media.Color?)null;
+            return CreateMoreMenuItem(LocalizationService.Translate(label), iconId, onClick, iconColor: color);
         }
 
         private void RaiseSessionCompleted(PreviewSession session, bool committed)

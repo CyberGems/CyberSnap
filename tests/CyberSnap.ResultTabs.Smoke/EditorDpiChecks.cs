@@ -371,7 +371,10 @@ internal static partial class Program
                     CheckEditorTitleTooltip(editor, context);
                     CheckEditorStatusBar(editor, context);
                     if (language == "es" && uiScale == UiScale.Default && checkedZoomDpis.Add(dpi))
+                    {
                         CheckEditorZoomInteraction(editor, context);
+                        if (dpi == 144) CheckEditorMoreIcons(editor, renders);
+                    }
                     SaveEditorRender(editor, renders, language, uiScale, "restored");
 
                     var command = GetField<Forms.Button>(editor, "_galleryButton");
@@ -423,6 +426,41 @@ internal static partial class Program
 
     private static bool ContainsControl(Forms.Control parent, Forms.Control child)
         => child.Visible && parent.ClientRectangle.Contains(parent.RectangleToClient(child.RectangleToScreen(child.ClientRectangle)));
+
+    private static void CheckEditorMoreIcons(EditorForm editor, string? renders)
+    {
+        var menu = GetField<Forms.ContextMenuStrip>(editor, "_burgerMenu");
+        var button = GetField<Forms.Control>(editor, "_menuButton");
+        KeepVisibleForMeasurement(menu);
+        try
+        {
+            menu.Show(button.PointToScreen(new Point(0, button.Height)), Forms.ToolStripDropDownDirection.BelowLeft);
+            Pump();
+            Assert(menu.Visible, "the Editor More menu opens on the 150% display");
+            var help = menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == LocalizationService.Translate("Help"));
+            var foreground = Theme.TextPrimary;
+            var color = Color.FromArgb(foreground.A, foreground.R, foreground.G, foreground.B);
+            CheckNativeMenuIcon(help, "question", color, Math.Min(30, help.Height - 9));
+            help.ShowDropDown();
+            Pump();
+            Assert(help.DropDown.Visible, "the Editor Help submenu opens on the 150% display");
+            var guide = help.DropDownItems.OfType<Forms.ToolStripMenuItem>().First();
+            CheckNativeMenuIcon(guide, "question", color, Math.Min(30, guide.Height - 9));
+            var recent = menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == LocalizationService.Translate("Open recent"));
+            bool recentEnabled = recent.Enabled;
+            recent.Enabled = false;
+            var muted = Theme.TextMuted;
+            CheckNativeMenuIcon(recent, "history", Color.FromArgb(muted.A, muted.R, muted.G, muted.B), Math.Min(30, recent.Height - 9));
+            recent.Enabled = recentEnabled;
+            if (renders is not null)
+            {
+                using var image = new Bitmap(menu.Width, menu.Height);
+                menu.DrawToBitmap(image, new Rectangle(0, 0, image.Width, image.Height));
+                image.Save(Path.Combine(renders, "editor-mas-150.png"));
+            }
+        }
+        finally { menu.Close(); Pump(); }
+    }
 
     private static void CheckEditorTitleTooltip(EditorForm editor, string context)
     {

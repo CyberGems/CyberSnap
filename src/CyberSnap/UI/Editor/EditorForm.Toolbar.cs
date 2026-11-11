@@ -2184,10 +2184,7 @@ public sealed partial class EditorForm
         menu.Items.Add(new ToolStripSeparator());
 
         // ── "New" submenu ──
-        var newSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("New"), showImages: true);
-        newSubmenu.Image = FluentIcons.RenderBitmap("document",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var newSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("New"), showImages: true, iconId: "document");
 
         var newCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New canvas..."), shortcut: "Ctrl+N", iconId: "document");
         newCanvasItem.Click += (_, _) => DoNewCanvas();
@@ -2234,10 +2231,7 @@ public sealed partial class EditorForm
         var openItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Open..."), shortcut: "Ctrl+O", iconId: "folder");
         openItem.Click += (_, _) => DoOpen();
 
-        var openRecentItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open recent"), showImages: true);
-        openRecentItem.Image = FluentIcons.RenderBitmap("history",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var openRecentItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open recent"), showImages: true, iconId: "history");
 
         var saveItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save"), shortcut: "Ctrl+S", iconId: "save");
         saveItem.Click += (_, _) => DoSave();
@@ -2246,15 +2240,9 @@ public sealed partial class EditorForm
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
 
         // Single submenu per family (no redundant top-level Export / Share rows).
-        var exportAsItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Export as…"), showImages: true);
-        exportAsItem.Image = FluentIcons.RenderBitmap("export",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var exportAsItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Export as…"), showImages: true, iconId: "export");
 
-        var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
-        shareToItem.Image = FluentIcons.RenderBitmap("share",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true, iconId: "share");
 
         var sendToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open with…"), showImages: true);
 
@@ -2291,10 +2279,7 @@ public sealed partial class EditorForm
             }
         };
 
-        var objectSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Object"), showImages: true);
-        objectSubmenu.Image = FluentIcons.RenderBitmap("select",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var objectSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Object"), showImages: true, iconId: "select");
         objectSubmenu.DropDownItems.Add(deleteItem);
         objectSubmenu.DropDownItems.Add(new ToolStripSeparator());
         objectSubmenu.DropDownItems.Add(duplicateItem);
@@ -2332,10 +2317,7 @@ public sealed partial class EditorForm
         var achievementsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Achievements..."), iconId: "trophy");
 
         // ── Help submenu: wiki / homepage / updates / about ──
-        var helpSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true);
-        helpSubmenu.Image = FluentIcons.RenderBitmap("question",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var helpSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true, iconId: "question");
 
         var quickStartItem = WindowsMenuRenderer.Item(
             LocalizationService.Translate("Editor Quick Start..."), iconId: "question");
@@ -2585,6 +2567,7 @@ public sealed partial class EditorForm
                 : ToolStripDropDownDirection.Right;
             viewItem.DropDownDirection = dir;
             openRecentItem.DropDownDirection = dir;
+            WindowsMenuRenderer.SetPhysicalIconScale(menu, DeviceDpi / 96.0 * UiChrome.UiScale);
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
@@ -2642,20 +2625,19 @@ public sealed partial class EditorForm
 
     private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem welcomeBannerItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem, ToolStripMenuItem coordinatesItem, ToolStripMenuItem tooltipsItem, ToolStripMenuItem scrollbarsItem)
     {
-        var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
-        borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        fitItem.Image = _toggleFitSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        lockObjectsItem.Image = _togglePanLockSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        cropHandlesItem.Image = _canvas.EditorAutoCropControls ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        resizeScaleItem.Image = _canvas.ResizeHandlesScaleContent ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        resizeHandlesItem.Image = _canvas.EditorShowResizeHandles ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        welcomeBannerItem.Image = _canvas.ShowWelcomeBanner ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        rulersItem.Image = _rulersEnabled ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        hintsItem.Image = _canvas.ShowHints ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        coordinatesItem.Image = _coordsPanel.Visible ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        tooltipsItem.Image = _showTooltips ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
-        scrollbarsItem.Image = _canvas.ShowScrollbarsAlways ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        WindowsMenuRenderer.SetMenuCheckmark(borderItem, _toggleFrameSwitch.Checked);
+        WindowsMenuRenderer.SetMenuCheckmark(fitItem, _toggleFitSwitch.Checked);
+        WindowsMenuRenderer.SetMenuCheckmark(lockObjectsItem, _togglePanLockSwitch.Checked);
+        WindowsMenuRenderer.SetMenuCheckmark(cropHandlesItem, _canvas.EditorAutoCropControls);
+        WindowsMenuRenderer.SetMenuCheckmark(resizeScaleItem, _canvas.ResizeHandlesScaleContent);
+        WindowsMenuRenderer.SetMenuCheckmark(resizeHandlesItem, _canvas.EditorShowResizeHandles);
+        WindowsMenuRenderer.SetMenuCheckmark(bannersItem, _canvas.ShowBanners);
+        WindowsMenuRenderer.SetMenuCheckmark(welcomeBannerItem, _canvas.ShowWelcomeBanner);
+        WindowsMenuRenderer.SetMenuCheckmark(rulersItem, _rulersEnabled);
+        WindowsMenuRenderer.SetMenuCheckmark(hintsItem, _canvas.ShowHints);
+        WindowsMenuRenderer.SetMenuCheckmark(coordinatesItem, _coordsPanel.Visible);
+        WindowsMenuRenderer.SetMenuCheckmark(tooltipsItem, _showTooltips);
+        WindowsMenuRenderer.SetMenuCheckmark(scrollbarsItem, _canvas.ShowScrollbarsAlways);
     }
 
     private System.Windows.Forms.Timer? _shareMenuHoverTimer;

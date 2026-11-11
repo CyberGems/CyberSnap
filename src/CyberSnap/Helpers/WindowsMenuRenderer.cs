@@ -22,6 +22,16 @@ public static class WindowsMenuRenderer
         menu.Invalidate();
     }
 
+    internal static void SetPhysicalIconScale(ToolStripDropDown menu, double scale)
+    {
+        if (menu.Renderer is Renderer renderer) renderer.IconScale = scale;
+        menu.Invalidate();
+        foreach (var item in menu.Items.OfType<ToolStripMenuItem>())
+        {
+            if (item.HasDropDownItems) SetPhysicalIconScale(item.DropDown, scale);
+        }
+    }
+
     public static ContextMenuStrip Create(bool showImages = true, int minWidth = DefaultWidth)
     {
         var menu = new ContextMenuStrip
@@ -250,6 +260,7 @@ public static class WindowsMenuRenderer
         private readonly Color _accent;
         private readonly bool _showImages;
         public double? PhysicalScale { get; set; }
+        public double? IconScale { get; set; }
         private double Scale => PhysicalScale ?? 1;
         private int P(int value) => (int)Math.Round(value * Scale);
         private float F(float value) => (float)(value * Scale);
@@ -335,17 +346,22 @@ public static class WindowsMenuRenderer
                 return;
 
             MenuIcon? icon = null;
-            if (PhysicalScale.HasValue)
+            double? iconScale = PhysicalScale ?? IconScale;
+            if (iconScale.HasValue)
                 MenuIcons.TryGetValue(e.Item, out icon);
 
             int indent = e.Item.Padding.Left;
-            int size = Math.Min(P(24), Math.Min(e.Item.Height - P(9), P(icon?.Size ?? e.Image.Width)));
+            int requestedSize = icon is not null ? (int)Math.Round(icon.Size * iconScale!.Value) : P(e.Image.Width);
+            // Menus that opt in to icon scaling alone keep their existing text gutter and row sizes.
+            int iconLimit = icon is not null && IconScale.HasValue ? P(30) : P(24);
+            int size = Math.Min(iconLimit, Math.Min(e.Item.Height - P(9), requestedSize));
             if (size <= 0) return;
-            int x = P(10) + indent + (P(24) - size) / 2;
+            int x = P(10) + indent + Math.Max(0, (P(24) - size) / 2);
             int y = e.Item.ContentRectangle.Y + (e.Item.Height - size) / 2;
             if (icon is not null)
             {
-                StreamlineIcons.DrawIconUnscaled(e.Graphics, icon.Id, icon.ColorOverride ?? _fg, size, x, y, icon.Active);
+                var iconColor = e.Item.Enabled ? icon.ColorOverride ?? _fg : _muted;
+                StreamlineIcons.DrawIconUnscaled(e.Graphics, icon.Id, iconColor, size, x, y, icon.Active);
                 return;
             }
 

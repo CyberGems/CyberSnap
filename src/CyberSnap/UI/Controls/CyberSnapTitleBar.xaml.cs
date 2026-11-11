@@ -261,28 +261,13 @@ public partial class CyberSnapTitleBar : UserControl
         ApplyTooltipPlacement(PinBtn);
     }
 
-    private static System.Windows.Controls.Image CreateMenuIcon(string id, System.Drawing.Color color, int size = 16)
-    {
-        var img = new System.Windows.Controls.Image
-        {
-            Source = Helpers.FluentIcons.RenderWpf(id, color, size),
-            Width = size,
-            Height = size,
-            SnapsToDevicePixels = true,
-            VerticalAlignment = System.Windows.VerticalAlignment.Center,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center
-        };
-        RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-        return img;
-    }
-
     /// <summary>Builds the "Help" submenu: contextual wiki page, homepage, update check and About.</summary>
-    private MenuItem CreateHelpSubmenu(ContextMenu rootMenu, string wikiPage, string wikiHeaderKey, string wikiTooltipKey, System.Drawing.Color titleIcon)
+    private MenuItem CreateHelpSubmenu(ContextMenu rootMenu, string wikiPage, string wikiHeaderKey, string wikiTooltipKey)
     {
         var helpItem = new MenuItem
         {
             Header = LocalizationService.Translate("Help"),
-            Icon = CreateMenuIcon("question", titleIcon, 16)
+            Icon = Helpers.FluentIcons.CreateWpfMenuIcon("question")
         };
         helpItem.SetResourceReference(FrameworkElement.StyleProperty, "HistoryActionsMenuItem");
         helpItem.SetResourceReference(MenuItem.ItemContainerStyleProperty, "HistoryActionsMenuItem");
@@ -290,7 +275,7 @@ public partial class CyberSnapTitleBar : UserControl
         var wikiItem = new MenuItem
         {
             Header = LocalizationService.Translate(wikiHeaderKey),
-            Icon = CreateMenuIcon("question", titleIcon, 16),
+            Icon = Helpers.FluentIcons.CreateWpfMenuIcon("question"),
             ToolTip = LocalizationService.Translate(wikiTooltipKey)
         };
         wikiItem.Click += (_, _) =>
@@ -302,7 +287,7 @@ public partial class CyberSnapTitleBar : UserControl
         var homepageItem = new MenuItem
         {
             Header = LocalizationService.Translate("CyberGems Website..."),
-            Icon = CreateMenuIcon("home", titleIcon, 16),
+            Icon = Helpers.FluentIcons.CreateWpfMenuIcon("home"),
             ToolTip = LocalizationService.Translate("Visit CyberGems website")
         };
         homepageItem.Click += (_, _) =>
@@ -314,7 +299,7 @@ public partial class CyberSnapTitleBar : UserControl
         var updatesItem = new MenuItem
         {
             Header = LocalizationService.Translate("Check for Updates..."),
-            Icon = CreateMenuIcon("redo", titleIcon, 16),
+            Icon = Helpers.FluentIcons.CreateWpfMenuIcon("redo"),
             ToolTip = LocalizationService.Translate("Check for the latest version")
         };
         updatesItem.Click += (_, _) =>
@@ -326,7 +311,7 @@ public partial class CyberSnapTitleBar : UserControl
         var aboutItem = new MenuItem
         {
             Header = LocalizationService.Translate("About CyberSnap..."),
-            Icon = CreateMenuIcon("info", titleIcon, 16),
+            Icon = Helpers.FluentIcons.CreateWpfMenuIcon("info"),
             ToolTip = LocalizationService.Translate("Open About CyberSnap")
         };
         aboutItem.Click += (_, _) =>
@@ -364,7 +349,7 @@ public partial class CyberSnapTitleBar : UserControl
             var editorItem = new MenuItem
             {
                 Header = WithEllipsis(LocalizationService.Translate("Annotations Editor")),
-                Icon = CreateMenuIcon("compose", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("compose"),
                 ToolTip = LocalizationService.Translate("Open the post-capture editor for annotations.")
             };
             editorItem.Click += (_, _) =>
@@ -380,7 +365,7 @@ public partial class CyberSnapTitleBar : UserControl
             var galleryItem = new MenuItem
             {
                 Header = WithEllipsis(LocalizationService.Translate("Capture Gallery")),
-                Icon = CreateMenuIcon("history", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("history"),
                 ToolTip = LocalizationService.Translate("Open the Capture Gallery")
             };
             galleryItem.Click += (_, _) =>
@@ -396,7 +381,7 @@ public partial class CyberSnapTitleBar : UserControl
             var achievementsItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Achievements..."),
-                Icon = CreateMenuIcon("trophy", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("trophy"),
                 ToolTip = LocalizationService.Translate("Open Achievements")
             };
             achievementsItem.Click += (_, _) =>
@@ -414,7 +399,7 @@ public partial class CyberSnapTitleBar : UserControl
             var wizardItem = new MenuItem
             {
                 Header = WithEllipsis(LocalizationService.Translate("Setup wizard")),
-                Icon = CreateMenuIcon("gear", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("gear"),
                 ToolTip = LocalizationService.Translate("Re-run the setup wizard")
             };
             wizardItem.Click += (_, _) =>
@@ -428,7 +413,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             // Help (wiki / homepage / updates / about)
             menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.SettingsPage,
-                "Wiki: Settings...", "Open the Settings page in the CyberSnap wiki.", titleIcon));
+                "Wiki: Settings...", "Open the Settings page in the CyberSnap wiki."));
 
             ApplyMenuItemStyles(menu);
 
@@ -484,7 +469,7 @@ public partial class CyberSnapTitleBar : UserControl
             var configItem = new MenuItem
             {
                 Header = WithEllipsis(LocalizationService.Translate("Gallery settings")),
-                Icon = CreateMenuIcon("gear", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("gear"),
                 ToolTip = LocalizationService.Translate("Open Gallery settings")
             };
             configItem.Click += (_, _) =>
@@ -500,7 +485,7 @@ public partial class CyberSnapTitleBar : UserControl
             var achievementsItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Achievements..."),
-                Icon = CreateMenuIcon("trophy", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("trophy"),
                 ToolTip = LocalizationService.Translate("Open Achievements")
             };
             achievementsItem.Click += (_, _) =>
@@ -513,7 +498,7 @@ public partial class CyberSnapTitleBar : UserControl
             menu.Items.Add(achievementsItem);
 
             menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.GalleryPage,
-                "Wiki: Gallery...", "Open the Gallery page in the CyberSnap wiki.", titleIcon));
+                "Wiki: Gallery...", "Open the Gallery page in the CyberSnap wiki."));
 
             ApplyMenuItemStyles(menu);
 
@@ -559,7 +544,7 @@ public partial class CyberSnapTitleBar : UserControl
             var repickItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Pick another color..."),
-                Icon = CreateMenuIcon("picker", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("picker"),
                 ToolTip = LocalizationService.Translate("Pick another color from the screen")
             };
             repickItem.Click += (_, _) =>
@@ -574,7 +559,7 @@ public partial class CyberSnapTitleBar : UserControl
             var configItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Configuration..."),
-                Icon = CreateMenuIcon("gear", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("gear"),
                 ToolTip = LocalizationService.Translate("Open the full Configuration window")
             };
             configItem.Click += (_, _) =>
@@ -589,7 +574,7 @@ public partial class CyberSnapTitleBar : UserControl
             var achievementsItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Achievements..."),
-                Icon = CreateMenuIcon("trophy", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("trophy"),
                 ToolTip = LocalizationService.Translate("Open Achievements")
             };
             achievementsItem.Click += (_, _) =>
@@ -602,7 +587,7 @@ public partial class CyberSnapTitleBar : UserControl
             menu.Items.Add(achievementsItem);
 
             menu.Items.Add(CreateHelpSubmenu(menu, WikiLinks.StandaloneToolsPage,
-                "Wiki: Standalone Tools...", "Open the Standalone Tools page in the CyberSnap wiki.", titleIcon));
+                "Wiki: Standalone Tools...", "Open the Standalone Tools page in the CyberSnap wiki."));
 
             ApplyMenuItemStyles(menu);
 
@@ -703,7 +688,7 @@ public partial class CyberSnapTitleBar : UserControl
             var configItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Configuration..."),
-                Icon = CreateMenuIcon("gear", titleIcon, 16),
+                Icon = Helpers.FluentIcons.CreateWpfMenuIcon("gear"),
                 ToolTip = LocalizationService.Translate("Open the full Configuration window")
             };
             configItem.Click += (_, _) =>
@@ -720,7 +705,7 @@ public partial class CyberSnapTitleBar : UserControl
                 var achievementsItem = new MenuItem
                 {
                     Header = LocalizationService.Translate("Achievements..."),
-                    Icon = CreateMenuIcon("trophy", titleIcon, 16),
+                    Icon = Helpers.FluentIcons.CreateWpfMenuIcon("trophy"),
                     ToolTip = LocalizationService.Translate("Open Achievements")
                 };
                 achievementsItem.Click += (_, _) =>
@@ -758,7 +743,7 @@ public partial class CyberSnapTitleBar : UserControl
                 CapturePreviewDialog => "Open the Capture Preview page in the CyberSnap wiki.",
                 _ => "Open the CyberSnap wiki home page."
             };
-            menu.Items.Add(CreateHelpSubmenu(menu, wikiPage, wikiHeaderKey, wikiTooltipKey, titleIcon));
+            menu.Items.Add(CreateHelpSubmenu(menu, wikiPage, wikiHeaderKey, wikiTooltipKey));
 
             ApplyMenuItemStyles(menu);
 
@@ -795,7 +780,7 @@ public partial class CyberSnapTitleBar : UserControl
         var item = new MenuItem
         {
             Header = LocalizationService.Translate("Donate"),
-            Icon = CreateMenuIcon("heart", System.Drawing.Color.FromArgb(244, 63, 94), 16),
+            Icon = Helpers.FluentIcons.CreateWpfMenuIcon("heart", colorOverride: System.Windows.Media.Color.FromRgb(244, 63, 94)),
         };
         item.Click += (_, _) =>
         {

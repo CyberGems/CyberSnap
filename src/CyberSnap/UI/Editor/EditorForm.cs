@@ -1864,10 +1864,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// context menu and the burger menu. File-bound rows hide when unsaved.</summary>
     private ToolStripMenuItem BuildCopySubmenu()
     {
-        var submenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Copy"), showImages: true);
-        submenu.Image = FluentIcons.RenderBitmap("copy",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var submenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Copy"), showImages: true, iconId: "copy");
 
         var imageItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy image"), shortcut: "Ctrl+C");
         var fileItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy file"), shortcut: "Ctrl+Shift+C");
@@ -2108,10 +2105,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// <summary>Rotate / flip submenu shared by the burger menu and canvas context menus.</summary>
     private ToolStripMenuItem BuildTransformSubmenu()
     {
-        var transformSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Transform"), showImages: true);
-        transformSubmenu.Image = FluentIcons.RenderBitmap("flipHorizontal",
-            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
-            20, false);
+        var transformSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Transform"), showImages: true, iconId: "flipHorizontal");
 
         var rotate90CwItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 90° clockwise"), iconId: "rotateCw");
         rotate90CwItem.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.Rotate90Clockwise);

@@ -108,7 +108,9 @@ public sealed partial class RegionOverlayForm
         };
         var anchor = _confirmOptionsPillRect.IsEmpty ? clickLocation
             : new Point(_confirmOptionsPillRect.Right, _confirmOptionsPillRect.Top);
-        menu.Show(PointToScreen(anchor));
+        var screenPoint = PointToScreen(anchor);
+        WindowsMenuRenderer.SetPhysicalIconScale(menu, UI.PopupWindowHelper.GetScaleForPoint(screenPoint).X * UiChrome.UiScale);
+        menu.Show(screenPoint);
     }
 
     private void ActivateConfirmFrameMove()

@@ -59,6 +59,12 @@ internal static partial class Program
                     Assert(menu.Items.OfType<MenuItem>().Any(i => (string)i.Header == pathLabel)
                         && menu.Items.OfType<MenuItem>().Any(i => (string)i.Header == paintLabel),
                         $"More offers the existing image path without automatic saving, and Paint in {language}");
+                    Assert(menu.Items.OfType<MenuItem>().All(item => item.Icon is Image { Source: System.Windows.Media.DrawingImage }),
+                        "preview More uses vector icons at every display scale", false);
+                    var titleBar = Element<FrameworkElement>(preview, "TitleBar");
+                    var titleMenu = ((Border)titleBar.FindName("BurgerBtn")).ContextMenu;
+                    Assert(titleMenu is not null && UsesVectorIcons(titleMenu),
+                        "the shared title menu and its submenus use vector icons", false);
                     menu.PlacementTarget = Element<Button>(preview, "MoreBtn");
                     menu.IsOpen = true; Pump();
                     Assert(menu.IsOpen && menu.Items.OfType<MenuItem>().All(i => i.ActualHeight is >= 24 and <= 30),
@@ -156,6 +162,9 @@ internal static partial class Program
             Theme.SetMode(AppThemeMode.Dark);
         }
     }
+
+    private static bool UsesVectorIcons(ItemsControl menu) => menu.Items.OfType<MenuItem>().All(item =>
+        (item.Icon is null or Image { Source: System.Windows.Media.DrawingImage }) && UsesVectorIcons(item));
 
     private static ProcessStartInfo PreparePaintForTest(object session) =>
         (ProcessStartInfo)typeof(CapturePreviewDialog).GetMethod("PreparePaintImage", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [session])!;

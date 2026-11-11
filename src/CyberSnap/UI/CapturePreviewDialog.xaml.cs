@@ -1090,11 +1090,9 @@ namespace CyberSnap.UI
             var savedPath = SavedPathIfExists(session);
             if (savedPath is not null)
             {
-                var cPrimary = Theme.TextPrimary;
-                var folderIconColor = System.Drawing.Color.FromArgb(cPrimary.A, cPrimary.R, cPrimary.G, cPrimary.B);
                 menu.Items.Add(CreateMoreMenuItem(
                     LocalizationService.Translate("Open in folder"),
-                    FluentIcons.RenderWpf("folder", folderIconColor, 28, active: false),
+                    "folder",
                     () => OpenPathInFolder(savedPath),
                     LocalizationService.Translate("Show this file in File Explorer.")));
                 menu.Items.Add(CreateTabMenuItem("Copy image path", "copy", () => CopyImagePath(session)));
@@ -1106,14 +1104,14 @@ namespace CyberSnap.UI
             {
                 menu.Items.Add(CreateMoreMenuItem(
                     LocalizationService.Translate("Share"),
-                    ShareIcon.Source,
+                    "share",
                     () => ShareBtn_Click(ShareBtn, new RoutedEventArgs()),
                     LocalizationService.Translate("Share image in the cloud.")));
             }
 
             menu.Items.Add(CreateMoreMenuItem(
                 LocalizationService.Translate("Gallery"),
-                GalleryIcon.Source,
+                "history",
                 () => GalleryBtn_Click(GalleryBtn, new RoutedEventArgs()),
                 LocalizationService.Translate("Open the captures Gallery.")));
 
@@ -1123,7 +1121,8 @@ namespace CyberSnap.UI
         private bool CanDeleteSavedCapture() =>
             !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
 
-        private MenuItem CreateMoreMenuItem(string label, ImageSource? icon, Action onClick, string? toolTip = null)
+        private MenuItem CreateMoreMenuItem(string label, string iconId, Action onClick, string? toolTip = null,
+            System.Windows.Media.Color? iconColor = null)
         {
             var item = new MenuItem
             {
@@ -1132,21 +1131,11 @@ namespace CyberSnap.UI
                 Background = System.Windows.Media.Brushes.Transparent,
                 Style = (Style)FindResource("PreviewMenuItem"),
                 FontSize = 12,
-                ToolTip = toolTip
+                ToolTip = toolTip,
+                Icon = FluentIcons.CreateWpfMenuIcon(iconId, 14, iconColor)
             };
             item.Resources["PreviewMenuHoverBrush"] = Theme.Brush(Theme.AccentSubtle);
 
-            if (icon != null)
-            {
-                var iconImage = new System.Windows.Controls.Image
-                {
-                    Source = icon,
-                    Width = 14,
-                    Height = 14
-                };
-                RenderOptions.SetBitmapScalingMode(iconImage, BitmapScalingMode.HighQuality);
-                item.Icon = iconImage;
-            }
 
             item.Click += (_, _) => onClick();
             return item;

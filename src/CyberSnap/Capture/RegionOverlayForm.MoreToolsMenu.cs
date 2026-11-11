@@ -389,6 +389,7 @@ public sealed partial class RegionOverlayForm
                 screenPoint = PointToScreen(new Point(_confirmOptionsPillRect.Right, _confirmOptionsPillRect.Top));
         }
 
+        WindowsMenuRenderer.SetPhysicalIconScale(menu, UI.PopupWindowHelper.GetScaleForPoint(screenPoint).X * UiChrome.UiScale);
         menu.Show(screenPoint);
     }
 

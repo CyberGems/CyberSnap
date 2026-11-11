@@ -28,4 +28,30 @@ public static class FluentIcons
 
     public static System.Windows.Media.Geometry? GetGeometry(string id, bool active = false)
         => StreamlineIcons.GetGeometry(id, active);
+
+    internal static System.Windows.Controls.Image CreateWpfMenuIcon(string id, int size = 16,
+        System.Windows.Media.Color? colorOverride = null)
+    {
+        var drawing = new System.Windows.Media.DrawingGroup();
+        using (var context = drawing.Open())
+        {
+            // Keep the icon in the same 20-unit viewbox, including a margin around its outline.
+            context.DrawRectangle(System.Windows.Media.Brushes.Transparent, null, new System.Windows.Rect(0, 0, 20, 20));
+            context.PushTransform(new System.Windows.Media.MatrixTransform(0.88, 0, 0, 0.88, 1.2, 1.2));
+            context.DrawGeometry(UI.Theme.Brush(colorOverride ?? UI.Theme.TextPrimary), null, GetGeometry(id));
+            context.Pop();
+        }
+        drawing.Freeze();
+        var source = new System.Windows.Media.DrawingImage(drawing);
+        source.Freeze();
+        return new System.Windows.Controls.Image
+        {
+            Source = source,
+            Width = size,
+            Height = size,
+            SnapsToDevicePixels = true,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+        };
+    }
 }
