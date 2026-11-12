@@ -1266,7 +1266,7 @@ public partial class CaptureWidgetWindow : Window
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
-        var achievementsItem = Helpers.WindowsMenuRenderer.Item("Achievements", iconId: "trophy");
+        var achievementsItem = Helpers.WindowsMenuRenderer.Item("Achievements...", iconId: "trophy");
         achievementsItem.Click += (_, _) =>
         {
             CollapseWidget();

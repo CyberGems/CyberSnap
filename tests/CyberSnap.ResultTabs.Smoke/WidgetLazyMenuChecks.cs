@@ -30,6 +30,9 @@ internal static partial class Program
                 Call(widget, "ExpandWidget");
                 Pump();
                 var root = (Forms.ContextMenuStrip)Call(widget, "BuildMoreMenu")!;
+                string achievementsLabel = language == "es" ? "Logros..." : "Achievements...";
+                Assert(root.Items.OfType<Forms.ToolStripMenuItem>().Any(item => item.Text == achievementsLabel),
+                    "the widget More menu shows " + achievementsLabel);
                 KeepVisibleForMeasurement(root);
                 Call(widget, "ShowThemedMenu", root, true);
                 var options = (Forms.ToolStripMenuItem)root.Items[0];
