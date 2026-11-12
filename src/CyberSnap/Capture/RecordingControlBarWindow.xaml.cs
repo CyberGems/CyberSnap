@@ -107,13 +107,15 @@ public sealed partial class RecordingControlBarWindow : Window
 
     /// <summary>True once the bar became visible at its settled placement (see ctor).</summary>
     private bool _revealedAtFinalPlacement;
+    private bool _awaitingSelection = true;
+    private bool _closed;
     private bool _placementQueued;
     private int _placementRevision;
 
     private System.Drawing.Point _dragCursorStart;
     private System.Drawing.Point _dragWindowStart;
 
-    public RecordingControlBarWindow(
+    private RecordingControlBarWindow(
         System.Drawing.Rectangle captureRegion,
         Models.RecordingFormat format,
         int fps,
@@ -165,6 +167,7 @@ public sealed partial class RecordingControlBarWindow : Window
             if (hwnd != IntPtr.Zero)
             {
                 CaptureWindowExclusion.Apply(hwnd);
+                SetClickThrough(true);
 
                 // Owner the WPF bar to the WinForms overlay. Must use WindowInteropHelper
                 // (SetWindowLongPtr) — SetWindowLongA truncates HWNDs on 64-bit, so the
@@ -210,13 +213,8 @@ public sealed partial class RecordingControlBarWindow : Window
         UpdateBarVisibility();
         SizeChanged += (_, _) => QueueMeasuredPlacement();
 
-        Loaded += (_, _) =>
-        {
-            // Loaded gives us the native size without waiting for a transparent frame to render.
-            QueueMeasuredPlacement();
-            if (!UI.Motion.Disabled && !_isRecording && !_isEncoding)
-                PlayReadyPulse(miniPresentation: false);
-        };
+        // Loaded gives us the native size without waiting for a transparent frame to render.
+        Loaded += (_, _) => QueueMeasuredPlacement();
     }
 
     public int Fps => _fps;
@@ -429,7 +427,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void QueueMeasuredPlacement()
     {
-        if (!IsLoaded || _placementQueued) return;
+        if (_awaitingSelection || !IsLoaded || _placementQueued) return;
         _placementQueued = true;
         Dispatcher.BeginInvoke(() =>
         {
@@ -457,7 +455,9 @@ public sealed partial class RecordingControlBarWindow : Window
         }
         if (_revealedAtFinalPlacement || _placementQueued || revision != _placementRevision || !IsVisible) return;
         _revealedAtFinalPlacement = true;
+        SetClickThrough(false);
         UpdateBarVisibility();
+        PlayReadyPulse(miniPresentation: false);
     }
 
     private void UpdateBarVisibility()
@@ -465,6 +465,16 @@ public sealed partial class RecordingControlBarWindow : Window
         bool visible = _revealedAtFinalPlacement && !_isDragInProgress;
         IsHitTestVisible = visible;
         Opacity = visible ? 1 : 0;
+    }
+
+    private void SetClickThrough(bool enabled)
+    {
+        var hwnd = _nativeHwnd;
+        if (hwnd == IntPtr.Zero) return;
+        int style = User32.GetWindowLongA(hwnd, User32.GWL_EXSTYLE);
+        int updated = enabled ? style | User32.WS_EX_TRANSPARENT : style & ~User32.WS_EX_TRANSPARENT;
+        if (updated != style)
+            User32.SetWindowLongA(hwnd, User32.GWL_EXSTYLE, updated);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1663,61 +1673,60 @@ public sealed partial class RecordingControlBarWindow : Window
         _ => "GIF"
     };
 
-    /// <summary>
-    /// Thread-safe creation: builds the window on the WPF UI dispatcher if the caller
-    /// is on a different thread (RecordingForm runs on a WinForms thread). WPF throws
-    /// "cannot access Freezable because it is frozen" when constructing on the wrong thread.
-    /// </summary>
-    public static RecordingControlBarWindow Create(
-        System.Drawing.Rectangle captureRegion,
+    // Realize and measure the transparent window on the WPF dispatcher while the
+    // WinForms overlay continues processing the selection drag.
+    internal static DispatcherOperation<RecordingControlBarWindow> PrepareAsync(
+        System.Drawing.Rectangle anchor,
         Models.RecordingFormat format,
         int fps,
         bool sendToTrimmer,
-        System.Windows.Forms.Form ownerForm,
+        System.Windows.Forms.Form owner,
         string outputPath)
     {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess())
+        var dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+        return dispatcher.InvokeAsync(() =>
         {
-            var w = new RecordingControlBarWindow(captureRegion, format, fps, sendToTrimmer, outputPath);
-            w.OwnerWinFormsForm = ownerForm;
-            return w;
-        }
-
-        RecordingControlBarWindow? window = null;
-        dispatcher.Invoke(() =>
-        {
-            window = new RecordingControlBarWindow(captureRegion, format, fps, sendToTrimmer, outputPath);
-            window.OwnerWinFormsForm = ownerForm;
+            var bar = new RecordingControlBarWindow(anchor, format, fps, sendToTrimmer, outputPath)
+            {
+                OwnerWinFormsForm = owner
+            };
+            try
+            {
+                bar.Show();
+                return bar;
+            }
+            catch
+            {
+                bar.CloseSafely();
+                throw;
+            }
         });
-        return window!;
     }
 
-    /// <summary>Thread-safe Show: marshals to the window's own dispatcher.</summary>
-    public void ShowSafely()
+    internal void ShowForSelection(System.Drawing.Rectangle region)
     {
-        if (Dispatcher.CheckAccess()) { Show(); return; }
-        Dispatcher.BeginInvoke(() =>
-        {
-            Show();
-            // Re-assert topmost after Show so the bar stays above the overlay + trimmer.
-            Dispatcher.BeginInvoke(AssertBarTopmost, DispatcherPriority.Loaded);
-        });
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => ShowForSelection(region)); return; }
+        if (_closed) return;
+        _lastCaptureRegion = region;
+        _awaitingSelection = false;
+        QueueMeasuredPlacement();
     }
 
-    /// <summary>Thread-safe Close companion to Create.</summary>
+    /// <summary>Closes the bar on its owning dispatcher.</summary>
     public void CloseSafely()
     {
-        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(Close); return; }
-        Close();
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(CloseSafely); return; }
+        if (!_closed) Close();
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        _closed = true;
         StopPrimaryScaleAnimation(reset: true);
         TeardownMini();
         _pulseTimer.Stop();
         _storageTimer.Stop();
+        CaptureWindowExclusion.Unregister(_nativeHwnd);
         _nativeHwnd = IntPtr.Zero;
         base.OnClosed(e);
     }

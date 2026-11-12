@@ -87,6 +87,8 @@ public sealed partial class RecordingForm : Form
     private System.Windows.Forms.Timer? _tickTimer;
     private readonly string _savePath;
     private RecordingControlBarWindow? _controlBarWpf;
+    private System.Windows.Threading.DispatcherOperation<RecordingControlBarWindow>? _controlBarPreparation;
+    private bool _startWhenBarReady;
 
     // Screen-relative selection (stays valid after phase change)
     private Rectangle _recordRegion; // in form coords, persisted
@@ -482,6 +484,7 @@ public sealed partial class RecordingForm : Form
             }
             _banner?.Dismiss();
             UpdateLiveSelectionAdorner();
+            PrepareControlBar(ClientToScreenRect(new Rectangle(_dragStart, new Size(1, 1))));
         }
         else if (_state == State.PreRecording && e.Button == MouseButtons.Left)
         {
@@ -675,6 +678,7 @@ public sealed partial class RecordingForm : Form
             else
             {
                 // Click without meaningful selection — revive instruction banner
+                CloseControlBar();
                 _banner?.Revive();
                 Invalidate();
             }
@@ -1508,6 +1512,13 @@ public sealed partial class RecordingForm : Form
 
     private void CloseControlBar()
     {
+        _startWhenBarReady = false;
+        if (_controlBarPreparation is { } preparation)
+        {
+            _controlBarPreparation = null;
+            if (!preparation.Abort())
+                _ = ClosePreparedControlBarAsync(preparation.Task);
+        }
         if (_controlBarWpf is not null)
         {
             try { _controlBarWpf.CloseSafely(); } catch { /* ignore */ }

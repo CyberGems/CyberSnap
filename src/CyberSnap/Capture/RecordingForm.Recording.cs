@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.IO;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using CyberSnap.Native;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
@@ -275,42 +276,86 @@ public sealed partial class RecordingForm
         catch { /* settings may be locked */ }
     }
 
-    private void ShowControlBar()
+    private DispatcherOperation<RecordingControlBarWindow> PrepareControlBar(Rectangle screenRegion)
+        => _controlBarPreparation ??= RecordingControlBarWindow.PrepareAsync(
+            screenRegion, _format, _fps, _openTrimmerAfterCapture, this, _savePath);
+
+    private async void ShowControlBar()
     {
-        CloseControlBar();
+        var preparation = PrepareControlBar(GetRecordRegionScreen());
+        RecordingControlBarWindow bar;
+        try
+        {
+            bar = await preparation.Task;
+        }
+        catch (Exception ex)
+        {
+            if (!ReferenceEquals(_controlBarPreparation, preparation))
+                return;
+            _controlBarPreparation = null;
+            AppDiagnostics.LogError("recording.bar-prepare", ex);
+            RecordingFailed?.Invoke(ex);
+            Close();
+            return;
+        }
 
-        var screenRegion = GetRecordRegionScreen();
+        if (!ReferenceEquals(_controlBarPreparation, preparation))
+            return;
+        _controlBarPreparation = null;
+        _controlBarWpf = bar;
+        ConnectControlBar(bar);
+        if (_handleDragBarHidden)
+            bar.SetDragInProgress(true);
+        bar.ShowForSelection(GetRecordRegionScreen());
 
-        // Own the bar by this overlay so it stays above it while dragging.
-        _controlBarWpf = RecordingControlBarWindow.Create(screenRegion, _format, _fps, _openTrimmerAfterCapture, this, _savePath);
-        _controlBarWpf.FpsChanged += fps =>
+        if (_startWhenBarReady)
+        {
+            _startWhenBarReady = false;
+            StartActualRecording();
+        }
+    }
+
+    private static async Task ClosePreparedControlBarAsync(Task<RecordingControlBarWindow> preparation)
+    {
+        try
+        {
+            var bar = await preparation.ConfigureAwait(false);
+            bar.CloseSafely();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { AppDiagnostics.LogError("recording.bar-close-prepared", ex); }
+    }
+
+    private void ConnectControlBar(RecordingControlBarWindow bar)
+    {
+        bar.FpsChanged += fps =>
         {
             _fps = fps;
             PersistRecordingFps(_format, fps);
         };
-        _controlBarWpf.SendToTrimmerChanged += enabled =>
+        bar.SendToTrimmerChanged += enabled =>
         {
             _openTrimmerAfterCapture = enabled;
             PersistSendToTrimmer(_format, enabled);
         };
-        _controlBarWpf.StartClicked += () =>
+        bar.StartClicked += () =>
         {
             if (_state == State.PreRecording)
                 StartActualRecording();
         };
-        _controlBarWpf.StopClicked += () =>
+        bar.StopClicked += () =>
         {
             if (_state == State.Recording)
                 StopRecording();
             else if (_state == State.Starting)
                 DiscardRecording();
         };
-        _controlBarWpf.PauseClicked += () =>
+        bar.PauseClicked += () =>
         {
             if (_state == State.Recording)
                 TogglePause();
         };
-        _controlBarWpf.CancelClicked += () =>
+        bar.CancelClicked += () =>
         {
             if (_state is State.PreRecording or State.Starting)
             {
@@ -324,7 +369,6 @@ public sealed partial class RecordingForm
                     DiscardRecording();
             }
         };
-        _controlBarWpf.ShowSafely();
     }
 
     private async void StartActualRecording()
@@ -332,9 +376,16 @@ public sealed partial class RecordingForm
         if (_state != State.PreRecording)
             return;
 
+        if (_controlBarPreparation is not null)
+        {
+            _startWhenBarReady = true;
+            return;
+        }
+
         // Never start a recorder with an empty region; fall back to area selection.
         if (_recordRegion.Width <= 0 || _recordRegion.Height <= 0)
         {
+            CloseControlBar();
             _state = State.Selecting;
             Invalidate();
             return;
