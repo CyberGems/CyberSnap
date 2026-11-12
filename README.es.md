@@ -37,12 +37,10 @@
 - [🖼️ Capturas](#️-capturas)
 - [📸 ¿Por qué CyberSnap?](#-por-qué-cybersnap)
 - [✨ Funciones principales](#-funciones-principales)
-- [🚀 Instalación](#-instalación)
+- [⬇️ Instalación](#️-instalación)
 - [🧭 Cómo usar la app](#-cómo-usar-la-app)
 - [🛠️ Stack tecnológico y arquitectura](#️-stack-tecnológico-y-arquitectura)
 - [⌨️ Atajos de teclado](#️-atajos-de-teclado)
-- [🤝 Contribuir](#-contribuir)
-- [🙏 Agradecimientos](#-agradecimientos)
 - [❤️ Donar](#️-donar)
 - [📄 Licencia](#-licencia)
 - [❓ Preguntas frecuentes](#-preguntas-frecuentes)
@@ -157,9 +155,10 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 - **4 temas**: CyberSnap, Gris, Claro y Sistema. Gris incluye un damero neutro y colores a juego en el Selector de color y la Regla.
 - **Escala de interfaz ajustable**: adapta a cualquier pantalla
 - **Monitores con distintas escalas**: Configuración y Galería se abren centradas en el monitor elegido, y los avisos respetan la posición configurada desde que aparecen
+
 ---
 
-## 🚀 Instalación
+## ⬇️ Instalación
 
 ### Instalar
 
@@ -200,6 +199,7 @@ Windows muestra este aviso para cualquier instalador sin un certificado de firma
 Puedes verificar el archivo de forma independiente: compara el SHA con el release de GitHub, escanéalo en VirusTotal o compila desde el código fuente. Más detalles: [guía de SmartScreen en el sitio web](https://cybergems.org/download#smartscreen).
 
 </details>
+
 ---
 
 ## 🧭 Cómo usar la app
@@ -280,6 +280,16 @@ Compila el instalador con [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 o 
 
 Los detalles de release, CI y sincronización de los iconos del About están en la [guía para mantenedores](docs/maintainers.es.md).
 
+### 🤝 Contribuir
+
+Las contribuciones son bienvenidas. Abre un issue describiendo el cambio antes de empezar trabajos grandes y envía pull requests contra la rama principal.
+
+### 🙏 Agradecimientos
+
+Originalmente hace un fork de [OddSnap](https://github.com/jasperdevs/odd-snap) de [jasperdevs](https://github.com/jasperdevs). Desde entonces, CyberSnap ha sido reescrito y ampliado extensamente por [CyberGems](https://cybergems.org/).
+
+Este proyecto también se construye sobre componentes de código abierto como ZXing, SQLite, FFmpeg, x264 e Inno Setup, gracias a sus autores y mantenedores. Los binarios de FFmpeg incluidos con CyberSnap son la build essentials GPLv3 documentada en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+
 ---
 
 ## ⌨️ Atajos de teclado
@@ -310,18 +320,6 @@ Durante la confirmación, el logo de la barra de anotaciones y Más → **Anotar
 Las anotaciones de captura y el Editor pueden compartir atajos locales, incluido `F6` para Dibujo libre. Se detectan asignaciones duplicadas dentro de cada etapa; las herramientas y los atajos de vista del Editor comparten una etapa. Los atajos globales se siguen comprobando contra ambas etapas.
 
 Abre el editor de anotaciones directamente: `CyberSnap.exe --editor`
-
----
-
-## 🤝 Contribuir
-
-Las contribuciones son bienvenidas. Abre un issue describiendo el cambio antes de empezar trabajos grandes y envía pull requests contra la rama principal.
-
-## 🙏 Agradecimientos
-
-Originalmente hace un fork de [OddSnap](https://github.com/jasperdevs/odd-snap) de [jasperdevs](https://github.com/jasperdevs). Desde entonces, CyberSnap ha sido reescrito y ampliado extensamente por [CyberGems](https://cybergems.org/).
-
-Este proyecto también se construye sobre componentes de código abierto como ZXing, SQLite, FFmpeg, x264 e Inno Setup, gracias a sus autores y mantenedores. Los binarios de FFmpeg incluidos con CyberSnap son la build essentials GPLv3 documentada en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ---
 
@@ -359,6 +357,7 @@ Este proyecto también se construye sobre componentes de código abierto como ZX
 </details>
 
 </div>
+
 ---
 
 ## 📄 Licencia

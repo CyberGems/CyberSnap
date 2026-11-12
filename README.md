@@ -37,12 +37,10 @@
 - [🖼️ Screenshots](#️-screenshots)
 - [📸 Why CyberSnap?](#-why-cybersnap)
 - [✨ Key Features](#-key-features)
-- [🚀 Installation](#-installation)
+- [⬇️ Installation](#️-installation)
 - [🧭 Using the App](#-using-the-app)
 - [🛠️ Tech Stack & Architecture](#️-tech-stack--architecture)
 - [⌨️ Keyboard Shortcuts](#️-keyboard-shortcuts)
-- [🤝 Contributing](#-contributing)
-- [🙏 Acknowledgments](#-acknowledgments)
 - [❤️ Donate](#️-donate)
 - [📄 License](#-license)
 - [❓ FAQ](#-faq)
@@ -161,7 +159,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ---
 
-## 🚀 Installation
+## ⬇️ Installation
 
 ### Install
 
@@ -283,6 +281,16 @@ Build the installer with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or 
 
 Release, CI and About-icon automation details live in the [maintainer guide](docs/maintainers.md).
 
+### 🤝 Contributing
+
+Contributions are welcome. Please open an issue describing the change before starting large work, and submit pull requests against the main branch.
+
+### 🙏 Acknowledgments
+
+Originally forked from [OddSnap](https://github.com/jasperdevs/odd-snap) by [jasperdevs](https://github.com/jasperdevs). CyberSnap has since been extensively rewritten and expanded by [CyberGems](https://cybergems.org/).
+
+This project also builds on open-source components including ZXing, SQLite, FFmpeg, x264, and Inno Setup, thanks to their authors and maintainers. The FFmpeg binaries shipped with CyberSnap are the GPLv3 essentials build documented in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
+
 ---
 
 ## ⌨️ Keyboard Shortcuts
@@ -313,18 +321,6 @@ During confirmation, the annotation toolbar logo and More → **Annotate and con
 Capture annotations and the Editor can reuse local shortcuts, including their default `F6` for FreeHand. Duplicate assignments are checked within each stage; Editor tools and view shortcuts share one stage. Global assignments are still checked against both stages.
 
 Open the annotation editor directly: `CyberSnap.exe --editor`
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome. Please open an issue describing the change before starting large work, and submit pull requests against the main branch.
-
-## 🙏 Acknowledgments
-
-Originally forked from [OddSnap](https://github.com/jasperdevs/odd-snap) by [jasperdevs](https://github.com/jasperdevs). CyberSnap has since been extensively rewritten and expanded by [CyberGems](https://cybergems.org/).
-
-This project also builds on open-source components including ZXing, SQLite, FFmpeg, x264, and Inno Setup, thanks to their authors and maintainers. The FFmpeg binaries shipped with CyberSnap are the GPLv3 essentials build documented in [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
 ---
 
