@@ -41,12 +41,14 @@ internal static partial class Program
                 "migration preserves the previously recorded start date and capture counts");
             Assert(label.Text == "Fecha de inicio: Mayo 10, 2026" && reset.Content is "Reiniciar progreso",
                 "the Spanish start date shows a capitalized full month first and the reset action is localized");
+            CheckHelpEntry("Ayuda", "Wiki: Logros...");
             Render(window, renders, "achievements-start-date.png");
 
             progress.InterfaceLanguage = "en";
             window.RefreshLocalization();
             Assert(label.Text == "Start date: May 10, 2026",
                 "the English start date shows the full month first");
+            CheckHelpEntry("Help", "Wiki: Achievements...");
             progress.InterfaceLanguage = "es";
             window.RefreshLocalization();
 
@@ -88,6 +90,15 @@ internal static partial class Program
                 && reloaded.Settings.CelebrationCaptureCount == 0 && reloaded.Settings.ScreenshotCount == 0
                 && !reloaded.Settings.HasFirstEditor,
                 "the new period and zero progress survive an older build repopulating settings from the Gallery");
+
+            void CheckHelpEntry(string helpLabel, string wikiLabel)
+            {
+                var titleBar = Element<FrameworkElement>(window, "AchievementsTitleBar");
+                var menu = ((Border)titleBar.FindName("BurgerBtn")).ContextMenu;
+                var help = menu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, helpLabel));
+                Assert(help.Items.OfType<MenuItem>().First().Header is string header && header == wikiLabel,
+                    "Achievements shows its localized wiki entry under Help");
+            }
 
             void RewriteSettingsAsLegacy(int galleryCount)
             {

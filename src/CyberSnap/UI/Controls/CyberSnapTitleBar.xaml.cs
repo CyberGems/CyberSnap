@@ -262,7 +262,7 @@ public partial class CyberSnapTitleBar : UserControl
     }
 
     /// <summary>Builds the "Help" submenu: contextual wiki page, homepage, update check and About.</summary>
-    private MenuItem CreateHelpSubmenu(ContextMenu rootMenu, string wikiPage, string wikiHeaderKey, string wikiTooltipKey)
+    private MenuItem CreateHelpSubmenu(ContextMenu rootMenu, string wikiPage, string wikiHeaderKey, string? wikiTooltipKey)
     {
         var helpItem = new MenuItem
         {
@@ -276,7 +276,7 @@ public partial class CyberSnapTitleBar : UserControl
         {
             Header = LocalizationService.Translate(wikiHeaderKey),
             Icon = Helpers.FluentIcons.CreateWpfMenuIcon("question"),
-            ToolTip = LocalizationService.Translate(wikiTooltipKey)
+            ToolTip = wikiTooltipKey is null ? null : LocalizationService.Translate(wikiTooltipKey)
         };
         wikiItem.Click += (_, _) =>
         {
@@ -725,6 +725,9 @@ public partial class CyberSnapTitleBar : UserControl
                 QrResultWindow => WikiLinks.StandaloneToolsPage,
                 VideoTrimmerWindow => WikiLinks.ScreenRecordingPage,
                 CapturePreviewDialog => WikiLinks.CapturePreviewPage,
+                AchievementsWindow => LocalizationService.CurrentLanguageCode == "es"
+                    ? WikiLinks.AchievementsPage + "-es"
+                    : WikiLinks.AchievementsPage,
                 _ => WikiLinks.HomePage
             };
             string wikiHeaderKey = OwnerWindow switch
@@ -733,14 +736,16 @@ public partial class CyberSnapTitleBar : UserControl
                 QrResultWindow => "Wiki: Standalone Tools...",
                 VideoTrimmerWindow => "Wiki: Screen Recording...",
                 CapturePreviewDialog => "Wiki: Capture Preview...",
+                AchievementsWindow => "Wiki: Achievements...",
                 _ => "Wiki: CyberSnap Help..."
             };
-            string wikiTooltipKey = OwnerWindow switch
+            string? wikiTooltipKey = OwnerWindow switch
             {
                 OcrResultWindow => "Open the OCR & Translation page in the CyberSnap wiki.",
                 QrResultWindow => "Open the Standalone Tools page in the CyberSnap wiki.",
                 VideoTrimmerWindow => "Open the Screen Recording page in the CyberSnap wiki.",
                 CapturePreviewDialog => "Open the Capture Preview page in the CyberSnap wiki.",
+                AchievementsWindow => null,
                 _ => "Open the CyberSnap wiki home page."
             };
             menu.Items.Add(CreateHelpSubmenu(menu, wikiPage, wikiHeaderKey, wikiTooltipKey));

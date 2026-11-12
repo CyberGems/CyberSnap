@@ -89,6 +89,7 @@ public partial class AchievementsWindow : Window
         LocalizationService.ApplyCurrentCulture(_settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         AchievementsTitleBar.RefreshTooltips();
+        AchievementsTitleBar.RefreshIcons();
         UpdateWindowTitle();
         RefreshAchievementContent(revealRail: false);
     }

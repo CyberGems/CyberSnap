@@ -20,6 +20,7 @@ public static class WikiLinks
     public const string ScreenRecordingPage = "Screen-Recording";
     public const string OcrAndTranslationPage = "OCR-&-Translation";
     public const string GalleryPage = "Gallery";
+    public const string AchievementsPage = "Achievements";
     public const string UploadAndSharePage = "Upload-&-Share";
     public const string StandaloneToolsPage = "Standalone-Tools";
     public const string SettingsPage = "Settings";
