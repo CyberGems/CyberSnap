@@ -93,17 +93,18 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 ## ✨ Key Features
 
 ### 📷 Capture
-- **Floating Capture Widget**: Always-available on-screen widget for one-click capture. Nine shortcuts form a 3×3 grid, with a subtle separator between capture actions and utility tools, including Pin. Its More menu groups clipboard and result-window preferences by mode, with independent cursor checks for images, MP4 and GIF and separate MP4/GIF Trimmer options.
-- **Widget Monitor Following**: Choose **Follow active monitor** (default), **Follow cursor** to switch displays without clicking, or a fixed monitor. The choice stays synchronized with Settings and persists across sessions. The primary capture button has a larger clickable tile with a tray-style hover background and more vertical space.
+- **Floating Capture Widget**: Capture Area, Screen, Window, or Repeat, start recording, open tools, and jump to Gallery or Editor. **More → Widget** lets you hide each optional section. The panel adjusts to the visible sections and remembers your choices. [Widget guide](https://github.com/CyberGems/CyberSnap/wiki/Capture-Widget)
+- **Widget Monitor Following**: Choose **Follow active monitor** (default), **Follow cursor** to switch displays without clicking, or a fixed monitor. The widget hides on the display showing a fullscreen app. Its **More** menu groups clipboard, result-window, cursor, and trimmer preferences by mode.
 - **Independent Auto-Copy**: Choose clipboard delivery separately for screenshots, scrolling captures, OCR, QR/barcodes, MP4, GIF, and colors. Ordinary and scrolling captures also have separate preview preferences. Image presets preserve the scrolling clipboard and preview preferences. OCR, QR, and color tools keep their result window enabled when auto-copy is off.
 - **Flexible Capture Modes**: Area, active window, full screen, and scroll capture (long pages stitched into one image)
-- **Screen Recording**: Record to MP4 or GIF with a tabbed trimmer: independent trim/playback state, filmstrip, waveform, and precise cut
+- **Screen Recording**: Record to MP4 or GIF. The recording bar prepares while you select a region and appears in its final position when you release. The tabbed trimmer offers independent trim and playback state, filmstrip, waveform, and precise cuts.
 - **Precision Tools**: Crosshair guides, capture magnifier, and smart window detection
 - **Scroll Capture**: Automatically stitches long scrollable pages into a single image
-- **Preview Background**: Toggle the checkerboard next to the preview zoom controls or open the adjacent **Solid background and margin** button to choose a color. The picker supports HEX, RGB, HSV, palettes and screen sampling, with a **Theme default** action. Custom colors are remembered separately for light and dark themes (including grayscale), shared across tabs and sessions. Changing the preview background alone preserves the image's transparency.
+- **Preview Background**: Toggle the checkerboard next to the preview zoom controls or open the adjacent **Solid background and margin** button to choose a color. The picker supports HEX, RGB, HSV, palettes and screen sampling, with a **Theme default** action. Custom colors are remembered separately for the light and dark palettes, including Gray, and shared across tabs and sessions. Changing the preview background alone preserves the image's transparency.
 - **Capture Outline**: Add an outline from Preview with a custom color and a thickness of 1–32 output pixels. It grows outside the capture, preserving its pixels and transparency, and is included in copied and saved images. Each tab keeps its own settings; the last choice is remembered for new captures. The color picker keeps Reset and Accept visible when scrolling at higher DPI.
 - **Capture Margin**: Add 1–256 output pixels around each side using the chosen solid background color. The margin sits outside the outline and is included when copying or saving. Tabs keep their own margin sizes, and the final dimensions include output scaling, outline and margin.
-- **Preview Actions**: The compact More menu can copy the active capture's existing image path or send an exported copy to Paint, including its current output scale, outline and margin. Preview stays centered after maximizing and restoring while preserving manual zoom.
+- **Preview Actions**: The compact More menu can copy the active capture's existing image path or send an exported copy to Paint, including its current output scale, outline and margin. Preview remembers whether it was maximized and plays the capture sound once when closing several tabs together.
+- **Paste in File Explorer**: Copy an image from Preview or Gallery, or copy the Editor canvas with its current edits, to paste it as a file. The clipboard also carries the image for apps that paste pixels.
 
 ### ✏️ Annotation Editor
 - **Rich Canvas**: Shapes, text, image paste, rulers, custom colors, and frames
@@ -153,7 +154,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ### 🎨 Customization
 - **28 Languages**: Full UI localization (including English and Spanish)
-- **4 Themes**: Signature dark, grayscale, light, and system-following
+- **4 Themes**: CyberSnap, Gray, Light, and System. Gray includes a neutral checkerboard and matching Color Picker and Ruler controls.
 - **Adjustable UI Scale**: Adapt to any display
 - **Mixed-DPI Monitors**: Settings and Gallery open centered on the selected monitor, and notifications use the configured position from their first appearance
 

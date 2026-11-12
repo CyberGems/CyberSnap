@@ -93,17 +93,18 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 ## ✨ Funciones principales
 
 ### 📷 Captura
-- **Widget de captura flotante**: acceso con un clic y nueve botones en una cuadrícula 3×3, con separación entre capturas y herramientas, incluido Pin. Su menú Más agrupa las preferencias por modo, con ajustes independientes de cursor para imágenes, MP4 y GIF, y de Recortador para MP4 y GIF.
-- **Monitores del widget**: elige **Seguir monitor activo** (predeterminado), **Seguir cursor** para cambiar de pantalla sin clic o un monitor fijo. La elección se sincroniza con Configuración y se guarda entre sesiones. El botón principal tiene un área de clic más amplia, fondo al pasar el mouse como el del tray y más espacio vertical.
+- **Widget de captura flotante**: captura Área, Pantalla, Ventana o Repetir, inicia grabaciones, abre herramientas y accede a Galería o Editor. **Más → Widget** permite ocultar cada sección opcional. El panel ajusta su tamaño y recuerda tus preferencias. [Guía del widget](https://github.com/CyberGems/CyberSnap/wiki/Capture-Widget-es)
+- **Monitores del widget**: elige **Seguir monitor activo** (predeterminado), **Seguir cursor** para cambiar de pantalla sin clic o un monitor fijo. El widget se oculta en la pantalla que muestra una aplicación a pantalla completa. Su menú **Más** agrupa las preferencias de portapapeles, resultados, cursor y recortador por modo.
 - **Autocopia independiente**: elige por separado qué enviar al portapapeles para capturas normales, capturas con desplazamiento, OCR, QR/códigos de barras, MP4, GIF y colores. Las capturas normales y con desplazamiento tienen preferencias de vista previa independientes. Los presets de imágenes conservan las preferencias de portapapeles y vista previa de las capturas con desplazamiento. OCR, QR y el selector de color mantienen su ventana de resultados habilitada al desactivar la autocopia.
 - **Modos de captura flexibles**: área, ventana activa, pantalla completa y captura con desplazamiento (páginas largas cosidas en una sola imagen)
-- **Grabación de pantalla**: graba en MP4 o GIF con un recortador con pestañas: recorte y reproducción independientes, tira de fotogramas, forma de onda y corte preciso
+- **Grabación de pantalla**: graba en MP4 o GIF. La barra se prepara mientras seleccionas el área y aparece en su posición final al soltar. El recortador ofrece pestañas con recorte y reproducción independientes, tira de fotogramas, forma de onda y cortes precisos.
 - **Herramientas de precisión**: guías de cruz, lupa de captura y detección inteligente de ventanas
 - **Captura con desplazamiento**: cose automáticamente páginas largas con desplazamiento en una sola imagen
-- **Fondo de Vista previa**: alterna el damero junto al zoom o abre el botón adyacente **Fondo sólido y margen** para elegir un color. El picker admite HEX, RGB, HSV, paletas y cuentagotas, con la acción **Predeterminado** para recuperar el color del tema. Los colores se recuerdan por separado para temas claros y oscuros (incluida la escala de grises) y se comparten entre pestañas y sesiones. Cambiar solo el fondo conserva la transparencia de la imagen.
+- **Fondo de Vista previa**: alterna el damero junto al zoom o abre el botón adyacente **Fondo sólido y margen** para elegir un color. El selector admite HEX, RGB, HSV, paletas y cuentagotas, con la acción **Predeterminado** para recuperar el color del tema. Los colores se recuerdan por separado para las paletas clara y oscura, incluido Gris, y se comparten entre pestañas y sesiones. Cambiar solo el fondo conserva la transparencia de la imagen.
 - **Delineado de captura**: añade desde Vista previa un delineado de color y grosor configurable, de 1–32 píxeles de salida. Crece por fuera de la captura y se conserva al copiar y guardar. Cada pestaña mantiene sus ajustes; las nuevas capturas recuperan la última elección guardada. Restablecer y Aceptar permanecen visibles en el picker al desplazar el contenido con DPI alto.
 - **Margen de captura**: añade 1–256 píxeles de salida por lado con el color del fondo sólido. El margen queda por fuera del delineado y se incluye al copiar y guardar. Cada pestaña mantiene su tamaño de margen; las dimensiones finales incluyen escala de salida, delineado y margen.
-- **Acciones de Vista previa**: el menú Más permite copiar la ruta del archivo existente de la pestaña activa o enviar una copia a Paint con su escala, delineado y margen. La captura conserva el centro al maximizar y restaurar, respetando el zoom manual.
+- **Acciones de Vista previa**: el menú Más permite copiar la ruta del archivo existente de la pestaña activa o enviar una copia a Paint con su escala, delineado y margen. Vista previa recuerda si estaba maximizada y reproduce el sonido de captura una sola vez al cerrar varias pestañas juntas.
+- **Pegar en el Explorador**: copia una imagen desde Vista previa o Galería, o el lienzo del Editor con sus cambios actuales, para pegarla como archivo. El portapapeles también conserva la imagen para las aplicaciones compatibles.
 
 ### ✏️ Editor de anotaciones
 - **Lienzo enriquecido**: formas, texto, pegado de imágenes, reglas, colores personalizados y marcos
@@ -152,7 +153,7 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 
 ### 🎨 Personalización
 - **28 idiomas**: localización completa de la interfaz (incluidos inglés y español)
-- **4 temas**: oscuro de firma, escala de grises, claro y siguiendo al sistema
+- **4 temas**: CyberSnap, Gris, Claro y Sistema. Gris incluye un damero neutro y colores a juego en el Selector de color y la Regla.
 - **Escala de interfaz ajustable**: adapta a cualquier pantalla
 - **Monitores con distintas escalas**: Configuración y Galería se abren centradas en el monitor elegido, y los avisos respetan la posición configurada desde que aparecen
 ---
