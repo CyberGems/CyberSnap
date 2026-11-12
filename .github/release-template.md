@@ -8,27 +8,29 @@
 
 <!-- IMPORTANT FOR AGENTS & MAINTAINERS: Always rewrite this entire section and highlights with the ACTUAL release notes for this specific new version before tagging. NEVER leave or copy previous version notes! Use 25-45 words for the summary, lead with user-facing changes, and do not repeat the app name or version. -->
 <!-- changelog-summary:start -->
-Notifications align on their first appearance across monitors with different scaling. Settings and Gallery open centered, window titles use a softer hover, and About aligns update actions. Setup uses refreshed artwork, and uninstall prompts you to close the app.
+The floating widget gains capture modes, Gallery and Editor shortcuts, and customizable sections. Paste copied captures into File Explorer as files. The recording bar prepares during selection, Capture Preview remembers its window state, and the Gray theme covers more tools.
 <!-- changelog-summary:end -->
 
 ### ✨ Key Features & Highlights
 
-- 🖥️ **Precise placement on mixed-DPI monitors**. Capture previews and system notifications align on their first appearance. Settings and Gallery open centered on the monitor where you requested them.
-- ✨ **Subtler window titles**. Interactive titles use a soft hover that clears when the pointer leaves. Click a title to open About.
-- ⬇️ **Clearer update actions**. The three actions in About align to the right, with **Update now** on the far right.
-- 📦 **Refreshed setup and safer removal**. The installer uses the current CyberSnap artwork. If CyberSnap is open during uninstall, the uninstaller asks you to close it before removing files. Installation payloads retain both FFmpeg executables.
+- **More from the floating widget.** Use Screen, Window, and Repeat beside Area. Open Gallery and Editor directly. Show or hide Capture modes, Recording, Tools, and Gallery and editor independently from **More → Widget**. The panel fits the visible sections and remembers your choices.
+- **A quicker, clearer More menu.** Submenus load on demand, tooltips stay near their buttons, and menu icons render at the display's resolution. The widget hides on the monitor showing a fullscreen app. Window capture from the tray or widget uses the previously active app.
+- **Paste captures as files in File Explorer.** Copy a capture from Preview or Gallery, or copy the current Editor canvas, including unsaved edits. Images remain available for pasting into image-aware apps. **Save As** from Preview also makes the saved file available to paste when auto-copy is enabled.
+- **Smoother recording and Preview.** The MP4 and GIF bar prepares during region selection and appears in its final position when you release. Capture Preview remembers whether it was maximized and plays the capture notification sound once when you close a window with multiple tabs.
+- **Gray theme and contextual help.** The former Dark theme is now **Gray**, with a neutral checkerboard and matching Color Picker and Ruler controls. About gives the app description more room, and Achievements has a dedicated wiki guide in English and Spanish.
 
 <details>
 <summary><b>🌐 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
-Los avisos se alinean desde que aparecen por primera vez en monitores con distintas escalas. Configuración y Galería abren centradas, los títulos tienen un resaltado más tenue y Acerca de alinea las acciones de actualización. El instalador usa el icono actual y el desinstalador te pide cerrar la app.
+El widget flotante incorpora modos de captura, accesos a Galería y Editor, y secciones configurables. Pega capturas como archivos en el Explorador. La barra de grabación se prepara durante la selección, Vista previa recuerda su estado y el tema Gris abarca más herramientas.
 
-- **Ubicación precisa entre monitores**. Las vistas previas de capturas y los avisos de sistema se alinean desde el primer intento. Configuración y Galería abren centradas en el monitor desde el que las solicitaste.
-- **Títulos más sutiles**. Los títulos interactivos se aclaran levemente al pasar el puntero y recuperan su fondo al retirarlo. Haz clic en el título para abrir Acerca de.
-- **Acciones de actualización más claras**. Los tres botones de Acerca de quedan alineados a la derecha, con **Actualizar ahora** al extremo derecho.
-- **Instalador actualizado y desinstalación más segura**. El instalador usa la imagen actual de CyberSnap. Si la app sigue abierta al desinstalar, se te pide cerrarla antes de eliminar archivos. Los paquetes de instalación conservan ambos ejecutables de FFmpeg.
+- **Más opciones en el widget flotante.** Usa Pantalla, Ventana y Repetir junto a Área. Abre Galería y Editor directamente. Desde **Más → Widget**, muestra u oculta por separado Modos de captura, Grabación, Herramientas y Galería y editor. El panel ajusta su tamaño y recuerda tus preferencias.
+- **Menú Más más rápido y claro.** Los submenús se cargan al abrirlos, los tooltips aparecen cerca de sus botones y los iconos se dibujan a la resolución del monitor. El widget se oculta en el monitor que muestra una app a pantalla completa. Ventana captura la aplicación que estaba activa antes de usar la bandeja o el widget.
+- **Pega capturas como archivos en el Explorador.** Copia desde Vista previa o Galería, o copia el lienzo actual del Editor con sus cambios sin guardar. La imagen también se puede pegar en aplicaciones compatibles. **Guardar como** desde Vista previa deja el archivo listo para pegar si la copia automática está activada.
+- **Grabación y Vista previa más fluidas.** La barra de MP4 y GIF se prepara durante la selección y aparece en su posición final al soltar. Vista previa recuerda si estaba maximizada y reproduce un solo sonido de notificación al cerrar una ventana con varias pestañas.
+- **Tema Gris y ayuda contextual.** El tema Oscuro pasa a llamarse **Gris**, con un damero neutro y colores a juego en el Selector de color y la Regla. Acerca de da más espacio a la descripción y Logros enlaza a su guía en español e inglés.
 
 </details>
 

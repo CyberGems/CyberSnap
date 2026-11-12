@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.25.0] - 2026-11-11
+
+### Added
+
+- Add Screen, Window, and Repeat to the floating widget, along with shortcuts to Gallery, Editor, and Achievements.
+- Let the widget hide each of its Capture modes, Recording, Tools, and Gallery and editor sections independently, remember those choices, and fit the visible content.
+- Include a file alongside copied images so captures can be pasted into File Explorer. This also covers Preview's Save As with auto-copy enabled, Gallery's Copy image, and the Editor's current canvas with unsaved edits.
+- Add contextual wiki help for Achievements in English and Spanish.
+
+### Improved
+
+- Open widget submenus on demand, keep tooltips clear of controls, and render More menu icons at the display's pixel size.
+- Hide the widget on the display occupied by a fullscreen app and keep it available on the other displays.
+- Rename the Dark theme to Gray and apply its palette to checkerboards, Color Picker, and Ruler.
+- Expand the About description and give it the full width of the card.
+
+### Fixed
+
+- Capture the previously active app when choosing Window from the tray or widget.
+- Prepare the MP4 and GIF recording bar during region selection and show it at its final position on mixed-DPI displays.
+- Remember Capture Preview's maximized state and play the capture sound only once when closing multiple tabs together.
+
 ## [1.24.2] - 2026-11-09
 
 ### Fixed
@@ -66,6 +88,7 @@
 
 Earlier versions are documented in the [GitHub release history](https://github.com/CyberGems/CyberSnap/releases).
 
+[1.25.0]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.25.0
 [1.24.2]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.24.2
 [1.24.1]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.24.1
 [1.23.0]: https://github.com/CyberGems/CyberSnap/releases/tag/v1.23.0
