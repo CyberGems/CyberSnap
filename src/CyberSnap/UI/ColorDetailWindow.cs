@@ -130,7 +130,7 @@ internal sealed class ColorDetailWindow : Window
     }
 
     /// <summary>Rebuilds content when theme or language changed while open (like other windows).</summary>
-    private void RefreshLiveState()
+    internal void RefreshLiveState()
     {
         try
         {
@@ -246,9 +246,7 @@ internal sealed class ColorDetailWindow : Window
         var card = new Border
         {
             CornerRadius = new CornerRadius(10),
-            Background = Theme.Brush(Theme.IsDark
-                ? WpfColor.FromArgb(255, 28, 30, 43)
-                : WpfColor.FromArgb(255, 248, 249, 252)),
+            Background = Theme.Brush(ColorPickerPopup.PanelBg),
             BorderBrush = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)70 : (byte)50)),
             BorderThickness = new Thickness(1),
             Padding = new Thickness(14),
@@ -482,9 +480,7 @@ internal sealed class ColorDetailWindow : Window
         Grid.SetColumn(lbl, 0);
         grid.Children.Add(lbl);
 
-        WpfColor idleFieldBg = Theme.IsDark
-            ? WpfColor.FromArgb(255, 20, 22, 33)
-            : WpfColor.FromArgb(255, 238, 240, 245);
+        WpfColor idleFieldBg = ColorPickerPopup.FieldBg;
         var tb = new WpfTextBox
         {
             Height = 32,
@@ -795,9 +791,7 @@ internal sealed class ColorDetailWindow : Window
     /// </summary>
     private static Style GhostButtonStyle(int cornerRadius = 6)
     {
-        var idleBg = Theme.IsDark
-            ? WpfColor.FromArgb(255, 48, 50, 66)
-            : WpfColor.FromArgb(255, 228, 230, 237);
+        var idleBg = ColorPickerPopup.SecondaryButtonBg;
         var style = new Style(typeof(WpfButton));
         style.Setters.Add(new Setter(System.Windows.Controls.Control.BackgroundProperty, Theme.Brush(idleBg)));
         style.Setters.Add(new Setter(System.Windows.Controls.Control.BorderBrushProperty, Theme.Brush(Theme.BorderSubtle)));

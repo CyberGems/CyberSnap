@@ -84,7 +84,7 @@ public sealed partial class EditorForm
     private void AttachCanvas(AnnotationCanvas canvas)
     {
         canvas.StateChanged += OnCanvasStateChanged;
-        canvas.BlankBitmapFactory = (w, h) => CreateBlankCheckerboard(EditorColors.IsDark, w, h);
+        canvas.BlankBitmapFactory = CreateBlankCheckerboard;
         canvas.ConfirmResizeByHandle = ConfirmCanvasResizeByHandle;
         canvas.TextFontSizeChanged += OnCanvasTextFontSizeChanged;
         canvas.TextStyleChanged += OnCanvasTextStyleChanged;
@@ -331,7 +331,7 @@ public sealed partial class EditorForm
     private void OpenBlankTab(Bitmap? blank = null)
     {
         WarnIfManyTabs();
-        blank ??= CreateBlankCheckerboard(EditorColors.IsDark);
+        blank ??= CreateBlankCheckerboard();
         var doc = CreateDocument(blank, null, _canvas);
         doc.Canvas.IsDefaultBlank = true;
         doc.Canvas.IsBlankCanvas = true;
@@ -398,7 +398,7 @@ public sealed partial class EditorForm
     private void ReplaceLastDocumentWithBlank()
     {
         var closing = _activeDocument;
-        var blankBitmap = CreateBlankCheckerboard(EditorColors.IsDark);
+        var blankBitmap = CreateBlankCheckerboard();
         var blank = CreateDocument(blankBitmap, null, closing.Canvas);
         blank.Canvas.IsDefaultBlank = true;
         blank.Canvas.IsBlankCanvas = true;
@@ -608,7 +608,7 @@ public sealed partial class EditorForm
 
     private void ResetActiveToBlank()
     {
-        var blank = CreateBlankCheckerboard(EditorColors.IsDark);
+        var blank = CreateBlankCheckerboard();
         LoadCapture(blank, null, autoMaximize: false);
         blank.Dispose();
         _canvas.IsDefaultBlank = true;

@@ -16,6 +16,7 @@ internal static partial class Program
 {
     private static void CheckPreviewBackground(string temp, string? renders)
     {
+        CheckGraySurfaces();
         string originalLanguage = LocalizationService.CurrentLanguageSetting;
         double originalScale = UiScale.Current;
         Assert(SettingsService.TryDeserialize("{}", out var defaults) && defaults.PreviewShowCheckerboard,
@@ -125,6 +126,63 @@ internal static partial class Program
             LocalizationService.ApplyCurrentCulture(originalLanguage);
             Theme.SetMode(AppThemeMode.Dark);
             UiScale.Set(originalScale);
+        }
+    }
+
+    private static void CheckGraySurfaces()
+    {
+        const System.Reflection.BindingFlags nonPublicStatic =
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        const System.Reflection.BindingFlags nonPublicInstance =
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var previous = Theme.IsGray ? AppThemeMode.Grayscale : Theme.IsDark ? AppThemeMode.Dark : AppThemeMode.Light;
+        var colorType = typeof(Theme).Assembly.GetType("CyberSnap.UI.ColorDetailWindow")!;
+        var makeBlank = typeof(CyberSnap.UI.Editor.EditorForm).GetMethod("CreateBlankCheckerboard", nonPublicStatic)!;
+        var rulerBorder = typeof(CyberSnap.Capture.RulerRenderer).GetField("_borderPen", nonPublicStatic)!;
+        Theme.SetMode(AppThemeMode.Dark);
+        using var magnifier = new CyberSnap.Capture.PickerMagnifierForm();
+        _ = magnifier.Handle;
+        var detail = (Window)Activator.CreateInstance(colorType, (byte)24, (byte)85, (byte)176, null!)!;
+        try
+        {
+            var darkPanel = ((SolidColorBrush)((Border)detail.Content).Background).Color;
+            var darkBorder = ((System.Drawing.Pen)Field(magnifier, "_lensBorderPen")).Color;
+            Theme.SetMode(AppThemeMode.Grayscale);
+            colorType.GetMethod("RefreshLiveState", nonPublicInstance)!.Invoke(detail, null);
+            var grayPanel = ((SolidColorBrush)((Border)detail.Content).Background).Color;
+            Assert(darkPanel != grayPanel && grayPanel == Theme.BgElevated,
+                "the existing color detail window adopts the Gray palette");
+            var expectedBorder = System.Drawing.Color.FromArgb(160, Theme.Accent.R, Theme.Accent.G, Theme.Accent.B);
+            AwaitCondition(() => ((System.Drawing.Pen)Field(magnifier, "_lensBorderPen")).Color == expectedBorder,
+                "The existing color magnifier did not adopt the Gray palette", 5000);
+            Assert(darkBorder != expectedBorder, "the existing color magnifier repaints its accent in Gray");
+
+            var tiles = (DrawingGroup)((DrawingBrush)Theme.CreateCheckerboardBrush()).Drawing;
+            var background = ((SolidColorBrush)((GeometryDrawing)tiles.Children[0]).Brush).Color;
+            var alternate = ((SolidColorBrush)((GeometryDrawing)tiles.Children[1]).Brush).Color;
+            using var blank = (System.Drawing.Bitmap)makeBlank.Invoke(null, [64, 48])!;
+            var pixel = blank.GetPixel(0, 0);
+            var other = blank.GetPixel(16, 0);
+            Assert(background.R == background.G && background.G == background.B
+                && alternate.R == alternate.G && alternate.G == alternate.B
+                && background != alternate
+                && pixel.R == background.R && pixel.G == background.G && pixel.B == background.B
+                && other.R == alternate.R && other.G == alternate.G && other.B == alternate.B,
+                "the Editor and WPF checkerboards share the same neutral Gray tiles");
+
+            using var rulerImage = new System.Drawing.Bitmap(640, 320);
+            using var graphics = System.Drawing.Graphics.FromImage(rulerImage);
+            CyberSnap.Capture.RulerRenderer.Paint(graphics, new(100, 120), new(420, 120), new(0, 0, 640, 320), isDark: true);
+            Assert(((System.Drawing.Pen)rulerBorder.GetValue(null)!).Color == expectedBorder,
+                "the ruler measurement label uses the Gray accent");
+            Assert(LocalizationService.Translate("en", "Gray") == "Gray"
+                && LocalizationService.Translate("es", "Gray") == "Gris",
+                "the Gray theme label is available in English and Spanish");
+        }
+        finally
+        {
+            detail.Close();
+            Theme.SetMode(previous);
         }
     }
 

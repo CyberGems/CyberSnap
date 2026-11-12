@@ -817,8 +817,7 @@ internal sealed class ColorPickerPopup : ContentControl
     public static void PaintCheckerboard(DrawingContext dc, int w, int h)
     {
         const int size = 8;
-        var c1 = Theme.IsDark ? WpfColor.FromRgb(20, 22, 33) : WpfColor.FromRgb(245, 246, 250);
-        var c2 = Theme.IsDark ? WpfColor.FromRgb(28, 30, 43) : WpfColor.FromRgb(233, 235, 243);
+        var (c1, c2) = Theme.CheckerboardColors;
         var baseTone = Theme.Brush(c1);
         var altTone = Theme.Brush(c2);
         dc.DrawRectangle(baseTone, null, new Rect(0, 0, w, h));
@@ -883,13 +882,13 @@ internal sealed class ColorPickerPopup : ContentControl
         return true;
     }
 
-    private static WpfColor PanelBg => Theme.IsDark
+    internal static WpfColor PanelBg => Theme.IsGray ? Theme.BgElevated : Theme.IsDark
         ? WpfColor.FromArgb(255, 28, 30, 43)
         : WpfColor.FromArgb(255, 248, 249, 252);
-    private static WpfColor FieldBg => Theme.IsDark
+    internal static WpfColor FieldBg => Theme.IsGray ? Theme.BgSecondary : Theme.IsDark
         ? WpfColor.FromArgb(255, 20, 22, 33)
         : WpfColor.FromArgb(255, 238, 240, 245);
-    private static WpfColor SecondaryButtonBg => Theme.IsDark
+    internal static WpfColor SecondaryButtonBg => Theme.IsGray ? Theme.BgHover : Theme.IsDark
         ? WpfColor.FromArgb(255, 48, 50, 66)
         : WpfColor.FromArgb(255, 228, 230, 237);
     private static WpfColor SecondaryButtonBorder => Theme.IsDark

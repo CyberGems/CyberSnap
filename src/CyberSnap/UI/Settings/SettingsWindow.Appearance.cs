@@ -897,6 +897,9 @@ public partial class SettingsWindow
 
                         if (w is CapturePreviewDialog preview && preview.IsLoaded)
                             preview.ApplyTheme();
+
+                        if (w is ColorDetailWindow colorDetail)
+                            colorDetail.RefreshLiveState();
                     }
                     catch (Exception ex)
                     {

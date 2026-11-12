@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
+using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
 
@@ -42,10 +43,13 @@ public sealed class PickerMagnifierForm : Form
     private readonly Font _hexFont = UiChrome.ChromeFont(11f, FontStyle.Bold);
     private readonly Font _rgbFont = UiChrome.ChromeFont(9f, FontStyle.Regular);
     private readonly SolidBrush _labelBrush = new(UiChrome.SurfaceTextPrimary);
-    private readonly SolidBrush _bgBrush = new(UiChrome.SurfaceTier1);
+    private readonly SolidBrush _bgBrush = new(ChromeBackground);
     private readonly Pen _lensBorderPen = new(Color.FromArgb(160, UiChrome.AccentColor), 1.2f);
-    private readonly SolidBrush _pillBg = new(UiChrome.SurfaceTier1);
+    private readonly SolidBrush _pillBg = new(ChromeBackground);
     private readonly Pen _pillBorder = new(Color.FromArgb(160, UiChrome.AccentColor), 1f);
+
+    private static Color ChromeBackground =>
+        Theme.IsGray ? UiChrome.ToDrawingColor(Theme.BgElevated) : UiChrome.SurfaceTier1;
 
     private static readonly (int dx, int dy, SolidBrush brush)[] LensShadowPasses =
     {
@@ -82,6 +86,35 @@ public sealed class PickerMagnifierForm : Form
     {
         base.OnHandleCreated(e);
         CaptureWindowExclusion.Apply(this);
+        Theme.ModeChanged += RefreshChrome;
+        ApplyChromeColors();
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        Theme.ModeChanged -= RefreshChrome;
+        base.OnHandleDestroyed(e);
+    }
+
+    private void RefreshChrome()
+    {
+        try
+        {
+            BeginInvoke(() =>
+            {
+                if (IsDisposed) return;
+                ApplyChromeColors();
+                if (Visible) UpdateSurface();
+            });
+        }
+        catch (InvalidOperationException) when (IsDisposed || !IsHandleCreated) { }
+    }
+
+    private void ApplyChromeColors()
+    {
+        _labelBrush.Color = UiChrome.SurfaceTextPrimary;
+        _bgBrush.Color = _pillBg.Color = ChromeBackground;
+        _lensBorderPen.Color = _pillBorder.Color = Color.FromArgb(160, UiChrome.AccentColor);
     }
 
     protected override void WndProc(ref Message m)

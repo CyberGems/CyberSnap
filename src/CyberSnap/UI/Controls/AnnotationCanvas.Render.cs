@@ -84,25 +84,22 @@ public sealed partial class AnnotationCanvas
     private int _scaledCacheH = -1;
 
     private TextureBrush? _checkerboardBrush;
-    private bool _checkerboardBrushIsDark;
+    private (Color Base, Color Alternate) _checkerboardColors;
 
     private void PaintCheckerboardBackground(Graphics g, float x, float y, float width, float height)
     {
-        bool isDark = EditorColors.IsDark;
-        if (_checkerboardBrush == null || _checkerboardBrushIsDark != isDark)
+        var colors = UiChrome.CheckerboardColors;
+        if (_checkerboardBrush == null || _checkerboardColors != colors)
         {
             _checkerboardBrush?.Dispose();
-
-            var color1 = isDark ? Color.FromArgb(20, 22, 33) : Color.FromArgb(245, 246, 250);
-            var color2 = isDark ? Color.FromArgb(28, 30, 43) : Color.FromArgb(233, 235, 243);
 
             int size = 16;
             using (var tempBmp = new Bitmap(size * 2, size * 2))
             {
                 using (var tempG = Graphics.FromImage(tempBmp))
                 {
-                    tempG.Clear(color1);
-                    using (var b = new SolidBrush(color2))
+                    tempG.Clear(colors.Base);
+                    using (var b = new SolidBrush(colors.Alternate))
                     {
                         tempG.FillRectangle(b, 0, 0, size, size);
                         tempG.FillRectangle(b, size, size, size, size);
@@ -110,7 +107,7 @@ public sealed partial class AnnotationCanvas
                 }
                 _checkerboardBrush = new TextureBrush(tempBmp);
             }
-            _checkerboardBrushIsDark = isDark;
+            _checkerboardColors = colors;
         }
 
         _checkerboardBrush.ResetTransform();

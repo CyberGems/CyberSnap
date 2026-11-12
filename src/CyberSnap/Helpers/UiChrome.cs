@@ -102,16 +102,21 @@ public static class UiChrome
     public static System.Drawing.Color SurfaceTier1 => IsDark ? System.Drawing.Color.FromArgb(255, 26, 27, 31) : System.Drawing.Color.FromArgb(255, 228, 231, 238);
     public static System.Drawing.Color SurfaceTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 36, 38, 42) : System.Drawing.Color.FromArgb(255, 233, 236, 243);
     public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 30, 33, 34) : System.Drawing.Color.FromArgb(255, 237, 240, 246);
-    private static System.Drawing.Color ThemeAccentColor =>
-        System.Drawing.Color.FromArgb(
-            CyberSnap.UI.Theme.Accent.A,
-            CyberSnap.UI.Theme.Accent.R,
-            CyberSnap.UI.Theme.Accent.G,
-            CyberSnap.UI.Theme.Accent.B);
+    internal static Color ToDrawingColor(System.Windows.Media.Color color) =>
+        Color.FromArgb(color.A, color.R, color.G, color.B);
+
+    internal static (Color Base, Color Alternate) CheckerboardColors
+    {
+        get
+        {
+            var (baseColor, alternate) = CyberSnap.UI.Theme.CheckerboardColors;
+            return (ToDrawingColor(baseColor), ToDrawingColor(alternate));
+        }
+    }
 
     public static System.Drawing.Color AccentColor =>
         IsGray
-            ? ThemeAccentColor
+            ? ToDrawingColor(CyberSnap.UI.Theme.Accent)
             : IsDark
                 ? System.Drawing.Color.FromArgb(255, 75, 130, 246)
                 : System.Drawing.Color.FromArgb(255, 0, 120, 215);

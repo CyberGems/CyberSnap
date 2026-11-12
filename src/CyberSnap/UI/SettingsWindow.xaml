@@ -2985,7 +2985,7 @@
                                                  AutomationProperties.Name="CyberSnap theme"
                                                  ToolTip="Always use the signature CyberSnap theme."
                                                  Checked="AppThemeRadio_Changed"/>
-                                    <controls:ThemeCard x:Name="ThemeGrayscaleRadio" Caption="Dark"
+                                    <controls:ThemeCard x:Name="ThemeGrayscaleRadio" Caption="Gray"
                                                  ThemeMode="Grayscale" CardWidth="104" GroupName="AppTheme" Margin="0,0,14,0"
                                                  AutomationProperties.Name="Dark theme"
                                                  ToolTip="Sober, monochrome dark theme."

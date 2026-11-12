@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
 using CyberSnap.Helpers;
+using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
 
@@ -81,18 +82,16 @@ public static class RulerRenderer
 
     public static void EnsureChrome(bool isDark)
     {
-        var text = isDark
+        var text = Theme.IsGray ? UiChrome.ToDrawingColor(Theme.TextPrimary) : isDark
             ? Color.FromArgb(240, 240, 245)
             : Color.FromArgb(24, 24, 24);
-        var pill = isDark
+        var pill = Theme.IsGray ? UiChrome.ToDrawingColor(Theme.BgElevated) : isDark
             ? Color.FromArgb(26, 27, 31)
             : Helpers.UiChrome.SurfaceElevated;
-        var border = isDark
-            ? Color.FromArgb(160, 0, 200, 215)
-            : Color.FromArgb(160, 0, 110, 205);
-        var accent = isDark
+        var accent = Theme.IsGray ? UiChrome.AccentColor : isDark
             ? Color.FromArgb(0, 200, 215)
             : Color.FromArgb(0, 110, 205);
+        var border = Color.FromArgb(160, accent);
         // Contrast ring so the shaft stays readable on both light and dark screenshots.
         var halo = isDark
             ? Color.FromArgb(210, 0, 0, 0)

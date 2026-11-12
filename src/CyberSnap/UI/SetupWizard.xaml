@@ -671,7 +671,7 @@
                                              Services:LocalizationService.SourceToolTip="Always use the signature CyberSnap theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <controls:ThemeCard x:Name="WizThemeGrayscaleRadio"
-                                             Caption="Dark" ThemeMode="Grayscale" CardWidth="90"
+                                             Caption="Gray" ThemeMode="Grayscale" CardWidth="90"
                                              GroupName="WizTheme" Margin="0,0,10,0"
                                              AutomationProperties.Name="Dark theme"
                                              ToolTip="Sober, monochrome dark theme."

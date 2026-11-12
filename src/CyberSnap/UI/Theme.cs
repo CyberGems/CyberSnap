@@ -13,6 +13,7 @@ public static class Theme
     // IsGray redirects the palette below toward sober, desaturated greys with a
     // silver accent instead of the cyberpunk cyan/blue.
     public static bool IsGray { get; private set; }
+    internal static event Action? ModeChanged;
 
     // Sober silver accent used across the grayscale theme (replaces cyan).
     private static Color GraySilver => C(184, 190, 198);
@@ -170,9 +171,12 @@ public static class Theme
     /// <summary>Set the app-wide theme mode and refresh IsDark.</summary>
     public static void SetMode(Models.AppThemeMode mode)
     {
+        var previous = (IsDark, IsGray);
         _forcedMode = mode;
         Volatile.Write(ref _cachedDarkMode, -1);
         Refresh();
+        if (previous != (IsDark, IsGray))
+            ModeChanged?.Invoke();
     }
 
     public static void Refresh()
@@ -211,10 +215,13 @@ public static class Theme
     private static Color C(byte r, byte g, byte b) => Color.FromRgb(r, g, b);
     private static Color CA(byte r, byte g, byte b, byte a) => Color.FromArgb(a, r, g, b);
 
+    internal static (Color Base, Color Alternate) CheckerboardColors =>
+        (P(C(24, 24, 24), C(20, 22, 33), C(245, 246, 250)),
+         P(C(33, 33, 33), C(28, 30, 43), C(233, 235, 243)));
+
     public static System.Windows.Media.Brush CreateCheckerboardBrush()
     {
-        var c1 = IsDark ? Color.FromRgb(20, 22, 33) : Color.FromRgb(245, 246, 250);
-        var c2 = IsDark ? Color.FromRgb(28, 30, 43) : Color.FromRgb(233, 235, 243);
+        var (c1, c2) = CheckerboardColors;
 
         var brush = new DrawingBrush
         {

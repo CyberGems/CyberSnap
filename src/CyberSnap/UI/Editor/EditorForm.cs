@@ -280,7 +280,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return;
         }
 
-        var blank = CreateBlankCheckerboard(Theme.IsDark);
+        var blank = CreateBlankCheckerboard();
         ShowEditor(blank, source: ImageOpenSource.UserImport);
         if (_instance is not null)
         {
@@ -291,15 +291,14 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
     }
 
-    private static Bitmap CreateBlankCheckerboard(bool isDark, int width = 1024, int height = 768)
+    private static Bitmap CreateBlankCheckerboard(int width = 1024, int height = 768)
     {
         width = Math.Clamp(width, AnnotationCanvas.MinCanvasSize, AnnotationCanvas.MaxCanvasSize);
         height = Math.Clamp(height, AnnotationCanvas.MinCanvasSize, AnnotationCanvas.MaxCanvasSize);
         var blank = new Bitmap(width, height);
         using (var g = Graphics.FromImage(blank))
         {
-            var color1 = isDark ? Color.FromArgb(20, 22, 33) : Color.FromArgb(245, 246, 250);
-            var color2 = isDark ? Color.FromArgb(28, 30, 43) : Color.FromArgb(233, 235, 243);
+            var (color1, color2) = UiChrome.CheckerboardColors;
             g.Clear(color1);
             using (var brush = new SolidBrush(color2))
             {
@@ -820,10 +819,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return;
         }
 
-        if (_canvas != null && _canvas.IsDefaultBlank)
+        foreach (var document in _documents)
         {
-            var newBlank = CreateBlankCheckerboard(EditorColors.IsDark);
-            _canvas.BaseBitmap = newBlank;
+            var canvas = document.Canvas;
+            if (canvas.IsDefaultBlank && !canvas.IsDirty)
+                canvas.BaseBitmap = CreateBlankCheckerboard(canvas.BaseBitmap.Width, canvas.BaseBitmap.Height);
         }
 
         UpdateControlTheme(this);
@@ -1667,7 +1667,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         var blank = result.BackgroundColor is { } bg
              ? CreateSolidBackground(result.Width, result.Height, bg)
-             : CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
+             : CreateBlankCheckerboard(result.Width, result.Height);
 
         if (ShouldReplaceActiveDocument)
         {
