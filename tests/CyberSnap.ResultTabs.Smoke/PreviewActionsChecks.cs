@@ -15,6 +15,7 @@ internal static partial class Program
 {
     private static void CheckPreviewActions(string temp, string? renders, bool openPaint = false)
     {
+        CheckPreviewMaximizePreference(temp);
         string originalLanguage = LocalizationService.CurrentLanguageSetting;
         double originalScale = UiScale.Current;
         try
@@ -160,6 +161,47 @@ internal static partial class Program
             LocalizationService.ApplyCurrentCulture(originalLanguage);
             UiScale.Set(originalScale);
             Theme.SetMode(AppThemeMode.Dark);
+        }
+    }
+
+    private static void CheckPreviewMaximizePreference(string temp)
+    {
+        foreach (var screen in WidgetScreens())
+        {
+            var bounds = WidgetStatic<System.Drawing.Rectangle>("GetPhysicalWorkingArea", screen);
+            var anchor = new System.Drawing.Point(bounds.Left + bounds.Width / 2, bounds.Top + bounds.Height / 2);
+            var path = Path.Combine(temp, $"preview-placement-{bounds.X}-{bounds.Y}.json");
+            using (var settings = new SettingsService(path))
+            {
+                settings.Settings.CapturePreviewTimeoutSeconds = 0;
+                var preview = OpenPreview(settings);
+                Assert(preview.WindowState == WindowState.Normal, "Preview opens normally by default");
+                preview.WindowState = WindowState.Maximized;
+                preview.WindowState = WindowState.Minimized;
+                preview.CloseFromReplace();
+                settings.FlushPendingWrites();
+            }
+
+            using var reloaded = new SettingsService(path);
+            reloaded.Load();
+            var reopened = OpenPreview(reloaded);
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(reopened).Handle;
+            Assert(reopened.WindowState == WindowState.Maximized
+                && System.Windows.Forms.Screen.FromHandle(hwnd).DeviceName == screen.DeviceName,
+                $"Preview restores its maximized state on the capture monitor ({GetDpiForWindow(hwnd)} DPI)");
+            reopened.WindowState = WindowState.Normal;
+            reopened.CloseFromReplace();
+            var normal = OpenPreview(reloaded);
+            Assert(normal.WindowState == WindowState.Normal, "Preview remembers restoring to a normal window");
+            normal.CloseFromReplace();
+
+            CapturePreviewDialog OpenPreview(SettingsService settings)
+            {
+                var preview = new CapturePreviewDialog(new Bitmap(64, 48), settings, targetMonitorPoint: anchor);
+                preview.Show();
+                AwaitCondition(() => preview.Opacity == 1, "Preview did not reach its opening placement", 6000);
+                return preview;
+            }
         }
     }
 

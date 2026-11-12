@@ -55,6 +55,7 @@ namespace CyberSnap.UI
         internal event Action? ShownOnScreen;
         private bool _isSideBySide = true;
         private bool _isClosing;
+        private bool _lastPreviewMaximized;
         private int _pillSimToken;
         private List<AfterCapturePillChip>? _activePillChips;
         private List<AfterCapturePillChip>? _pendingPillSimulation;
@@ -204,6 +205,7 @@ namespace CyberSnap.UI
             CaptureKind captureKind = CaptureKind.Screenshot)
         {
             _settingsService = settingsService;
+            _lastPreviewMaximized = settingsService.Settings.PreviewOpenMaximized;
             _active = CreateSession(bitmap, savedFilePath, clipboardAlreadyCopied, captureKind);
             _sessions.Add(_active);
             // Own the capture-monitor anchor immediately. The static hint is easy to consume
@@ -242,6 +244,12 @@ namespace CyberSnap.UI
                 StopPrimaryButtonSpin();
                 StopCtaBorderPulse();
                 DiscardStashedSession();
+                if (_settingsService.Settings.PreviewOpenMaximized != _lastPreviewMaximized)
+                {
+                    _settingsService.Settings.PreviewOpenMaximized = _lastPreviewMaximized;
+                    try { _settingsService.Save(); }
+                    catch (Exception ex) { AppDiagnostics.LogError("preview.window-state-save", ex); }
+                }
             };
             // Pause auto-close only while the cursor is moving over this window; when it
             // stops (or leaves), the countdown resumes from the preserved remaining time.
@@ -280,7 +288,12 @@ namespace CyberSnap.UI
                 ApplyZoom();
                 TryApplyInitialContain();
             };
-            StateChanged += (_, _) => RecenterPreviewOnStateChange();
+            StateChanged += (_, _) =>
+            {
+                if (WindowState != WindowState.Minimized)
+                    _lastPreviewMaximized = WindowState == WindowState.Maximized;
+                RecenterPreviewOnStateChange();
+            };
             Loaded += (_, _) =>
             {
                 // The first SizeChanged can occur before the preview is fully arranged (and
@@ -413,7 +426,7 @@ namespace CyberSnap.UI
 
         private void CenterOnOpenMonitor()
         {
-            if (_didCenterOnOpen) return;
+            if (_didCenterOnOpen || _isClosing) return;
             _didCenterOnOpen = true;
 
             // Mixed-DPI (primary 125% / secondary 150%): only SetWindowPos in physical pixels.
@@ -429,12 +442,16 @@ namespace CyberSnap.UI
 
             Dispatcher.BeginInvoke(new Action(() =>
             {
+                if (_isClosing) return;
                 try
                 {
                     UpdateLayout();
                     PopupWindowHelper.CenterWindowOnPhysicalMonitor(this, _targetMonitorPoint);
                 }
                 catch { /* keep current position */ }
+
+                if (_lastPreviewMaximized && WindowState == WindowState.Normal)
+                    WindowState = WindowState.Maximized;
 
                 Opacity = 1;
                 Dispatcher.BeginInvoke(new Action(() => ShownOnScreen?.Invoke()),
