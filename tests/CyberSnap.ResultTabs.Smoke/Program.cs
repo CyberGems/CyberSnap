@@ -25,7 +25,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        Application app = args.Contains("--gallery-focus-only") || args.Contains("--editor-title-about-only") || args.Contains("--preview-margin-only") || args.Contains("--preview-outline-only") || args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--widget-session-only") || args.Contains("--widget-capture-modes-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
+        Application app = args.Contains("--preview-close-sound-only") || args.Contains("--gallery-focus-only") || args.Contains("--editor-title-about-only") || args.Contains("--preview-margin-only") || args.Contains("--preview-outline-only") || args.Contains("--zoom-only") || args.Contains("--pin-only") || args.Contains("--pin-capture-only") || args.Contains("--pin-shadow-only") || args.Contains("--pin-chooser-only") || args.Contains("--pin-appearance-only") || args.Contains("--pin-lifecycle-only") || args.Contains("--widget-cursor-only") || args.Contains("--widget-session-only") || args.Contains("--widget-capture-modes-only") || args.Contains("--hotkeys-only") ? new ZoomFlowTestApp() : new Application();
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
         // Real result windows request foreground. Isolate this automated fixture
@@ -92,6 +92,12 @@ internal static partial class Program
             {
                 CheckPreviewActions(temp, args.FirstOrDefault(a => !a.StartsWith("--")), args.Contains("--open-paint"));
                 Console.WriteLine($"PASS: {_checks} preview action and viewport checks.");
+                return 0;
+            }
+            if (args.Contains("--preview-close-sound-only"))
+            {
+                CheckPreviewCloseSound((CyberSnap.App)app, settings, temp);
+                Console.WriteLine($"PASS: {_checks} preview close sound checks.");
                 return 0;
             }
             if (args.Contains("--preview-margin-only"))

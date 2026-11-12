@@ -60,6 +60,7 @@ internal sealed class PreviewSession : IDisposable
     public string? EarlySavePath { get; }
     public bool ClipboardAlreadyCopied => _copiedRevision == _revision;
     public CaptureKind CaptureKind { get; }
+    public CaptureSoundOnce? SharedCaptureSound { get; set; }
     public int Ordinal { get; }
     public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; set; } =
         RegionOverlayForm.ConfirmCommitAction.Default;

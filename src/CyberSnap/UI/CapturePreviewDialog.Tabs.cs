@@ -368,8 +368,12 @@ namespace CyberSnap.UI
             _sessionsFinalized = true;
             var list = _sessions.ToArray();
             _sessions.Clear();
+            var sharedSound = commit && list.Length > 1 ? new CaptureSoundOnce() : null;
             foreach (var session in list)
+            {
+                session.SharedCaptureSound = sharedSound;
                 RaiseSessionCompleted(session, commit);
+            }
             DiscardStashedSession();
         }
 

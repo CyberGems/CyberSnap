@@ -22,6 +22,14 @@ internal sealed record ToastStatusLine
     public string? CopyableTooltip { get; init; }
 }
 
+// Results from a single preview close may reach the toast in any order.
+internal sealed class CaptureSoundOnce
+{
+    private int _claimed;
+
+    public bool TryClaim() => Interlocked.Exchange(ref _claimed, 1) == 0;
+}
+
 internal sealed record ToastSpec
 {
     public string Title { get; init; } = "";
@@ -38,6 +46,7 @@ internal sealed record ToastSpec
     public string? ClickActionUrl { get; init; }
     public string? ClickActionLabel { get; init; }
     public bool PlayCaptureSound { get; init; }
+    public CaptureSoundOnce? SharedCaptureSound { get; init; }
     public bool PlayErrorSound { get; init; }
     public bool SuppressSound { get; init; }
     public bool IsError { get; init; }

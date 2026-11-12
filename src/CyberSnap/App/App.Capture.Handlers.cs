@@ -100,7 +100,8 @@ public partial class App
                 effectiveSavePath,
                 effectiveCopied,
                 preservePreviewPixels: isScaled || session.OutlineEnabled || session.MarginEnabled,
-                captureKind: kind);
+                captureKind: kind,
+                sharedCaptureSound: session.SharedCaptureSound);
 
             if (kind == CaptureKind.ScrollCapture)
             {
@@ -173,7 +174,8 @@ public partial class App
         string? alreadySavedPath = null,
         bool clipboardAlreadyCopied = false,
         bool preservePreviewPixels = false,
-        CaptureKind captureKind = CaptureKind.Screenshot)
+        CaptureKind captureKind = CaptureKind.Screenshot,
+        CaptureSoundOnce? sharedCaptureSound = null)
     {
         var settings = _settingsService!.Settings;
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
@@ -307,7 +309,8 @@ public partial class App
                                     openedViewer: true,
                                     filePath: persisted.FilePath,
                                     preview: BitmapPerf.CloneToastThumb(persisted.Output),
-                                    captureKind: captureKind);
+                                    captureKind: captureKind,
+                                    sharedCaptureSound: sharedCaptureSound);
                             }
                             persisted.Output.Dispose();
                             ScheduleIdleMemoryTrim();
@@ -325,7 +328,8 @@ public partial class App
                                 openedViewer: false,
                                 filePath: persisted.FilePath,
                                 preview: BitmapPerf.CloneToastThumb(persisted.Output),
-                                captureKind: captureKind);
+                                captureKind: captureKind,
+                                sharedCaptureSound: sharedCaptureSound);
                         }
                         persisted.Output.Dispose();
                     }
@@ -384,7 +388,8 @@ public partial class App
                                 copied,
                                 copyWanted,
                                 openedViewer,
-                                captureKind);
+                                captureKind,
+                                sharedCaptureSound);
                         }
                         else
                         {
@@ -403,7 +408,8 @@ public partial class App
                                     openedViewer: openedViewer,
                                     filePath: persisted.FilePath,
                                     preview: toastThumb,
-                                    captureKind: captureKind);
+                                    captureKind: captureKind,
+                                    sharedCaptureSound: sharedCaptureSound);
                             }
                         }
                     }
@@ -434,7 +440,8 @@ public partial class App
         bool copied,
         bool copyWanted,
         bool openedViewer,
-        CaptureKind captureKind)
+        CaptureKind captureKind,
+        CaptureSoundOnce? sharedCaptureSound)
     {
         ShareAttempt shareAttempt = default;
         Bitmap? toastThumb = showCompactToast ? BitmapPerf.CloneToastThumb(bitmap) : null;
@@ -460,7 +467,8 @@ public partial class App
                 openedViewer: openedViewer,
                 filePath: filePath,
                 preview: toastThumb,
-                captureKind: captureKind);
+                captureKind: captureKind,
+                sharedCaptureSound: sharedCaptureSound);
         }
         else
         {
@@ -553,7 +561,8 @@ public partial class App
         bool openedViewer,
         string? filePath,
         Bitmap? preview = null,
-        CaptureKind captureKind = CaptureKind.Screenshot)
+        CaptureKind captureKind = CaptureKind.Screenshot,
+        CaptureSoundOnce? sharedCaptureSound = null)
     {
         var state = Helpers.AfterCaptureOutcomeModel.FromSettings(_settingsService!.Settings, captureKind);
         var rows = new List<(int Order, UI.ToastStatusLine Line)>();
@@ -659,6 +668,7 @@ public partial class App
             StatusLines = rows.Select(r => r.Line).ToList(),
             FilePath = filePath,
             PlayCaptureSound = true,
+            SharedCaptureSound = sharedCaptureSound,
             IsSystemMessage = false,
             InlinePreviewBitmap = preview
         });
