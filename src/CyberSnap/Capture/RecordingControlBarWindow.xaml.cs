@@ -107,7 +107,6 @@ public sealed partial class RecordingControlBarWindow : Window
 
     /// <summary>True once the bar became visible at its settled placement (see ctor).</summary>
     private bool _revealedAtFinalPlacement;
-    private bool _hasRenderedContent;
     private bool _placementQueued;
     private int _placementRevision;
 
@@ -142,6 +141,11 @@ public sealed partial class RecordingControlBarWindow : Window
         InitializeComponent();
 
         Height = BarHeight;
+        // Start on the selection monitor so WPF can measure at its DPI before docking.
+        // Native placement below still determines the final position.
+        var initialDpi = VisualTreeHelper.GetDpi(this);
+        Left = (captureRegion.Left + captureRegion.Width / 2.0) / initialDpi.DpiScaleX;
+        Top = (captureRegion.Top + captureRegion.Height / 2.0) / initialDpi.DpiScaleY;
 
         // ── Chrome setup ──
         ConfigureShell();
@@ -205,15 +209,11 @@ public sealed partial class RecordingControlBarWindow : Window
         // Keep the bar transparent until positioning uses the measured native rectangle.
         UpdateBarVisibility();
         SizeChanged += (_, _) => QueueMeasuredPlacement();
-        ContentRendered += (_, _) =>
-        {
-            _hasRenderedContent = true;
-            QueueMeasuredPlacement();
-        };
 
-        // Briefly introduce the ready control once the final layout is visible.
         Loaded += (_, _) =>
         {
+            // Loaded gives us the native size without waiting for a transparent frame to render.
+            QueueMeasuredPlacement();
             if (!UI.Motion.Disabled && !_isRecording && !_isEncoding)
                 PlayReadyPulse(miniPresentation: false);
         };
@@ -429,7 +429,7 @@ public sealed partial class RecordingControlBarWindow : Window
 
     private void QueueMeasuredPlacement()
     {
-        if (!_hasRenderedContent || _placementQueued) return;
+        if (!IsLoaded || _placementQueued) return;
         _placementQueued = true;
         Dispatcher.BeginInvoke(() =>
         {
@@ -545,7 +545,9 @@ public sealed partial class RecordingControlBarWindow : Window
 
         _parkedAboveRegion = noRoomBelow && !clampedOffTop;
         MoveBarToPhysical(tx, ty);
-        NotifyOverlayChromeRelayout();
+        // Initial placement resolves the overlay chrome before revealing the bar.
+        if (_revealedAtFinalPlacement)
+            NotifyOverlayChromeRelayout();
 
         // If handle isn't ready, SourceInitialized re-invokes this and places it then.
     }

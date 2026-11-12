@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows.Media;
@@ -54,11 +55,20 @@ internal static partial class Program
             var owner = ownerReady.Task.GetAwaiter().GetResult();
             var bar = RecordingControlBarWindow.Create(region, format, 30, false, owner, outputPath);
             Rectangle? firstVisible = null;
+            long showRequested = 0;
+            TimeSpan revealTime = default;
+            TimeSpan sourceReady = default;
+            TimeSpan loadedTime = default;
+            bar.SourceInitialized += (_, _) => sourceReady = Stopwatch.GetElapsedTime(showRequested);
+            bar.Loaded += (_, _) => loadedTime = Stopwatch.GetElapsedTime(showRequested);
             var renderedBounds = new List<Rectangle>();
             EventHandler captureFirstVisible = (_, _) =>
             {
                 if (bar.Opacity > 0 && firstVisible is null)
+                {
                     firstVisible = bar.GetScreenBounds();
+                    revealTime = Stopwatch.GetElapsedTime(showRequested);
+                }
             };
             EventHandler captureRenderedBounds = (_, _) =>
             {
@@ -74,6 +84,7 @@ internal static partial class Program
                 owner.BeginInvoke(() =>
                 {
                     SetField(owner, "_controlBarWpf", bar);
+                    showRequested = Stopwatch.GetTimestamp();
                     bar.ShowSafely();
                 });
                 AwaitCondition(() => firstVisible is not null && renderedBounds.Count > 0, "The recording bar did not appear", 5000);
@@ -84,7 +95,8 @@ internal static partial class Program
                 int expectedLeft = region.Left + (region.Width - settled.Width) / 2;
                 int expectedTop = parkAbove ? region.Top - settled.Height - gap : region.Bottom + gap;
                 string context = $"{screen.DeviceName}, DPI={dpi}, UI={scale}, {format}, above={parkAbove}";
-                Console.WriteLine($"{context}: first={firstVisible}, settled={settled}, expected=({expectedLeft},{expectedTop}).");
+                Console.WriteLine($"{context}: first={firstVisible}, settled={settled}, expected=({expectedLeft},{expectedTop}), "
+                    + $"source={sourceReady.TotalMilliseconds:F1}, loaded={loadedTime.TotalMilliseconds:F1}, reveal={revealTime.TotalMilliseconds:F1} ms.");
                 Assert(Forms.Screen.FromHandle(bar.Hwnd).DeviceName == screen.DeviceName,
                     "the recording bar appears on the selection monitor: " + context, false);
                 if (firstVisible != settled || renderedBounds.Any(bounds => bounds != settled)
