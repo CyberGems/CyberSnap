@@ -37,7 +37,8 @@
 - [🖼️ Capturas](#️-capturas)
 - [📸 ¿Por qué CyberSnap?](#-por-qué-cybersnap)
 - [✨ Funciones principales](#-funciones-principales)
-- [🚀 Primeros pasos](#-primeros-pasos)
+- [🚀 Instalación](#-instalación)
+- [🧭 Cómo usar la app](#-cómo-usar-la-app)
 - [🛠️ Stack tecnológico y arquitectura](#️-stack-tecnológico-y-arquitectura)
 - [⌨️ Atajos de teclado](#️-atajos-de-teclado)
 - [🤝 Contribuir](#-contribuir)
@@ -158,9 +159,9 @@ La mayoría de las herramientas de captura hacen muy poco o esconden funciones d
 - **Monitores con distintas escalas**: Configuración y Galería se abren centradas en el monitor elegido, y los avisos respetan la posición configurada desde que aparecen
 ---
 
-## 🚀 Primeros pasos
+## 🚀 Instalación
 
-### Instalación
+### Instalar
 
 Descarga el [instalador de Inno Setup](https://github.com/CyberGems/CyberSnap/releases/latest) y sigue el asistente. El instalador registra las asociaciones de archivos `.csnp`, crea accesos directos y ofrece iniciar con Windows.
 
@@ -199,6 +200,20 @@ Windows muestra este aviso para cualquier instalador sin un certificado de firma
 Puedes verificar el archivo de forma independiente: compara el SHA con el release de GitHub, escanéalo en VirusTotal o compila desde el código fuente. Más detalles: [guía de SmartScreen en el sitio web](https://cybergems.org/download#smartscreen).
 
 </details>
+---
+
+## 🧭 Cómo usar la app
+
+CyberSnap no tiene ventana principal: vive en la **bandeja del sistema**, con un **Widget de captura** flotante para acceder rápido.
+
+1. Pulsa `Alt+Shift+A` (el atajo predeterminado de Selección de área) o haz clic en el widget y arrastra un rectángulo.
+2. Copia el resultado directamente al portapapeles o ábrelo en el **Editor de anotaciones** para añadir flechas, texto y formas.
+3. Recupera capturas anteriores desde la **Galería**, con búsqueda por las palabras que el OCR leyó dentro de ellas.
+
+Las capturas se apilan como pestañas en la vista previa, así que puedes tomar varias seguidas sin parar. Con clic derecho en el icono de la bandeja accedes a OCR, QR, el selector de color, Zoom, Fijar en pantalla y **Salir**; al salir se desactivan los atajos y el widget, porque no existe «minimizar a la bandeja». Solo Selección de área trae un atajo predeterminado: asigna los demás en **Configuración → Teclado**.
+
+Consulta [¿Cómo se usa CyberSnap?](https://github.com/CyberGems/CyberSnap/wiki/How-Do-You-Use-es) para ver ejemplos cotidianos y las guías completas.
+
 ---
 
 ## 🛠️ Stack tecnológico y arquitectura

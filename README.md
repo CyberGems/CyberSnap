@@ -37,7 +37,8 @@
 - [🖼️ Screenshots](#️-screenshots)
 - [📸 Why CyberSnap?](#-why-cybersnap)
 - [✨ Key Features](#-key-features)
-- [🚀 Getting Started](#-getting-started)
+- [🚀 Installation](#-installation)
+- [🧭 Using the App](#-using-the-app)
 - [🛠️ Tech Stack & Architecture](#️-tech-stack--architecture)
 - [⌨️ Keyboard Shortcuts](#️-keyboard-shortcuts)
 - [🤝 Contributing](#-contributing)
@@ -160,7 +161,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation
 
 ### Install
 
@@ -201,6 +202,20 @@ Windows shows this warning for any installer without a paid code-signing certifi
 You can verify the file independently: compare the SHA with the GitHub release, scan it on VirusTotal, or build from source. More details: [SmartScreen guide on the website](https://cybergems.org/download#smartscreen).
 
 </details>
+
+---
+
+## 🧭 Using the App
+
+CyberSnap has no main window: it lives in the **system tray**, with a floating **Capture Widget** for quick access.
+
+1. Press `Alt+Shift+A` (the default Area Capture hotkey) or click the widget, then drag a rectangle.
+2. Copy the result straight to the clipboard, or open it in the **Annotation Editor** to add arrows, text and shapes.
+3. Reopen earlier captures from the **Gallery**, searchable by the words OCR read inside them.
+
+Captures stack as tabs in Preview, so you can take several in a row without stopping. Right-click the tray icon for OCR, QR, the color picker, Zoom, Pin and **Exit**; exiting disables the hotkeys and the widget, since there is no "minimize to tray". Only Area Capture ships with a default hotkey — assign the others in **Settings → Hotkeys**.
+
+See [How Do You Use CyberSnap?](https://github.com/CyberGems/CyberSnap/wiki/How-Do-You-Use) for everyday examples and the full guides.
 
 ---
 
