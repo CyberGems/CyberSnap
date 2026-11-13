@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using CyberSnap.Helpers;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using Microsoft.Win32;
@@ -605,9 +606,9 @@ public static class InstallService
             key.SetValue("DisplayIcon", exePath);
             key.SetValue("UninstallString", $"\"{exePath}\" --uninstall");
             key.SetValue("QuietUninstallString", $"\"{exePath}\" --uninstall");
-            key.SetValue("URLInfoAbout", "");
-            key.SetValue("URLUpdateInfo", "");
-            key.SetValue("HelpLink", "");
+            key.SetValue("URLInfoAbout", WikiLinks.HomepageUrl);
+            key.SetValue("URLUpdateInfo", WikiLinks.HomepageUrl);
+            key.SetValue("HelpLink", WikiLinks.HomepageUrl);
             key.SetValue("NoModify", 1, RegistryValueKind.DWord);
             key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
             key.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd"));

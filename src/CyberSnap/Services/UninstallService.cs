@@ -113,9 +113,9 @@ public static class UninstallService
         key.SetValue("DisplayIcon", exe, RegistryValueKind.String);
         key.SetValue("UninstallString", $"\"{exe}\" --uninstall", RegistryValueKind.String);
         key.SetValue("QuietUninstallString", $"\"{exe}\" --uninstall", RegistryValueKind.String);
-        key.SetValue("URLInfoAbout", "", RegistryValueKind.String);
-        key.SetValue("URLUpdateInfo", "", RegistryValueKind.String);
-        key.SetValue("HelpLink", "", RegistryValueKind.String);
+        key.SetValue("URLInfoAbout", WikiLinks.HomepageUrl, RegistryValueKind.String);
+        key.SetValue("URLUpdateInfo", WikiLinks.HomepageUrl, RegistryValueKind.String);
+        key.SetValue("HelpLink", WikiLinks.HomepageUrl, RegistryValueKind.String);
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
         key.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd"), RegistryValueKind.String);
