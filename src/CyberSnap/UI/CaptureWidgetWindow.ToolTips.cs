@@ -16,7 +16,11 @@ namespace CyberSnap.UI;
 public partial class CaptureWidgetWindow
 {
     private const double ToolTipGap = 6;
+    // A tooltip closed this recently still counts as "just shown", so the next hover in the
+    // widget opens immediately instead of waiting for the initial delay again.
+    private const long BetweenShowWindowMs = 1500;
     private UIElement? _openToolTipOwner;
+    private long _lastToolTipHideTick;
 
     private void RefreshToolTips()
     {
@@ -70,6 +74,7 @@ public partial class CaptureWidgetWindow
             };
             tooltip.Opened += (_, _) => WidgetToolTip_Opened(tooltip, owner);
             tooltip.Closed += WidgetToolTip_Closed;
+            owner.MouseEnter += WidgetToolTipOwner_MouseEnter;
             owner.ToolTip = tooltip;
         }
         tooltip.Content = content;
@@ -124,9 +129,24 @@ public partial class CaptureWidgetWindow
     private void TrackWidgetToolTip(ToolTip? tip, UIElement? owner)
     {
         if (_openToolTipOwner is not null) _openToolTipOwner.MouseLeave -= ToolTipOwner_MouseLeave;
+        if (tip is null && _openToolTip is not null) _lastToolTipHideTick = Environment.TickCount64;
         _openToolTip = tip;
         _openToolTipOwner = owner;
         if (_openToolTipOwner is not null) _openToolTipOwner.MouseLeave += ToolTipOwner_MouseLeave;
+    }
+
+    /// <summary>
+    /// WPF's tooltip safe area is sized around the closed tip and keeps the next control from
+    /// taking over when the pointer hops between adjacent widget buttons, so the new help could
+    /// fail to appear at all. BetweenShowDelay is set to zero for exactly this case, so honour it
+    /// ourselves instead of waiting on the service.
+    /// </summary>
+    private void WidgetToolTipOwner_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is not FrameworkElement owner || owner.ToolTip is not ToolTip tip) return;
+        if (ReferenceEquals(tip, _openToolTip)) return;
+        if (Environment.TickCount64 - _lastToolTipHideTick > BetweenShowWindowMs) return;
+        tip.IsOpen = true;
     }
 
     // WPF's tooltip safe area can extend over adjacent controls. End the hover at its owner.
