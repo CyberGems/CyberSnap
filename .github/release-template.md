@@ -24,13 +24,17 @@ The floating widget gains capture modes, Gallery and Editor shortcuts, and custo
 - **Gray theme and contextual help.** The former Dark theme is now **Gray**, with a neutral checkerboard and matching Color Picker and Ruler controls. About gives the app description more room, and Achievements has a dedicated wiki guide in English and Spanish.
 
 <details>
-<summary><b>🌐 Ver notas de la versión en Español</b></summary>
+<summary><b>🇪🇸 Ver notas de la versión en Español</b></summary>
 
 ### 🚀 Novedades de esta versión
 
 El widget flotante incorpora modos de captura, accesos a Galería y Editor, y secciones configurables. Pega capturas como archivos en el Explorador. La barra de grabación se prepara durante la selección, Vista previa recuerda su estado y el tema Gris abarca más herramientas.
 
 > **¿Nuevo en CyberSnap?** Una suite de captura todo en uno para Windows: capturas de área, ventana y página desplazable, grabación en MP4 y GIF, editor, OCR y lectura de códigos QR, y una galería con búsqueda por contenido.
+
+---
+
+### ✨ Novedades destacadas
 
 - **Más opciones en el widget flotante.** Usa Pantalla, Ventana y Repetir junto a Área. Abre Galería y Editor directamente. Desde **Más → Widget**, muestra u oculta por separado Modos de captura, Grabación, Herramientas y Galería y editor. El panel ajusta su tamaño y recuerda tus preferencias.
 - **Menú Más más rápido y claro.** Los submenús se cargan al abrirlos, los tooltips aparecen cerca de sus botones y los iconos se dibujan a la resolución del monitor. El widget se oculta en el monitor que muestra una app a pantalla completa. Ventana captura la aplicación que estaba activa antes de usar la bandeja o el widget.
