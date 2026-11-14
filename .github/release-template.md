@@ -32,7 +32,17 @@ El widget flotante incorpora modos de captura, accesos a Galería y Editor, y se
 - **Grabación y Vista previa más fluidas.** La barra de MP4 y GIF se prepara durante la selección y aparece en su posición final al soltar. Vista previa recuerda si estaba maximizada y reproduce un solo sonido de notificación al cerrar una ventana con varias pestañas.
 - **Tema Gris y ayuda contextual.** El tema Oscuro pasa a llamarse **Gris**, con un damero neutro y colores a juego en el Selector de color y la Regla. Acerca de da más espacio a la descripción y Logros enlaza a su guía en español e inglés.
 
+### ⚠️ Antes de instalar
+
+- **Windows:** esta versión aún no está firmada digitalmente. SmartScreen puede avisar antes de ejecutarla: **Más información › Ejecutar de todas formas**. Cuando Smart App Control está activado, Windows rechaza programas sin firmar; consulta la [política de firma de código](https://github.com/CyberGems/.github/blob/main/CODE_SIGNING.md). Verifica la descarga con los checksums SHA256 que aparecen más abajo.
+
 </details>
+
+---
+
+### ⚠️ Before you install
+
+- **Windows:** this release is not code-signed yet. SmartScreen may ask before it runs: **More info › Run anyway**. Where Smart App Control is on, Windows refuses unsigned programs; see the [code signing policy](https://github.com/CyberGems/.github/blob/main/CODE_SIGNING.md). Verify the download with the SHA256 checksums below.
 
 ---
 
