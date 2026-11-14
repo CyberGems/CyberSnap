@@ -263,6 +263,10 @@ public static class UpdateService
             if (line.StartsWith("Full Changelog", StringComparison.OrdinalIgnoreCase)) continue;
             if (line.StartsWith("VirusTotal", StringComparison.OrdinalIgnoreCase)) continue;
             if (line.StartsWith("SHA256", StringComparison.OrdinalIgnoreCase)) continue;
+            // Before you install is release-page furniture: the updater is
+            // automatic, so teasers never include SmartScreen guidance.
+            if (line.IndexOf("not code-signed", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+            if (line.IndexOf("no está firmada", StringComparison.OrdinalIgnoreCase) >= 0) continue;
 
             // Top-level bullet points
             if (rawLine.StartsWith("- ") || rawLine.StartsWith("* ") || rawLine.StartsWith("• "))
