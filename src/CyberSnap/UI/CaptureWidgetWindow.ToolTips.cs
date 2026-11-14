@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CyberSnap.Native;
 using Drawing = System.Drawing;
 using Forms = System.Windows.Forms;
@@ -80,19 +81,39 @@ public partial class CaptureWidgetWindow
         AutomationProperties.SetHelpText(tooltip, details?.Description ?? "");
     }
 
-    private void WidgetToolTip_Opened(ToolTip tip, FrameworkElement owner)
+    private void WidgetToolTip_Opened(ToolTip tip, FrameworkElement owner) => ShowWidgetToolTip(tip, owner, 3);
+
+    /// <summary>
+    /// Positions a tooltip that just opened. WPF raises Opened before the popup has necessarily
+    /// created its window, so <c>FromVisual(tip)</c> can still be null on the first pass; closing
+    /// in that case is what made hover help appear only sometimes. Retry a few dispatcher passes
+    /// before giving up.
+    /// </summary>
+    private void ShowWidgetToolTip(ToolTip tip, FrameworkElement owner, int attemptsLeft)
     {
-        if (ReferenceEquals(_openToolTip, tip)) return;
-        DismissWidgetToolTip();
+        if (!tip.IsOpen || ReferenceEquals(_openToolTip, tip)) return;
+        if (_openToolTip is not null) return;
         // Closing must remove the popup before a capture, even if Windows enables tooltip fades.
         if (tip.Parent is Popup popup)
             popup.SetCurrentValue(Popup.PopupAnimationProperty, PopupAnimation.None);
-        if (!IsVisible || !_isExpanded || _fullscreenSuppressed || _widgetMenuOpen || !TryPositionWidgetToolTip(tip, owner))
+        if (!IsVisible || !_isExpanded || _fullscreenSuppressed || _widgetMenuOpen)
         {
             tip.IsOpen = false;
             return;
         }
-        TrackWidgetToolTip(tip, owner);
+        if (TryPositionWidgetToolTip(tip, owner))
+        {
+            TrackWidgetToolTip(tip, owner);
+            return;
+        }
+        if (attemptsLeft <= 1 || PresentationSource.FromVisual(tip) is not null)
+        {
+            // Either the popup exists and no placement fits, or the retries are spent.
+            tip.IsOpen = false;
+            return;
+        }
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded,
+            new Action(() => ShowWidgetToolTip(tip, owner, attemptsLeft - 1)));
     }
 
     private void WidgetToolTip_Closed(object sender, RoutedEventArgs e)
