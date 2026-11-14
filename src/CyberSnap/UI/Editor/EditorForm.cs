@@ -1453,8 +1453,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
                                 if (!firstPage)
                                 {
                                     page = document.AddPage();
-                                    page.Size = document.Pages[0].Size;
-                                    page.Orientation = document.Pages[0].Orientation;
+                                    // PdfPage.Size's getter is obsolete; copy the dimensions instead.
+                                    var sourcePage = document.Pages[0];
+                                    page.Orientation = sourcePage.Orientation;
+                                    page.Width = sourcePage.Width;
+                                    page.Height = sourcePage.Height;
                                 }
                                 firstPage = false;
 
