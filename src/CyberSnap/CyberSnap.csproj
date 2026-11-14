@@ -62,7 +62,7 @@
     <PackageReference Include="PDFsharp" Version="6.1.1" />
     <ProjectReference Include="..\CyberSnap.AppModel\CyberSnap.AppModel.csproj" />
     <PackageReference Include="AnimatedGif" Version="1.0.5" />
-    <PackageReference Include="FluentFTP" Version="52.1.0" />
+    <PackageReference Include="FluentFTP" Version="55.1.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="SSH.NET" Version="2026.0.0" />
