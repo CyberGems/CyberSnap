@@ -64,7 +64,7 @@
     <PackageReference Include="AnimatedGif" Version="1.0.5" />
     <PackageReference Include="FluentFTP" Version="52.1.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio" Version="3.3.0" />
     <PackageReference Include="SSH.NET" Version="2026.0.0" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
     <PackageReference Include="Vortice.Direct2D1" Version="3.8.3" />
