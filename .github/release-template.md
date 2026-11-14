@@ -85,4 +85,6 @@ El widget flotante incorpora modos de captura, accesos a Galería y Editor, y se
 
 ---
 
+📜 **Full changelog:** browse every version in [CHANGELOG.md](https://github.com/CyberGems/CyberSnap/blob/main/CHANGELOG.md).
+
 *Crafted with precision by [CyberGems](https://cybergems.org)*
