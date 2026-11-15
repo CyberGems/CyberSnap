@@ -180,35 +180,37 @@ internal static partial class Program
         var windowTip = (ToolTip)window.ToolTip;
 
         // Gallery has no help of its own, so hopping from it to Area is the case where the next
-        // tooltip used to be lost inside WPF's safe area. Waiting for the framework service to
-        // finish its initial delay made this check depend on machine load, so the widget now takes
-        // the handoff in the owner's MouseEnter and the fixture writes the timestamp the close
-        // handler would have recorded a moment earlier instead of sleeping and racing the window.
+        // tooltip used to be lost inside WPF's safe area, and the hop waits for the framework's
+        // initial delay. Both make a fixture that moves the shared desktop's cursor and waits a
+        // fixed time depend on machine load, so the hover is reported the way WPF reports it for a
+        // real pointer (the widget's own Enter/Leave handlers) and the handoff timestamp is seeded
+        // instead of racing the window. The physical cursor is left alone on CI runners.
         Call(widget, "DismissWidgetToolTip");
         Pump();
-        Hover(gallery);
-        Pump();
+        Enter(gallery);
         SetField(widget, "_lastToolTipHideTick", Environment.TickCount64);
-        Hover(area);
-        Pump();
-        Assert(area.IsMouseOver, "the hover fixture enters Area from a different control");
+        Enter(area);
         Assert(areaTip.IsOpen, "Area shows its hover tooltip as soon as the pointer enters it from a neighbor");
 
-        Hover(window);
-        Pump();
+        Leave(area);
+        Enter(window);
         Assert(!areaTip.IsOpen, "moving directly to Window dismisses Area's tooltip");
         Assert(windowTip.IsOpen, "Window shows its own hover help on the same handoff");
 
         // Clearing the timestamp proves the real close path records it again below.
         SetField(widget, "_lastToolTipHideTick", 0L);
-        Hover(gallery);
-        Pump();
+        Leave(window);
+        Enter(gallery);
         Assert(!windowTip.IsOpen && gallery.ToolTip is null,
             "the previous tooltip also closes when hovering a labeled button without help");
         Assert(GetField<long>(widget, "_lastToolTipHideTick") > 0,
             "closing a tooltip records when it hid so the next hover can take the handoff");
+        Pump();
 
-        static void Hover(Button button) => MovePickerPointer(button, new Point(button.ActualWidth / 2, button.ActualHeight / 2));
+        static void Enter(Button button) => button.RaiseEvent(new System.Windows.Input.MouseEventArgs(
+            System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount) { RoutedEvent = System.Windows.Input.Mouse.MouseEnterEvent });
+        static void Leave(Button button) => button.RaiseEvent(new System.Windows.Input.MouseEventArgs(
+            System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount) { RoutedEvent = System.Windows.Input.Mouse.MouseLeaveEvent });
     }
 
     private static void CheckPausedCursorCrossings(CaptureWidgetWindow widget, Forms.Screen[] screens)
