@@ -13,3 +13,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # PDFsharp 6.5 requires loading an AGPL or paid license before any document is created,
+      # which broke PDF export. 6.2.4 is the last release that works without one.
+      - dependency-name: "PDFsharp"
+        versions: [">= 6.5.0"]

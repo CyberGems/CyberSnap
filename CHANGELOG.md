@@ -7,10 +7,12 @@ All notable changes to CyberSnap are documented here.
 ### 🇺🇸 English
 
 - Show the widget's hover help for the next control immediately when the pointer moves between adjacent buttons, instead of sometimes leaving it without a tooltip.
+- Restore PDF export, which failed with a "The loaded license is not valid" error after a library update by returning to the license-free PDFsharp release.
 
 ### 🇪🇸 Español
 
 - Muestra la ayuda al pasar el ratón por el siguiente control del widget en cuanto el puntero se mueve entre botones contiguos, en lugar de dejarlo a veces sin tooltip.
+- Restaura la exportación a PDF, que fallaba con el error "La licencia cargada no es válida" tras una actualización de la biblioteca, volviendo a la versión de PDFsharp sin licencia.
 
 ## [1.25.0] - 2026-11-11
 

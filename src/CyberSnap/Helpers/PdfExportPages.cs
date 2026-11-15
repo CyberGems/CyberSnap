@@ -3,8 +3,9 @@ using PdfSharp.Pdf;
 namespace CyberSnap.Helpers;
 
 /// <summary>
-/// The Span PDF export slices one image across several pages. PdfPage.Size's getter is obsolete,
-/// so every extra page copies the first page's orientation and dimensions instead.
+/// The Span PDF export slices one image across several pages. PdfPage.Size's getter is obsolete
+/// in current PdfSharp builds, so every extra page copies the first page's orientation and
+/// dimensions instead.
 /// </summary>
 public static class PdfExportPages
 {

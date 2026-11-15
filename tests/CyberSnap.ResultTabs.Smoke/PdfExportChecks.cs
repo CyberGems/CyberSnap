@@ -8,9 +8,6 @@ internal static partial class Program
     // size and orientation chosen for page one, in both orientations and for each page size.
     private static void CheckPdfSpanPageSizing()
     {
-        // PDFsharp 6.5 refuses to create a document until a license has been chosen. The test
-        // harness only builds throwaway documents in memory, so it selects the free AGPL license.
-        PdfSharp.PdfSharpLicense.SetAgplLicense();
         foreach (var (label, size, orientation, slices) in new[]
         {
             ("A4 portrait", PageSize.A4, PageOrientation.Portrait, 4),
