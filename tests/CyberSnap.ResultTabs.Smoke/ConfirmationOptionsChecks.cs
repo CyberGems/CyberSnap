@@ -7,6 +7,20 @@ using Forms = System.Windows.Forms;
 
 internal static partial class Program
 {
+    // The overlay's confirm press runs on a Forms timer, which only advances with the WinForms
+    // message pump, so wait for the state itself instead of a fixed pause.
+    private static void AwaitOverlayState(Func<bool> condition, string description, int timeoutMs)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (!condition())
+        {
+            if (DateTime.UtcNow > deadline) throw new TimeoutException(description);
+            Forms.Application.DoEvents();
+            Pump();
+            Thread.Sleep(10);
+        }
+    }
+
     // The overlay's read-only static reader normally uses the live app path. Point
     // its in-process cache at the temporary snapshot, without touching user files.
     private static void UseTemporaryConfirmationSettings(SettingsService settings)
@@ -183,13 +197,15 @@ internal static partial class Program
                         Call(restarted, "OnKeyDown", new Forms.KeyEventArgs(Forms.Keys.Space));
                     }
                     else Call(restarted, "OnKeyDown", new Forms.KeyEventArgs(Forms.Keys.Enter));
-                    // The key press plays the confirm press animation through a Forms timer and the
-                    // commit then runs the real capture pipeline, so poll the delivery with the
-                    // WinForms pump the timer needs instead of assuming both finish within two
-                    // seconds on a busy machine.
-                    var deadline = DateTime.UtcNow.AddSeconds(10);
-                    while (committed.IsEmpty && DateTime.UtcNow < deadline) { Forms.Application.DoEvents(); Pump(); Thread.Sleep(10); }
-                    Assert(committed == expected, "Space or Enter still confirms the original capture after hiding annotations: " + purpose + ", " + language
+                    // A broken confirm must fail fast, so wait in two steps: the press animation the
+                    // key started, then a short margin for the real capture pipeline to deliver.
+                    string where = purpose + ", " + language;
+                    AwaitOverlayState(() => Field(restarted, "_pressedConfirmButton") is -1
+                            && Field(restarted, "_pendingConfirmAction") is -1,
+                        "the confirmation press never finished: " + where, 3000);
+                    AwaitOverlayState(() => !committed.IsEmpty,
+                        "the confirmed region was never delivered: " + where, 3000);
+                    Assert(committed == expected, "Space or Enter still confirms the original capture after hiding annotations: " + where
                         + (committed == expected ? "" : $" (confirming={Field(restarted, "_isConfirmingSelection")}, pressed={Field(restarted, "_pressedConfirmButton")},"
                             + $" pending={Field(restarted, "_pendingConfirmAction")}, focus={Field(restarted, "_toolbarKeyboardFocusId")},"
                             + $" committed={committed}, expected={expected}, mode={Field(restarted, "_mode")})"));
