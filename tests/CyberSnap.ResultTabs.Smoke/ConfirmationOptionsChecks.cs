@@ -183,9 +183,16 @@ internal static partial class Program
                         Call(restarted, "OnKeyDown", new Forms.KeyEventArgs(Forms.Keys.Space));
                     }
                     else Call(restarted, "OnKeyDown", new Forms.KeyEventArgs(Forms.Keys.Enter));
-                    var deadline = DateTime.UtcNow.AddSeconds(2);
+                    // The key press plays the confirm press animation through a Forms timer and the
+                    // commit then runs the real capture pipeline, so poll the delivery with the
+                    // WinForms pump the timer needs instead of assuming both finish within two
+                    // seconds on a busy machine.
+                    var deadline = DateTime.UtcNow.AddSeconds(10);
                     while (committed.IsEmpty && DateTime.UtcNow < deadline) { Forms.Application.DoEvents(); Pump(); Thread.Sleep(10); }
-                    Assert(committed == expected, "Space or Enter still confirms the original capture after hiding annotations: " + purpose + ", " + language);
+                    Assert(committed == expected, "Space or Enter still confirms the original capture after hiding annotations: " + purpose + ", " + language
+                        + (committed == expected ? "" : $" (confirming={Field(restarted, "_isConfirmingSelection")}, pressed={Field(restarted, "_pressedConfirmButton")},"
+                            + $" pending={Field(restarted, "_pendingConfirmAction")}, focus={Field(restarted, "_toolbarKeyboardFocusId")},"
+                            + $" committed={committed}, expected={expected}, mode={Field(restarted, "_mode")})"));
                 }
             }
             // Older versions stored bulk-hidden annotations as an empty annotation subset.
