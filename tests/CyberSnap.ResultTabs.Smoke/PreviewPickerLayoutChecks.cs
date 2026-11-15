@@ -42,30 +42,18 @@ internal static partial class Program
                 };
                 EventHandler moved = (_, _) => ownerEvents.Add("moved");
                 SizeChangedEventHandler resized = (_, _) => ownerEvents.Add("resized");
-                // This runs on a live desktop, where another app can take the foreground between
-                // the activation above and the click, and the owner then refuses to open its
-                // popup. Retry with a fresh activation a bounded number of times instead of
-                // failing on a focus change that says nothing about picker layout.
-                for (int attempt = 0; attempt < 5; attempt++)
+                preview.Deactivated += deactivated;
+                preview.LocationChanged += moved;
+                preview.SizeChanged += resized;
+                try
                 {
-                    preview.Deactivated += deactivated;
-                    preview.LocationChanged += moved;
-                    preview.SizeChanged += resized;
-                    try
-                    {
-                        Element<Button>(preview, buttonName).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                        Pump();
-                    }
-                    finally
-                    {
-                        preview.Deactivated -= deactivated;
-                        preview.LocationChanged -= moved;
-                        preview.SizeChanged -= resized;
-                    }
-                    if (Field(preview, "_previewBackgroundColorPopup") is Popup { IsOpen: true }) break;
-                    Assert(preview.Activate() || preview.IsActive,
-                        "the picker owner regains activation before retrying the click");
-                    Pump();
+                    OpenPreviewColorPicker(preview, Element<Button>(preview, buttonName));
+                }
+                finally
+                {
+                    preview.Deactivated -= deactivated;
+                    preview.LocationChanged -= moved;
+                    preview.SizeChanged -= resized;
                 }
                 Assert(Field(preview, "_previewBackgroundColorPopup") is Popup { IsOpen: true },
                     $"the picker opens after changing monitor DPI and UI scale (active={preview.IsActive}, events={string.Join(',', ownerEvents)})");

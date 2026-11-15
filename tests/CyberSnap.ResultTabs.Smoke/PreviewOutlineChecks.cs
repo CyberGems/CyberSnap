@@ -168,16 +168,8 @@ internal static partial class Program
                         && !(bool)Property(session, "ClipboardAlreadyCopied"),
                         "removing edits restores the original and invalidates previously delivered edited versions");
                     Call(preview, "ApplyOutlineSettings", true, 6, borderColor.ToArgb());
-                    // Clicking creates the picker, but the preview closes it again as soon as it
-                    // loses focus, which a live desktop can do at any moment. Retry a bounded
-                    // number of times instead of dereferencing the null it leaves behind.
-                    for (int attempt = 0; attempt < 5 && Field(preview, "_previewBackgroundColorPicker") is null; attempt++)
-                    {
-                        preview.Activate(); Pump();
-                        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
-                    }
+                    OpenPreviewColorPicker(preview, button);
                     picker = (FrameworkElement)Field(preview, "_previewBackgroundColorPicker");
-                    Assert(picker is not null, "the outline color picker opens for the active tab");
                     picker.MaxHeight = 260; Pump();
                     Render(preview, renders, "preview-outline-" + language + ".png");
                     Render(picker, renders, "outline-picker-" + language + ".png");
