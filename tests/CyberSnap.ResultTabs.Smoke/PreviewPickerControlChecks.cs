@@ -94,6 +94,12 @@ internal static partial class Program
         foreach (string name in new[] { "_boxHex", "_boxR", "_boxG", "_boxB", "_boxH", "_boxS", "_boxV" })
         {
             var input = (TextBox)Field(picker, name);
+            // A picker that closes and reopens under a focus change can still be applying its
+            // themed template, so wait for the parts this check reads instead of assuming they
+            // are ready the instant the popup reports itself open.
+            AwaitCondition(() => input.Background is SolidColorBrush
+                    && input.Template?.FindName("InputBorder", input) is Border,
+                $"{name} finishes applying its themed input template", 3000);
             var normal = ((SolidColorBrush)input.Background).Color;
             input.BringIntoView(); Pump();
             Assert(input.Focus(), $"{name} remains editable by keyboard");
