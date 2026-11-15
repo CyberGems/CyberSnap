@@ -3,9 +3,6 @@ name: README sync
 on:
   push:
     branches: [main]
-    paths:
-      - 'README.md'
-      - 'README.es.md'
   pull_request:
   workflow_dispatch:
 
