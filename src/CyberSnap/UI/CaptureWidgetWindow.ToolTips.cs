@@ -4,7 +4,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Threading;
 using CyberSnap.Native;
 using Drawing = System.Drawing;
 using Forms = System.Windows.Forms;
@@ -86,15 +85,7 @@ public partial class CaptureWidgetWindow
         AutomationProperties.SetHelpText(tooltip, details?.Description ?? "");
     }
 
-    private void WidgetToolTip_Opened(ToolTip tip, FrameworkElement owner) => ShowWidgetToolTip(tip, owner, 3);
-
-    /// <summary>
-    /// Positions a tooltip that just opened. WPF raises Opened before the popup has necessarily
-    /// created its window, so <c>FromVisual(tip)</c> can still be null on the first pass; closing
-    /// in that case is what made hover help appear only sometimes. Retry a few dispatcher passes
-    /// before giving up.
-    /// </summary>
-    private void ShowWidgetToolTip(ToolTip tip, FrameworkElement owner, int attemptsLeft)
+    private void WidgetToolTip_Opened(ToolTip tip, FrameworkElement owner)
     {
         if (!tip.IsOpen || ReferenceEquals(_openToolTip, tip)) return;
         if (_openToolTip is not null) return;
@@ -111,14 +102,7 @@ public partial class CaptureWidgetWindow
             TrackWidgetToolTip(tip, owner);
             return;
         }
-        if (attemptsLeft <= 1 || PresentationSource.FromVisual(tip) is not null)
-        {
-            // Either the popup exists and no placement fits, or the retries are spent.
-            tip.IsOpen = false;
-            return;
-        }
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded,
-            new Action(() => ShowWidgetToolTip(tip, owner, attemptsLeft - 1)));
+        tip.IsOpen = false;
     }
 
     private void WidgetToolTip_Closed(object sender, RoutedEventArgs e)
