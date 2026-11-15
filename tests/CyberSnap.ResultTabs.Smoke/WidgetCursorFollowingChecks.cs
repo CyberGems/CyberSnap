@@ -179,17 +179,34 @@ internal static partial class Program
         var areaTip = (ToolTip)area.ToolTip;
         var windowTip = (ToolTip)window.ToolTip;
 
+        // Gallery has no help of its own, so hopping from it to Area is the case where the next
+        // tooltip used to be lost inside WPF's safe area. Waiting for the framework service to
+        // finish its initial delay made this check depend on machine load, so the widget now takes
+        // the handoff in the owner's MouseEnter and the fixture writes the timestamp the close
+        // handler would have recorded a moment earlier instead of sleeping and racing the window.
+        Call(widget, "DismissWidgetToolTip");
+        Pump();
         Hover(gallery);
         Pump();
+        SetField(widget, "_lastToolTipHideTick", Environment.TickCount64);
         Hover(area);
+        Pump();
         Assert(area.IsMouseOver, "the hover fixture enters Area from a different control");
-        AwaitCondition(() => areaTip.IsOpen, "Area did not show its hover tooltip after entering from Gallery", 3000);
+        Assert(areaTip.IsOpen, "Area shows its hover tooltip as soon as the pointer enters it from a neighbor");
+
         Hover(window);
+        Pump();
         Assert(!areaTip.IsOpen, "moving directly to Window dismisses Area's tooltip");
-        AwaitCondition(() => windowTip.IsOpen, "Window did not show its own hover help", 3000);
+        Assert(windowTip.IsOpen, "Window shows its own hover help on the same handoff");
+
+        // Clearing the timestamp proves the real close path records it again below.
+        SetField(widget, "_lastToolTipHideTick", 0L);
         Hover(gallery);
+        Pump();
         Assert(!windowTip.IsOpen && gallery.ToolTip is null,
             "the previous tooltip also closes when hovering a labeled button without help");
+        Assert(GetField<long>(widget, "_lastToolTipHideTick") > 0,
+            "closing a tooltip records when it hid so the next hover can take the handoff");
 
         static void Hover(Button button) => MovePickerPointer(button, new Point(button.ActualWidth / 2, button.ActualHeight / 2));
     }
