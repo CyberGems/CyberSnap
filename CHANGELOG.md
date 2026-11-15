@@ -2,6 +2,24 @@
 
 All notable changes to CyberSnap are documented here.
 
+## [1.25.1] - 2026-11-15
+
+### 🇺🇸 English
+
+- Show the floating widget's hover tooltips reliably: a tooltip no longer dismisses itself while its popup window is still being created, and hopping between adjacent buttons opens the next tooltip immediately instead of leaving that control without help.
+- Copy the first page's exact dimensions and orientation in multi-page PDF export instead of the deprecated page size getter.
+- Hide the Before you install guidance from the in-app update notes, because updates install automatically.
+- Show the CyberSnap website and description in the Windows uninstall entry.
+- Update dependencies, keeping PDFsharp on the MIT-licensed 6.2.4 release so PDF export requires no license.
+
+### 🇪🇸 Español
+
+- Muestra con fiabilidad los tooltips del widget flotante al pasar el puntero: una ayuda ya no se cierra sola mientras su ventana emergente se está creando y saltar entre botones contiguos abre el siguiente tooltip de inmediato en lugar de dejar ese control sin ayuda.
+- Copia las dimensiones y la orientación exactas de la primera página en la exportación a PDF multipágina, en lugar del getter de tamaño de página obsoleto.
+- Oculta la guía Antes de instalar de las notas de actualización dentro de la app, porque las actualizaciones se instalan automáticamente.
+- Muestra el sitio web de CyberSnap y su descripción en la entrada de desinstalación de Windows.
+- Actualiza dependencias, manteniendo PDFsharp en la versión 6.2.4 con licencia MIT para que la exportación a PDF no requiera licencia.
+
 ## [1.25.0] - 2026-11-11
 
 ### 🇺🇸 English
