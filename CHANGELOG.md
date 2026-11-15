@@ -2,6 +2,16 @@
 
 All notable changes to CyberSnap are documented here.
 
+## [1.25.1] - 2026-11-15
+
+### 🇺🇸 English
+
+- Show the widget's hover help for the next control immediately when the pointer moves between adjacent buttons, instead of sometimes leaving it without a tooltip.
+
+### 🇪🇸 Español
+
+- Muestra la ayuda al pasar el ratón por el siguiente control del widget en cuanto el puntero se mueve entre botones contiguos, en lugar de dejarlo a veces sin tooltip.
+
 ## [1.25.0] - 2026-11-11
 
 ### 🇺🇸 English

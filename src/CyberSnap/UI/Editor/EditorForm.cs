@@ -1451,14 +1451,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                             while (yOffset < imgHPoints)
                             {
                                 if (!firstPage)
-                                {
-                                    page = document.AddPage();
-                                    // PdfPage.Size's getter is obsolete; copy the dimensions instead.
-                                    var sourcePage = document.Pages[0];
-                                    page.Orientation = sourcePage.Orientation;
-                                    page.Width = sourcePage.Width;
-                                    page.Height = sourcePage.Height;
-                                }
+                                    page = PdfExportPages.AddLikeFirstPage(document);
                                 firstPage = false;
 
                                 var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);

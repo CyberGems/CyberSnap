@@ -120,8 +120,15 @@ internal static partial class Program
                 Console.WriteLine($"PASS: {_checks} preview background checks.");
                 return 0;
             }
+            if (args.Contains("--pdf-span-only"))
+            {
+                CheckPdfSpanPageSizing();
+                Console.WriteLine($"PASS: {_checks} span PDF export checks.");
+                return 0;
+            }
             if (args.Contains("--capture-tool-regressions-only"))
             {
+                CheckPdfSpanPageSizing();
                 CheckPreviewBackground(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
                 CheckPreviewOutline(temp, args.FirstOrDefault(a => !a.StartsWith("--")));
                 CheckStageHotkeyConflicts();
