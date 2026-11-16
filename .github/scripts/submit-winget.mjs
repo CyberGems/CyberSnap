@@ -94,7 +94,7 @@ function openSubmissions(api, login) {
     if (pr.state !== 'open' || pr.head.repo?.owner.login.toLowerCase() !== login.toLowerCase() || pr.base.ref !== 'master') {
       throw new Error(`Unexpected ownership or state for PR #${pr.number}.`);
     }
-    submissions.push({ ...pr, ...filesFor(api, pr) });
+    submissions.push({ ...pr, ...filesFor(api, pr), labels: (issue.labels ?? []).map(label => label.name) });
   }
   return submissions.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.number - b.number);
 }
@@ -141,6 +141,13 @@ export function submitWinget({ api, manifests, author, closeSuperseded = true, m
   }
   if (optional(api, `repos/${upstream}/contents/${packageRoot}${manifests.version}?ref=master`)) {
     return { skipped: true, reason: 'This CyberSnap version is already in winget.' };
+  }
+  // The Validation-Completed label is what puts a submission in the moderator queue, and any
+  // new commit removes it and restarts that review. winget-pkgs currently needs weeks for a
+  // new package, so keep an already queued PR frozen instead of pushing every release to it.
+  const queued = pending.find(pr => (pr.labels ?? []).includes('Validation-Completed'));
+  if (queued) {
+    return { skipped: true, reason: `PR #${queued.number} is already waiting for moderator review (Validation-Completed); skip the update to keep its place in the queue.` };
   }
   let kept = pending[0];
   const fork = kept?.head.repo.full_name ?? `${user.login}/winget-pkgs`;

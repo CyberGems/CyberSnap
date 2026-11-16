@@ -11,12 +11,12 @@ const manifests = version => ({ version, files: names.map(name => ({
   name, content: `PackageIdentifier: ${packageId}\nPackageVersion: ${version}\n`,
 })) });
 const files = version => names.map(name => ({ filename: `${packageRoot}${version}/${name}`, status: 'added' }));
-const pull = (number, version, date = '2026-10-10') => ({
+const pull = (number, version, date = '2026-10-10', labels = []) => ({
   number, title: `${packageId} version ${version}`, body: submissionBody(version),
   created_at: date + 'T00:00:00Z', state: 'open', html_url: `https://github.com/${upstream}/pull/${number}`,
   head: { sha: `head-${number}`, ref: `${packageId}-${version}-${number}`,
     repo: { full_name: fork, owner: { login: 'CyberGems' } } },
-  base: { ref: 'master' }, files: files(version),
+  base: { ref: 'master' }, files: files(version), labels: labels.map(name => ({ name })),
 });
 const clone = value => structuredClone(value);
 const missing = () => { const error = new Error('Not found'); error.status = 404; throw error; };
@@ -35,7 +35,7 @@ function fixture(prs = [], options = {}) {
       const page = Number(new URLSearchParams(path.split('?')[1]).get('page'));
       if (options.paginated && page === 1) return Array.from({ length: 100 }, (_, i) => ({ number: i }));
       if (page > (options.paginated ? 2 : 1)) return [];
-      return [...state.prs.values()].filter(pr => pr.state === 'open').map(pr => ({ number: pr.number, pull_request: {} }));
+      return [...state.prs.values()].filter(pr => pr.state === 'open').map(pr => ({ number: pr.number, pull_request: {}, labels: pr.labels ?? [] }));
     }
     if (path.startsWith(`repos/${upstream}/contents/`)) {
       if (options.merged) return [{ name: 'already-listed.yaml' }];
@@ -204,6 +204,21 @@ test('already published winget versions do not create another PR', () => {
   const { state, run } = fixture([], { merged: true });
   assert.equal(run().skipped, true);
   assert.deepEqual(writes(state), []);
+});
+
+test('a pending PR already waiting for moderator review is frozen instead of updated', () => {
+  const { state, run } = fixture([pull(1, '1.18.0', '2026-10-10', ['New-Package', 'Validation-Completed'])]);
+  const result = run();
+  assert.equal(result.skipped, true);
+  assert.match(result.reason, /#1.*moderator review/);
+  assert.deepEqual(writes(state), []);
+});
+
+test('a pending PR without the moderator label is still updated', () => {
+  const { state, run } = fixture([pull(1, '1.18.0', '2026-10-10', ['New-Package'])]);
+  assert.equal(run().number, 1);
+  assert.equal(state.commits.length, 1);
+  assert.deepEqual(state.prs.get(1).files, files('1.21.0'));
 });
 
 test('pagination and unrelated packages do not hide or change the pending CyberSnap PR', () => {
