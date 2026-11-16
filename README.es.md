@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cybergems.org/apps/cybersnap/">
+  <a href="https://cybergems.org/es/apps/cybersnap/">
     <img src="https://cybergems.org/banners/es/cybersnap.png" alt="Captura, anota y graba tu pantalla" />
   </a>
 </p>
@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/Licencia-GPL--3.0-1F2428.svg?style=flat-square&color=334155" alt="Licencia" />&nbsp;
   <img src="https://img.shields.io/badge/Plataforma-Windows_10%2F11-1F2428.svg?style=flat-square&color=334155" alt="Plataforma" />&nbsp;
   <img src="https://img.shields.io/badge/.NET-10-1F2428.svg?style=flat-square&logo=dotnet&logoColor=white&color=334155" alt=".NET" />&nbsp;
-  <a href="https://github.com/CyberGems/CyberSnap/wiki"><img src="https://img.shields.io/badge/Wiki-Documentaci%C3%B3n-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=334155" alt="Wiki" /></a>&nbsp;
+  <a href="https://github.com/CyberGems/CyberSnap/wiki/Home-es"><img src="https://img.shields.io/badge/Wiki-Documentaci%C3%B3n-1F2428?style=flat-square&logo=gitbook&logoColor=white&color=334155" alt="Wiki" /></a>&nbsp;
   <a href="https://github.com/CyberGems/CyberSnap/blob/main/CHANGELOG.md"><img src="https://img.shields.io/badge/Notas_de_la_versi%C3%B3n-475569?style=flat-square" alt="Notas de la versión" /></a>
 </p>
 
@@ -49,8 +49,8 @@
 <details>
 <summary><strong>🔗 Related links (outside this README)</strong></summary>
 
-- 🌐 [CyberSnap en la web](https://cybergems.org/apps/cybersnap/) — resumen, descarga y guía de SmartScreen
-- 📚 [Documentación y FAQ — Wiki](https://github.com/CyberGems/CyberSnap/wiki) — solución de problemas y guías detalladas
+- 🌐 [CyberSnap en la web](https://cybergems.org/es/apps/cybersnap/) — resumen, descarga y guía de SmartScreen
+- 📚 [Documentación y FAQ — Wiki](https://github.com/CyberGems/CyberSnap/wiki/Home-es) — solución de problemas y guías detalladas
 - 💾 [Releases](https://github.com/CyberGems/CyberSnap/releases) — instaladores, versiones portátiles y changelog
 - 🟣 [Suite CyberGems](https://github.com/CyberGems) — todas las apps de código abierto
 
@@ -196,7 +196,7 @@ Windows muestra este aviso para cualquier instalador sin un certificado de firma
 
 3. Haz clic en **Ejecutar de todos modos**. El instalador arranca con normalidad.
 
-Puedes verificar el archivo de forma independiente: compara el SHA con el release de GitHub, escanéalo en VirusTotal o compila desde el código fuente. Más detalles: [guía de SmartScreen en el sitio web](https://cybergems.org/download#smartscreen).
+Puedes verificar el archivo de forma independiente: compara el SHA con el release de GitHub, escanéalo en VirusTotal o compila desde el código fuente. Más detalles: [guía de SmartScreen en el sitio web](https://cybergems.org/es/download#smartscreen).
 
 </details>
 
@@ -286,7 +286,7 @@ Las contribuciones son bienvenidas. Abre un issue describiendo el cambio antes d
 
 ### 🙏 Agradecimientos
 
-Originalmente hace un fork de [OddSnap](https://github.com/jasperdevs/odd-snap) de [jasperdevs](https://github.com/jasperdevs). Desde entonces, CyberSnap ha sido reescrito y ampliado extensamente por [CyberGems](https://cybergems.org/).
+Originalmente hace un fork de [OddSnap](https://github.com/jasperdevs/odd-snap) de [jasperdevs](https://github.com/jasperdevs). Desde entonces, CyberSnap ha sido reescrito y ampliado extensamente por [CyberGems](https://cybergems.org/es/).
 
 Este proyecto también se construye sobre componentes de código abierto como ZXing, SQLite, FFmpeg, x264 e Inno Setup, gracias a sus autores y mantenedores. Los binarios de FFmpeg incluidos con CyberSnap son la build essentials GPLv3 documentada en [third-party/ffmpeg/README.md](third-party/ffmpeg/README.md).
 
@@ -325,7 +325,7 @@ Abre el editor de anotaciones directamente: `CyberSnap.exe --editor`
 
 ## ❤️ Donar
 
-**CyberSnap** es 100% gratis y de código abierto. Si te resulta útil, por favor considera [donar](https://cybergems.org/donate) o [dar una estrella al repo en GitHub](https://github.com/CyberGems/CyberSnap) para apoyar el desarrollo continuo. [Lee la historia completa](https://cybergems.org/about/) del proyecto. ¡Gracias! 🙏
+**CyberSnap** es 100% gratis y de código abierto. Si te resulta útil, por favor considera [donar](https://cybergems.org/es/donate) o [dar una estrella al repo en GitHub](https://github.com/CyberGems/CyberSnap) para apoyar el desarrollo continuo. [Lee la historia completa](https://cybergems.org/es/about/) del proyecto. ¡Gracias! 🙏
 
 <p align="center">
   <a href="https://www.paypal.com/donate/?hosted_button_id=M4PY3UPJA5Y6Q"><img src="https://img.shields.io/badge/Donar-PayPal-0070BA?style=for-the-badge&logo=paypal" alt="Donar con PayPal" /></a>
@@ -370,7 +370,7 @@ Copyright (C) 2026 CyberGems
 
 ## ❓ Preguntas frecuentes
 
-Para preguntas frecuentes, guías de solución de problemas e instrucciones detalladas de configuración, visita las [Preguntas frecuentes](https://github.com/CyberGems/CyberSnap/wiki/FAQ) o la [documentación en línea](https://cybergems.org/docs/cybersnap/FAQ).
+Para preguntas frecuentes, guías de solución de problemas e instrucciones detalladas de configuración, visita las [Preguntas frecuentes](https://github.com/CyberGems/CyberSnap/wiki/FAQ-es) o la [documentación en línea](https://cybergems.org/es/docs/cybersnap/FAQ).
 
 ---
 
@@ -378,16 +378,16 @@ Para preguntas frecuentes, guías de solución de problemas e instrucciones deta
 
 ### ¡Gracias por usar CyberSnap! 🎉
 
-Creado por [**CyberGems**](https://cybergems.org)
+Creado por [**CyberGems**](https://cybergems.org/es/)
 
 </div>
 <p align="center">
-  <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F&title=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows"><img src="https://img.shields.io/badge/Compartir_en_Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Compartir en Reddit" /></a>
-  &nbsp;<a href="https://twitter.com/intent/tweet?text=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows&url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_en_X-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Compartir en X" /></a>
-  &nbsp;<a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_en_Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white" alt="Compartir en Facebook" /></a>
-  &nbsp;<a href="mailto:?subject=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows&body=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows%20https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_por_Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Compartir por correo" /></a>
-  &nbsp;<a href="https://t.me/share/url?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F&text=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows"><img src="https://img.shields.io/badge/Compartir_en_Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Compartir en Telegram" /></a>
-  &nbsp;<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fcybergems.org%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_en_LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Compartir en LinkedIn" /></a>
+  <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fcybergems.org%2Fes%2Fapps%2Fcybersnap%2F&title=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows"><img src="https://img.shields.io/badge/Compartir_en_Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Compartir en Reddit" /></a>
+  &nbsp;<a href="https://twitter.com/intent/tweet?text=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows&url=https%3A%2F%2Fcybergems.org%2Fes%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_en_X-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Compartir en X" /></a>
+  &nbsp;<a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fcybergems.org%2Fes%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_en_Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white" alt="Compartir en Facebook" /></a>
+  &nbsp;<a href="mailto:?subject=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows&body=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows%20https%3A%2F%2Fcybergems.org%2Fes%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_por_Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Compartir por correo" /></a>
+  &nbsp;<a href="https://t.me/share/url?url=https%3A%2F%2Fcybergems.org%2Fes%2Fapps%2Fcybersnap%2F&text=CyberSnap%3A%20herramienta%20de%20escritorio%20gratuita%20y%20de%20c%C3%B3digo%20abierto%20para%20Windows"><img src="https://img.shields.io/badge/Compartir_en_Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Compartir en Telegram" /></a>
+  &nbsp;<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fcybergems.org%2Fes%2Fapps%2Fcybersnap%2F"><img src="https://img.shields.io/badge/Compartir_en_LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Compartir en LinkedIn" /></a>
 </p>
 
 ---
@@ -408,4 +408,4 @@ Más aplicaciones gratuitas, de código abierto y con la privacidad primero de [
 | 💫&nbsp;[**CyberViewer**](https://github.com/CyberGems/CyberViewer#readme) | Visor y editor de imágenes completo diseñado para usuarios casuales y avanzados. |
 | 🛡️&nbsp;[**CyberWall**](https://github.com/CyberGems/CyberWall#readme) | Cortafuegos de Windows fácil de usar con reglas por aplicación en tiempo real gracias al motor kernel WFP. |
 
-➡️ **[Todas las aplicaciones en cybergems.org](https://cybergems.org)**
+➡️ **[Todas las aplicaciones en cybergems.org](https://cybergems.org/es/)**
