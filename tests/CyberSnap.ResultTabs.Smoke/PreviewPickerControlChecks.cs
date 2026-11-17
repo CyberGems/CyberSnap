@@ -103,7 +103,7 @@ internal static partial class Program
                 $"{name} finishes applying its themed input template", 3000);
             var normal = ((SolidColorBrush)input.Background).Color;
             input.BringIntoView(); Pump();
-            FocusWithOwnerActive(picker, input, $"{name} remains editable by keyboard");
+            Assert(input.Focus(), $"{name} remains editable by keyboard (visible={input.IsVisible}, enabled={input.IsEnabled}, source={PresentationSource.FromVisual(input) is not null})");
             Pump();
             MovePickerPointer(input, new Point(input.ActualWidth / 2, input.ActualHeight / 2)); input.UpdateLayout();
             var border = (Border)input.Template.FindName("InputBorder", input);
