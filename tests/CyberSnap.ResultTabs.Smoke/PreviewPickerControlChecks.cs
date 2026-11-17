@@ -61,19 +61,8 @@ internal static partial class Program
         var pixel = new byte[4];
         image.CopyPixels(new Int32Rect((int)(image.PixelWidth * .85), image.PixelHeight / 2, 1, 1), pixel, 4, 0);
         Assert(pixel[3] >= 30, "the size rail paints visible pixels away from its handle");
-        // WPF only hands out keyboard focus while the owning window is active, and a live desktop
-        // can give the foreground to another app at any moment, so activate and retry a bounded
-        // number of times instead of failing on a focus change that says nothing about the field.
-        var owner = Window.GetWindow(picker);
-        bool focused = number.Focus();
-        for (int attempt = 0; attempt < 5 && !focused; attempt++)
-        {
-            if (owner is not null) owner.Activate();
-            Pump();
-            Thread.Sleep(20);
-            focused = number.Focus();
-        }
-        Assert(focused, $"the numeric size field accepts keyboard focus (visible={number.IsVisible}, enabled={number.IsEnabled}, source={PresentationSource.FromVisual(number) is not null}, ownerActive={owner?.IsActive})");
+        FocusWithOwnerActive(picker, number,
+            $"the numeric size field accepts keyboard focus (visible={number.IsVisible}, enabled={number.IsEnabled}, source={PresentationSource.FromVisual(number) is not null})");
         Pump();
         MovePickerPointer(number, new Point(number.ActualWidth / 2, number.ActualHeight / 2));
         number.UpdateLayout();
@@ -114,7 +103,7 @@ internal static partial class Program
                 $"{name} finishes applying its themed input template", 3000);
             var normal = ((SolidColorBrush)input.Background).Color;
             input.BringIntoView(); Pump();
-            Assert(input.Focus(), $"{name} remains editable by keyboard");
+            FocusWithOwnerActive(picker, input, $"{name} remains editable by keyboard");
             Pump();
             MovePickerPointer(input, new Point(input.ActualWidth / 2, input.ActualHeight / 2)); input.UpdateLayout();
             var border = (Border)input.Template.FindName("InputBorder", input);

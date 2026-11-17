@@ -25,7 +25,7 @@ internal static partial class Program
             foreach (var (window, screen) in new[] { (second, screens[1]), (first, screens[0]), (second, screens[1]), (first, screens[0]) })
             {
                 Assert(window.Activate(), "the window-switch fixture gains foreground", false);
-                Settle();
+                Settle(new WindowInteropHelper(window).Handle);
                 Assert(Here() == screen.DeviceName, "repeated real foreground switches follow the selected window's monitor", false);
             }
 
@@ -36,21 +36,21 @@ internal static partial class Program
             Assert(first.Activate(), "the final focus target activates", false);
             Tick();
             Assert(Here() == screens[0].DeviceName, "brief intermediate foreground targets do not move the widget", false);
-            Settle();
+            Settle(firstHandle);
             Assert(Here() == screens[0].DeviceName, "only the stable final foreground target is followed", false);
 
             Place(first, screens[1]);
-            Settle();
+            Settle(firstHandle);
             Assert(Here() == screens[1].DeviceName, "moving the same active HWND across monitors is followed", false);
             Place(first, screens[0]);
-            Settle();
+            Settle(firstHandle);
             Assert(Here() == screens[0].DeviceName, "moving the active HWND back restores the original monitor", false);
 
             first.WindowState = WindowState.Minimized;
             Pump();
             Assert(first.WindowState == WindowState.Minimized, "the foreground fixture is really minimized", false);
             Assert(second.Activate(), "the replacement foreground window activates after minimization", false);
-            Settle();
+            Settle(secondHandle);
             Assert(Here() == screens[0].DeviceName,
                 "automatic replacement focus on another display preserves the minimized window's desktop", false);
             Assert(GetField<IntPtr>(widget, "_minimizeFallbackWindow") == secondHandle,
@@ -59,23 +59,23 @@ internal static partial class Program
             var pointType = typeof(CaptureWidgetWindow).Assembly.GetType("CyberSnap.Native.User32+POINT")!;
             var nativePoint = Activator.CreateInstance(pointType, (int)center.X, (int)center.Y)!;
             Call(widget, "RecordMonitorPointerActivation", nativePoint);
-            Settle();
+            Settle(secondHandle);
             Assert(Here() == screens[1].DeviceName, "native hit testing of an explicit app selection releases the desktop hold", false);
 
             first.WindowState = WindowState.Normal;
             Assert(first.Activate(), "the minimized fixture restores and activates", false);
-            Settle();
+            Settle(firstHandle);
             Assert(Here() == screens[0].DeviceName, "restoring and focusing the original window follows its monitor", false);
 
             Call(widget, "ExpandWidget");
             AwaitCondition(() => !widget.HasAnimatedProperties, "Widget expansion did not settle for focus isolation");
             Assert(second.Activate(), "an external window activates during expanded widget use", false);
-            Settle();
+            Settle(secondHandle);
             Assert(Here() == screens[0].DeviceName, "real external focus cannot move an expanded widget", false);
             widget.CollapseImmediately();
             Tick();
             Assert(Here() == screens[0].DeviceName, "collapsing does not replay a stale foreground move", false);
-            Settle();
+            Settle(secondHandle);
             Assert(Here() == screens[1].DeviceName, "fresh stable focus is followed after interaction ends", false);
 
             // Desktop HWNDs span monitors. Exercise shell samples without
@@ -141,17 +141,20 @@ internal static partial class Program
 
         string Here() => Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName;
         void Tick() { Call(widget, "FollowActiveMonitorTick", null!, EventArgs.Empty); Pump(); }
-        // ObserveForegroundMonitor follows a foreground only after it stays put for 400 ms, so wait
-        // for the widget's own pending marker instead of sleeping a fixed 450 ms. The short cap
-        // makes a follow that never settles fail fast instead of hanging the run.
-        void Settle()
+        // ObserveForegroundMonitor follows a foreground only after it stays put for 400 ms, and
+        // Windows reports the new foreground a moment after Activate. Wait until the widget has
+        // seen the expected window and resolved its pending decision, instead of sleeping a fixed
+        // 450 ms that guesses at both. A suppressed follow reports a zero observed foreground and
+        // resolves immediately, and the short cap fails fast when a follow never settles.
+        void Settle(IntPtr expectedForeground)
         {
-            Tick();
             AwaitCondition(() =>
             {
                 Tick();
-                return Field(widget, "_pendingForegroundMonitor") is null;
-            }, "the foreground stayed stable long enough for the widget to settle a follow", 2000);
+                if (Field(widget, "_pendingForegroundMonitor") is not null) return false;
+                return Field(widget, "_observedForeground") is not IntPtr observed
+                    || observed == IntPtr.Zero || observed == expectedForeground;
+            }, "the widget settled its follow for the current foreground", 2000);
         }
         void Place(Window window, Forms.Screen screen)
         {
@@ -163,7 +166,7 @@ internal static partial class Program
         {
             Assert(window.Activate(), "the initial focus target activates", false);
             Call(widget, "ObserveMonitorPointerActivation", new WindowInteropHelper(window).Handle, screen, false);
-            Settle();
+            Settle(new WindowInteropHelper(window).Handle);
         }
         void Sample(IntPtr hwnd, Forms.Screen screen, bool desktop, bool minimized)
         {
