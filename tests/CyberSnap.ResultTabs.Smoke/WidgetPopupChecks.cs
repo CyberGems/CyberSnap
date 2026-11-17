@@ -318,12 +318,14 @@ internal static partial class Program
                 helper.GetMethod("CenterWindowOnPhysicalMonitor")!.Invoke(null, [focus, point]);
                 Assert(focus.Activate(), "the owned focus fixture activates on each monitor", false);
                 Pump();
-                Call(widget, "FollowActiveMonitorTick", null!, EventArgs.Empty);
-                Thread.Sleep(450);
-                Call(widget, "FollowActiveMonitorTick", null!, EventArgs.Empty);
-                Pump();
-                Assert(Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName == screen.DeviceName,
-                    "actual foreground focus moves the collapsed widget to that monitor", false);
+                // The widget follows only once the foreground stays put for 400 ms, so tick until it
+                // lands instead of sleeping a fixed 450 ms; the cap fails fast if it never follows.
+                AwaitCondition(() =>
+                {
+                    Call(widget, "FollowActiveMonitorTick", null!, EventArgs.Empty);
+                    Pump();
+                    return Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName == screen.DeviceName;
+                }, "actual foreground focus moves the collapsed widget to that monitor", 2000);
                 widget.RefreshLayout();
                 widget.CollapseImmediately();
                 Assert(Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName == screen.DeviceName,

@@ -141,7 +141,18 @@ internal static partial class Program
 
         string Here() => Forms.Screen.FromHandle(new WindowInteropHelper(widget).Handle).DeviceName;
         void Tick() { Call(widget, "FollowActiveMonitorTick", null!, EventArgs.Empty); Pump(); }
-        void Settle() { Tick(); Thread.Sleep(450); Tick(); }
+        // ObserveForegroundMonitor follows a foreground only after it stays put for 400 ms, so wait
+        // for the widget's own pending marker instead of sleeping a fixed 450 ms. The short cap
+        // makes a follow that never settles fail fast instead of hanging the run.
+        void Settle()
+        {
+            Tick();
+            AwaitCondition(() =>
+            {
+                Tick();
+                return Field(widget, "_pendingForegroundMonitor") is null;
+            }, "the foreground stayed stable long enough for the widget to settle a follow", 2000);
+        }
         void Place(Window window, Forms.Screen screen)
         {
             helper.GetMethod("CenterWindowOnPhysicalMonitor")!.Invoke(null,
