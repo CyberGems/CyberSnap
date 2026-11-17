@@ -61,7 +61,19 @@ internal static partial class Program
         var pixel = new byte[4];
         image.CopyPixels(new Int32Rect((int)(image.PixelWidth * .85), image.PixelHeight / 2, 1, 1), pixel, 4, 0);
         Assert(pixel[3] >= 30, "the size rail paints visible pixels away from its handle");
-        Assert(number.Focus(), $"the numeric size field accepts keyboard focus (visible={number.IsVisible}, enabled={number.IsEnabled}, source={PresentationSource.FromVisual(number) is not null})");
+        // WPF only hands out keyboard focus while the owning window is active, and a live desktop
+        // can give the foreground to another app at any moment, so activate and retry a bounded
+        // number of times instead of failing on a focus change that says nothing about the field.
+        var owner = Window.GetWindow(picker);
+        bool focused = number.Focus();
+        for (int attempt = 0; attempt < 5 && !focused; attempt++)
+        {
+            if (owner is not null) owner.Activate();
+            Pump();
+            Thread.Sleep(20);
+            focused = number.Focus();
+        }
+        Assert(focused, $"the numeric size field accepts keyboard focus (visible={number.IsVisible}, enabled={number.IsEnabled}, source={PresentationSource.FromVisual(number) is not null}, ownerActive={owner?.IsActive})");
         Pump();
         MovePickerPointer(number, new Point(number.ActualWidth / 2, number.ActualHeight / 2));
         number.UpdateLayout();
