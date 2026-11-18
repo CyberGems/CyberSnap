@@ -59,7 +59,7 @@ internal static partial class Program
                     $"the picker opens after changing monitor DPI and UI scale (active={preview.IsActive}, events={string.Join(',', ownerEvents)})");
                 var picker = (FrameworkElement)Field(preview, "_previewBackgroundColorPicker");
                 CheckBounds("natural");
-                CheckPickerColorInputs(picker);
+                picker = CheckPickerColorInputs(preview, Element<Button>(preview, buttonName));
                 CheckPickerHeaderRendering(picker);
                 CheckPickerPaletteLayout(picker);
                 picker.MaxHeight = Math.Min(picker.MaxHeight, 260);

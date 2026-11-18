@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using CyberSnap.UI;
 
 internal static partial class Program
 {
@@ -90,10 +91,16 @@ internal static partial class Program
             "all twelve standard colors, including black, fit one unclipped row");
     }
 
-    private static void CheckPickerColorInputs(FrameworkElement picker)
+    private static FrameworkElement CheckPickerColorInputs(CapturePreviewDialog preview, Button button)
     {
+        var picker = OpenPreviewColorPicker(preview, button);
         foreach (string name in new[] { "_boxHex", "_boxR", "_boxG", "_boxB", "_boxH", "_boxS", "_boxV" })
         {
+            // The preview closes the picker whenever it deactivates or moves, so a check that reads
+            // seven fields in a row can be holding a popup that is already gone: reopen it and
+            // re-read the field from the picker the preview hosts now.
+            if (PresentationSource.FromVisual(picker) is null)
+                picker = OpenPreviewColorPicker(preview, button);
             var input = (TextBox)Field(picker, name);
             // A picker that closes and reopens under a focus change can still be applying its
             // themed template, so wait for the parts this check reads instead of assuming they
@@ -103,7 +110,8 @@ internal static partial class Program
                 $"{name} finishes applying its themed input template", 3000);
             var normal = ((SolidColorBrush)input.Background).Color;
             input.BringIntoView(); Pump();
-            Assert(input.Focus(), $"{name} remains editable by keyboard (visible={input.IsVisible}, enabled={input.IsEnabled}, source={PresentationSource.FromVisual(input) is not null})");
+            FocusWithOwnerActive(preview, input,
+                $"{name} remains editable by keyboard (visible={input.IsVisible}, enabled={input.IsEnabled}, source={PresentationSource.FromVisual(input) is not null})");
             Pump();
             MovePickerPointer(input, new Point(input.ActualWidth / 2, input.ActualHeight / 2)); input.UpdateLayout();
             var border = (Border)input.Template.FindName("InputBorder", input);
@@ -113,5 +121,6 @@ internal static partial class Program
                 && !VisualDescendants(input).OfType<Button>().Any(button => button.IsVisible),
                 $"{name} keeps its input background under hover and focus, with an accent border and no clear overlay");
         }
+        return picker;
     }
 }
