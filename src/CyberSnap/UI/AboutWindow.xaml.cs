@@ -702,7 +702,7 @@ public partial class AboutWindow : Window
     private void AboutFooterIcon_MouseEnter(object sender, MouseEventArgs e)
     {
         if (sender is not Border border) return;
-        border.Background = Theme.Brush(Theme.AccentSubtle);
+        border.Background = Theme.Brush(Theme.ChromeHoverTile);
         SetFooterIconAccent(border, hovered: true);
     }
 
@@ -715,7 +715,9 @@ public partial class AboutWindow : Window
 
     private void SetFooterIconAccent(Border border, bool hovered)
     {
-        var brushKey = hovered ? "ThemeAccentBrush" : "ThemeMutedBrush";
+        // Hover follows the chrome ink: whitish in the default dark theme,
+        // the accent family in grayscale and light (see Theme.ChromeHoverInk).
+        var brushKey = hovered ? "ThemeChromeHoverInkBrush" : "ThemeMutedBrush";
         if (border == AboutFooterWebsiteBtn)
         {
             AboutFooterWebsiteIcon.SetResourceReference(Shape.StrokeProperty, brushKey);

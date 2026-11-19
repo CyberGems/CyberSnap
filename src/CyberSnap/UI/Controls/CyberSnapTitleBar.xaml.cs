@@ -1209,13 +1209,8 @@ public partial class CyberSnapTitleBar : UserControl
     private static System.Drawing.Color TitleBarIconColor =>
         System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
 
-    // Hover brightens the glyph to the theme's brightest text in the default dark
-    // theme (the whitish titlebar hover the suite uses); grayscale keeps its silver
-    // accent and light keeps its darkened blue ink.
     private static System.Drawing.Color TitleBarHoverIconColor =>
-        (!Theme.IsGray && Theme.IsDark)
-            ? System.Drawing.Color.FromArgb(255, Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B)
-            : System.Drawing.Color.FromArgb(255, Theme.Accent.R, Theme.Accent.G, Theme.Accent.B);
+        System.Drawing.Color.FromArgb(255, Theme.ChromeHoverInk.R, Theme.ChromeHoverInk.G, Theme.ChromeHoverInk.B);
 
     private static System.Drawing.Color TitleBarCloseHoverIconColor =>
         System.Drawing.Color.FromArgb(255, 255, 255, 255);

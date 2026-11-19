@@ -51,6 +51,14 @@ public static class Theme
     public static Color AccentHover => P(CA(184, 190, 198, 44), CA(0, 255, 255, 40), CA(0, 120, 215, 28));
     public static Color DangerHover => IsDark ? CA(255, 0, 85, 210) : CA(196, 43, 28, 225);
 
+    // Chrome hover (titlebar + floating bars): the glyph brightens to the theme's
+    // brightest text in the default dark theme (the suite's whitish standard),
+    // while grayscale keeps its silver accent and light its darkened blue ink.
+    // The hover tile follows the same split: neutral wash here, accent family
+    // elsewhere.
+    public static Color ChromeHoverInk => (!IsGray && IsDark) ? TextPrimary : Accent;
+    public static Color ChromeHoverTile => (!IsGray && IsDark) ? BgHover : AccentSubtle;
+
     // Selection
     public static Color SelectionBg => P(CA(184, 190, 198, 30), CA(0, 255, 255, 25), CA(0, 120, 215, 10));
 
@@ -107,6 +115,7 @@ public static class Theme
         resources["ThemeWindowBorderBrush"] = Brush(WindowBorder);
         resources["ThemeSeparatorBrush"] = Brush(Separator);
         resources["ThemeAccentBrush"] = Brush(Accent);
+        resources["ThemeChromeHoverInkBrush"] = Brush(ChromeHoverInk);
         resources["ThemeAccentForegroundBrush"] = Brush(AccentForeground);
         resources["ThemeAccentSubtleBrush"] = Brush(AccentSubtle);
         resources["ThemeAccentHoverBrush"] = Brush(AccentHover);

@@ -896,12 +896,14 @@ public sealed partial class RecordingControlBarWindow : Window
         // ── Trimmer button hover ──
         TrimmerBtn.MouseEnter += (_, _) =>
         {
-            var c = _sendToTrimmer ? _accentHover : _accent;
+            // Idle hover follows the chrome ink; the active trimmer state keeps
+            // its accent family (see Theme.ChromeHoverInk).
+            var c = _sendToTrimmer ? _accentHover : Theme.ChromeHoverInk;
             var iconColor = System.Drawing.Color.FromArgb(240, c.R, c.G, c.B);
             TrimmerIcon.Source = FluentIcons.RenderWpf("scissors", iconColor, 44, _sendToTrimmer);
             TrimmerBtn.Background = _sendToTrimmer
                 ? Theme.Brush(Color.FromArgb(50, _accent.R, _accent.G, _accent.B))
-                : Theme.Brush(Theme.AccentSubtle);
+                : Theme.Brush(Theme.ChromeHoverTile);
         };
         TrimmerBtn.MouseLeave += (_, _) =>
         {
