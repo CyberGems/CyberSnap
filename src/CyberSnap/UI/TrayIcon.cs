@@ -131,7 +131,7 @@ public sealed class TrayIcon : IDisposable
             var hint = HotkeyHint("rect");
             text = string.IsNullOrWhiteSpace(hint) ? "CyberSnap" : $"CyberSnap · {hint}";
         }
-        return text.Length > 63 ? text[..63] : text;
+        return text.Length > 63 ? text[..62] + "…" : text;
     }
 
     /// <summary>True while the custom WPF tray context menu is on screen. Other topmost
