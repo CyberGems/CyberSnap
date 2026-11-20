@@ -322,6 +322,8 @@ Capture annotations and the Editor can reuse local shortcuts, including their de
 
 Open the annotation editor directly: `CyberSnap.exe --editor`
 
+For the full shortcut reference, see the [Keyboard Shortcuts wiki](https://github.com/CyberGems/CyberSnap/wiki/Keyboard-Shortcuts).
+
 ---
 
 ## ❤️ Donate

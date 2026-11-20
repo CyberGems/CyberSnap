@@ -321,6 +321,8 @@ Las anotaciones de captura y el Editor pueden compartir atajos locales, incluido
 
 Abre el editor de anotaciones directamente: `CyberSnap.exe --editor`
 
+Para la referencia completa de atajos, consulta la [wiki de Atajos de teclado](https://github.com/CyberGems/CyberSnap/wiki/Keyboard-Shortcuts-es).
+
 ---
 
 ## ❤️ Donar
