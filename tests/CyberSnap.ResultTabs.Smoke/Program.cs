@@ -349,6 +349,12 @@ internal static partial class Program
                 Console.WriteLine($"PASS: {_checks} delivery synchronization checks.");
                 return 0;
             }
+            if (args.Contains("--tray-tooltip-only"))
+            {
+                CheckTrayTooltip();
+                Console.WriteLine($"PASS: {_checks} tray tooltip checks.");
+                return 0;
+            }
             if (args.Contains("--widget-only"))
             {
                 CheckWidgetToolTips(settings);
@@ -371,6 +377,7 @@ internal static partial class Program
             CheckAboutUpdates(settings, args.FirstOrDefault());
             CheckToastPlacement(settings);
             CheckTrayMenuMonitors();
+            CheckTrayTooltip();
             CheckWidgetMonitors(settings);
             CheckWidgetPopups(settings, args.FirstOrDefault());
             CheckWidgetActiveMonitor(settings);

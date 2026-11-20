@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using CyberSnap.AppModel;
 using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
@@ -120,18 +121,11 @@ public sealed class TrayIcon : IDisposable
 
     private string FormatTrayTooltip()
     {
-        string text;
         if (_isShowingRecording)
         {
-            var status = _isRecordingPaused ? T("Recording paused") : T("Recording");
-            text = $"CyberSnap · {status}";
+            return TrayTooltipText.Format(_isRecordingPaused ? T("Recording paused") : T("Recording"));
         }
-        else
-        {
-            var hint = HotkeyHint("rect");
-            text = string.IsNullOrWhiteSpace(hint) ? "CyberSnap" : $"CyberSnap · {hint}";
-        }
-        return text.Length > 63 ? text[..62] + "…" : text;
+        return TrayTooltipText.Format(HotkeyHint("rect"));
     }
 
     /// <summary>True while the custom WPF tray context menu is on screen. Other topmost

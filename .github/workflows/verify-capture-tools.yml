@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/verify-capture-tools.yml'
       - 'src/CyberSnap/UI/ToolListBuilder.cs'
+      - 'src/CyberSnap/UI/TrayIcon.cs'
+      - 'src/CyberSnap.AppModel/**'
       - 'src/CyberSnap/UI/CapturePreviewDialog*'
       - 'src/CyberSnap/UI/CaptureWidgetWindow*'
       - 'src/CyberSnap/UI/Settings/SettingsWindow.Preferences.cs'
@@ -52,6 +54,8 @@ jobs:
         run: ./scripts/Test-Localization.ps1 -Strict
       - name: Build smoke checks
         run: dotnet build tests/CyberSnap.ResultTabs.Smoke --configuration Release
+      - name: Check tray tooltip format
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --tray-tooltip-only
       - name: Check preview backgrounds, hotkey scopes, confirmation, Pin formats and Zoom help
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --capture-tool-regressions-only
       - name: Check outline output through real preview completion
