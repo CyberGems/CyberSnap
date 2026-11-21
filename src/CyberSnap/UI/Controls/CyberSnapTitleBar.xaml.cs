@@ -160,7 +160,10 @@ public partial class CyberSnapTitleBar : UserControl
     private static string ResolveCloseToolTip(CyberSnapTitleBar tb) =>
         !string.IsNullOrEmpty(tb.CloseToolTip)
             ? Services.LocalizationService.Translate(tb.CloseToolTip)
-            : Services.LocalizationService.Translate("Close");
+            : WithHotkeyHint(Services.LocalizationService.Translate("Close"), "Alt+F4");
+
+    private static string WithHotkeyHint(string text, string shortcut) =>
+        $"{text} ({shortcut})";
 
     /// <summary>
     /// Re-applies the localized title-bar button tooltips. Called by owner windows
@@ -173,8 +176,8 @@ public partial class CyberSnapTitleBar : UserControl
         TitleAboutButton.ToolTip = aboutHint;
         System.Windows.Automation.AutomationProperties.SetHelpText(TitleAboutButton, aboutHint ?? string.Empty);
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
-        MinimizeBtn.ToolTip = Services.LocalizationService.Translate("Minimize");
-        MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
+        MinimizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate("Minimize"), "Win+↓");
+        MaximizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize"), "Win+↑");
         CloseBtn.ToolTip = ResolveCloseToolTip(this);
         ApplyTooltipPlacement(MinimizeBtn);
         ApplyTooltipPlacement(MaximizeBtn);
