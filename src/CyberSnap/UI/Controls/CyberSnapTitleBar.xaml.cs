@@ -176,7 +176,11 @@ public partial class CyberSnapTitleBar : UserControl
         TitleAboutButton.ToolTip = aboutHint;
         System.Windows.Automation.AutomationProperties.SetHelpText(TitleAboutButton, aboutHint ?? string.Empty);
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
-        MinimizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate("Minimize"), "Win+↓");
+        // While maximized Win+Down restores the window, so the minimize button
+        // shows no shortcut chip in that state.
+        MinimizeBtn.ToolTip = isMaximized
+            ? Services.LocalizationService.Translate("Minimize")
+            : WithHotkeyHint(Services.LocalizationService.Translate("Minimize"), "Win+↓");
         MaximizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize"), isMaximized ? "Win+↓" : "Win+↑");
         CloseBtn.ToolTip = ResolveCloseToolTip(this);
         ApplyTooltipPlacement(MinimizeBtn);
