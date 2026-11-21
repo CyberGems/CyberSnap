@@ -245,6 +245,7 @@ public partial class SettingsWindow
             SetSaveDirectoryPath(s.SaveDirectory);
             SyncSavingSettingsFromSaveToFile();
             StartWithWindowsCheck.IsChecked = s.StartWithWindows;
+            UpdateNotificationsCheck.IsChecked = s.AutoCheckForUpdates;
             _suppressShowSuiteChange = true;
             try { ShowSuiteRecommendationsCheck.IsChecked = s.ShowSuiteRecommendations; }
             finally { _suppressShowSuiteChange = false; }

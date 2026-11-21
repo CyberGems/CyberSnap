@@ -53,6 +53,14 @@ public partial class AboutWindow : Window
             PopupWindowHelper.CenterWindowOnPhysicalMonitor(this);
             StartAboutLogoGlow();
         };
+        Activated += (_, _) => SyncUpdateNotifications();
+    }
+
+    private void SyncUpdateNotifications()
+    {
+        _suppressAutoCheckUpdateChange = true;
+        try { AutoCheckUpdateCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates; }
+        finally { _suppressAutoCheckUpdateChange = false; }
     }
 
     public void ApplyThemeColors()

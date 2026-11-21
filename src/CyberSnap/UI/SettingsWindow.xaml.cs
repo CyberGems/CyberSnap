@@ -136,6 +136,7 @@ public partial class SettingsWindow : Window
         {
             ApplyThemeColors();
             RefreshQuietHoursStatus();
+            UpdateNotificationsCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates;
         };
         Closed += (_, _) =>
         {
@@ -1041,6 +1042,22 @@ public partial class SettingsWindow : Window
             }
 
             ShowStartupPreferenceFailed(ex);
+        }
+    }
+
+    private void UpdateNotificationsCheck_Click(object sender, RoutedEventArgs e)
+    {
+        var previous = _settingsService.Settings.AutoCheckForUpdates;
+        try
+        {
+            _settingsService.Settings.AutoCheckForUpdates = UpdateNotificationsCheck.IsChecked == true;
+            _settingsService.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.update-notifications", ex);
+            _settingsService.Settings.AutoCheckForUpdates = previous;
+            UpdateNotificationsCheck.IsChecked = previous;
         }
     }
 

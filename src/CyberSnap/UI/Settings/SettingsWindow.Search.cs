@@ -961,6 +961,7 @@ public partial class SettingsWindow
         {
             // General / Startup
             "startwithwindows"          => StartWithWindowsCheck,
+            "autocheckforupdates"      => UpdateNotificationsRow,
             "showsuiterecommendations"  => ShowSuiteRecommendationsCheck,
             "cybergemssuite"            => SuiteSuggestionsRow,
             "pintrayicon"               => TrayPinRow,

@@ -29,6 +29,7 @@ public static class SettingsSchemaCatalog
                     [
                         new SettingDefinition("start_with_windows", "Start with Windows", SettingsValueKind.Toggle, "Launch CyberSnap automatically when the user signs in.", "StartWithWindows"),
                         new SettingDefinition("pin_tray_icon", "Keep CyberSnap visible in the tray", SettingsValueKind.Action, "Windows hides new tray icons behind the overflow (^). Drag CyberSnap onto the taskbar, or pin it in Windows Settings."),
+                        new SettingDefinition("auto_check_for_updates", "Check for updates on startup", SettingsValueKind.Toggle, "Automatically check for new versions when CyberSnap starts.", "AutoCheckForUpdates"),
                         new SettingDefinition("setup_wizard", "Setup wizard", SettingsValueKind.Action, "Review language, theme, capture options, and hotkeys from the first-launch walkthrough."),
                     ]),
                 new SettingsSectionDefinition(
