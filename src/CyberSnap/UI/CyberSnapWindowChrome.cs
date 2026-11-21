@@ -4,6 +4,7 @@ using System.Windows.Interop;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using System.Runtime.InteropServices;
+using CyberSnap.Helpers;
 using CyberSnap.Native;
 using CyberSnap.Services;
 
@@ -178,6 +179,8 @@ public static class CyberSnapWindowChrome
 
     public static void Apply(Window window, bool fitMaximizedToWorkArea = false)
     {
+        AltF4Exit.Attach(window);
+
         WindowChrome.SetWindowChrome(window, new WindowChrome
         {
             CaptionHeight = 0,

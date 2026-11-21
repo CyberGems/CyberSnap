@@ -560,6 +560,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         ResumeLayout(false);
         PerformLayout();
 
+        AltF4Exit.Attach(this);
         FormClosing += OnFormClosing;
         Deactivate += (_, _) =>
         {
