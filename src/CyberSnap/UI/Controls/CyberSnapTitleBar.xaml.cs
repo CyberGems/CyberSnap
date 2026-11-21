@@ -177,7 +177,7 @@ public partial class CyberSnapTitleBar : UserControl
         System.Windows.Automation.AutomationProperties.SetHelpText(TitleAboutButton, aboutHint ?? string.Empty);
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         MinimizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate("Minimize"), "Win+↓");
-        MaximizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize"), "Win+↑");
+        MaximizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize"), isMaximized ? "Win+↓" : "Win+↑");
         CloseBtn.ToolTip = ResolveCloseToolTip(this);
         ApplyTooltipPlacement(MinimizeBtn);
         ApplyTooltipPlacement(MaximizeBtn);
