@@ -99,12 +99,13 @@
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
 
-        <!-- Suite-standard sidebar close button: subtle bordered pill with an Esc keycap. -->
+        <!-- Suite-standard sidebar close button: subtle bordered pill with an Esc keycap,
+             matching CyberLauncher's CERRAR (dark fill, hairline border, soft hover). -->
         <Style x:Key="SettingsNavCloseButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeWindowBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeCloseButtonBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCloseButtonBorderBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -115,13 +116,13 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                CornerRadius="12" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeBgHoverBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeCloseButtonBgHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeCloseButtonBorderHoverBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -1200,10 +1201,12 @@
                                 Background="{DynamicResource ThemeSavedPulseBrush}"
                                 Opacity="0"/>
                     </Grid>
+                    <!-- Fixed gap between the hairline and the slot below it, so the
+                         idle layout keeps the line 12px above the close button. -->
+                    <Border Height="12" IsHitTestVisible="False"/>
                     <Border x:Name="SettingsSavedPillHost" Height="0" ClipToBounds="True">
                         <StackPanel x:Name="SettingsSavedPill" Orientation="Horizontal"
                                     HorizontalAlignment="Center" VerticalAlignment="Top"
-                                    Margin="0,0,0,12"
                                     Opacity="0" IsHitTestVisible="False"
                                     RenderTransformOrigin="0.5,0.5">
                             <StackPanel.RenderTransform>

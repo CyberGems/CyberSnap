@@ -82,6 +82,13 @@ public static class Theme
     // Emerald: lighter on dark themes for glow contrast, deeper on light for legibility.
     public static Color Success => P(C(52, 211, 153), C(52, 211, 153), C(5, 150, 105));
 
+    // Settings sidebar close button, matching CyberLauncher's CERRAR: darker fill,
+    // hairline border, slightly brighter on hover. Light theme flips to soft gray.
+    public static Color CloseButtonBg => P(CA(0, 0, 0, 77), CA(0, 0, 0, 77), CA(0, 0, 0, 18));
+    public static Color CloseButtonBorder => P(CA(255, 255, 255, 26), CA(255, 255, 255, 26), CA(0, 0, 0, 22));
+    public static Color CloseButtonBgHover => P(CA(255, 255, 255, 10), CA(255, 255, 255, 10), CA(0, 0, 0, 30));
+    public static Color CloseButtonBorderHover => P(CA(255, 255, 255, 38), CA(255, 255, 255, 38), CA(0, 0, 0, 36));
+
     // Toast shell. Only the default Dark theme (not Grayscale/Light) uses Settings CardBg so
     // notifications match Configuración; gray/light keep the prior island palette.
     public static Color ToastBg => P(C(30, 32, 35), C(23, 26, 40), C(234, 237, 244));
@@ -130,6 +137,10 @@ public static class Theme
         resources["SoundItemCustomSourceBrush"] = Brush(AccentHover);
         resources["ThemeSuccessBrush"] = Brush(Success);
         resources["ThemeSavedPulseBrush"] = SavedPulseBrush();
+        resources["ThemeCloseButtonBgBrush"] = Brush(CloseButtonBg);
+        resources["ThemeCloseButtonBorderBrush"] = Brush(CloseButtonBorder);
+        resources["ThemeCloseButtonBgHoverBrush"] = Brush(CloseButtonBgHover);
+        resources["ThemeCloseButtonBorderHoverBrush"] = Brush(CloseButtonBorderHover);
     }
 
     /// <summary>Horizontal green flash painted over the settings sidebar separator.</summary>
