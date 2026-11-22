@@ -131,12 +131,12 @@ public partial class SettingsWindow : Window
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.AutoCopyPreferencesChanged += OnAutoCopyPreferencesChanged;
         SettingsService.SettingsChanged += RefreshShowCursorCheck;
+        SettingsService.SettingsChanged += SyncUpdateNotifications;
         SettingsService.WidgetPreferencesChanged += OnWidgetPreferencesChanged;
         Activated += (_, _) =>
         {
             ApplyThemeColors();
             RefreshQuietHoursStatus();
-            UpdateNotificationsCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates;
         };
         Closed += (_, _) =>
         {
@@ -145,6 +145,7 @@ public partial class SettingsWindow : Window
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
             SettingsService.AutoCopyPreferencesChanged -= OnAutoCopyPreferencesChanged;
             SettingsService.SettingsChanged -= RefreshShowCursorCheck;
+            SettingsService.SettingsChanged -= SyncUpdateNotifications;
             SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;
             SaveWindowBounds();
         };
@@ -1043,6 +1044,17 @@ public partial class SettingsWindow : Window
 
             ShowStartupPreferenceFailed(ex);
         }
+    }
+
+    private void SyncUpdateNotifications()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(SyncUpdateNotifications);
+            return;
+        }
+
+        UpdateNotificationsCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates;
     }
 
     private void UpdateNotificationsCheck_Click(object sender, RoutedEventArgs e)

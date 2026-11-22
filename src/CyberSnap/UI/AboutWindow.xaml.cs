@@ -53,11 +53,18 @@ public partial class AboutWindow : Window
             PopupWindowHelper.CenterWindowOnPhysicalMonitor(this);
             StartAboutLogoGlow();
         };
-        Activated += (_, _) => SyncUpdateNotifications();
+        SettingsService.SettingsChanged += SyncUpdateNotifications;
+        Closed += (_, _) => SettingsService.SettingsChanged -= SyncUpdateNotifications;
     }
 
     private void SyncUpdateNotifications()
     {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(SyncUpdateNotifications);
+            return;
+        }
+
         _suppressAutoCheckUpdateChange = true;
         try { AutoCheckUpdateCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates; }
         finally { _suppressAutoCheckUpdateChange = false; }
