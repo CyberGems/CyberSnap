@@ -22,13 +22,20 @@ public sealed class WindowsToolTip : Form
     private const int AnchorGap = 8;
     private readonly Font _font = UiChrome.ChromeFont(8.5f);
     private readonly Font _titleFont = UiChrome.ChromeFont(8.5f, FontStyle.Bold);
+    private readonly Font _badgeFont = UiChrome.ChromeFont(7.5f, FontStyle.Bold);
     [System.ComponentModel.DefaultValue(false)]
     public bool EmphasizeTitle { get; set; }
     private string? _title;
     private string? _description;
     private int _titleHeight;
+    private int _titleWidth;
     private string _text = "";
     private bool _singleLine;
+    // Hotkey hint lifted out of the text and painted as a keycap badge, so capture-bar
+    // tooltips use the same chip as the rest of the suite instead of a plain "(Esc)".
+    private string? _shortcut;
+    private int _badgeWidth;
+    private int _badgeHeight;
 
     public WindowsToolTip() : this(managedTopMost: true) { }
 
@@ -121,7 +128,10 @@ public sealed class WindowsToolTip : Form
 
         CyberSnap.UI.Theme.Refresh();
         _text = text;
+        _shortcut = ExtractShortcutHint(ref _text);
         _singleLine = singleLine;
+        _badgeWidth = 0;
+        _badgeHeight = 0;
         BackColor = UiChrome.SurfaceTooltip;
         ForeColor = UiChrome.SurfaceTextPrimary;
 
@@ -143,17 +153,32 @@ public sealed class WindowsToolTip : Form
             Bounds = new Rectangle(anchorScreenBounds.Left, anchorScreenBounds.Top, 1, 1);
             _ = Handle;
         }
-        var preferred = TextRenderer.MeasureText(text, _font, measureSize, measureFlags);
+        var preferred = TextRenderer.MeasureText(_text, _font, measureSize, measureFlags);
         _title = null;
         _description = null;
-        if (EmphasizeTitle && !singleLine && text.IndexOf('\n') is int split && split > 0)
+        _titleWidth = 0;
+        if (_shortcut is not null)
         {
-            _title = text[..split];
-            _description = text[(split + 1)..];
+            var badgeText = TextRenderer.MeasureText(_shortcut, _badgeFont, new Size(int.MaxValue, 0), measureFlags);
+            _badgeWidth = badgeText.Width + 10;
+            _badgeHeight = badgeText.Height + 4;
+        }
+        if (EmphasizeTitle && !singleLine && _text.IndexOf('\n') is int split && split > 0)
+        {
+            _title = _text[..split];
+            _description = _text[(split + 1)..];
             var titleSize = TextRenderer.MeasureText(_title, _titleFont, measureSize, measureFlags);
             var bodySize = TextRenderer.MeasureText(_description, _font, measureSize, measureFlags);
-            _titleHeight = titleSize.Height;
-            preferred = new Size(Math.Max(titleSize.Width, bodySize.Width), titleSize.Height + 4 + bodySize.Height);
+            _titleWidth = titleSize.Width;
+            _titleHeight = Math.Max(titleSize.Height, _badgeHeight);
+            int titleRowWidth = _badgeWidth > 0 ? titleSize.Width + 8 + _badgeWidth : titleSize.Width;
+            preferred = new Size(Math.Max(titleRowWidth, bodySize.Width), _titleHeight + 4 + bodySize.Height);
+        }
+        else if (_badgeWidth > 0)
+        {
+            preferred = singleLine
+                ? new Size(preferred.Width + 8 + _badgeWidth, Math.Max(preferred.Height, _badgeHeight))
+                : new Size(Math.Max(preferred.Width, _badgeWidth), preferred.Height + 4 + _badgeHeight);
         }
         int width = singleLine
             ? Math.Max(1, preferred.Width + PadX * 2)
@@ -259,9 +284,14 @@ public sealed class WindowsToolTip : Form
         var textRect = new Rectangle(PadX, PadY, Width - PadX * 2, Height - PadY * 2);
         if (_title is not null && _description is not null)
         {
-            var flags = TextFormatFlags.Left | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
+            var flags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
             TextRenderer.DrawText(g, _title, _titleFont,
-                new Rectangle(textRect.X, textRect.Y, textRect.Width, _titleHeight), UiChrome.SurfaceTextPrimary, flags);
+                new Rectangle(textRect.X, textRect.Y, _titleWidth, _titleHeight), UiChrome.SurfaceTextPrimary, flags);
+            if (_shortcut is not null)
+            {
+                int badgeX = Math.Min(textRect.X + _titleWidth + 8, textRect.Right - _badgeWidth);
+                PaintShortcutBadge(g, badgeX, textRect.Y, textRect.Y + _titleHeight);
+            }
             TextRenderer.DrawText(g, _description, _font,
                 new Rectangle(textRect.X, textRect.Y + _titleHeight + 4, textRect.Width, textRect.Height - _titleHeight - 4),
                 UiChrome.SurfaceTextSecondary, flags);
@@ -272,13 +302,66 @@ public sealed class WindowsToolTip : Form
             drawFlags |= TextFormatFlags.SingleLine;
         else
             drawFlags |= TextFormatFlags.WordBreak;
-        TextRenderer.DrawText(
-            g,
-            _text,
-            _font,
-            textRect,
-            UiChrome.SurfaceTextPrimary,
-            drawFlags);
+        if (_shortcut is null)
+        {
+            TextRenderer.DrawText(g, _text, _font, textRect, UiChrome.SurfaceTextPrimary, drawFlags);
+            return;
+        }
+
+        if (_singleLine)
+        {
+            var textWidth = Math.Max(1, textRect.Width - _badgeWidth - 8);
+            TextRenderer.DrawText(g, _text, _font,
+                new Rectangle(textRect.X, textRect.Y, textWidth, textRect.Height),
+                UiChrome.SurfaceTextPrimary, drawFlags);
+            PaintShortcutBadge(g, textRect.X + textWidth + 8, textRect.Y, textRect.Bottom);
+            return;
+        }
+
+        var bodyHeight = Math.Max(1, textRect.Height - _badgeHeight - 4);
+        TextRenderer.DrawText(g, _text, _font,
+            new Rectangle(textRect.X, textRect.Y, textRect.Width, bodyHeight),
+            UiChrome.SurfaceTextPrimary, drawFlags);
+        PaintShortcutBadge(g, textRect.X, textRect.Y + bodyHeight + 4, textRect.Bottom);
+    }
+
+    /// <summary>
+    /// Lifts a trailing hotkey hint off the first line. The capture bar composes hints as
+    /// "Label  (Ctrl+Z)" / "Cancel capture  (Esc)\nDescription"; the renderer paints that
+    /// hint as a keycap badge instead of plain text.
+    /// </summary>
+    private static string? ExtractShortcutHint(ref string text)
+    {
+        int lineEnd = text.IndexOf('\n');
+        string firstLine = lineEnd < 0 ? text : text[..lineEnd];
+        if (!firstLine.EndsWith(')'))
+            return null;
+        int open = firstLine.LastIndexOf("  (", StringComparison.Ordinal);
+        if (open < 0)
+            return null;
+        string hint = firstLine[(open + 3)..^1];
+        if (hint.Length == 0 || hint.Contains('(') || hint.Contains(')'))
+            return null;
+        string title = firstLine[..open];
+        text = lineEnd < 0 ? title : title + text[lineEnd..];
+        return hint;
+    }
+
+    /// <summary>Keycap at <paramref name="x"/>, vertically centered between top and bottom.</summary>
+    private void PaintShortcutBadge(Graphics g, int x, int top, int bottom)
+    {
+        if (_shortcut is null || _badgeWidth <= 0) return;
+        var bounds = new Rectangle(x, top + Math.Max(0, (bottom - top - _badgeHeight) / 2), _badgeWidth, _badgeHeight);
+        using (var path = WindowsDockRenderer.RoundedRect(new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height), 4f))
+        {
+            using (var fill = new SolidBrush(UiChrome.KeycapBackground))
+                g.FillPath(fill, path);
+            using (var pen = new Pen(UiChrome.KeycapBorder, 1f))
+                g.DrawPath(pen, path);
+        }
+        TextRenderer.DrawText(g, _shortcut, _badgeFont, bounds, UiChrome.SurfaceTextSecondary,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+            | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
     }
 
     protected override void Dispose(bool disposing)
@@ -288,6 +371,7 @@ public sealed class WindowsToolTip : Form
             Region?.Dispose();
             _font.Dispose();
             _titleFont.Dispose();
+            _badgeFont.Dispose();
         }
         base.Dispose(disposing);
     }

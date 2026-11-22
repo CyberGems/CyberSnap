@@ -43,6 +43,13 @@ public partial class CyberSnapTitleBar : UserControl
             typeof(CyberSnapTitleBar),
             new PropertyMetadata(null, OnCloseToolTipChanged));
 
+    public static readonly DependencyProperty CloseShortcutProperty =
+        DependencyProperty.Register(
+            nameof(CloseShortcut),
+            typeof(string),
+            typeof(CyberSnapTitleBar),
+            new PropertyMetadata("Alt+F4", OnCloseToolTipChanged));
+
     public event EventHandler? CloseRequested;
     public event EventHandler? PinRequested;
 
@@ -145,6 +152,14 @@ public partial class CyberSnapTitleBar : UserControl
         set => SetValue(CloseToolTipProperty, value);
     }
 
+    /// <summary>Keycap shown in the close tooltip. Windows that close with their own
+    /// gesture (Preview uses Esc to discard) override the Alt+F4 default.</summary>
+    public string CloseShortcut
+    {
+        get => (string)GetValue(CloseShortcutProperty);
+        set => SetValue(CloseShortcutProperty, value);
+    }
+
     private static void OnShowPinButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is CyberSnapTitleBar tb && tb.PinBtn != null)
@@ -157,13 +172,14 @@ public partial class CyberSnapTitleBar : UserControl
             tb.CloseBtn.ToolTip = ResolveCloseToolTip(tb);
     }
 
-    private static string ResolveCloseToolTip(CyberSnapTitleBar tb) =>
-        !string.IsNullOrEmpty(tb.CloseToolTip)
+    private static object ResolveCloseToolTip(CyberSnapTitleBar tb)
+    {
+        string label = !string.IsNullOrEmpty(tb.CloseToolTip)
             ? Services.LocalizationService.Translate(tb.CloseToolTip)
-            : WithHotkeyHint(Services.LocalizationService.Translate("Close"), "Alt+F4");
-
-    private static string WithHotkeyHint(string text, string shortcut) =>
-        $"{text} ({shortcut})";
+            : Services.LocalizationService.Translate("Close");
+        string shortcut = string.IsNullOrWhiteSpace(tb.CloseShortcut) ? "Alt+F4" : tb.CloseShortcut;
+        return HotkeyToolTipContent.WithShortcut(label, shortcut);
+    }
 
     /// <summary>
     /// Re-applies the localized title-bar button tooltips. Called by owner windows
@@ -180,8 +196,10 @@ public partial class CyberSnapTitleBar : UserControl
         // shows no shortcut chip in that state.
         MinimizeBtn.ToolTip = isMaximized
             ? Services.LocalizationService.Translate("Minimize")
-            : WithHotkeyHint(Services.LocalizationService.Translate("Minimize"), "Win+↓");
-        MaximizeBtn.ToolTip = WithHotkeyHint(Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize"), isMaximized ? "Win+↓" : "Win+↑");
+            : HotkeyToolTipContent.WithShortcut(Services.LocalizationService.Translate("Minimize"), "Win+↓");
+        MaximizeBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+            Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize"),
+            isMaximized ? "Win+↓" : "Win+↑");
         CloseBtn.ToolTip = ResolveCloseToolTip(this);
         ApplyTooltipPlacement(MinimizeBtn);
         ApplyTooltipPlacement(MaximizeBtn);

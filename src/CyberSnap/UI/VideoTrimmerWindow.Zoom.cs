@@ -110,8 +110,8 @@ namespace CyberSnap.UI
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
         }
 
-        private static string WithHotkeyHint(string text, string shortcut)
-            => string.IsNullOrWhiteSpace(text) ? $"({shortcut})" : $"{text} ({shortcut})";
+        private static System.Windows.FrameworkElement WithHotkeyHint(string text, string shortcut)
+            => CyberSnap.Helpers.HotkeyToolTipContent.WithShortcut(text, shortcut);
 
         private void GetPhysicalBaseDimensions(BitmapSource bmp, out double baseW, out double baseH)
         {

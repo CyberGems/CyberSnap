@@ -102,6 +102,9 @@ public static class UiChrome
     public static System.Drawing.Color SurfaceTier1 => IsDark ? System.Drawing.Color.FromArgb(255, 26, 27, 31) : System.Drawing.Color.FromArgb(255, 228, 231, 238);
     public static System.Drawing.Color SurfaceTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 36, 38, 42) : System.Drawing.Color.FromArgb(255, 233, 236, 243);
     public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 30, 33, 34) : System.Drawing.Color.FromArgb(255, 237, 240, 246);
+    /// <summary>Keycap chrome shared with the in-app HotkeyBadge: faint well plus hairline.</summary>
+    public static System.Drawing.Color KeycapBackground => IsDark ? System.Drawing.Color.FromArgb(20, 255, 255, 255) : System.Drawing.Color.FromArgb(16, 0, 0, 0);
+    public static System.Drawing.Color KeycapBorder => IsDark ? System.Drawing.Color.FromArgb(41, 255, 255, 255) : System.Drawing.Color.FromArgb(32, 0, 0, 0);
     internal static Color ToDrawingColor(System.Windows.Media.Color color) =>
         Color.FromArgb(color.A, color.R, color.G, color.B);
 

@@ -316,10 +316,10 @@ namespace CyberSnap.UI
             SoundService.PlayPreviewSound();
         }
 
-        // Suffix "(<shortcut>)" appended to a translated tooltip body so hotkeys are
-        // discoverable on hover without taking up label space.
-        private static string WithHotkeyHint(string text, string shortcut)
-            => string.IsNullOrWhiteSpace(text) ? $"({shortcut})" : $"{text} ({shortcut})";
+        // Hotkeys appear as a keycap badge beside the translated tooltip body, matching
+        // the suite standard (and the dialog's own Enter/Esc badges).
+        private static FrameworkElement WithHotkeyHint(string text, string shortcut)
+            => Helpers.HotkeyToolTipContent.WithShortcut(text, shortcut);
 
         /// <summary>
         /// Anchor a control's ToolTip above the control itself instead of WPF's default
@@ -339,9 +339,8 @@ namespace CyberSnap.UI
             var lang = _settingsService.Settings.InterfaceLanguage;
             Helpers.WindowTitles.ApplyTaskbar(this, Helpers.WindowTitles.Preview, lang);
             TitleBar.Title = LocalizationService.Translate(lang, Helpers.WindowTitles.Preview);
-            TitleBar.CloseToolTip = WithHotkeyHint(
-                LocalizationService.Translate("Cancel and discard pending actions."),
-                "Esc");
+            TitleBar.CloseToolTip = LocalizationService.Translate("Cancel and discard pending actions.");
+            TitleBar.CloseShortcut = "Esc";
             AfterCaptureHeaderLabel.Text = LocalizationService.Translate("Active actions:");
             OptionalActionsHeaderLabel.Text = LocalizationService.Translate("You can also:");
             OptionalActionsHeaderLabel.ToolTip =
