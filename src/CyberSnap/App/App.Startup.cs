@@ -261,6 +261,7 @@ public partial class App
                     return;
 
                 var result = await UpdateService.CheckForUpdatesAsync();
+                if (_settingsService is null || !_settingsService.Settings.AutoCheckForUpdates) return;
                 if (!result.IsUpdateAvailable)
                 {
                     ClearSkippedUpdateVersion();
@@ -281,11 +282,11 @@ public partial class App
                 }
                 ClearSkippedUpdateVersion();
 
-                LatestUpdateResult = result;
-
                 if (Application.Current is null) return;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
+                    if (_settingsService is null || !_settingsService.Settings.AutoCheckForUpdates) return;
+                    LatestUpdateResult = result;
                     RefreshWidgetUpdateBadge();
                     RefreshAboutUpdateSectionIfOpen();
                     var peek = UpdateService.PeekReleaseNotes(result.ReleaseNotes, 160);
