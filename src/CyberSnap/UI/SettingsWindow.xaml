@@ -1142,7 +1142,7 @@
 
             <!-- Sidebar navigation: scroll when UiScale / DPI shrinks the frame below the tab list. -->
             <Border x:Name="SettingsSidebar" Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
-                    Padding="10,14,8,8">
+                    Padding="10,14,8,12">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
