@@ -458,16 +458,18 @@ public partial class AboutWindow : Window
         }
 
         HideUpdateAvailable();
-        var skipped = _settingsService.Settings.SkippedUpdateVersion;
-        if (!string.IsNullOrEmpty(skipped))
-            AboutUpdateDesc.Text = string.Format(LocalizationService.Translate("Update {0} skipped"), skipped);
-        else if (result is not null)
+        if (result is not null)
         {
             AboutUpdateTitle.Text = LocalizationService.Translate(result.LatestVersion is null ? "Update check failed" : "CyberSnap is up to date");
             AboutUpdateDesc.Text = result.StatusMessage;
         }
         else
-            AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
+        {
+            var skipped = _settingsService.Settings.SkippedUpdateVersion;
+            AboutUpdateDesc.Text = !string.IsNullOrEmpty(skipped)
+                ? string.Format(LocalizationService.Translate("Update {0} skipped"), skipped)
+                : LocalizationService.Translate("Check for the latest version and download updates directly.");
+        }
         UpdateBtn.Content = LocalizationService.Translate("Check Now");
         System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
     }
@@ -504,7 +506,8 @@ public partial class AboutWindow : Window
             {
                 app.LatestUpdateResult = result;
                 app.RefreshWidgetUpdateBadge();
-                if (!result.IsUpdateAvailable || !app.IsUpdateVersionSkipped(result.LatestVersionLabel))
+                if (result.LatestVersion is not null &&
+                    (!result.IsUpdateAvailable || !app.IsUpdateVersionSkipped(result.LatestVersionLabel)))
                     app.ClearSkippedUpdateVersion();
             }
             ApplyUpdateCheckResult(result);
