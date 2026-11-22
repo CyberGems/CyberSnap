@@ -34,6 +34,8 @@ public sealed class SettingsService : IDisposable
     public static event Action? AutoCopyPreferencesChanged;
     public static event Action<Helpers.WidgetPreferences>? WidgetPreferencesChanged;
     public static event Action? SettingsChanged;
+    /// <summary>Raised on the flush (background) thread once settings actually hit the disk.</summary>
+    public static event Action? SettingsWritten;
 
     public static void PublishWidgetPreferences(AppSettings settings)
     {
@@ -562,7 +564,10 @@ public sealed class SettingsService : IDisposable
         }
 
         if (wrote)
+        {
             _settingsDirty = false;
+            SettingsWritten?.Invoke();
+        }
     }
 
     private static AchievementProgress? ReadAchievementProgress(string path)
@@ -733,6 +738,7 @@ public sealed class SettingsService : IDisposable
             CacheSettings(_settingsPath, copy);
         }
         SettingsChanged?.Invoke();
+        SettingsWritten?.Invoke();
     }
 
     private static AppSettings DeserializeSettings(string json)

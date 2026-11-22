@@ -3,7 +3,10 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CaptureMode = CyberSnap.Models.CaptureMode;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
@@ -133,6 +136,9 @@ public partial class SettingsWindow : Window
         SettingsService.SettingsChanged += RefreshShowCursorCheck;
         SettingsService.SettingsChanged += SyncUpdateNotifications;
         SettingsService.WidgetPreferencesChanged += OnWidgetPreferencesChanged;
+        SettingsService.SettingsWritten += OnSettingsWrittenForSavedPulse;
+        LocalizationChanged += SettingsWindow_LocalizationChanged;
+        RefreshSavedFooterLocalization();
         Activated += (_, _) =>
         {
             ApplyThemeColors();
@@ -147,6 +153,8 @@ public partial class SettingsWindow : Window
             SettingsService.SettingsChanged -= RefreshShowCursorCheck;
             SettingsService.SettingsChanged -= SyncUpdateNotifications;
             SettingsService.WidgetPreferencesChanged -= OnWidgetPreferencesChanged;
+            SettingsService.SettingsWritten -= OnSettingsWrittenForSavedPulse;
+            LocalizationChanged -= SettingsWindow_LocalizationChanged;
             SaveWindowBounds();
         };
     }
@@ -1357,6 +1365,96 @@ public partial class SettingsWindow : Window
         {
             AppDiagnostics.LogError("settings.assign-prtsc", ex);
         }
+    }
+
+    // ── Suite-standard sidebar footer: Esc close + "Saved" pulse ──────────────
+
+    private DispatcherTimer? _savedPulseTimer;
+
+    private void SettingsWindow_LocalizationChanged()
+        => RefreshSavedFooterLocalization();
+
+    private void RefreshSavedFooterLocalization()
+    {
+        // Uppercase like the suite's other settings sidebars (GUARDADO / SAVED).
+        if (SettingsSavedPillText != null)
+            SettingsSavedPillText.Text = LocalizationService.Translate("Saved").ToUpperInvariant();
+        if (SettingsCloseButtonText != null)
+            SettingsCloseButtonText.Text = LocalizationService.Translate("Close").ToUpperInvariant();
+    }
+
+    private void SettingsCloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void SettingsWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || e.Handled)
+            return;
+        // Esc inside the settings search clears the query first; with an empty
+        // box (or anywhere else) Esc closes the window like in the other suite apps.
+        if (SettingsSearchBox.IsKeyboardFocusWithin && !string.IsNullOrEmpty(SettingsSearchBox.Text))
+            return;
+        e.Handled = true;
+        Close();
+    }
+
+    private void OnSettingsWrittenForSavedPulse()
+    {
+        // FlushPendingWrites runs on a timer thread; the animation must be on the UI thread.
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(ShowSavedPulse);
+            return;
+        }
+        ShowSavedPulse();
+    }
+
+    private void ShowSavedPulse()
+    {
+        // Expand the pill slot: 0 → pill height (+ its 12px gap to the close button).
+        SettingsSavedPill.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+        double target = Math.Ceiling(SettingsSavedPill.DesiredSize.Height) + 12d;
+        var expand = new DoubleAnimation(target, TimeSpan.FromMilliseconds(250))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        };
+        SettingsSavedPillHost.BeginAnimation(HeightProperty, expand);
+
+        // Fade + slide the pill in (replayed on every write, like the suite's key remount).
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        };
+        var slide = new DoubleAnimation(3, 0, TimeSpan.FromMilliseconds(200))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        };
+        SettingsSavedPill.BeginAnimation(OpacityProperty, fade);
+        SettingsSavedPillSlide.BeginAnimation(TranslateTransform.YProperty, slide);
+
+        // Flash the sidebar hairline green: rise fast, fade slow (1.4s total).
+        var pulse = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromMilliseconds(1400) };
+        pulse.KeyFrames.Add(new LinearDoubleKeyFrame(0, TimeSpan.Zero));
+        pulse.KeyFrames.Add(new LinearDoubleKeyFrame(1, TimeSpan.FromMilliseconds(350)));
+        pulse.KeyFrames.Add(new LinearDoubleKeyFrame(0, TimeSpan.FromMilliseconds(1400)));
+        SettingsSavedSeparatorPulse.BeginAnimation(OpacityProperty, pulse);
+
+        _savedPulseTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2200) };
+        _savedPulseTimer.Tick -= SavedPulseTimer_Tick;
+        _savedPulseTimer.Tick += SavedPulseTimer_Tick;
+        _savedPulseTimer.Stop();
+        _savedPulseTimer.Start();
+    }
+
+    private void SavedPulseTimer_Tick(object? sender, EventArgs e)
+    {
+        _savedPulseTimer?.Stop();
+
+        var collapse = new DoubleAnimation(0, TimeSpan.FromMilliseconds(250))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
+        };
+        SettingsSavedPillHost.BeginAnimation(HeightProperty, collapse);
+        SettingsSavedPill.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(120)));
     }
 
 }

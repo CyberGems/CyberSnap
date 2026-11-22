@@ -78,6 +78,10 @@ public static class Theme
     // Separator
     public static Color Separator => IsDark ? CA(255, 255, 255, 16) : CA(0, 0, 0, 10);
 
+    // Suite-standard "saved" confirmation (settings footer pill + separator pulse).
+    // Emerald: lighter on dark themes for glow contrast, deeper on light for legibility.
+    public static Color Success => P(C(52, 211, 153), C(52, 211, 153), C(5, 150, 105));
+
     // Toast shell. Only the default Dark theme (not Grayscale/Light) uses Settings CardBg so
     // notifications match Configuración; gray/light keep the prior island palette.
     public static Color ToastBg => P(C(30, 32, 35), C(23, 26, 40), C(234, 237, 244));
@@ -124,6 +128,24 @@ public static class Theme
         resources["HotkeyBadgeBackgroundBrush"] = Brush(IsDark ? CA(255, 255, 255, 20) : CA(0, 0, 0, 16));
         resources["HotkeyBadgeBorderBrush"] = Brush(IsDark ? CA(255, 255, 255, 41) : CA(0, 0, 0, 32));
         resources["SoundItemCustomSourceBrush"] = Brush(AccentHover);
+        resources["ThemeSuccessBrush"] = Brush(Success);
+        resources["ThemeSavedPulseBrush"] = SavedPulseBrush();
+    }
+
+    /// <summary>Horizontal green flash painted over the settings sidebar separator.</summary>
+    public static LinearGradientBrush SavedPulseBrush()
+    {
+        var s = Success;
+        var b = new LinearGradientBrush
+        {
+            StartPoint = new System.Windows.Point(0, 0.5),
+            EndPoint = new System.Windows.Point(1, 0.5),
+        };
+        b.GradientStops.Add(new GradientStop(Color.FromArgb(0, s.R, s.G, s.B), 0.0));
+        b.GradientStops.Add(new GradientStop(Color.FromArgb(217, s.R, s.G, s.B), 0.5));
+        b.GradientStops.Add(new GradientStop(Color.FromArgb(0, s.R, s.G, s.B), 1.0));
+        b.Freeze();
+        return b;
     }
 
     /// <summary>

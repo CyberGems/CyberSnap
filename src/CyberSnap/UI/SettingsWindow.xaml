@@ -12,6 +12,7 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
+        PreviewKeyDown="SettingsWindow_PreviewKeyDown"
         Icon="pack://application:,,,/Assets/Icons/Configuration.ico">
 
     <Window.Resources>
@@ -98,6 +99,40 @@
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
 
+        <!-- Suite-standard sidebar close button: subtle bordered pill with an Esc keycap. -->
+        <Style x:Key="SettingsNavCloseButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeWindowBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeBgHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="NavItem" TargetType="RadioButton">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -114,7 +149,7 @@
                                     <TextBlock x:Name="Icon" Grid.Column="0" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                                FontSize="14" Text="&#xE713;" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                                Opacity="0.74" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                                    <Path x:Name="VectorIcon" Grid.Column="0" Width="14" Height="14" 
+                                    <Path x:Name="VectorIcon" Grid.Column="0" Width="14" Height="14"
                                            Stretch="Uniform" Fill="{DynamicResource ThemeTextPrimaryBrush}"
                                            Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
                                            Opacity="0.74" HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -1107,7 +1142,12 @@
             <!-- Sidebar navigation: scroll when UiScale / DPI shrinks the frame below the tab list. -->
             <Border x:Name="SettingsSidebar" Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
                     Padding="10,14,8,8">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               CanContentScroll="False"
                               Focusable="False"
@@ -1148,6 +1188,46 @@
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                 </StackPanel>
             </ScrollViewer>
+
+                <!-- Sidebar footer (suite standard): the saved pill collapses to zero when
+                     idle so the separator hairline sits back against the close button;
+                     on each settings write the line flashes green and the pill fades in
+                     centered between the hairline and the button. -->
+                <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                    <Grid Height="1" IsHitTestVisible="False">
+                        <Border Background="{DynamicResource ThemeSeparatorBrush}"/>
+                        <Border x:Name="SettingsSavedSeparatorPulse"
+                                Background="{DynamicResource ThemeSavedPulseBrush}"
+                                Opacity="0"/>
+                    </Grid>
+                    <Border x:Name="SettingsSavedPillHost" Height="0" ClipToBounds="True">
+                        <StackPanel x:Name="SettingsSavedPill" Orientation="Horizontal"
+                                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                                    Margin="0,0,0,12"
+                                    Opacity="0" IsHitTestVisible="False"
+                                    RenderTransformOrigin="0.5,0.5">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform x:Name="SettingsSavedPillSlide" Y="3"/>
+                            </StackPanel.RenderTransform>
+                            <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                     Fill="{DynamicResource ThemeSuccessBrush}" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="SettingsSavedPillText" Text="SAVED"
+                                       FontSize="10" FontWeight="Bold"
+                                       FontFamily="Segoe UI Variable Text"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource ThemeMutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="SettingsCloseButton" Style="{StaticResource SettingsNavCloseButton}"
+                            Click="SettingsCloseButton_Click"
+                            AutomationProperties.Name="Close settings">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="SettingsCloseButtonText" Text="CLOSE" VerticalAlignment="Center"/>
+                            <controls:HotkeyBadge Kind="Escape" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                </Grid>
             </Border>
 
             <!-- Content area -->
