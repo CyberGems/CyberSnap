@@ -32,6 +32,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CyberSnap.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Localization\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
