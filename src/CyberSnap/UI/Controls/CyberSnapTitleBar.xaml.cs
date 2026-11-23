@@ -8,6 +8,7 @@ using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using UserControl = System.Windows.Controls.UserControl;
 
@@ -66,6 +67,8 @@ public partial class CyberSnapTitleBar : UserControl
     /// </summary>
     private bool _burgerMenuOpen;
     private bool _actionMenuOpen;
+    /// <summary>Suite gesture for the title-bar More menu, matching CyberWall/CyberManager.</summary>
+    internal const string MoreMenuShortcut = "Alt+M";
     /// <summary>
     /// Which title button received the current press. Set on preview-down (which runs
     /// before bubble handlers act). Menu buttons only toggle on mouse-up when the press
@@ -97,6 +100,7 @@ public partial class CyberSnapTitleBar : UserControl
                     }
                     _subscribedWindow = window;
                     _subscribedWindow.StateChanged += Window_StateChanged;
+                    _subscribedWindow.PreviewKeyDown += Window_PreviewKeyDown;
                 }
             }
             TitleText.Text = WindowTitles.FeatureTitle(Title);
@@ -111,6 +115,7 @@ public partial class CyberSnapTitleBar : UserControl
             if (_subscribedWindow != null)
             {
                 _subscribedWindow.StateChanged -= Window_StateChanged;
+                _subscribedWindow.PreviewKeyDown -= Window_PreviewKeyDown;
                 _subscribedWindow = null;
             }
         };
@@ -120,6 +125,42 @@ public partial class CyberSnapTitleBar : UserControl
     private void Window_StateChanged(object? sender, EventArgs e)
     {
         RefreshIcons();
+    }
+
+    /// <summary>
+    /// Alt+M opens the same More menu the title-bar button shows, so the button carries a
+    /// real gesture next to its label instead of a decorative keycap.
+    /// </summary>
+    private void Window_PreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        bool altM = Keyboard.Modifiers == ModifierKeys.Alt
+            && (e.Key == Key.M || (e.Key == Key.System && e.SystemKey == Key.M));
+        if (altM && ToggleMoreMenuFromKeyboard())
+            e.Handled = true;
+    }
+
+    /// <summary>Opens or closes whichever More menu this title bar hosts (burger or History's).</summary>
+    private bool ToggleMoreMenuFromKeyboard()
+    {
+        if (BurgerBtn.Visibility == Visibility.Visible && BurgerBtn.ContextMenu is not null)
+        {
+            bool wasOpen = _burgerMenuOpen;
+            ToggleTitleMenu(BurgerBtn.ContextMenu, BurgerBtn, ref _burgerMenuOpen);
+            if (wasOpen)
+                ApplyButtonHoverVisual(BurgerBtn, true);
+            return true;
+        }
+
+        if (ActionBtn.Visibility == Visibility.Visible && ActionBtn.ContextMenu is not null)
+        {
+            bool wasOpen = _actionMenuOpen;
+            ToggleTitleMenu(ActionBtn.ContextMenu, ActionBtn, ref _actionMenuOpen);
+            if (wasOpen)
+                ApplyButtonHoverVisual(ActionBtn, true);
+            return true;
+        }
+
+        return false;
     }
 
     public string Title
@@ -364,7 +405,9 @@ public partial class CyberSnapTitleBar : UserControl
 
             // Burger menu with toggles + shortcuts
             BurgerBtn.Visibility = Visibility.Visible;
-            BurgerBtn.ToolTip = LocalizationService.Translate("More");
+            BurgerBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate("More"), MoreMenuShortcut);
+            ApplyTooltipPlacement(BurgerBtn);
 
             var menu = new ContextMenu();
             StyleBurgerMenu(menu);
@@ -464,7 +507,9 @@ public partial class CyberSnapTitleBar : UserControl
             AnnotationBtn.Visibility = Visibility.Collapsed;
 
             ActionBtn.Visibility = Visibility.Visible;
-            ActionBtn.ToolTip = LocalizationService.Translate("More");
+            ActionBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate("More"), MoreMenuShortcut);
+            ApplyTooltipPlacement(ActionBtn);
             ActionIcon.Source = Helpers.FluentIcons.RenderWpf("more", titleIcon, 18);
 
             var menu = new ContextMenu();
@@ -550,7 +595,9 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.Visibility = Visibility.Collapsed;
 
             BurgerBtn.Visibility = Visibility.Visible;
-            BurgerBtn.ToolTip = LocalizationService.Translate("More");
+            BurgerBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate("More"), MoreMenuShortcut);
+            ApplyTooltipPlacement(BurgerBtn);
 
             var menu = new ContextMenu();
             StyleBurgerMenu(menu);
@@ -640,7 +687,9 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.Visibility = Visibility.Collapsed;
 
             BurgerBtn.Visibility = Visibility.Visible;
-            BurgerBtn.ToolTip = LocalizationService.Translate("More");
+            BurgerBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate("More"), MoreMenuShortcut);
+            ApplyTooltipPlacement(BurgerBtn);
 
             var menu = new ContextMenu();
             StyleBurgerMenu(menu);

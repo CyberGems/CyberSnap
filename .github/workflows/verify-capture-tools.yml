@@ -33,7 +33,12 @@ on:
       - 'src/CyberSnap/Models/Editor*HotkeyDef.cs'
       - 'src/CyberSnap/Localization/en.json'
       - 'src/CyberSnap/Localization/es.json'
+      - 'src/CyberSnap/Helpers/HotkeyToolTipContent.cs'
+      - 'src/CyberSnap/UI/Controls/CyberSnapTitleBar*'
+      - 'src/CyberSnap/UI/Editor/EditorForm.Toolbar.cs'
+      - 'src/CyberSnap/UI/Editor/EditorForm.Tooltips.cs'
       - 'tests/CyberSnap.ResultTabs.Smoke/**'
+      - 'tests/CyberSnap.Tests/**'
   pull_request:
   workflow_dispatch:
 
@@ -52,6 +57,8 @@ jobs:
       - name: Validate English and Spanish localization
         shell: pwsh
         run: ./scripts/Test-Localization.ps1 -Strict
+      - name: Run CyberSnap unit tests
+        run: dotnet test tests/CyberSnap.Tests --configuration Release
       - name: Build smoke checks
         run: dotnet build tests/CyberSnap.ResultTabs.Smoke --configuration Release
       - name: Check tray tooltip format

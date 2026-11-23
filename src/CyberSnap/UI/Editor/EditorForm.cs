@@ -2349,6 +2349,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        // Suite gesture for the title-bar More menu, matching the WPF chrome (Alt+M).
+        if (keyData == (Keys.Alt | Keys.M)) { DismissVisibleHoverTooltips(); ShowBurgerMenuFromButton(); return true; }
         if (keyData == (Keys.Control | Keys.N)) { DoNewCanvas(); return true; }
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }

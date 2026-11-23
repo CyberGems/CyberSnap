@@ -768,15 +768,15 @@ public sealed partial class EditorForm
         };
         windowActions.MouseDown += BeginWindowDrag;
 
-        _closeButton = MakeChromeButton("close", LocalizationService.Translate("Close"));
+        _closeButton = MakeChromeButton("close", LocalizationService.Translate("Close"), "Alt+F4");
         _closeButton.Click += (_, _) => Close();
         windowActions.Controls.Add(_closeButton);
 
-        _windowStateButton = MakeChromeButton("maximize", LocalizationService.Translate("Maximize"));
+        _windowStateButton = MakeChromeButton("maximize", LocalizationService.Translate("Maximize"), "Win+↑");
         _windowStateButton.Click += (_, _) => ToggleWindowState();
         windowActions.Controls.Add(_windowStateButton);
 
-        _minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"));
+        _minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"), "Win+↓");
         _minimizeButton.Click += (_, _) =>
         {
             DismissVisibleHoverTooltips();
@@ -785,24 +785,8 @@ public sealed partial class EditorForm
         windowActions.Controls.Add(_minimizeButton);
 
         windowActions.Controls.Add(MakeSeparator());
-        _menuButton = MakeChromeButton("more", LocalizationService.Translate("More"));
-        _menuButton.Click += (s, _) =>
-        {
-            if (DateTime.UtcNow - _burgerMenuLastClosed < TimeSpan.FromMilliseconds(200))
-            {
-                return;
-            }
-            _burgerMenu ??= BuildBurgerMenu();
-            // Use absolute screen coordinates so the menu stays on the correct monitor
-            // even when the button is near the edge (maximized window on multi-monitor).
-            var screenPt = _menuButton.PointToScreen(new Point(0, _menuButton.Height));
-            var scr = Screen.FromPoint(screenPt);
-            bool nearRight = screenPt.X > scr.Bounds.Left + scr.Bounds.Width * 0.65;
-            _burgerMenuNearRight = nearRight;
-            _burgerMenu.Show(screenPt, nearRight
-                ? ToolStripDropDownDirection.BelowLeft
-                : ToolStripDropDownDirection.BelowRight);
-        };
+        _menuButton = MakeChromeButton("more", LocalizationService.Translate("More"), "Alt+M");
+        _menuButton.Click += (_, _) => ShowBurgerMenuFromButton();
         windowActions.Controls.Add(_menuButton);
 
         // Filename Label in the middle
@@ -1516,7 +1500,7 @@ public sealed partial class EditorForm
             Margin = new Padding(2, 0, 2, 0),
         };
 
-    private EditorChromeButton MakeChromeButton(string iconId, string tooltip)
+    private EditorChromeButton MakeChromeButton(string iconId, string tooltip, string? shortcut = null)
     {
         var button = new EditorChromeButton
         {
@@ -1525,12 +1509,39 @@ public sealed partial class EditorForm
             Height = 44,
             Margin = new Padding(4, 0, 0, 0),
             AccessibleName = tooltip,
+            Tag = shortcut,
         };
         // Top-bar chrome: open the CyberSnap-styled hint downward (below: above = false).
-        // Reading AccessibleName keeps the text in sync for buttons whose label changes
-        // at runtime (e.g. Maximize <-> Restore).
-        RegisterHoverTooltip(button, () => button.AccessibleName ?? tooltip, above: false);
+        // Reading AccessibleName/Tag keeps the text in sync for buttons whose label or
+        // gesture changes at runtime (e.g. Maximize <-> Restore).
+        RegisterHoverTooltip(button, () => ComposeChromeTooltip(button), above: false);
         return button;
+    }
+
+    /// <summary>Title-bar hint: the localized label followed by the gesture the button mirrors.</summary>
+    private static string ComposeChromeTooltip(EditorChromeButton button)
+    {
+        string label = button.AccessibleName ?? string.Empty;
+        string? shortcut = button.Tag as string;
+        return string.IsNullOrWhiteSpace(shortcut) ? label : $"{label}  ({shortcut})";
+    }
+
+    /// <summary>Opens the title-bar More menu, shared by the button and the Alt+M gesture.</summary>
+    private void ShowBurgerMenuFromButton()
+    {
+        if (DateTime.UtcNow - _burgerMenuLastClosed < TimeSpan.FromMilliseconds(200))
+            return;
+
+        _burgerMenu ??= BuildBurgerMenu();
+        // Use absolute screen coordinates so the menu stays on the correct monitor
+        // even when the button is near the edge (maximized window on multi-monitor).
+        var screenPt = _menuButton.PointToScreen(new Point(0, _menuButton.Height));
+        var scr = Screen.FromPoint(screenPt);
+        bool nearRight = screenPt.X > scr.Bounds.Left + scr.Bounds.Width * 0.65;
+        _burgerMenuNearRight = nearRight;
+        _burgerMenu.Show(screenPt, nearRight
+            ? ToolStripDropDownDirection.BelowLeft
+            : ToolStripDropDownDirection.BelowRight);
     }
 
     private Control MakeSeparator()
@@ -1586,6 +1597,11 @@ public sealed partial class EditorForm
         _windowStateButton.IconId = _isManualMaximized ? "restore" : "maximize";
         _windowStateButton.AccessibleName =
             LocalizationService.Translate(_isManualMaximized ? "Restore" : "Maximize");
+        _windowStateButton.Tag = _isManualMaximized ? "Win+↓" : "Win+↑";
+        // While maximized Win+Down restores the window, so the minimize button shows no
+        // gesture chip in that state — same rule as the WPF title bar.
+        if (_minimizeButton is not null)
+            _minimizeButton.Tag = _isManualMaximized ? null : "Win+↓";
     }
 
     private EditorToolButton? GetEmojiToolButton() =>
