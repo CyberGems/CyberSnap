@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using CyberSnap.Services;
@@ -88,6 +89,25 @@ internal static partial class Program
             titleButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert(ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
                 "the shared title still opens About");
+
+            // Suite gesture: F1 opens About from the branding, and the About window
+            // leaves the key alone (its branding has no action of its own).
+            var firstAbout = (AboutWindow)ZoomAppField(app, "_aboutWindow")!;
+            firstAbout.Close();
+            AwaitCondition(() => ZoomAppField(app, "_aboutWindow") is null, "Closing About did not release it");
+            var f1 = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(gallery),
+                Environment.TickCount, Key.F1) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            gallery.RaiseEvent(f1);
+            Pump();
+            Assert(f1.Handled && ZoomAppField(app, "_aboutWindow") is AboutWindow { IsVisible: true },
+                "F1 opens About from the title bar");
+            var aboutFromF1 = (AboutWindow)ZoomAppField(app, "_aboutWindow")!;
+            var f1OnAbout = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(aboutFromF1),
+                Environment.TickCount, Key.F1) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            aboutFromF1.RaiseEvent(f1OnAbout);
+            Pump();
+            Assert(!f1OnAbout.Handled && ReferenceEquals(ZoomAppField(app, "_aboutWindow"), aboutFromF1),
+                "the About window ignores F1 instead of reopening itself");
         }
         finally
         {
