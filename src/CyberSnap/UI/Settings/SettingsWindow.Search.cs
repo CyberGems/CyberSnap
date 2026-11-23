@@ -1092,7 +1092,9 @@ public partial class SettingsWindow
     /// <summary>Re-applies translated tooltips for all search bar elements.</summary>
     private void RefreshSearchTooltips()
     {
-        SettingsSearchBox.ToolTip = LocalizationService.Translate("Search settings — type a setting name, section, or keyword (Ctrl+F)");
+        SettingsSearchBox.ToolTip = Helpers.HotkeyToolTipContent.WithShortcutHint(
+            LocalizationService.Translate("Search settings — type a setting name, section, or keyword (Ctrl+F)"),
+            "Ctrl+F");
         SettingsSearchClearBtn.ToolTip = LocalizationService.Translate("Clear search");
         SettingsSearchPlaceholder.Text = LocalizationService.Translate("Search settings...");
     }

@@ -711,7 +711,10 @@ internal sealed class ColorDetailWindow : Window
         actions.Children.Add(repick);
 
         var copyOnly = StyledButton(T("Copy"), isAccent: false, leadingCopy: true);
-        ToolTipService.SetToolTip(copyOnly, T("Copy the text and keep this window open."));
+        // The shared localization entry carries an OCR parenthetical (Ctrl+Shift+C), but this
+        // popup binds no such gesture: strip the hint and draw no keycap for a dead shortcut.
+        ToolTipService.SetToolTip(copyOnly, HotkeyToolTipContent.WithShortcutHint(
+            T("Copy the text and keep this window open."), shortcut: null));
         copyOnly.Click += (_, _) => CopyFavorite();
         _copyOnlyBtn = copyOnly;
         Grid.SetColumn(copyOnly, 2);

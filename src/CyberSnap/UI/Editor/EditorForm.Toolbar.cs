@@ -772,11 +772,14 @@ public sealed partial class EditorForm
         _closeButton.Click += (_, _) => Close();
         windowActions.Controls.Add(_closeButton);
 
-        _windowStateButton = MakeChromeButton("maximize", LocalizationService.Translate("Maximize"), "Win+↑");
+        // A frameless window is outside Aero Snap: the shell swallows Win+Up/Down before the
+        // form sees the arrow (measured), so the hints advertise the gestures the editor
+        // actually handles in ProcessCmdKey.
+        _windowStateButton = MakeChromeButton("maximize", LocalizationService.Translate("Maximize"), "Alt+↑");
         _windowStateButton.Click += (_, _) => ToggleWindowState();
         windowActions.Controls.Add(_windowStateButton);
 
-        _minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"), "Win+↓");
+        _minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"), "Alt+↓");
         _minimizeButton.Click += (_, _) =>
         {
             DismissVisibleHoverTooltips();
@@ -1599,11 +1602,11 @@ public sealed partial class EditorForm
         _windowStateButton.IconId = _isManualMaximized ? "restore" : "maximize";
         _windowStateButton.AccessibleName =
             LocalizationService.Translate(_isManualMaximized ? "Restore" : "Maximize");
-        _windowStateButton.Tag = _isManualMaximized ? "Win+↓" : "Win+↑";
-        // While maximized Win+Down restores the window, so the minimize button shows no
+        _windowStateButton.Tag = _isManualMaximized ? "Alt+↓" : "Alt+↑";
+        // While maximized Alt+Down restores the window, so the minimize button shows no
         // gesture chip in that state — same rule as the WPF title bar.
         if (_minimizeButton is not null)
-            _minimizeButton.Tag = _isManualMaximized ? null : "Win+↓";
+            _minimizeButton.Tag = _isManualMaximized ? null : "Alt+↓";
     }
 
     private EditorToolButton? GetEmojiToolButton() =>
