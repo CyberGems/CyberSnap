@@ -137,8 +137,11 @@ public partial class QrResultWindow : Window
         ContentLabel.Text = LocalizationService.Translate(language, "Code content");
         PreviewUnavailableText.Text = LocalizationService.Translate(language, "Source preview unavailable");
         CopyOnlyButtonText.Text = LocalizationService.Translate(language, "Copy");
+        // This window binds no keep-open gesture: the shared legacy entry still carries
+        // "(Ctrl+Shift+C)", so strip that hint instead of advertising a dead shortcut.
         CopyOnlyButton.ToolTip = CyberSnap.Helpers.HotkeyToolTipContent.WithShortcutHint(
-            LocalizationService.Translate(language, "Copy the text and keep this window open."));
+            LocalizationService.Translate(language, "Copy the text and keep this window open."),
+            shortcut: null);
         ApplyCopyActionState();
         QrTitleBar.CloseToolTip = LocalizationService.Translate(language, "Close");
         QrTitleBar.RefreshTooltips();

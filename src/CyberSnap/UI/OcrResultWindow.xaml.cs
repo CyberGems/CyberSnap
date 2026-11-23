@@ -21,6 +21,7 @@ namespace CyberSnap.UI;
 public partial class OcrResultWindow : Window
 {
     private const int SearchHighlightMinLength = 2;
+    private const string CopyOnlyShortcut = "Ctrl+Shift+C";
 
     private readonly SettingsService _settingsService;
     private string? _copiedText;
@@ -210,7 +211,8 @@ public partial class OcrResultWindow : Window
         OcrTitleBar.CloseToolTip = LocalizationService.Translate(lang, "Close");
         OcrTitleBar.RefreshTooltips();
         CopyOnlyBtn.ToolTip = CyberSnap.Helpers.HotkeyToolTipContent.WithShortcutHint(
-            LocalizationService.Translate(lang, "Copy the text and keep this window open."));
+            LocalizationService.Translate(lang, "Copy the text and keep this window open."),
+            CopyOnlyShortcut);
         CopyBtn.ToolTip = CyberSnap.Helpers.HotkeyToolTipContent.WithShortcut(
             LocalizationService.Translate(lang, "Copy and close"), "Ctrl+Enter");
         CopyOnlyBtnText.Text = LocalizationService.Translate(lang, "Copy");

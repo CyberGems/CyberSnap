@@ -32,16 +32,20 @@ internal static class HotkeyToolTipContent
 
     internal static FrameworkElement WithShortcut(string label, string? shortcut)
     {
+        // Trimmed so a trailing space in the translation cannot push the keycap away
+        // from the last word.
+        string labelValue = (label ?? string.Empty).TrimEnd();
         var labelText = new TextBlock
         {
-            Text = label,
+            Text = labelValue,
             MaxWidth = LabelMaxWidth,
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap
         };
         labelText.SetResourceReference(TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
 
-        if (string.IsNullOrWhiteSpace(shortcut))
+        string badgeText = shortcut?.Trim() ?? string.Empty;
+        if (badgeText.Length == 0)
             return labelText;
 
         var row = new StackPanel
@@ -49,23 +53,29 @@ internal static class HotkeyToolTipContent
             Orientation = System.Windows.Controls.Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center
         };
-        row.Children.Add(labelText);
-        row.Children.Add(CreateBadge(shortcut));
+        // A blank label contributes no width, so adding it would leave the badge's own
+        // left margin as a stray gap at the start of the tooltip.
+        if (labelValue.Length > 0)
+            row.Children.Add(labelText);
+        row.Children.Add(CreateBadge(badgeText));
         return row;
     }
 
     /// <summary>
     /// Same as <see cref="WithShortcut"/>, for already localized texts that still carry the
     /// shortcut as a trailing parenthetical (the legacy localization entries). The hint is
-    /// extracted and drawn as a keycap; texts without one stay plain.
+    /// extracted and drawn as a keycap; when the translation drops the parenthetical,
+    /// <paramref name="shortcut"/> supplies the keycap instead, so the tooltip never loses
+    /// it. Pass <c>null</c> for windows that do not bind the gesture: the parenthetical is
+    /// stripped and no keycap is drawn.
     /// </summary>
-    internal static FrameworkElement WithShortcutHint(string label)
+    internal static FrameworkElement WithShortcutHint(string label, string? shortcut)
     {
         string text = label ?? string.Empty;
         var match = TrailingHint.Match(text);
         if (match.Success && LooksLikeShortcut(match.Groups[1].Value))
-            return WithShortcut(text[..match.Index].TrimEnd(), match.Groups[1].Value.Trim());
-        return WithShortcut(text, null);
+            return WithShortcut(text[..match.Index], match.Groups[1].Value);
+        return WithShortcut(text, shortcut);
     }
 
     /// <summary>Guards against turning an ordinary prose parenthetical into a keycap.</summary>
