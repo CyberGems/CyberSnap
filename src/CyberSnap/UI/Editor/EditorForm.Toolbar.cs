@@ -1532,14 +1532,16 @@ public sealed partial class EditorForm
         if (DateTime.UtcNow - _burgerMenuLastClosed < TimeSpan.FromMilliseconds(200))
             return;
 
-        _burgerMenu ??= BuildBurgerMenu();
+        var menu = _burgerMenu ??= BuildBurgerMenu();
+        if (_menuButton is not { } menuButton)
+            return;
         // Use absolute screen coordinates so the menu stays on the correct monitor
         // even when the button is near the edge (maximized window on multi-monitor).
-        var screenPt = _menuButton.PointToScreen(new Point(0, _menuButton.Height));
+        var screenPt = menuButton.PointToScreen(new Point(0, menuButton.Height));
         var scr = Screen.FromPoint(screenPt);
         bool nearRight = screenPt.X > scr.Bounds.Left + scr.Bounds.Width * 0.65;
         _burgerMenuNearRight = nearRight;
-        _burgerMenu.Show(screenPt, nearRight
+        menu.Show(screenPt, nearRight
             ? ToolStripDropDownDirection.BelowLeft
             : ToolStripDropDownDirection.BelowRight);
     }
