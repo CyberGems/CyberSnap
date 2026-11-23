@@ -71,6 +71,8 @@ jobs:
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-margin-only
       - name: Check preview actions, Paint snapshots and maximize/restore centering
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-actions-only
+      - name: Check the shared title bar opens About with F1
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --gallery-focus-only
       - name: Check widget cursor following and capture hit target
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --widget-follow-cursor-only
       - name: Check widget preference synchronization and restart
