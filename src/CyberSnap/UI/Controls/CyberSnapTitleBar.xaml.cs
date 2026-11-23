@@ -69,6 +69,8 @@ public partial class CyberSnapTitleBar : UserControl
     private bool _actionMenuOpen;
     /// <summary>Suite gesture for the title-bar More menu, matching CyberWall/CyberManager.</summary>
     internal const string MoreMenuShortcut = "Alt+M";
+    /// <summary>Suite gesture for About: the branding itself opens it, matching CyberWall/CyberManager.</summary>
+    internal const string AboutShortcut = "F1";
     /// <summary>
     /// Which title button received the current press. Set on preview-down (which runs
     /// before bubble handlers act). Menu buttons only toggle on mouse-up when the press
@@ -137,6 +139,16 @@ public partial class CyberSnapTitleBar : UserControl
             && (e.Key == Key.M || (e.Key == Key.System && e.SystemKey == Key.M));
         if (altM && ToggleMoreMenuFromKeyboard())
             e.Handled = true;
+
+        // Suite gesture for About. The About window itself has no branding action,
+        // so it keeps F1 unhandled instead of reopening itself.
+        bool f1 = Keyboard.Modifiers == ModifierKeys.None
+            && (e.Key == Key.F1 || (e.Key == Key.System && e.SystemKey == Key.F1));
+        if (f1 && OwnerWindow is not AboutWindow)
+        {
+            OpenTitleAbout();
+            e.Handled = true;
+        }
     }
 
     /// <summary>Opens or closes whichever More menu this title bar hosts (burger or History's).</summary>
@@ -230,7 +242,9 @@ public partial class CyberSnapTitleBar : UserControl
     public void RefreshTooltips()
     {
         string? aboutHint = OwnerWindow is AboutWindow ? null : LocalizationService.Translate(WindowTitles.AboutTooltip);
-        TitleAboutButton.ToolTip = aboutHint;
+        TitleAboutButton.ToolTip = aboutHint is null
+            ? null
+            : HotkeyToolTipContent.WithShortcut(aboutHint, AboutShortcut);
         System.Windows.Automation.AutomationProperties.SetHelpText(TitleAboutButton, aboutHint ?? string.Empty);
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         // While maximized Win+Down restores the window, so the minimize button
