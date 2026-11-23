@@ -209,8 +209,10 @@ public partial class OcrResultWindow : Window
         SearchClearBtn.ToolTip = LocalizationService.Translate(lang, "Clear search");
         OcrTitleBar.CloseToolTip = LocalizationService.Translate(lang, "Close");
         OcrTitleBar.RefreshTooltips();
-        CopyOnlyBtn.ToolTip = LocalizationService.Translate(lang, "Copy the text and keep this window open.");
-        CopyBtn.ToolTip = LocalizationService.Translate(lang, "Copy and close (Ctrl+Enter)");
+        CopyOnlyBtn.ToolTip = CyberSnap.Helpers.HotkeyToolTipContent.WithShortcutHint(
+            LocalizationService.Translate(lang, "Copy the text and keep this window open."));
+        CopyBtn.ToolTip = CyberSnap.Helpers.HotkeyToolTipContent.WithShortcut(
+            LocalizationService.Translate(lang, "Copy and close"), "Ctrl+Enter");
         CopyOnlyBtnText.Text = LocalizationService.Translate(lang, "Copy");
         CopiedBadgeText.Text = LocalizationService.Translate(lang, "Copied");
         UpdateCharCount();

@@ -137,7 +137,8 @@ public partial class QrResultWindow : Window
         ContentLabel.Text = LocalizationService.Translate(language, "Code content");
         PreviewUnavailableText.Text = LocalizationService.Translate(language, "Source preview unavailable");
         CopyOnlyButtonText.Text = LocalizationService.Translate(language, "Copy");
-        CopyOnlyButton.ToolTip = LocalizationService.Translate(language, "Copy the text and keep this window open.");
+        CopyOnlyButton.ToolTip = CyberSnap.Helpers.HotkeyToolTipContent.WithShortcutHint(
+            LocalizationService.Translate(language, "Copy the text and keep this window open."));
         ApplyCopyActionState();
         QrTitleBar.CloseToolTip = LocalizationService.Translate(language, "Close");
         QrTitleBar.RefreshTooltips();

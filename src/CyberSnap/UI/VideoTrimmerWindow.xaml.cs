@@ -906,9 +906,8 @@ namespace CyberSnap.UI
         private void UpdatePlayPauseToolTip()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
-            PlayPauseBtn.ToolTip = !IsPlaying()
-                ? LocalizationService.Translate(lang, "Play") + " (Space)"
-                : LocalizationService.Translate(lang, "Pause") + " (Space)";
+            PlayPauseBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, IsPlaying() ? "Pause" : "Play"), "Space");
         }
 
         private bool IsPlaying()
@@ -1402,15 +1401,19 @@ namespace CyberSnap.UI
             EndPointText.Text = FormatTime(_endTimeSeconds);
 
             string lang = _settingsService.Settings.InterfaceLanguage;
-            SetStartBtn.ToolTip = SetStartBtn.IsChecked == true
-                ? LocalizationService.Translate(lang, "Clear crop start position") + " (I)"
-                : LocalizationService.Translate(lang, "Set the current time as the crop start position") + " (I)";
-            SetEndBtn.ToolTip = SetEndBtn.IsChecked == true
-                ? LocalizationService.Translate(lang, "Clear crop end position") + " (O)"
-                : LocalizationService.Translate(lang, "Set the current time as the crop end position") + " (O)";
+            SetStartBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, SetStartBtn.IsChecked == true
+                    ? "Clear crop start position"
+                    : "Set the current time as the crop start position"), "I");
+            SetEndBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, SetEndBtn.IsChecked == true
+                    ? "Clear crop end position"
+                    : "Set the current time as the crop end position"), "O");
 
-            StartSeekBtn.ToolTip = LocalizationService.Translate(lang, "Click to seek · Double-click to edit") + " (Shift+I)";
-            EndSeekBtn.ToolTip = LocalizationService.Translate(lang, "Click to seek · Double-click to edit") + " (Shift+O)";
+            StartSeekBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, "Click to seek · Double-click to edit"), "Shift+I");
+            EndSeekBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, "Click to seek · Double-click to edit"), "Shift+O");
 
             string startHandleName = LocalizationService.Translate(lang, "Crop start handle");
             string endHandleName = LocalizationService.Translate(lang, "Crop end handle");
@@ -1996,9 +1999,8 @@ namespace CyberSnap.UI
         private void UpdateLoopTooltip()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
-            LoopToggleBtn.ToolTip = _loopEnabled
-                ? LocalizationService.Translate(lang, "Disable loop") + " (L)"
-                : LocalizationService.Translate(lang, "Enable loop") + " (L)";
+            LoopToggleBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, _loopEnabled ? "Disable loop" : "Enable loop"), "L");
         }
 
         private void PreciseCutToggleBtn_Click(object sender, RoutedEventArgs e)
@@ -2020,9 +2022,10 @@ namespace CyberSnap.UI
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
             PreciseCutLabel.Text = LocalizationService.Translate(lang, "Precise");
-            PreciseCutToggleBtn.ToolTip = (_preciseCut
-                ? LocalizationService.Translate(lang, "Exact trim is on. The video starts and ends on your marks, and export takes longer.")
-                : LocalizationService.Translate(lang, "Fast trim is on. The video can start a little before or after your marks.")) + " (P)";
+            PreciseCutToggleBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, _preciseCut
+                    ? "Exact trim is on. The video starts and ends on your marks, and export takes longer."
+                    : "Fast trim is on. The video can start a little before or after your marks."), "P");
             System.Windows.Automation.AutomationProperties.SetName(PreciseCutToggleBtn,
                 LocalizationService.Translate(lang, _preciseCut ? "Exact trim" : "Fast trim"));
         }
@@ -2030,12 +2033,17 @@ namespace CyberSnap.UI
         private void UpdateAllTooltips()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
-            StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (← · Shift+← −1s)";
-            StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (→ · Shift+→ +1s)";
+            StepBackBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, "Step Backward"), "← · Shift+← −1s");
+            StepForwardBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, "Step Forward"), "→ · Shift+→ +1s");
             CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the original file (without audio when muted)");
-            SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed segment as a new file, keeping the original") + " (Ctrl+S)";
-            TrimBtn.ToolTip = LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version") + " (Ctrl+T)";
-            ResetBtn.ToolTip = LocalizationService.Translate(lang, "Reset crop range") + " (R)";
+            SaveAsNewBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, "Save the trimmed segment as a new file, keeping the original"), "Ctrl+S");
+            TrimBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, "Overwrite the original file with the trimmed version"), "Ctrl+T");
+            ResetBtn.ToolTip = HotkeyToolTipContent.WithShortcut(
+                LocalizationService.Translate(lang, "Reset crop range"), "R");
             WaveformHost.ToolTip = (_isGif || !_hasAudioTrack)
                 ? LocalizationService.Translate(lang, "No audio track in this file")
                 : LocalizationService.Translate(lang, "Audio waveform — click to seek");
