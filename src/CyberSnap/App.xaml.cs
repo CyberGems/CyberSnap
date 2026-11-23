@@ -759,15 +759,15 @@ public partial class App : Application
         _settingsWindow?.RefreshShowCursorCheck();
     }
 
-    // Update check → widget: push the latest update result onto the widget's LED badge.
-    public void RefreshWidgetUpdateBadge()
+    private void RefreshUpdateShortcuts()
     {
         if (!Dispatcher.CheckAccess())
         {
-            _ = Dispatcher.BeginInvoke(RefreshWidgetUpdateBadge);
+            _ = Dispatcher.BeginInvoke(RefreshUpdateShortcuts);
             return;
         }
 
         _widgetWindow?.RefreshUpdateBadge();
+        _trayIcon?.RefreshUpdateBadge();
     }
 }

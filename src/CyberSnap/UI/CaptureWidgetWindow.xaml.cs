@@ -487,11 +487,7 @@ public partial class CaptureWidgetWindow : Window
             Motion.AnimateCaptureMarkHover(mark, hovered);
     }
 
-    /// <summary>
-    /// Mirrors the tray menu's green update LED: visible next to the widget branding
-    /// when a newer release was detected (App.LatestUpdateResult). Clicking the
-    /// branding already opens About, same as the tray menu header.
-    /// </summary>
+    /// <summary>Shows the update notice shortcut beside the widget branding.</summary>
     public void RefreshUpdateBadge()
     {
         if (!Dispatcher.CheckAccess())
@@ -503,20 +499,14 @@ public partial class CaptureWidgetWindow : Window
         try
         {
             var lang = _settings.InterfaceLanguage;
-            bool updateAvailable = (System.Windows.Application.Current as App)?.LatestUpdateResult?.IsUpdateAvailable ?? false;
+            bool updateAvailable = (System.Windows.Application.Current as App)?.HasPendingUpdate == true;
+            var showUpdate = LocalizationService.Translate(lang, "Show update notice");
             System.Windows.Automation.AutomationProperties.SetName(WidgetBrandingBtn,
                 LocalizationService.Translate(lang, "About tooltip"));
+            System.Windows.Automation.AutomationProperties.SetName(UpdateLed, showUpdate);
             UpdateLed.Visibility = updateAvailable ? Visibility.Visible : Visibility.Collapsed;
-            if (updateAvailable)
-            {
-                SetToolTipContent(UpdateLed, LocalizationService.Translate(lang, "Update available"));
-                SetToolTipContent(WidgetBrandingBtn, $"{LocalizationService.Translate(lang, "About tooltip")} ({LocalizationService.Translate(lang, "Update available")})");
-            }
-            else
-            {
-                UpdateLed.ToolTip = null;
-                SetToolTipContent(WidgetBrandingBtn, LocalizationService.Translate(lang, "About tooltip"));
-            }
+            SetToolTipContent(UpdateLed, showUpdate);
+            SetToolTipContent(WidgetBrandingBtn, LocalizationService.Translate(lang, "About tooltip"));
         }
         catch (Exception ex)
         {
@@ -1607,6 +1597,13 @@ public partial class CaptureWidgetWindow : Window
     private void Pin_Click(object sender, RoutedEventArgs e)
     {
         TriggerStandaloneTool(app => app.OnPinToolProxy());
+    }
+
+    private void UpdateNotice_Click(object sender, RoutedEventArgs e)
+    {
+        var anchor = PopupWindowHelper.GetWindowMonitorAnchor(this);
+        CollapseWidget();
+        ((App)System.Windows.Application.Current).OpenUpdateNotice(anchor);
     }
 
     private void WidgetBranding_Click(object sender, RoutedEventArgs e)

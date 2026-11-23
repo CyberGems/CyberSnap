@@ -89,8 +89,11 @@ internal static partial class Program
             Assert(openedWhenClickResolved, "About opens as soon as the title click is resolved");
             var about = (AboutWindow)ZoomAppField(app, "_aboutWindow")!;
             var checkNow = Element<System.Windows.Controls.Button>(about, "UpdateBtn");
-            Assert(ReferenceEquals(checkNow.Parent, Element<System.Windows.Controls.Grid>(about, "UpdateHeader"))
-                && System.Windows.Controls.Grid.GetColumn(checkNow) == 3,
+            var updateRow = Element<System.Windows.Controls.Grid>(about, "UpdateHeader");
+            var status = Element<System.Windows.Controls.TextBlock>(about, "AboutUpdateDesc");
+            Assert(ReferenceEquals(checkNow.Parent, updateRow) && status.Parent is System.Windows.FrameworkElement statusPanel
+                && ReferenceEquals(statusPanel.Parent, updateRow)
+                && System.Windows.Controls.Grid.GetColumn(checkNow) > System.Windows.Controls.Grid.GetColumn(statusPanel),
                 "Check Now is in the update description row");
             var aboutHandle = new System.Windows.Interop.WindowInteropHelper(about).Handle;
             AwaitCondition(() => GetForegroundWindow() == aboutHandle, "About did not come to the foreground", 5000);
@@ -136,7 +139,9 @@ internal static partial class Program
             var surface = (System.Windows.Controls.Border)title.Template.FindName("TitleSurface", title);
             // Settings and Gallery can apply an accent to unstyled buttons when refreshing their theme.
             title.Background = Theme.Brush(Theme.AccentSubtle);
-            Assert(text.Text == "Gallery" && (string)title.ToolTip == LocalizationService.Translate("Title About tooltip"),
+            var aboutHint = LocalizationService.Translate("Title About tooltip");
+            Assert(text.Text == "Gallery" && title.ToolTip is System.Windows.Controls.StackPanel tooltip
+                && tooltip.Children.OfType<System.Windows.Controls.TextBlock>().Any(label => label.Text == aboutHint),
                 "the shared title displays the feature name and its About tooltip");
 
             Point PointAtTitle()

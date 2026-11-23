@@ -27,6 +27,14 @@ internal static class PopupWindowHelper
         return pt;
     }
 
+    internal static System.Drawing.Point GetWindowMonitorAnchor(Window window)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero) return Cursor.Position;
+        var bounds = Screen.FromHandle(hwnd).Bounds;
+        return new System.Drawing.Point(bounds.Left + bounds.Width / 2, bounds.Top + bounds.Height / 2);
+    }
+
     public static Screen[] GetSortedScreens()
     {
         // Sort screens: Primary first, then by X coordinate, then by Y.

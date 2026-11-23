@@ -243,39 +243,33 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Border x:Name="AboutHeaderBtn"
-                        Grid.Column="0"
-                        HorizontalAlignment="Left"
-                        Background="Transparent"
-                        CornerRadius="6"
-                        Padding="4,2"
-                        Cursor="Hand"
-                        VerticalAlignment="Center"
-                        ToolTipService.InitialShowDelay="400"
-                        ToolTipService.BetweenShowDelay="0"
-                        MouseLeftButtonUp="AboutHeader_Click"
-                        MouseEnter="AboutHeader_MouseEnter"
-                        MouseLeave="AboutHeader_MouseLeave">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Image x:Name="AppLogoImage" Width="20" Height="20" Margin="0,0,7,0" VerticalAlignment="Center" Opacity="0.82" Stretch="Uniform"/>
-                        <TextBlock x:Name="TitleTextBlock"
-                                   VerticalAlignment="Center"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-                        <Ellipse x:Name="UpdateLed"
-                                 Width="8"
-                                 Height="8"
-                                 Fill="#22C55E"
-                                 Margin="6,0,0,0"
-                                 VerticalAlignment="Center"
-                                 Visibility="Collapsed">
-                            <Ellipse.Effect>
-                                <DropShadowEffect BlurRadius="6" Color="#22C55E" ShadowDepth="0" Opacity="0.8"/>
-                            </Ellipse.Effect>
-                        </Ellipse>
-                    </StackPanel>
-                </Border>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="AboutHeaderBtn"
+                            HorizontalAlignment="Left"
+                            Background="Transparent"
+                            CornerRadius="6"
+                            Padding="4,2"
+                            Cursor="Hand"
+                            VerticalAlignment="Center"
+                            ToolTipService.InitialShowDelay="400"
+                            ToolTipService.BetweenShowDelay="0"
+                            MouseLeftButtonUp="AboutHeader_Click"
+                            MouseEnter="AboutHeader_MouseEnter"
+                            MouseLeave="AboutHeader_MouseLeave">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Image x:Name="AppLogoImage" Width="20" Height="20" Margin="0,0,7,0" VerticalAlignment="Center" Opacity="0.82" Stretch="Uniform"/>
+                            <TextBlock x:Name="TitleTextBlock"
+                                       VerticalAlignment="Center"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="UpdateLed" Width="20" Height="20" Margin="3,0,0,0" Padding="0"
+                            VerticalAlignment="Center" Visibility="Collapsed" Click="UpdateNotice_Click">
+                        <Ellipse Width="8" Height="8" Fill="{DynamicResource ThemeSuccessBrush}"/>
+                    </Button>
+                </StackPanel>
                 <!-- Panel options (⋯): replaces the old compact chevron so the header
                      keeps only two controls (⋯, X). Capture-modes collapsing moves
                      into this menu as its first checkable item. -->

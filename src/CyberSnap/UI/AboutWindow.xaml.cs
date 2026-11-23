@@ -1,7 +1,5 @@
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -28,16 +26,16 @@ public partial class AboutWindow : Window
     private const double SuiteIdleOpacity = 0.38;
 
     private readonly SettingsService _settingsService;
-    private bool _suppressAutoCheckUpdateChange;
     private bool _suiteBuilt;
     private DropShadowEffect? _aboutLogoGlow;
-    private UpdateCheckResult? _availableUpdate;
+    private UpdateCheckResult? _lastUpdateResult;
     private bool _checkingForUpdates;
     private DispatcherTimer? _diagTipTimer;
 
     public AboutWindow(SettingsService settingsService)
     {
         _settingsService = settingsService;
+        _lastUpdateResult = (Application.Current as App)?.LastUpdateCheck;
         InitializeComponent();
         CyberSnapWindowChrome.Apply(this);
         Theme.Refresh();
@@ -53,21 +51,6 @@ public partial class AboutWindow : Window
             PopupWindowHelper.CenterWindowOnPhysicalMonitor(this);
             StartAboutLogoGlow();
         };
-        SettingsService.SettingsChanged += SyncUpdateNotifications;
-        Closed += (_, _) => SettingsService.SettingsChanged -= SyncUpdateNotifications;
-    }
-
-    private void SyncUpdateNotifications()
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.BeginInvoke(SyncUpdateNotifications);
-            return;
-        }
-
-        _suppressAutoCheckUpdateChange = true;
-        try { AutoCheckUpdateCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates; }
-        finally { _suppressAutoCheckUpdateChange = false; }
     }
 
     public void ApplyThemeColors()
@@ -106,85 +89,12 @@ public partial class AboutWindow : Window
         LoadVersionLabels();
     }
 
-    public async Task StartUpdateDownloadAsync(UpdateCheckResult result)
-    {
-        ShowUpdateAvailable(result);
-        UpdateProgressPanel.Visibility = Visibility.Visible;
-        SetUpdateActionsEnabled(false);
-        SetFooterIconsEnabled(false);
-
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var updatesFolder = Path.Combine(appData, "CyberSnap", "Updates");
-        var filename = result.AssetName ?? $"cybersnap_setup_{UpdateService.GetRuntimeChannel()}.exe";
-        var installerPath = Path.Combine(updatesFolder, filename);
-
-        var progress = new Progress<double>(val =>
-        {
-            UpdateProgressBar.Value = val;
-            UpdateProgressText.Text = string.Format(LocalizationService.Translate("Downloading update ({0:F1}%)..."), val);
-        });
-
-        try
-        {
-            UpdateProgressBar.Value = 0;
-            UpdateProgressText.Text = LocalizationService.Translate("Downloading update (0.0%)...");
-
-            if (string.IsNullOrEmpty(result.DownloadUrl))
-                throw new Exception("Direct download link is not available for this release.");
-
-            await UpdateService.DownloadUpdateAsync(result.DownloadUrl, installerPath, progress);
-
-            UpdateProgressBar.Value = 100;
-            UpdateProgressText.Text = LocalizationService.Translate("Download Complete");
-
-            var install = ThemedConfirmDialog.Confirm(this,
-                LocalizationService.Translate("Install update"),
-                LocalizationService.Translate("The update is downloaded. Install it now? CyberSnap will close."),
-                LocalizationService.Translate("Install"),
-                LocalizationService.Translate("Not now"),
-                danger: false);
-            if (!install)
-            {
-                UpdateProgressPanel.Visibility = Visibility.Collapsed;
-                SetUpdateActionsEnabled(true);
-                SetFooterIconsEnabled(true);
-                return;
-            }
-
-            UpdateService.LaunchInstallerAndExit(installerPath);
-        }
-        catch (Exception ex)
-        {
-            UpdateProgressPanel.Visibility = Visibility.Collapsed;
-            SetUpdateActionsEnabled(true);
-            SetFooterIconsEnabled(true);
-
-            var errorChoice = ThemedConfirmDialog.Confirm(this,
-                LocalizationService.Translate("Download Failed"),
-                string.Format(LocalizationService.Translate("Failed to download update automatically:\n{0}\n\nWould you like to open the GitHub release page instead?"), ex.Message),
-                LocalizationService.Translate("Open Browser"),
-                LocalizationService.Translate("Cancel"),
-                danger: false);
-            if (errorChoice)
-                OpenUrl(result.ReleaseUrl);
-        }
-    }
-
     private void LoadContent()
     {
-        _suppressAutoCheckUpdateChange = true;
-        try
-        {
-            AutoCheckUpdateCheck.IsChecked = _settingsService.Settings.AutoCheckForUpdates;
-            LoadVersionLabels();
-            RefreshLocalization();
-            EnsureSuiteApps();
-            ApplySuiteVisibility();
-        }
-        finally
-        {
-            _suppressAutoCheckUpdateChange = false;
-        }
+        LoadVersionLabels();
+        RefreshLocalization();
+        EnsureSuiteApps();
+        ApplySuiteVisibility();
     }
 
     private void LoadVersionLabels()
@@ -199,13 +109,7 @@ public partial class AboutWindow : Window
         {
             AboutDescriptionText.Text = LocalizationService.Translate(LocalizationService.GetSourceText(AboutDescriptionText));
             AboutUpdatesSectionLabel.Text = LocalizationService.Translate("Updates & Maintenance");
-            AboutAutoUpdateTitle.Text = LocalizationService.Translate("Check for updates on startup");
-            AboutAutoUpdateDesc.Text = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
-            System.Windows.Automation.AutomationProperties.SetName(AutoCheckUpdateCheck, AboutAutoUpdateTitle.Text);
-            AutoCheckUpdateCheck.ToolTip = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
-            AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
             RefreshUpdateSection();
-            UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
             AboutTitleBar.Title = LocalizationService.Translate("About CyberSnap");
             AboutFooterCopyright.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterWebsiteBtn.ToolTip = LocalizationService.Translate("Visit CyberGems website");
@@ -297,231 +201,44 @@ public partial class AboutWindow : Window
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
-    private void AutoCheckUpdateCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressAutoCheckUpdateChange) return;
+    private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e) =>
+        await RunUpdateCheckAsync();
 
-        var previous = _settingsService.Settings.AutoCheckForUpdates;
-        var selected = AutoCheckUpdateCheck.IsChecked == true;
+    internal async Task RunUpdateCheckAsync()
+    {
+        if (_checkingForUpdates || Application.Current is not App app) return;
+        _checkingForUpdates = true;
+        RefreshUpdateSection();
         try
         {
-            _settingsService.Settings.AutoCheckForUpdates = selected;
-            _settingsService.Save();
+            await app.CheckForUpdatesAsync(manual: true, PopupWindowHelper.GetWindowMonitorAnchor(this));
         }
         catch (Exception ex)
         {
-            AppDiagnostics.LogError("about.auto-check-updates", ex);
-            _settingsService.Settings.AutoCheckForUpdates = previous;
-            _suppressAutoCheckUpdateChange = true;
-            try { AutoCheckUpdateCheck.IsChecked = previous; }
-            finally { _suppressAutoCheckUpdateChange = false; }
-            try { _settingsService.Save(); } catch { }
-        }
-    }
-
-    private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
-    {
-        var app = Application.Current as App;
-        var result = _availableUpdate ?? app?.LatestUpdateResult;
-        if (result?.IsUpdateAvailable == true)
-        {
-            var download = ThemedConfirmDialog.Confirm(this,
-                LocalizationService.Translate("Download"),
-                string.Format(
-                    LocalizationService.Translate("Download {0}? The installer does not run until you confirm."),
-                    result.LatestVersionLabel),
-                LocalizationService.Translate("Download"),
-                LocalizationService.Translate("Cancel"),
-                danger: false);
-            if (!download)
-                return;
-
-            // Downloading re-arms notifications for this version (also on failure).
-            app?.ClearSkippedUpdateVersion();
-            await StartUpdateDownloadAsync(result);
-            return;
-        }
-
-        await RunUpdateCheckAsync();
-    }
-
-    /// <summary>Shows the release highlights and the available update actions.
-    /// Update Now asks before it downloads, and
-    /// installation asks again after the file is ready.</summary>
-    private void ShowUpdateAvailable(UpdateCheckResult result)
-    {
-        _availableUpdate = result;
-        AboutUpdateTitle.Text = LocalizationService.Translate("Update available");
-        AboutUpdateDesc.Visibility = Visibility.Collapsed;
-        UpdateBadgeText.Text = result.LatestVersionLabel;
-        UpdateNowBtn.Content = LocalizationService.Translate("Update Now");
-        UpdateNowBtn.ToolTip = LocalizationService.Translate("Download this version after you confirm. Installation waits for a second confirmation.");
-        UpdatePeekTitle.Text = LocalizationService.Translate("What's New");
-        var highlights = GetUpdateHighlights(result.ReleaseNotes).ToArray();
-        UpdateHighlightsList.ItemsSource = highlights;
-        ViewReleaseBtn.Content = LocalizationService.Translate("View Release");
-        ViewReleaseBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
-        SkipVersionBtn.Content = LocalizationService.Translate("Skip this version");
-        System.Windows.Automation.AutomationProperties.SetName(UpdateNowBtn, UpdateNowBtn.Content.ToString());
-        System.Windows.Automation.AutomationProperties.SetName(ViewReleaseBtn, ViewReleaseBtn.Content.ToString());
-        System.Windows.Automation.AutomationProperties.SetName(SkipVersionBtn, SkipVersionBtn.Content.ToString());
-        UpdateBadge.Visibility = Visibility.Visible;
-        AboutUpdateIcon.SetResourceReference(TextBlock.ForegroundProperty, "ThemeAccentBrush");
-        UpdatePeekPanel.Visibility = highlights.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        UpdateBtn.Visibility = Visibility.Collapsed;
-        UpdateActions.Visibility = Visibility.Visible;
-    }
-
-    private void HideUpdateAvailable()
-    {
-        _availableUpdate = null;
-        AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
-        AboutUpdateDesc.Visibility = Visibility.Visible;
-        UpdateBadge.Visibility = Visibility.Collapsed;
-        UpdateBadgeText.Text = "";
-        AboutUpdateIcon.ClearValue(TextBlock.ForegroundProperty);
-        UpdatePeekPanel.Visibility = Visibility.Collapsed;
-        UpdateHighlightsList.ItemsSource = null;
-        UpdateActions.Visibility = Visibility.Collapsed;
-        UpdateBtn.Visibility = Visibility.Visible;
-    }
-
-    private static IEnumerable<string> GetUpdateHighlights(string? releaseNotes)
-    {
-        // Keep the shared toast teaser unchanged. About has room for four complete
-        // highlights, with a hanging bullet and no decorative leading emoji.
-        var peek = UpdateService.PeekReleaseNotes(releaseNotes, int.MaxValue);
-        foreach (string line in peek.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-        {
-            string text = line.Trim();
-            if (text.StartsWith("• ", StringComparison.Ordinal)) text = text[2..].TrimStart();
-            int prefixLength = 0;
-            foreach (var rune in text.EnumerateRunes())
-            {
-                if (!Rune.IsWhiteSpace(rune) && Rune.GetUnicodeCategory(rune) is not
-                    (UnicodeCategory.OtherSymbol or UnicodeCategory.ModifierSymbol or UnicodeCategory.NonSpacingMark or UnicodeCategory.Format))
-                    break;
-                prefixLength += rune.Utf16SequenceLength;
-            }
-            text = text[prefixLength..].Trim();
-            if (text.Length > 0) yield return text;
-        }
-    }
-
-    private void SetUpdateActionsEnabled(bool enabled)
-    {
-        UpdateBtn.IsEnabled = enabled;
-        UpdateActions.IsEnabled = enabled;
-    }
-
-    private void ShowUpdateChecking()
-    {
-        HideUpdateAvailable();
-        AboutUpdateTitle.Text = LocalizationService.Translate("Checking for updates...");
-        AboutUpdateDesc.Visibility = Visibility.Collapsed;
-        UpdateBtn.Content = LocalizationService.Translate("Checking...");
-        System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
-        SetUpdateActionsEnabled(false);
-    }
-
-    /// <summary>Refreshes the About update section from the latest background
-    /// check result. Called live by App when a check finishes while About is open.</summary>
-    public void RefreshUpdateState()
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.BeginInvoke(RefreshUpdateState);
-            return;
-        }
-
-        // Do not clobber an in-progress download (progress panel + disabled button).
-        if (UpdateProgressPanel.Visibility == Visibility.Visible || !UpdateBtn.IsEnabled)
-            return;
-
-        RefreshUpdateSection();
-    }
-
-    /// <summary>Applies the current update state to the About section:
-    /// available (peek + actions), skipped, or default check prompt.</summary>
-    private void RefreshUpdateSection()
-    {
-        if (_checkingForUpdates) { ShowUpdateChecking(); return; }
-        ApplyUpdateCheckResult((Application.Current as App)?.LatestUpdateResult);
-    }
-
-    private void ApplyUpdateCheckResult(UpdateCheckResult? result)
-    {
-        if (result?.IsUpdateAvailable == true)
-        {
-            ShowUpdateAvailable(result);
-            return;
-        }
-
-        HideUpdateAvailable();
-        if (result is not null)
-        {
-            AboutUpdateTitle.Text = LocalizationService.Translate(result.LatestVersion is null ? "Update check failed" : "CyberSnap is up to date");
-            AboutUpdateDesc.Text = result.StatusMessage;
-        }
-        else
-        {
-            var skipped = _settingsService.Settings.SkippedUpdateVersion;
-            AboutUpdateDesc.Text = !string.IsNullOrEmpty(skipped)
-                ? string.Format(LocalizationService.Translate("Update {0} skipped"), skipped)
-                : LocalizationService.Translate("Check for the latest version and download updates directly.");
-        }
-        UpdateBtn.Content = LocalizationService.Translate("Check Now");
-        System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
-    }
-
-    private void ViewReleaseBtn_Click(object sender, RoutedEventArgs e)
-    {
-        var url = _availableUpdate?.ReleaseUrl;
-        if (!string.IsNullOrWhiteSpace(url))
-            OpenUrl(url);
-    }
-
-    private void SkipVersionBtn_Click(object sender, RoutedEventArgs e)
-    {
-        var app = Application.Current as App;
-        var result = _availableUpdate ?? app?.LatestUpdateResult;
-        if (result?.IsUpdateAvailable != true)
-            return;
-        app?.SkipUpdateVersion(result.LatestVersionLabel);
-        RefreshUpdateSection();
-    }
-
-    /// <summary>Runs a manual update check and prompts the user with the result.
-    /// Shared by the About window's "Check Now" button and the "Check for Updates..." menu items.
-    /// Manual checks always report; a newer release than the skipped one re-arms notifications.</summary>
-    public async Task RunUpdateCheckAsync()
-    {
-        if (_checkingForUpdates || UpdateProgressPanel.Visibility == Visibility.Visible) return;
-        _checkingForUpdates = true;
-        ShowUpdateChecking();
-        try
-        {
-            var result = await UpdateService.CheckForUpdatesAsync();
-            if (Application.Current is App app)
-            {
-                app.LatestUpdateResult = result;
-                app.RefreshWidgetUpdateBadge();
-                if (result.LatestVersion is not null &&
-                    (!result.IsUpdateAvailable || !app.IsUpdateVersionSkipped(result.LatestVersionLabel)))
-                    app.ClearSkippedUpdateVersion();
-            }
-            ApplyUpdateCheckResult(result);
-            if (!result.IsUpdateAvailable)
-                ThemedConfirmDialog.Alert(this,
-                    LocalizationService.Translate("Check for Updates"),
-                    result.StatusMessage,
-                    error: result.LatestVersion is null);
+            AppDiagnostics.LogError("updates.about", ex);
         }
         finally
         {
             _checkingForUpdates = false;
-            SetUpdateActionsEnabled(true);
+            if (IsLoaded) RefreshUpdateSection();
         }
+    }
+
+    internal void ApplyUpdateCheckResult(UpdateCheckResult? result)
+    {
+        _lastUpdateResult = result;
+        RefreshUpdateSection();
+    }
+
+    private void RefreshUpdateSection()
+    {
+        AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
+        AboutUpdateDesc.Text = _checkingForUpdates
+            ? LocalizationService.Translate("Checking for updates...")
+            : _lastUpdateResult?.GetStatusMessage() ?? LocalizationService.Translate("Check for the latest version");
+        UpdateBtn.Content = LocalizationService.Translate(_checkingForUpdates ? "Checking..." : "Check Now");
+        UpdateBtn.IsEnabled = !_checkingForUpdates;
+        System.Windows.Automation.AutomationProperties.SetName(UpdateBtn, UpdateBtn.Content.ToString());
     }
 
     private void AboutFooterWebsite_Click(object sender, MouseButtonEventArgs e)
@@ -786,26 +503,6 @@ public partial class AboutWindow : Window
         SetFooterIconAccent(AboutFooterDiagBtn, hovered: false);
         SetFooterIconAccent(AboutFooterReleasesBtn, hovered: false);
         SetFooterIconAccent(AboutFooterDocsBtn, hovered: false);
-    }
-
-    private void SetFooterIconsEnabled(bool enabled)
-    {
-        AboutFooterWebsiteBtn.IsEnabled = enabled;
-        AboutFooterGithubBtn.IsEnabled = enabled;
-        AboutFooterIssuesBtn.IsEnabled = enabled;
-        AboutFooterDiagBtn.IsEnabled = enabled;
-        AboutFooterReleasesBtn.IsEnabled = enabled;
-        AboutFooterDocsBtn.IsEnabled = enabled;
-        AboutFooterDonateBtn.IsEnabled = enabled;
-        AboutFooterCopyright.IsEnabled = enabled;
-        AboutFooterWebsiteBtn.Opacity = enabled ? 1 : 0.45;
-        AboutFooterGithubBtn.Opacity = enabled ? 1 : 0.45;
-        AboutFooterIssuesBtn.Opacity = enabled ? 1 : 0.45;
-        AboutFooterDiagBtn.Opacity = enabled ? 1 : 0.45;
-        AboutFooterReleasesBtn.Opacity = enabled ? 1 : 0.45;
-        AboutFooterDocsBtn.Opacity = enabled ? 1 : 0.45;
-        AboutFooterDonateBtn.Opacity = enabled ? 1 : 0.45;
-        AboutFooterCopyright.Opacity = enabled ? 1 : 0.45;
     }
 
     private static void OpenUrl(string url)

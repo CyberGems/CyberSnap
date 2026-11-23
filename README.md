@@ -148,7 +148,7 @@ Most screenshot tools either do too little or bury features behind a paywall. Cy
 - **System Tray**: Runs in background with custom context menu
 - **Configurable Hotkeys**: area, center, fullscreen, active-window, scroll and repeat captures, screen recording, plus one global shortcut per tool (OCR, color picker, QR, ruler, Zoom, and Pin), also shown in capture-bar tooltips. Existing assignments are preserved.
 - **Auto-Start**: Launch at Windows sign-in
-- **Auto-Update**: Built-in updater with toast notifications, changelog preview, and per-version skip
+- **Updates**: A floating notice with release highlights, per-version skip, and manual downloads. The installed edition can restart to update, and the portable edition downloads a ZIP.
 - **Setup Wizard**: First-run configuration assistant
 - **Automatic Backups**: Configuration → Backup & Data protects settings and achievements on startup, daily (default), weekly, or monthly. Choose a folder, keep 1–50 verified copies (3 by default), and create, restore, or delete backups. Missed intervals catch up when CyberSnap opens. Restoring first creates a recovery copy and keeps current credentials and backup preferences. Captures and recordings are not included; API keys and passwords are excluded.
 - **Achievement Progress**: View when achievement tracking began, reset it for a fresh run, and keep progress separate from general settings. Existing history is migrated once.

@@ -219,21 +219,9 @@ public partial class TrayContextMenuWindow : Window
     private void LoadLocalizedLabels(CaptureMode captureMode)
     {
         TitleTextBlock.Text = $"CyberSnap  {UpdateService.GetCurrentVersionLabel()}";
-        
-        var app = Application.Current as App;
-        bool updateAvailable = app?.LatestUpdateResult?.IsUpdateAvailable ?? false;
-        if (updateAvailable)
-        {
-            UpdateLed.Visibility = Visibility.Visible;
-            SetTooltip(UpdateLed, T("Update available"));
-            SetTooltip(AboutHeaderBtn, $"{T("About tooltip")} ({T("Update available")})");
-        }
-        else
-        {
-            UpdateLed.Visibility = Visibility.Collapsed;
-            UpdateLed.ToolTip = null;
-            SetTooltip(AboutHeaderBtn, T("About tooltip"));
-        }
+
+        RefreshUpdateBadge();
+        SetTooltip(AboutHeaderBtn, T("About tooltip"));
 
         // Shorter labels for buttons
         AreaCaptureText.Text = T("Area");
@@ -1051,6 +1039,21 @@ public partial class TrayContextMenuWindow : Window
     {
         try { CloseMenu(); DonationLinks.Open(); }
         catch (Exception ex) { AppDiagnostics.LogError("traymenu.donate", ex); }
+    }
+
+    internal void RefreshUpdateBadge()
+    {
+        UpdateLed.Visibility = (Application.Current as App)?.HasPendingUpdate == true ? Visibility.Visible : Visibility.Collapsed;
+        var label = T("Show update notice");
+        SetTooltip(UpdateLed, label);
+        System.Windows.Automation.AutomationProperties.SetName(UpdateLed, label);
+    }
+
+    private void UpdateNotice_Click(object sender, RoutedEventArgs e)
+    {
+        var anchor = PopupWindowHelper.GetWindowMonitorAnchor(this);
+        CloseMenu();
+        (Application.Current as App)?.OpenUpdateNotice(anchor);
     }
 
     private void About_Click(object sender, RoutedEventArgs e)

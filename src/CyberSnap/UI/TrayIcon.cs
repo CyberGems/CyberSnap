@@ -231,6 +231,8 @@ public sealed class TrayIcon : IDisposable
         oldMenu?.Dispose();
     }
 
+    internal void RefreshUpdateBadge() => _activeWpfMenu?.RefreshUpdateBadge();
+
     private ContextMenuStrip CreateThemedMenu()
     {
         Theme.Refresh();

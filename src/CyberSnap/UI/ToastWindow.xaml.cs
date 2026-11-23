@@ -1783,19 +1783,6 @@ public partial class ToastWindow : Window
 
         if (!string.IsNullOrWhiteSpace(_spec.ClickActionUrl))
         {
-            if (_spec.ClickActionUrl == "cybersnap://update")
-            {
-                DismissAnimated();
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    var app = (App)Application.Current;
-                    // The About update section hosts the changelog peek plus
-                    // View Release / Download / Skip actions. Nothing downloads here.
-                    app.ShowAbout();
-                });
-                return;
-            }
-
             if (_spec.ClickActionUrl == "cybersnap://achievements")
             {
                 DismissAnimated();

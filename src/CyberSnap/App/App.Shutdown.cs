@@ -7,6 +7,7 @@ public partial class App
 {
     protected override void OnExit(ExitEventArgs e)
     {
+        _updateDownload?.Cancel();
         _idleTrimTimer?.Stop();
         ClosePinnedImages();
         _backupService?.Dispose();

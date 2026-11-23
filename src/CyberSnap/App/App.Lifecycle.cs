@@ -11,8 +11,6 @@ namespace CyberSnap;
 
 public partial class App
 {
-    public Services.UpdateCheckResult? LatestUpdateResult { get; set; }
-
     private const long IdleTrimPrivateBytesThreshold = 384L * 1024 * 1024;
     private static readonly TimeSpan MinimumIdleTrimInterval = TimeSpan.FromMinutes(2);
 
@@ -152,55 +150,15 @@ public partial class App
         }
     }
 
-    /// <summary>True when the user skipped this release label in the About update section.
-    /// Skipped versions stay silent (no toast, no badge/LED) until a newer release appears.</summary>
-    public bool IsUpdateVersionSkipped(string? versionLabel)
-    {
-        if (string.IsNullOrWhiteSpace(versionLabel))
-            return false;
-        return string.Equals(_settingsService?.Settings.SkippedUpdateVersion, versionLabel, StringComparison.Ordinal);
-    }
-
-    /// <summary>Persists a skipped release and clears any visible update state for it.</summary>
-    public void SkipUpdateVersion(string? versionLabel)
-    {
-        if (_settingsService is null || string.IsNullOrWhiteSpace(versionLabel))
-            return;
-        try
-        {
-            _settingsService.Settings.SkippedUpdateVersion = versionLabel;
-            _settingsService.Save();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("app.skip-update-version", ex.Message, ex);
-        }
-        if (string.Equals(LatestUpdateResult?.LatestVersionLabel, versionLabel, StringComparison.Ordinal))
-            LatestUpdateResult = null;
-        RefreshWidgetUpdateBadge();
-        RefreshAboutUpdateSectionIfOpen();
-    }
-
-    /// <summary>Clears the skipped version (e.g. when the user starts a download or a newer release appears).</summary>
-    public void ClearSkippedUpdateVersion()
-    {
-        if (_settingsService is null || string.IsNullOrEmpty(_settingsService.Settings.SkippedUpdateVersion))
-            return;
-        try
-        {
-            _settingsService.Settings.SkippedUpdateVersion = string.Empty;
-            _settingsService.Save();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("app.clear-skipped-update-version", ex.Message, ex);
-        }
-    }
-
     /// <summary>Opens the About window and runs a manual update check once it is visible.
     /// Used by the "Check for Updates..." items in the burger Help submenus.</summary>
     public void ShowAboutAndCheckForUpdates()
     {
+        if (HasPendingUpdate)
+        {
+            OpenUpdateNotice(System.Windows.Forms.Cursor.Position);
+            return;
+        }
         ShowAbout();
         _ = Dispatcher.BeginInvoke(async () =>
         {
@@ -289,20 +247,6 @@ public partial class App
 
         if (_achievementsWindow is { IsVisible: true })
             _achievementsWindow.RefreshFromSettings();
-    }
-
-    /// <summary>Pushes the latest background update result into an open About window,
-    /// so the changelog peek appears live without reopening or focusing it.</summary>
-    public void RefreshAboutUpdateSectionIfOpen()
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            _ = Dispatcher.BeginInvoke(RefreshAboutUpdateSectionIfOpen);
-            return;
-        }
-
-        if (_aboutWindow is { IsVisible: true })
-            _aboutWindow.RefreshUpdateState();
     }
 
     private void ShowAchievementsWindow()
@@ -419,6 +363,7 @@ public partial class App
             _trayIcon?.RefreshLocalization();
             _widgetWindow?.RefreshLocalization();
             _aboutWindow?.RefreshLocalization();
+            _updateNotice?.RefreshLocalization();
             _achievementsWindow?.RefreshLocalization();
             UI.Editor.EditorForm.ActiveInstance?.RefreshLocalization();
 
