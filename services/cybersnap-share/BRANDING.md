@@ -23,6 +23,10 @@ Copy-Item -LiteralPath src/CyberSnap/Assets/CyberSnap_square.png `
 
 Before committing, confirm that `public/index.php` still references `/logo.png` in both the landing page and viewer. If the asset changes format or filename, update those references, `.htaccess`, and this document together.
 
+## Display rules
+
+The canonical icon reaches the edges of its square canvas, including the corner brackets. Do not apply `border-radius` or `object-fit: cover` to `.brand img` in `public/index.php`: at the rendered 34–38 px size, rounded corners cut off the bracket tips. Keep the image square and unclipped on the landing page, viewer and error page.
+
 ## Agent guardrail
 
 Any task that changes CyberSnap branding must check this file and include the synchronized `public/logo.png` copy. A brand change is incomplete if the desktop application is updated but CyberSnap Share still shows the previous mark.
