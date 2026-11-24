@@ -73,6 +73,8 @@ jobs:
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --preview-actions-only
       - name: Check the shared title bar opens About with F1
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --gallery-focus-only
+      - name: Check F1 opens About on every shared title bar
+        run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --titlebar-gesture-only
       - name: Check widget cursor following and capture hit target
         run: dotnet run --project tests/CyberSnap.ResultTabs.Smoke --configuration Release --no-build -- --widget-follow-cursor-only
       - name: Check widget preference synchronization and restart
