@@ -25,7 +25,9 @@ Before committing, confirm that `public/index.php` still references `/logo.png` 
 
 ## Display rules
 
-The canonical icon reaches the edges of its square canvas, including the corner brackets. Do not apply `border-radius` or `object-fit: cover` to `.brand img` in `public/index.php`: at the rendered 34–38 px size, rounded corners cut off the bracket tips. Keep the image square and unclipped on the landing page, viewer and error page.
+The canonical icon reaches the edges of its square canvas, including the corner brackets. Do not apply `border-radius` or `object-fit: cover` to `.brand img` in `public/index.php`: rounded corners cut off the bracket tips. Keep the image square and unclipped on the landing page, viewer and error page.
+
+Render the mark at 32 px beside 18 px brand text (`font-size: 1.125rem`), with a 10 px gap. That keeps the icon-to-text ratio near 1.8:1 across all three pages. Update the `width` and `height` attributes on the `<img>` tag together with the CSS.
 
 ## Agent guardrail
 

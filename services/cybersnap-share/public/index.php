@@ -160,8 +160,8 @@ function handle_home(array $config): void
     a{color:inherit}
     .site-header,.site-shell,.site-footer{width:min(1100px,calc(100% - 40px));margin:0 auto}
     .site-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 0}
-    .brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;font-weight:700;letter-spacing:.01em;color:var(--text)}
-    .brand img{width:38px;height:38px;display:block;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+    .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-size:1.125rem;font-weight:700;line-height:1;letter-spacing:.01em;color:var(--text)}
+    .brand img{width:32px;height:32px;display:block;flex:none;box-shadow:0 8px 24px rgba(0,0,0,.28)}
     .brand-accent{color:var(--accent)}
     .brand em{font-style:normal;color:var(--text);font-weight:500}
     nav{display:flex;align-items:center;gap:15px;color:var(--muted);font-size:.9rem}
@@ -211,7 +211,7 @@ function handle_home(array $config): void
 <body>
   <header class="site-header">
     <a class="brand" href="/" aria-label="CyberSnap Share">
-      <img src="/logo.png" width="38" height="38" alt="CyberSnap"/>
+      <img src="/logo.png" width="32" height="32" alt="CyberSnap"/>
       <span>Cyber<span class="brand-accent">Snap</span> <em>Share</em></span>
     </a>
     <nav aria-label="{$copy['nav_label']}">
@@ -471,8 +471,8 @@ function handle_view(array $config, string $filesDir, string $metaDir, string $i
     body{margin:0;font-family:Segoe UI,Inter,system-ui,sans-serif;background:radial-gradient(circle at 15% 0%,#18304b 0,transparent 36%),radial-gradient(circle at 100% 20%,#123c4d 0,transparent 30%),var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px 40px}
     a{color:inherit}
     .site-header{width:min(1000px,100%);display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
-    .brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;font-weight:700;letter-spacing:.01em;color:var(--text)}
-    .brand img{width:34px;height:34px;display:block;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+    .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-size:1.125rem;font-weight:700;line-height:1;letter-spacing:.01em;color:var(--text)}
+    .brand img{width:32px;height:32px;display:block;flex:none;box-shadow:0 8px 24px rgba(0,0,0,.28)}
     .brand-accent{color:var(--accent)}
     .brand em{font-style:normal;color:var(--text);font-weight:500}
     .language{display:inline-flex;gap:5px;padding:4px;border:1px solid var(--line);border-radius:999px}
@@ -512,7 +512,7 @@ function handle_view(array $config, string $filesDir, string $metaDir, string $i
 <body>
   <header class="site-header">
     <a class="brand" href="/" aria-label="CyberSnap Share">
-      <img src="/logo.png" width="34" height="34" alt="CyberSnap"/>
+      <img src="/logo.png" width="32" height="32" alt="CyberSnap"/>
       <span>Cyber<span class="brand-accent">Snap</span> <em>Share</em></span>
     </a>
     <nav aria-label="{$copy['language']}">
@@ -720,8 +720,8 @@ function render_missing_page(string $lang, bool $expired): void
     *{box-sizing:border-box}
     body{margin:0;font-family:Segoe UI,Inter,system-ui,sans-serif;background:radial-gradient(circle at 15% 0%,#18304b 0,transparent 36%),radial-gradient(circle at 100% 20%,#123c4d 0,transparent 30%),var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px 16px}
     a{color:inherit}
-    .brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;font-weight:700;letter-spacing:.01em;color:var(--text)}
-    .brand img{width:38px;height:38px;display:block;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+    .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-size:1.125rem;font-weight:700;line-height:1;letter-spacing:.01em;color:var(--text)}
+    .brand img{width:32px;height:32px;display:block;flex:none;box-shadow:0 8px 24px rgba(0,0,0,.28)}
     .brand-accent{color:var(--accent)}
     .brand em{font-style:normal;color:var(--text);font-weight:500}
     main{max-width:560px;width:100%;text-align:center;border:1px solid var(--line);border-radius:16px;background:var(--panel);backdrop-filter:blur(12px);padding:44px 34px}
@@ -750,7 +750,7 @@ function render_missing_page(string $lang, bool $expired): void
 </head>
 <body>
   <a class="brand" href="/" aria-label="CyberSnap Share">
-    <img src="/logo.png" width="38" height="38" alt="CyberSnap"/>
+    <img src="/logo.png" width="32" height="32" alt="CyberSnap"/>
     <span>Cyber<span class="brand-accent">Snap</span> <em>Share</em></span>
   </a>
   <main>
