@@ -4,7 +4,7 @@
         xmlns:ui="clr-namespace:CyberSnap.UI"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:Services="clr-namespace:CyberSnap.Services"
-        Title="QR &amp; Barcode Scanner"
+        Title="CyberSnap · QR &amp; Barcode Scanner"
         Height="440" Width="560"
         MinHeight="340" MinWidth="420"
         ResizeMode="CanResize"
@@ -105,7 +105,7 @@
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="QrTitleBar" Grid.Row="0"
-                                        Title="QR &amp; Barcode Scanner ⋅ CyberSnap"
+                                        Title="CyberSnap · QR &amp; Barcode Scanner"
                                         CloseRequested="TitleBar_CloseRequested"/>
 
             <ui:PreviewTabStrip x:Name="ResultTabStrip" Grid.Row="1" Visibility="Collapsed"/>

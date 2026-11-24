@@ -385,7 +385,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             {
             }
         }
-        Text = WindowTitles.Taskbar(WindowTitles.Editor);
+        UpdateWindowTitle();
         FormBorderStyle = FormBorderStyle.None;
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint |
@@ -1004,11 +1004,22 @@ public sealed partial class EditorForm : Form, IMessageFilter
         RefreshUi();
     }
 
+    private void UpdateWindowTitle()
+    {
+        if (IsDisposed) return;
+        var document = _activeDocument;
+        var fileName = string.IsNullOrWhiteSpace(document?.SavedFilePath)
+            ? null
+            : Path.GetFileName(document.SavedFilePath);
+        Text = WindowTitles.EditorTitle(fileName, document?.IsDirty == true);
+    }
+
     private void RefreshUi()
     {
         if (IsDisposed || Disposing || _canvas.IsDisposed)
             return;
 
+        UpdateWindowTitle();
         UpdateZoomStatus();
         UpdateScaleControls();
         UpdateToolButtonState();

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:ui="clr-namespace:CyberSnap.UI"
-        Title="Capture Preview"
+        Title="CyberSnap · Capture Preview"
         Height="520" Width="860"
         MinHeight="440" MinWidth="580"
         ResizeMode="CanResize"
@@ -494,7 +494,7 @@
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="TitleBar" Grid.Row="0"
-                                      Title="Capture Preview ⋅ CyberSnap"
+                                      Title="CyberSnap · Capture Preview"
                                       ShowPinButton="True"
                                       CloseRequested="TitleBar_CloseRequested"
                                       PinRequested="TitleBar_PinRequested"/>

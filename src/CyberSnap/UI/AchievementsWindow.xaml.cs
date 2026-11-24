@@ -103,7 +103,7 @@ public partial class AchievementsWindow : Window
 
     private void UpdateWindowTitle()
     {
-        var label = LocalizationService.Translate("Achievements ᐧ CyberSnap");
+        var label = LocalizationService.Translate(WindowTitles.Achievements);
         AchievementsTitleBar.Title = label;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Achievements, _settingsService.Settings.InterfaceLanguage);
     }

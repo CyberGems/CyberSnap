@@ -4,7 +4,7 @@
         xmlns:ui="clr-namespace:CyberSnap.UI"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:Services="clr-namespace:CyberSnap.Services"
-        Title="Text extraction (OCR)"
+        Title="CyberSnap · Text extraction (OCR)"
         Height="600" Width="900"
         MinHeight="480" MinWidth="680"
         ResizeMode="CanResize"
@@ -480,7 +480,7 @@
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="OcrTitleBar" Grid.Row="0"
-                                      Title="Text Extraction (OCR) ⋅ CyberSnap"
+                                      Title="CyberSnap · Text extraction (OCR)"
                                       CloseRequested="TitleBar_CloseRequested"/>
 
             <!-- OCR workbench: source preview on the left and recognized text on the right. -->

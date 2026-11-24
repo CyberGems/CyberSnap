@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:CyberSnap.UI"
         xmlns:Services="clr-namespace:CyberSnap.Services"
-        Title="CyberSnap Quick Panel"
+        Title="CyberSnap · Quick Panel"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"

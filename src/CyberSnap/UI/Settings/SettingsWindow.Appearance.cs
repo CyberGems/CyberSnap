@@ -807,7 +807,7 @@ public partial class SettingsWindow
 
     private void UpdateWindowTitle()
     {
-        var configLabel = LocalizationService.Translate("Configuration ᐧ CyberSnap");
+        var configLabel = LocalizationService.Translate(WindowTitles.Settings);
         SettingsTitleBar.Title = configLabel;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Settings, _settingsService.Settings.InterfaceLanguage);
     }

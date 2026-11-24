@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:CyberSnap.UI"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
-         Title="Video &amp; GIF Trimmer"
+         Title="CyberSnap · Video &amp; GIF Trimmer"
          Height="604" Width="720"
          MinHeight="500" MinWidth="600"
         ResizeMode="CanResize"
@@ -672,7 +672,7 @@
 
             <Grid Grid.Row="0">
                 <controls:CyberSnapTitleBar x:Name="TrimmerTitleBar"
-                                            Title="Video &amp; GIF Trimmer ⋅ CyberSnap"
+                                            Title="CyberSnap · Video &amp; GIF Trimmer"
                                             CloseRequested="TitleBar_CloseRequested"/>
                 <!-- Centered Filename with LED Overlay -->
                 <StackPanel x:Name="TitleContainer"

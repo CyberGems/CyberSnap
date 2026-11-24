@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:Services="clr-namespace:CyberSnap.Services"
-        Title="Achievements ᐧ CyberSnap"
+        Title="CyberSnap · Achievements"
         Height="680" Width="760"
         MinHeight="480" MinWidth="560"
         ResizeMode="CanResize"
@@ -109,7 +109,7 @@
                 </Grid.RowDefinitions>
 
                 <controls:CyberSnapTitleBar x:Name="AchievementsTitleBar" Grid.Row="0"
-                                            Title="Achievements ⋅ CyberSnap"
+                                            Title="CyberSnap · Achievements"
                                             CloseRequested="TitleBar_CloseRequested"/>
 
                 <ScrollViewer Grid.Row="1"

@@ -19,7 +19,7 @@ public sealed partial class EditorForm
         var lang = SettingsService.LoadStatic()?.InterfaceLanguage ?? "en";
         LocalizationService.ApplyCurrentCulture(lang);
 
-        Text = WindowTitles.Taskbar(WindowTitles.Editor, lang);
+        UpdateWindowTitle();
 
         foreach (var (tool, keys) in _toolButtonLabels)
         {
