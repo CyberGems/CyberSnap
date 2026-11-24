@@ -781,6 +781,10 @@ public sealed class AppSettings
 
     // Editor toolbar hotkeys (Settings → Hotkeys → Annotations Editor). Key = editor tool id, Value = [mod, vk].
     public Dictionary<string, uint[]>? EditorToolHotkeys { get; set; }
+    /// <summary>
+    /// 0 = Pick may still be saved on F1; 1 = F1 opens About and Pick moved to V.
+    /// </summary>
+    public int EditorHotkeySchemaVersion { get; set; }
 
     // Editor view/zoom hotkeys (Settings → Hotkeys → Annotations Editor → View). Key = view id, Value = [mod, vk].
     public Dictionary<string, uint[]>? EditorViewHotkeys { get; set; }
@@ -821,7 +825,7 @@ public sealed class AppSettings
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["editorPan"] = (0, 0x20),         // Space
-            ["editorMove"] = (0, 0x70),        // F1
+            ["editorMove"] = (0, 0x56),        // V (F1 opens About)
             ["editorEraser"] = (0, 0x71),      // F2
             ["editorText"] = (0, 0x72),        // F3
             ["editorArrow"] = (0, 0x73),       // F4

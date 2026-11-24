@@ -667,7 +667,9 @@ public sealed partial class EditorForm
         UpdateControlTheme(_editorTitleButton);
         UpdateEditorTitleText();
         _editorTitleButton.Click += OpenEditorAbout;
-        RegisterHoverTooltip(_editorTitleButton, WindowTitles.AboutTooltip, above: false);
+        // Same chip as the shared title bars: the branding opens About with F1.
+        RegisterHoverTooltip(_editorTitleButton,
+            $"{LocalizationService.Translate(WindowTitles.AboutTooltip)}  (F1)", above: false);
 
         var clickTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Input);
         _editorTitleClickTimer = clickTimer;
