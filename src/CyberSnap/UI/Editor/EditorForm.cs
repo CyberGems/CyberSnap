@@ -2363,9 +2363,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
         // Suite gesture for the title-bar More menu, matching the WPF chrome (Alt+M).
         if (keyData == (Keys.Alt | Keys.M)) { DismissVisibleHoverTooltips(); ShowBurgerMenuFromButton(); return true; }
 
-        // Suite gesture for About, matching the shared WPF title bars. F1 no longer
-        // selects Pick: saved bindings are migrated to V in SettingsService.
-        if (keyData == Keys.F1) { OpenEditorAbout(this, EventArgs.Empty); return true; }
+        // About uses Ctrl+F1 here: unlike the shared WPF title bars, the editor's bare
+        // F-row belongs to its tools (F1 = Pick), so About cannot claim plain F1.
+        if (keyData == (Keys.Control | Keys.F1)) { OpenEditorAbout(this, EventArgs.Empty); return true; }
 
         // Window state. The editor draws its own chrome (FormBorderStyle.None), which puts the
         // window outside Aero Snap: Windows swallows Win+Up/Down before the form receives the
@@ -2529,8 +2529,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var key = (Keys)(int)m.WParam;
         var mod = Control.ModifierKeys;
 
-        // About, routed here as well so the gesture works before any tool hotkey runs.
-        if (mod == Keys.None && key is Keys.F1) { OpenEditorAbout(this, EventArgs.Empty); return true; }
+        // About (Ctrl+F1), routed here as well so the gesture works before any tool hotkey runs.
+        if (mod == Keys.Control && key is Keys.F1) { OpenEditorAbout(this, EventArgs.Empty); return true; }
 
         if (mod == Keys.Control && key is Keys.N) { DoNewCanvas(); return true; }
         if (mod == Keys.Control && key is Keys.O) { DoOpen(); return true; }

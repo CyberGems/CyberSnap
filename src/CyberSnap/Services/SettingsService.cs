@@ -859,24 +859,8 @@ public sealed class SettingsService : IDisposable
         if (settings.UploadHttpTimeoutSeconds is < 15 or > 600)
             settings.UploadHttpTimeoutSeconds = 120;
 
-        // One-time: F1 opens About in the annotation editor, so a saved Pick binding on
-        // F1 moves to V. Other editor tools saved on F1 are cleared and fall back to
-        // their own defaults, because About owns that key now.
-        if (settings.EditorHotkeySchemaVersion < 1)
-        {
-            if (settings.EditorToolHotkeys is { } editorHotkeys)
-            {
-                foreach (string id in editorHotkeys.Keys.ToList())
-                {
-                    if (editorHotkeys[id] is not { Length: >= 2 } saved || saved[0] != 0 || saved[1] != 0x70)
-                        continue;
-                    editorHotkeys[id] = string.Equals(id, "editorMove", StringComparison.OrdinalIgnoreCase)
-                        ? new[] { 0u, 0x56u }
-                        : new[] { 0u, 0u };
-                }
-            }
-            settings.EditorHotkeySchemaVersion = 1;
-        }
+        // Editor tool bindings are never rewritten. The editor opens About with Ctrl+F1, so
+        // bare F1 stays a normal tool key (Pick) and a saved binding survives upgrades.
     }
 
     private static TEnum NormalizeEnum<TEnum>(TEnum value, TEnum fallback)

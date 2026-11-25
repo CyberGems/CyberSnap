@@ -667,9 +667,10 @@ public sealed partial class EditorForm
         UpdateControlTheme(_editorTitleButton);
         UpdateEditorTitleText();
         _editorTitleButton.Click += OpenEditorAbout;
-        // Same chip as the shared title bars: the branding opens About with F1.
+        // Same chip as the shared title bars, but the editor keeps bare F1 for the Pick
+        // tool, so its About gesture is Ctrl+F1.
         RegisterHoverTooltip(_editorTitleButton,
-            $"{LocalizationService.Translate(WindowTitles.AboutTooltip)}  (F1)", above: false);
+            $"{LocalizationService.Translate(WindowTitles.AboutTooltip)}  (Ctrl+F1)", above: false);
 
         var clickTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Input);
         _editorTitleClickTimer = clickTimer;

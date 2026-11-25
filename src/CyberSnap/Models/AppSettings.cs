@@ -782,7 +782,9 @@ public sealed class AppSettings
     // Editor toolbar hotkeys (Settings → Hotkeys → Annotations Editor). Key = editor tool id, Value = [mod, vk].
     public Dictionary<string, uint[]>? EditorToolHotkeys { get; set; }
     /// <summary>
-    /// 0 = Pick may still be saved on F1; 1 = F1 opens About and Pick moved to V.
+    /// Retired migration marker, kept so existing profiles keep round-tripping. Version 1
+    /// briefly moved Pick from F1 to V while bare F1 opened About; the editor's About
+    /// gesture is Ctrl+F1, so F1 is an ordinary tool key again and no migration runs.
     /// </summary>
     public int EditorHotkeySchemaVersion { get; set; }
 
@@ -825,7 +827,7 @@ public sealed class AppSettings
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["editorPan"] = (0, 0x20),         // Space
-            ["editorMove"] = (0, 0x56),        // V (F1 opens About)
+            ["editorMove"] = (0, 0x70),        // F1 (Ctrl+F1 opens About)
             ["editorEraser"] = (0, 0x71),      // F2
             ["editorText"] = (0, 0x72),        // F3
             ["editorArrow"] = (0, 0x73),       // F4
