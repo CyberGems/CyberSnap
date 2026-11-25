@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -62,6 +63,11 @@ internal static partial class Program
 
                 var titleBar = Descendants(window).OfType<CyberSnapTitleBar>().FirstOrDefault()
                     ?? throw new InvalidOperationException($"{name} has no shared title bar");
+                // A window can be visible before its title bar raises Loaded and hooks
+                // PreviewKeyDown, so the F1 raise must wait for that subscription instead
+                // of racing it (the Trimmer intermittently lost the key on slow runners).
+                AwaitCondition(() => ReferenceEquals(TitleBarSubscribedWindow.GetValue(titleBar), window),
+                    $"{name} did not attach its title-bar shortcut handler");
                 var aboutButton = (Button)titleBar.FindName("TitleAboutButton");
                 Assert(aboutButton.IsHitTestVisible && TextOf(aboutButton.ToolTip).Contains("F1", StringComparison.Ordinal),
                     $"{name} advertises F1 on its title-bar branding");
@@ -95,6 +101,9 @@ internal static partial class Program
         SetZoomAppField(app, "_historyService", null);
         SetZoomAppField(app, "_imageSearchIndexService", null);
     }
+
+    private static readonly FieldInfo TitleBarSubscribedWindow =
+        typeof(CyberSnapTitleBar).GetField("_subscribedWindow", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     private static KeyEventArgs TitleBarKey(Window window, Key key) =>
         new(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), Environment.TickCount, key)
