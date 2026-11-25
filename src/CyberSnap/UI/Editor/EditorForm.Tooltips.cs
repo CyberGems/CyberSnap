@@ -237,7 +237,15 @@ public sealed partial class EditorForm
         _hoverAnchor = anchor;
         _hoverTooltipText = text;
         _hoverTooltipBounds = bounds;
-        _hoverToolTip.ShowNear(this, text!, bounds, above);
+        // Editor hints always sit beside the label: the suite's other windows draw the
+        // keycap on the same row, and leaving singleLine off put every shortcut on a second
+        // line. Tooltips without a hint keep wrapping normally.
+        _hoverToolTip.ShowNear(
+            this,
+            text!,
+            bounds,
+            above ? ToolTipPlacement.Above : ToolTipPlacement.Below,
+            singleLine: WindowsToolTip.HasShortcutHint(text));
     }
 
     private Rectangle? GetTitleStatusTooltipBounds(Point screenPoint)

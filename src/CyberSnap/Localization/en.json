@@ -1848,6 +1848,8 @@
   "Hotkey reassigned": "Hotkey reassigned",
   "\"{0}\" reassigned from {1}.": "\"{0}\" reassigned from {1}.",
   "Taken": "Taken",
+  "Reserved": "Reserved",
+  "Ctrl+F1 opens About in the editor. Choose another shortcut.": "Ctrl+F1 opens About in the editor. Choose another shortcut.",
   "This hotkey is registered by another application.": "This hotkey is registered by another application.",
   "Assign Print Screen (PrtSc) as the capture shortcut, replacing the default — works only if no other app is already using that key.": "Assign Print Screen (PrtSc) as the capture shortcut, replacing the default — works only if no other app is already using that key.",
   "Print Screen assigned, but {0} may intercept it. Close it or change its shortcut.": "Print Screen assigned, but {0} may intercept it. Close it or change its shortcut.",

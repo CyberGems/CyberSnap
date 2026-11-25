@@ -26,6 +26,7 @@ internal static partial class User32
     public const uint MOD_WIN = 0x0008;
     public const uint MOD_NOREPEAT = 0x4000;
     public const uint VK_SNAPSHOT = 0x2C;
+    public const uint VK_F1 = 0x70;
     public const uint VK_ESCAPE = 0x1B;
     public const uint VK_SPACE = 0x20;
     public const uint VK_RETURN = 0x0D;

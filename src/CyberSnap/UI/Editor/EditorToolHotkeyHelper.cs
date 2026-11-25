@@ -124,6 +124,13 @@ internal static class EditorToolHotkeyHelper
         return false;
     }
 
+    /// <summary>
+    /// Ctrl+F1 opens About in the editor and is resolved before tool and view hotkeys, so
+    /// Settings must refuse to bind it: the binding would never fire.
+    /// </summary>
+    public static bool IsAboutChord(uint mod, uint vk)
+        => mod == Native.User32.MOD_CONTROL && vk == Native.User32.VK_F1;
+
     /// <summary>Activates an editor tool from a keyboard shortcut. Returns true when handled.</summary>
     public static bool TryActivateTool(AnnotationCanvas canvas, Keys keyData)
     {

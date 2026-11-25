@@ -35,6 +35,16 @@ public class EditorHotkeyDefaultsTests
     }
 
     [Fact]
+    public void AboutChordIsOnlyControlF1()
+    {
+        // 0x2 is MOD_CONTROL, 0x70 is VK_F1.
+        Assert.True(CyberSnap.UI.Editor.EditorToolHotkeyHelper.IsAboutChord(0x2, 0x70));
+        Assert.False(CyberSnap.UI.Editor.EditorToolHotkeyHelper.IsAboutChord(0, 0x70));
+        Assert.False(CyberSnap.UI.Editor.EditorToolHotkeyHelper.IsAboutChord(0x2, 0x71));
+        Assert.False(CyberSnap.UI.Editor.EditorToolHotkeyHelper.IsAboutChord(0x6, 0x70));
+    }
+
+    [Fact]
     public void SavedEditorBindingsSurviveLoad()
     {
         string path = Path.Combine(Path.GetTempPath(), "CyberSnap-hotkeys-" + Guid.NewGuid().ToString("N"), "settings.json");

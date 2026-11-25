@@ -347,6 +347,19 @@ public sealed class WindowsToolTip : Form
         return hint;
     }
 
+    /// <summary>
+    /// True when the text ends with the "  (Ctrl+X)" hint that <see cref="ExtractShortcutHint"/>
+    /// turns into a keycap. Callers that want the hint beside the label (instead of under it)
+    /// pass this to <c>singleLine</c>.
+    /// </summary>
+    internal static bool HasShortcutHint(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return false;
+        string copy = text;
+        return ExtractShortcutHint(ref copy) is not null;
+    }
+
     /// <summary>Keycap at <paramref name="x"/>, vertically centered between top and bottom.</summary>
     private void PaintShortcutBadge(Graphics g, int x, int top, int bottom)
     {

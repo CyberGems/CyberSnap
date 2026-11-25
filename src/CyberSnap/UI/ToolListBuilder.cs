@@ -6,6 +6,7 @@ using System.Windows.Input;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
+using CyberSnap.UI.Editor;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
 using Cursors = System.Windows.Input.Cursors;
@@ -137,7 +138,7 @@ public static class ToolListBuilder
         void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey,
             Func<string, (uint mod, uint key)> getHotkey,
             Action<string, uint, uint> setHotkey,
-            bool allowSingleKeyHotkeys = false)
+            bool allowSingleKeyHotkeys = false, bool isEditorShortcut = false)
         {
             var card = new Border { Style = (Style)owner.FindResource("CompactItemCard"), Tag = toolId };
 
@@ -196,9 +197,13 @@ public static class ToolListBuilder
                 hkBox.Width = 120;
                 hkBox.MinWidth = 120;
                 hkBox.FontSize = 11;
+                string hotkeyTipDefault = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                string hotkeyTipText = isEditorShortcut
+                    ? hotkeyTipDefault + " " + LocalizationService.Translate("Ctrl+F1 opens About in the editor. Choose another shortcut.")
+                    : hotkeyTipDefault;
                 var tipText = new TextBlock
                 {
-                    Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application."),
+                    Text = hotkeyTipText,
                     TextWrapping = TextWrapping.Wrap,
                     MaxWidth = 260,
                 };
@@ -225,7 +230,7 @@ public static class ToolListBuilder
                     capturedBox.Text = LocalizationService.Translate("Press keys...");
                     hkBox.ClearValue(TextBox.ForegroundProperty);
                     hkBox.ClearValue(TextBox.FontWeightProperty);
-                    tipText.Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                    tipText.Text = hotkeyTipText;
                     tooltip.IsOpen = false;
                     CloseOtherAdvisories(tooltip);
                     if (resetWarningTimer != null)
@@ -244,7 +249,7 @@ public static class ToolListBuilder
                     capturedBox.Text = HotkeyFormatter.Format(m, k);
                     hkBox.ClearValue(TextBox.ForegroundProperty);
                     hkBox.ClearValue(TextBox.FontWeightProperty);
-                    tipText.Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                    tipText.Text = hotkeyTipText;
                     tooltip.IsOpen = false;
                     if (resetWarningTimer != null)
                     {
@@ -319,6 +324,11 @@ public static class ToolListBuilder
                     uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
 
                     if (mod == 0 && vk == 0) return;
+                    if (isEditorShortcut && EditorToolHotkeyHelper.IsAboutChord(mod, vk))
+                    {
+                        ShowReservedEditorChordWarning(hkBox, capturedBox, tooltip, tipText);
+                        return;
+                    }
                     if (!allowSingleKeyHotkeys && IsUnsafeModifierlessHotkey(mod, vk))
                     {
                         ShowModifierRequiredWarning(hkBox, capturedBox, tooltip, tipText);
@@ -389,7 +399,7 @@ public static class ToolListBuilder
                                         capturedBox.Text = LocalizationService.Translate("Press keys...");
                                         hkBox.ClearValue(TextBox.ForegroundProperty);
                                         hkBox.ClearValue(TextBox.FontWeightProperty);
-                                        tipText.Text = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                                        tipText.Text = hotkeyTipText;
                                         tooltip.IsOpen = false;
                                     }
                                 };
@@ -500,11 +510,11 @@ public static class ToolListBuilder
         if (editorToolsPanel is not null)
         {
             foreach (var t in EditorToolHotkeyDef.Tools)
-                AddToolRow(editorToolsPanel, t.Id, t.Label, t.Icon, true, GetEditorHotkey, SetEditorHotkey, allowSingleKeyHotkeys: true);
+                AddToolRow(editorToolsPanel, t.Id, t.Label, t.Icon, true, GetEditorHotkey, SetEditorHotkey, allowSingleKeyHotkeys: true, isEditorShortcut: true);
 
             AddSubHeader(editorToolsPanel, "View shortcuts");
             foreach (var v in EditorViewHotkeyDef.Shortcuts)
-                AddToolRow(editorToolsPanel, v.Id, v.Label, v.Icon, true, GetEditorViewHotkey, SetEditorViewHotkey, allowSingleKeyHotkeys: true);
+                AddToolRow(editorToolsPanel, v.Id, v.Label, v.Icon, true, GetEditorViewHotkey, SetEditorViewHotkey, allowSingleKeyHotkeys: true, isEditorShortcut: true);
 
             LocalizationService.ApplyTo(editorToolsPanel, settingsService.Settings.InterfaceLanguage);
         }
@@ -603,6 +613,16 @@ public static class ToolListBuilder
 
     private static readonly System.Windows.Media.SolidColorBrush HotkeyWarningBrush =
         new(System.Windows.Media.Color.FromRgb(245, 158, 11));
+
+    private static void ShowReservedEditorChordWarning(TextBox hkBox, TextBox capturedBox,
+        System.Windows.Controls.ToolTip tooltip, TextBlock tipText)
+    {
+        capturedBox.Text = LocalizationService.Translate("Reserved");
+        hkBox.Foreground = HotkeyWarningBrush;
+        hkBox.FontWeight = FontWeights.SemiBold;
+        tipText.Text = LocalizationService.Translate("Ctrl+F1 opens About in the editor. Choose another shortcut.");
+        ShowAdvisory(tooltip);
+    }
 
     private static void ShowInternalHotkeyConflictWarning(TextBox hkBox, TextBox capturedBox,
         System.Windows.Controls.ToolTip tooltip, TextBlock tipText, uint mod, uint vk, string conflictLabelKey)

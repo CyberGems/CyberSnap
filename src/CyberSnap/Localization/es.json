@@ -2176,6 +2176,8 @@
   "Hotkey reassigned": "Atajo reasignado",
   "\"{0}\" reassigned from {1}.": "\"{0}\" reasignado desde {1}.",
   "Taken": "Ocupada",
+  "Reserved": "Reservada",
+  "Ctrl+F1 opens About in the editor. Choose another shortcut.": "Ctrl+F1 abre Acerca de en el editor. Elige otro atajo.",
   "This hotkey is registered by another application.": "Este atajo de teclado está registrado por otra aplicación.",
   "Assign Print Screen (PrtSc) as the capture shortcut, replacing the default — works only if no other app is already using that key.": "Asigna Imprimir Pantalla (PrtSc) como atajo de captura, en lugar del predeterminado. Solo funciona si ningún otro programa usa ya esa tecla.",
   "Print Screen assigned, but {0} may intercept it. Close it or change its shortcut.": "Impr Pant asignada, pero {0} podría interceptarla. Ciérralo o cambia su atajo.",
