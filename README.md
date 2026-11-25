@@ -25,7 +25,7 @@
 
 <div align="center">
 
-### Capture, edit and share anything on screen — screenshots, recordings, OCR, QR codes and a color picker
+### Capture, edit and share screenshots, recordings, OCR, QR codes and colors in one window.
 
 </div>
 
