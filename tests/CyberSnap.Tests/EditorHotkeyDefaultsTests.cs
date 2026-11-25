@@ -106,6 +106,19 @@ public class EditorHotkeyDefaultsTests
     }
 
     [Fact]
+    public void WindowAndShellGesturesAreReservedForEditorRows()
+    {
+        // 0x1 is MOD_ALT; 0x26/0x28 are the arrow keys, 0x4D is M and 0x73 is F4.
+        foreach (uint vk in new uint[] { 0x26, 0x28, 0x4D, 0x73 })
+            Assert.NotNull(CyberSnap.UI.Editor.EditorToolHotkeyHelper.GetReservedEditorBindingMessage(0x1, vk));
+
+        Assert.Null(CyberSnap.UI.Editor.EditorToolHotkeyHelper.GetReservedEditorBindingMessage(0x2, 0x52));
+        Assert.Null(CyberSnap.UI.Editor.EditorToolHotkeyHelper.GetReservedEditorBindingMessage(0x1, 0x52));
+        Assert.Null(CyberSnap.UI.Editor.EditorToolHotkeyHelper.GetReservedEditorBindingMessage(0, 0x73));
+        Assert.NotNull(CyberSnap.UI.Editor.EditorToolHotkeyHelper.GetReservedEditorBindingMessage(0x2, 0x70));
+    }
+
+    [Fact]
     public void SavedEditorBindingsSurviveLoad()
     {
         string path = Path.Combine(Path.GetTempPath(), "CyberSnap-hotkeys-" + Guid.NewGuid().ToString("N"), "settings.json");

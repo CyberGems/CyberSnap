@@ -43,7 +43,7 @@ public sealed partial class EditorForm
     private EditorToggleSwitch _togglePanLockSwitch = null!;
     private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
     private readonly Dictionary<AnnotationCanvas.CanvasTool, (string labelKey, string? displayKey)> _toolButtonLabels = new();
-    private readonly List<(EditorToolButton Button, string LabelKey, string DisplayKey)> _transformButtons = new();
+    private readonly List<(EditorToolButton Button, string LabelKey, string DisplayKey, string HotkeyId)> _transformButtons = new();
     private readonly List<(EditorCommandButton Button, string LabelKey)> _localizedCommandButtons = new();
     private EditorChromeButton? _closeButton;
     private EditorChromeButton? _minimizeButton;
@@ -1455,7 +1455,7 @@ public sealed partial class EditorForm
             DoTransformCanvas(kind);
             _canvas.Focus();
         };
-        _transformButtons.Add((button, labelKey, displayKey));
+        _transformButtons.Add((button, labelKey, displayKey, hotkeyId));
         RegisterHoverTooltip(button, () =>
         {
             var text = LocalizationService.Translate(labelKey);

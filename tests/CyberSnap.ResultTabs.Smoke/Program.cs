@@ -77,6 +77,12 @@ internal static partial class Program
                 CheckEditorTitleAbout((CyberSnap.App)app);
                 return 0;
             }
+            if (args.Contains("--editor-hotkey-chips-only"))
+            {
+                CheckEditorHotkeyTooltipChips();
+                Console.WriteLine($"PASS: {_checks} editor tooltip shortcut chips.");
+                return 0;
+            }
             if (args.Contains("--gallery-focus-only"))
             {
                 CheckGalleryFocus((CyberSnap.App)app, settings);
@@ -142,6 +148,7 @@ internal static partial class Program
                 CheckConfirmationOptions(settings);
                 CheckConfirmationChrome(settings);
                 CheckConfirmationGuide(settings);
+                CheckEditorHotkeyTooltipChips();
                 CheckPinImageFormats(temp);
                 CheckZoomHelpBar(args.FirstOrDefault(a => !a.StartsWith("--")));
                 Console.WriteLine($"PASS: {_checks} capture tool regression checks.");

@@ -131,6 +131,27 @@ internal static class EditorToolHotkeyHelper
     public static bool IsAboutChord(uint mod, uint vk)
         => mod == Native.User32.MOD_CONTROL && vk == Native.User32.VK_F1;
 
+    /// <summary>
+    /// Editor and shell gestures that run before tool and view hotkeys. Settings refuses
+    /// these chords and explains why: a saved binding would look valid but never fire.
+    /// Returns the localization key of the explanation, or null when the chord is free.
+    /// </summary>
+    public static string? GetReservedEditorBindingMessage(uint mod, uint vk)
+    {
+        if (IsAboutChord(mod, vk))
+            return "Ctrl+F1 opens About in the editor. Choose another shortcut.";
+        if (mod != Native.User32.MOD_ALT)
+            return null;
+        return vk switch
+        {
+            0x26 => "Alt+↑ changes the window state in the editor. Choose another shortcut.", // VK_UP
+            0x28 => "Alt+↓ minimizes the editor. Choose another shortcut.",                   // VK_DOWN
+            0x4D => "Alt+M opens the editor menu. Choose another shortcut.",                  // VK_M
+            0x73 => "Alt+F4 closes the editor. Choose another shortcut.",                     // VK_F4
+            _ => null,
+        };
+    }
+
     /// <summary>Formatted hotkey for a configurable editor transform, or null when unassigned.</summary>
     public static string? GetActionHotkeyLabel(string actionId)
     {

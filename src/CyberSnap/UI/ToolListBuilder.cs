@@ -324,9 +324,9 @@ public static class ToolListBuilder
                     uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
 
                     if (mod == 0 && vk == 0) return;
-                    if (isEditorShortcut && EditorToolHotkeyHelper.IsAboutChord(mod, vk))
+                    if (isEditorShortcut && EditorToolHotkeyHelper.GetReservedEditorBindingMessage(mod, vk) is { } reservedMessage)
                     {
-                        ShowReservedEditorChordWarning(hkBox, capturedBox, tooltip, tipText);
+                        ShowReservedEditorChordWarning(hkBox, capturedBox, tooltip, tipText, reservedMessage);
                         return;
                     }
                     if (!allowSingleKeyHotkeys && IsUnsafeModifierlessHotkey(mod, vk))
@@ -630,12 +630,12 @@ public static class ToolListBuilder
         new(System.Windows.Media.Color.FromRgb(245, 158, 11));
 
     private static void ShowReservedEditorChordWarning(TextBox hkBox, TextBox capturedBox,
-        System.Windows.Controls.ToolTip tooltip, TextBlock tipText)
+        System.Windows.Controls.ToolTip tooltip, TextBlock tipText, string messageKey)
     {
         capturedBox.Text = LocalizationService.Translate("Reserved");
         hkBox.Foreground = HotkeyWarningBrush;
         hkBox.FontWeight = FontWeights.SemiBold;
-        tipText.Text = LocalizationService.Translate("Ctrl+F1 opens About in the editor. Choose another shortcut.");
+        tipText.Text = LocalizationService.Translate(messageKey);
         ShowAdvisory(tooltip);
     }
 

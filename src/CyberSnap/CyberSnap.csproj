@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CyberSnap.Tests" />
+    <InternalsVisibleTo Include="CyberSnap.ResultTabs.Smoke" />
   </ItemGroup>
 
   <ItemGroup>
