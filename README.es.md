@@ -354,11 +354,11 @@ Para la referencia completa de atajos, consulta la [wiki de Atajos de teclado](h
 
 | Activo | Dirección | QR |
 |---|---|---|
-| **<img src="src/CyberSnap/Assets/Donate/btc.svg" width="18" height="18" alt="" /> BTC** | <pre><code>bc1q5mxzz05nmvsheqzx7970euswta3fksxzcfzag4</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-btc.png" width="90" height="90" alt="QR de BTC" /> |
-| **<img src="src/CyberSnap/Assets/Donate/eth.svg" width="18" height="18" alt="" /> ETH** | <pre><code>0x79b703Ec0f77493679Fcd280aF3b983E20c580B8</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-eth.png" width="90" height="90" alt="QR de ETH" /> |
-| **<img src="src/CyberSnap/Assets/Donate/usdt.svg" width="18" height="18" alt="" /> USDT (ERC20 / BEP20)** | <pre><code>0x79b703Ec0f77493679Fcd280aF3b983E20c580B8</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-eth.png" width="90" height="90" alt="QR de USDT" /> |
-| **<img src="src/CyberSnap/Assets/Donate/usdt.svg" width="18" height="18" alt="" /> USDT (TRC20)** | <pre><code>TSVbSk1HSyZ1NprCnAYiw56ECwXgH887mD</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-usdt-tron.png" width="90" height="90" alt="QR de USDT TRC20" /> |
-| **<img src="src/CyberSnap/Assets/Donate/ltc.svg" width="18" height="18" alt="" /> LTC** | <pre><code>LWGnEHgcFCE2BRkzLnsdPDD8Y8ZeDK577X</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-ltc.png" width="90" height="90" alt="QR de LTC" /> |
+| **<img src="src/CyberSnap/Assets/Donate/btc.svg" width="18" height="18" alt="" />&nbsp;&nbsp;BTC** | <pre><code>bc1q5mxzz05nmvsheqzx7970euswta3fksxzcfzag4</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-btc.png" width="90" height="90" alt="QR de BTC" /> |
+| **<img src="src/CyberSnap/Assets/Donate/eth.svg" width="18" height="18" alt="" />&nbsp;&nbsp;ETH** | <pre><code>0x79b703Ec0f77493679Fcd280aF3b983E20c580B8</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-eth.png" width="90" height="90" alt="QR de ETH" /> |
+| **<img src="src/CyberSnap/Assets/Donate/usdt.svg" width="18" height="18" alt="" />&nbsp;&nbsp;USDT (ERC20 / BEP20)** | <pre><code>0x79b703Ec0f77493679Fcd280aF3b983E20c580B8</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-eth.png" width="90" height="90" alt="QR de USDT" /> |
+| **<img src="src/CyberSnap/Assets/Donate/usdt.svg" width="18" height="18" alt="" />&nbsp;&nbsp;USDT (TRC20)** | <pre><code>TSVbSk1HSyZ1NprCnAYiw56ECwXgH887mD</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-usdt-tron.png" width="90" height="90" alt="QR de USDT TRC20" /> |
+| **<img src="src/CyberSnap/Assets/Donate/ltc.svg" width="18" height="18" alt="" />&nbsp;&nbsp;LTC** | <pre><code>LWGnEHgcFCE2BRkzLnsdPDD8Y8ZeDK577X</code></pre> | <img src="src/CyberSnap/Assets/Donate/qr-ltc.png" width="90" height="90" alt="QR de LTC" /> |
 
 > ⚠️ Envía solo el activo seleccionado en la red indicada. Usar la red incorrecta provocará la pérdida permanente de fondos.
 
