@@ -843,11 +843,12 @@ public sealed class AppSettings
             ["editorMagnifier"] = (0, 0x7B),   // F12
             ["editorBlur"] = (0, 0x31),        // 1
             ["editorEmoji"] = (0, 0x32),       // 2
-            // Canvas transforms; the tool row above is complete, so these use Ctrl chords.
+            // Canvas transforms. Local shortcuts keep a single modifier (suite standard);
+            // the F-row and digits above already belong to the tools.
             ["editorRotateCw"] = (0x2, 0x52),        // Ctrl+R
-            ["editorRotateCcw"] = (0x6, 0x52),       // Ctrl+Shift+R
-            ["editorFlipH"] = (0x6, 0x48),           // Ctrl+Shift+H
-            ["editorFlipV"] = (0x6, 0x56),           // Ctrl+Shift+V
+            ["editorRotateCcw"] = (0x2, 0x4C),       // Ctrl+L
+            ["editorFlipH"] = (0x1, 0x48),           // Alt+H
+            ["editorFlipV"] = (0x1, 0x56),           // Alt+V
         };
 
     /// <summary>Get hotkey (mod, key) for an editor toolbar tool.</summary>

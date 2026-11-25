@@ -54,6 +54,21 @@ public class EditorHotkeyDefaultsTests
     }
 
     [Fact]
+    public void TransformDefaultsUseOneModifierAndStayBindable()
+    {
+        var settings = new AppSettings();
+
+        // Suite standard: local shortcuts take one modifier; two-modifier chords are global.
+        foreach (var (id, _, _, _) in EditorToolHotkeyDef.Actions)
+        {
+            var (mod, key) = settings.GetEditorToolHotkey(id);
+            Assert.NotEqual(0u, key);
+            Assert.True(mod != 0 && (mod & (mod - 1)) == 0, $"{id} defaults to more than one modifier ({mod})");
+            Assert.Null(CyberSnap.UI.Editor.EditorToolHotkeyHelper.GetReservedEditorBindingMessage(mod, key));
+        }
+    }
+
+    [Fact]
     public void ProfilesWithCtrlF1OnEditorRowsAreCleaned()
     {
         string path = Path.Combine(Path.GetTempPath(), "CyberSnap-hotkeys-" + Guid.NewGuid().ToString("N"), "settings.json");
