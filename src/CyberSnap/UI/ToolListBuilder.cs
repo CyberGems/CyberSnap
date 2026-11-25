@@ -512,6 +512,10 @@ public static class ToolListBuilder
             foreach (var t in EditorToolHotkeyDef.Tools)
                 AddToolRow(editorToolsPanel, t.Id, t.Label, t.Icon, true, GetEditorHotkey, SetEditorHotkey, allowSingleKeyHotkeys: true, isEditorShortcut: true);
 
+            AddSubHeader(editorToolsPanel, "Actions");
+            foreach (var a in EditorToolHotkeyDef.Actions)
+                AddToolRow(editorToolsPanel, a.Id, a.Label, a.Icon, true, GetEditorHotkey, SetEditorHotkey, allowSingleKeyHotkeys: true, isEditorShortcut: true);
+
             AddSubHeader(editorToolsPanel, "View shortcuts");
             foreach (var v in EditorViewHotkeyDef.Shortcuts)
                 AddToolRow(editorToolsPanel, v.Id, v.Label, v.Icon, true, GetEditorViewHotkey, SetEditorViewHotkey, allowSingleKeyHotkeys: true, isEditorShortcut: true);
@@ -530,6 +534,7 @@ public static class ToolListBuilder
         if (key == 0) return null;
         var excluded = excludeToolId is null ? null : AppSettings.CanonicalHotkeyId(excludeToolId);
         bool isEditorShortcut = EditorToolHotkeyDef.Tools.Any(t => string.Equals(t.Id, excluded, StringComparison.OrdinalIgnoreCase))
+            || EditorToolHotkeyDef.Actions.Any(a => string.Equals(a.Id, excluded, StringComparison.OrdinalIgnoreCase))
             || EditorViewHotkeyDef.Shortcuts.Any(t => string.Equals(t.Id, excluded, StringComparison.OrdinalIgnoreCase));
         bool isCaptureAnnotation = ToolDef.AllTools.Any(t => t.Group == 1
             && string.Equals(t.Id, excluded, StringComparison.OrdinalIgnoreCase));
@@ -562,6 +567,16 @@ public static class ToolListBuilder
         if (isCaptureAnnotation) return null;
 
         foreach (var (id, label, _) in EditorToolHotkeyDef.Tools)
+        {
+            if (string.Equals(id, excludeToolId, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var (existingMod, existingKey) = settings.GetEditorToolHotkey(id);
+            if (existingMod == mod && existingKey == key)
+                return new HotkeyConflict(id, label, IsEditor: true);
+        }
+
+        foreach (var (id, label, _, _) in EditorToolHotkeyDef.Actions)
         {
             if (string.Equals(id, excludeToolId, StringComparison.OrdinalIgnoreCase))
                 continue;

@@ -131,6 +131,46 @@ internal static class EditorToolHotkeyHelper
     public static bool IsAboutChord(uint mod, uint vk)
         => mod == Native.User32.MOD_CONTROL && vk == Native.User32.VK_F1;
 
+    /// <summary>Formatted hotkey for a configurable editor transform, or null when unassigned.</summary>
+    public static string? GetActionHotkeyLabel(string actionId)
+    {
+        var settings = SettingsService.LoadStatic();
+        if (settings is null)
+            return null;
+        var (mod, key) = settings.GetEditorToolHotkey(actionId);
+        if (key == 0)
+            return null;
+        return Helpers.HotkeyFormatter.Format(mod, key);
+    }
+
+    /// <summary>
+    /// Resolves a rotate/flip gesture from the configured editor bindings. About and tool
+    /// activation have already run by the time callers ask.
+    /// </summary>
+    public static Models.Commands.CanvasTransformKind? FindActionHotkey(Keys keyData)
+    {
+        uint mod = 0;
+        if ((keyData & Keys.Control) != 0) mod |= Native.User32.MOD_CONTROL;
+        if ((keyData & Keys.Alt) != 0) mod |= Native.User32.MOD_ALT;
+        if ((keyData & Keys.Shift) != 0) mod |= Native.User32.MOD_SHIFT;
+        uint vk = unchecked((uint)(keyData & Keys.KeyCode));
+        if (vk == 0)
+            return null;
+
+        var settings = SettingsService.LoadStatic();
+        if (settings is null)
+            return null;
+
+        foreach (var action in EditorToolHotkeyDef.Actions)
+        {
+            var (existingMod, existingKey) = settings.GetEditorToolHotkey(action.Id);
+            if (existingKey != 0 && existingMod == mod && existingKey == vk)
+                return action.Kind;
+        }
+
+        return null;
+    }
+
     /// <summary>Activates an editor tool from a keyboard shortcut. Returns true when handled.</summary>
     public static bool TryActivateTool(AnnotationCanvas canvas, Keys keyData)
     {

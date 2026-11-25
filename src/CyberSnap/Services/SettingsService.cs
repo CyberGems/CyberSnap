@@ -859,8 +859,29 @@ public sealed class SettingsService : IDisposable
         if (settings.UploadHttpTimeoutSeconds is < 15 or > 600)
             settings.UploadHttpTimeoutSeconds = 120;
 
-        // Editor tool bindings are never rewritten. The editor opens About with Ctrl+F1, so
-        // bare F1 stays a normal tool key (Pick) and a saved binding survives upgrades.
+        // Editor tool bindings are never rewritten, so bare F1 stays a normal tool key
+        // (Pick). The one exception is Ctrl+F1: About resolves it before tool and view
+        // hotkeys, so a profile saved before Settings refused the chord may still hold a
+        // binding that can never fire. Dropping it restores that row's default.
+        DropReservedEditorAboutChord(settings.EditorToolHotkeys);
+        DropReservedEditorAboutChord(settings.EditorViewHotkeys);
+    }
+
+    private static void DropReservedEditorAboutChord(Dictionary<string, uint[]>? bindings)
+    {
+        if (bindings is null || bindings.Count == 0)
+            return;
+
+        var reserved = new List<string>();
+        foreach (var (id, value) in bindings)
+        {
+            // 0x2 is MOD_CONTROL, 0x70 is VK_F1.
+            if (value is { Length: >= 2 } && value[0] == 0x2 && value[1] == 0x70)
+                reserved.Add(id);
+        }
+
+        foreach (var id in reserved)
+            bindings.Remove(id);
     }
 
     private static TEnum NormalizeEnum<TEnum>(TEnum value, TEnum fallback)

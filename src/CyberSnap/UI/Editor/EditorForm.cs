@@ -2371,20 +2371,13 @@ public sealed partial class EditorForm : Form, IMessageFilter
         // window outside Aero Snap: Windows swallows Win+Up/Down before the form receives the
         // arrow, and a borderless window is never maximized by the shell. Alt+Up/Down reach the
         // form as system keys, so they back the hints on the title-bar buttons.
-        if (keyData == (Keys.Alt | Keys.Up))
-        {
-            if (!_isManualMaximized)
-                ToggleWindowState();
-            return true;
-        }
-        if (keyData == (Keys.Alt | Keys.Down))
-        {
-            if (_isManualMaximized)
-                ToggleWindowState();
-            else
-                WindowState = FormWindowState.Minimized;
-            return true;
-        }
+        // Alt+Up maximizes or restores and Alt+Down always minimizes, so both chrome
+        // buttons keep a stable hint whatever the window state.
+        if (keyData == (Keys.Alt | Keys.Up)) { ToggleWindowState(); return true; }
+        if (keyData == (Keys.Alt | Keys.Down)) { WindowState = FormWindowState.Minimized; return true; }
+
+        // Configurable rotate/flip gestures run before tool hotkeys.
+        if (TryHandleEditorActionHotkey(keyData)) return true;
         if (keyData == (Keys.Control | Keys.N)) { DoNewCanvas(); return true; }
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
@@ -2552,6 +2545,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (mod == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
         if (mod == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
         if (mod == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
+
+        if (TryHandleEditorActionHotkey(key | mod))
+            return true;
 
         if (mod == Keys.None && key == Keys.Delete && !_canvas.IsEditingText)
         {

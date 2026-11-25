@@ -35,6 +35,67 @@ public class EditorHotkeyDefaultsTests
     }
 
     [Fact]
+    public void TransformActionsHaveDistinctDefaults()
+    {
+        var settings = new AppSettings();
+        var used = new HashSet<(uint, uint)>();
+
+        foreach (var (id, _, _) in EditorToolHotkeyDef.Tools)
+            used.Add(settings.GetEditorToolHotkey(id));
+        foreach (var (id, _, _) in EditorViewHotkeyDef.Shortcuts)
+            used.Add(settings.GetEditorViewHotkey(id));
+
+        foreach (var (id, _, _, _) in EditorToolHotkeyDef.Actions)
+        {
+            var hotkey = settings.GetEditorToolHotkey(id);
+            Assert.NotEqual((0u, 0u), hotkey);
+            Assert.True(used.Add(hotkey), $"{id} shares the default {hotkey}");
+        }
+    }
+
+    [Fact]
+    public void ProfilesWithCtrlF1OnEditorRowsAreCleaned()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "CyberSnap-hotkeys-" + Guid.NewGuid().ToString("N"), "settings.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        try
+        {
+            using (var service = new SettingsService(path))
+            {
+                service.Load();
+                service.Settings.EditorToolHotkeys = new Dictionary<string, uint[]>
+                {
+                    ["editorMove"] = new uint[] { 0x2, 0x70 },
+                    ["editorRotateCw"] = new uint[] { 0x2, 0x70 },
+                    ["editorEraser"] = new uint[] { 0, 0x73 }
+                };
+                service.Settings.EditorViewHotkeys = new Dictionary<string, uint[]>
+                {
+                    ["editorZoomIn"] = new uint[] { 0x2, 0x70 }
+                };
+                service.Save();
+                service.FlushPendingWrites();
+            }
+
+            using var reloaded = new SettingsService(path);
+            reloaded.Load();
+            var settings = reloaded.Settings;
+
+            Assert.DoesNotContain("editorMove", settings.EditorToolHotkeys!.Keys);
+            Assert.DoesNotContain("editorRotateCw", settings.EditorToolHotkeys.Keys);
+            Assert.DoesNotContain("editorZoomIn", settings.EditorViewHotkeys!.Keys);
+            Assert.Equal((0u, 0x70u), settings.GetEditorToolHotkey("editorMove"));
+            Assert.Equal((0x2u, 0x52u), settings.GetEditorToolHotkey("editorRotateCw"));
+            Assert.Equal((0u, 0x38u), settings.GetEditorViewHotkey("editorZoomIn"));
+            Assert.Equal((0u, 0x73u), settings.GetEditorToolHotkey("editorEraser"));
+        }
+        finally
+        {
+            try { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void AboutChordIsOnlyControlF1()
     {
         // 0x2 is MOD_CONTROL, 0x70 is VK_F1.

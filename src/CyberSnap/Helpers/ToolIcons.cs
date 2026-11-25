@@ -41,6 +41,10 @@ public static class ToolIcons
         ["editorStep"] = "step",
         ["editorMagnifier"] = "magnifier",
         ["editorEmoji"] = "emoji",
+        ["editorRotateCw"] = "rotateCw",
+        ["editorRotateCcw"] = "rotateCcw",
+        ["editorFlipH"] = "flipHorizontal",
+        ["editorFlipV"] = "flipVertical",
 
         // Editor view/zoom shortcuts
         ["editorZoomIn"] = "zoomIn",

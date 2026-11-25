@@ -1120,13 +1120,13 @@ public sealed partial class EditorForm
 
         AddToolButton(transform, 0, 0, AnnotationCanvas.CanvasTool.CutOut, "cutOut", "Cut Out", displayKey: "Cut", topMargin: 5);
         AddToolButton(transform, 1, 0, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop", topMargin: 5);
-        AddTransformButton(transform, 2, 0, "rotateCw", "Rotate 90° clockwise", "90° →",
+        AddTransformButton(transform, 2, 0, "rotateCw", "editorRotateCw", "Rotate 90° clockwise", "90° →",
             Models.Commands.CanvasTransformKind.Rotate90Clockwise, topMargin: 5);
-        AddTransformButton(transform, 0, 1, "flipVertical", "Flip vertical", "Flip V",
+        AddTransformButton(transform, 0, 1, "flipVertical", "editorFlipV", "Flip vertical", "Flip V",
             Models.Commands.CanvasTransformKind.FlipVertical);
-        AddTransformButton(transform, 1, 1, "flipHorizontal", "Flip horizontal", "Flip H",
+        AddTransformButton(transform, 1, 1, "flipHorizontal", "editorFlipH", "Flip horizontal", "Flip H",
             Models.Commands.CanvasTransformKind.FlipHorizontal);
-        AddTransformButton(transform, 2, 1, "rotateCcw", "Rotate 90° counter-clockwise", "90° ←",
+        AddTransformButton(transform, 2, 1, "rotateCcw", "editorRotateCcw", "Rotate 90° counter-clockwise", "90° ←",
             Models.Commands.CanvasTransformKind.Rotate90CounterClockwise);
 
         // Divider inside the drawing group: between the line/shape row (1) and the
@@ -1433,6 +1433,7 @@ public sealed partial class EditorForm
         int column,
         int row,
         string iconId,
+        string hotkeyId,
         string labelKey,
         string displayKey,
         Models.Commands.CanvasTransformKind kind,
@@ -1455,7 +1456,12 @@ public sealed partial class EditorForm
             _canvas.Focus();
         };
         _transformButtons.Add((button, labelKey, displayKey));
-        RegisterHoverTooltip(button, () => LocalizationService.Translate(labelKey));
+        RegisterHoverTooltip(button, () =>
+        {
+            var text = LocalizationService.Translate(labelKey);
+            var hotkey = EditorToolHotkeyHelper.GetActionHotkeyLabel(hotkeyId);
+            return hotkey is null ? text : $"{text}  ({hotkey})";
+        });
         parent.Controls.Add(button, column, row);
     }
 
@@ -1532,6 +1538,16 @@ public sealed partial class EditorForm
         return string.IsNullOrWhiteSpace(shortcut) ? label : $"{label}  ({shortcut})";
     }
 
+    /// <summary>Configurable rotate/flip gestures, routed before tool hotkeys.</summary>
+    private bool TryHandleEditorActionHotkey(Keys keyData)
+    {
+        if (EditorToolHotkeyHelper.FindActionHotkey(keyData) is not { } kind)
+            return false;
+        DoTransformCanvas(kind);
+        _canvas.Focus();
+        return true;
+    }
+
     /// <summary>Opens the title-bar More menu, shared by the button and the Alt+M gesture.</summary>
     private void ShowBurgerMenuFromButton()
     {
@@ -1605,11 +1621,11 @@ public sealed partial class EditorForm
         _windowStateButton.IconId = _isManualMaximized ? "restore" : "maximize";
         _windowStateButton.AccessibleName =
             LocalizationService.Translate(_isManualMaximized ? "Restore" : "Maximize");
-        _windowStateButton.Tag = _isManualMaximized ? "Alt+↓" : "Alt+↑";
-        // While maximized Alt+Down restores the window, so the minimize button shows no
-        // gesture chip in that state — same rule as the WPF title bar.
+        // Alt+Up maximizes or restores; Alt+Down minimizes in both states, so neither
+        // chrome button loses its hint when the window is maximized.
+        _windowStateButton.Tag = "Alt+↑";
         if (_minimizeButton is not null)
-            _minimizeButton.Tag = _isManualMaximized ? null : "Alt+↓";
+            _minimizeButton.Tag = "Alt+↓";
     }
 
     private EditorToolButton? GetEmojiToolButton() =>
