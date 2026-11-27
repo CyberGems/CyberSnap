@@ -75,6 +75,11 @@ Una captura suele necesitar cuatro herramientas: una para tomarla, otra para ano
 </p>
 <p align="center"><em>Superposición de selección y anotaciones en pantalla con flechas, trazo libre, formas, regla en píxeles y controles de confirmación.</em></p>
 
+<p align="center">
+  <img src="./docs/screenshots/ocr-es.png" alt="Ventana de extracción OCR de CyberSnap con vista previa, texto reconocido editable y panel integrado de traducción" />
+</p>
+<p align="center"><em>Ventana de extracción OCR con vista previa de la captura, texto reconocido editable, buscador y controles integrados de traducción.</em></p>
+
 ---
 
 ## 📸 ¿Por qué CyberSnap?

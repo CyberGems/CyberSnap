@@ -76,6 +76,11 @@ A screenshot usually takes four tools: one to grab it, one to annotate it, one t
 </p>
 <p align="center"><em>On-screen region selection and annotation overlay with arrows, freehand strokes, shapes, ruler measurements and quick confirmation controls.</em></p>
 
+<p align="center">
+  <img src="./docs/screenshots/ocr-en.png" alt="CyberSnap OCR extraction window with image preview, editable recognized text and inline translation panel" />
+</p>
+<p align="center"><em>OCR extraction window showing captured preview, editable recognized text, search box and inline translation controls.</em></p>
+
 ---
 
 ## 📸 Why CyberSnap?
