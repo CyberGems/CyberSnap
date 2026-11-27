@@ -68,12 +68,12 @@ Una captura suele necesitar cuatro herramientas: una para tomarla, otra para ano
 
 ---
 
-<!-- Capturas: pendiente de la galería bilingüe ES/EN del plan en https://github.com/CyberGems/CyberGems.github.io/blob/main/docs/screenshots.md — sustituir la cita, conservar este título y su entrada en el índice. -->
-
 ## 🖼️ Capturas
 
-> Próximamente...
-
+<p align="center">
+  <img src="./docs/screenshots/main-es.png" alt="Superposición de captura de CyberSnap con barra flotante de anotaciones, flechas, difuminado, regla y barra de confirmación" />
+</p>
+<p align="center"><em>Superposición de selección y anotaciones en pantalla con flechas, trazo libre, difuminado, regla en píxeles y controles de confirmación.</em></p>
 ---
 
 ## 📸 ¿Por qué CyberSnap?
