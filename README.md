@@ -72,9 +72,10 @@ A screenshot usually takes four tools: one to grab it, one to annotate it, one t
 ## 🖼️ Screenshots
 
 <p align="center">
-  <img src="./docs/screenshots/main-en.png" alt="CyberSnap capture overlay with floating annotation dock, arrows, blur, ruler readout and confirmation bar" />
+  <img src="./docs/screenshots/main-en.png" alt="CyberSnap capture overlay with floating annotation dock, arrows, rectangle, ruler readout and confirmation bar" />
 </p>
-<p align="center"><em>On-screen region selection and annotation overlay with arrows, freehand strokes, blur, ruler measurements and quick confirmation controls.</em></p>
+<p align="center"><em>On-screen region selection and annotation overlay with arrows, freehand strokes, shapes, ruler measurements and quick confirmation controls.</em></p>
+
 ---
 
 ## 📸 Why CyberSnap?
