@@ -920,7 +920,7 @@ public sealed partial class EditorForm
         _shareButton.RoundLeftOnly = true;
         _shareButton.Margin = new Padding(2, 0, 0, 0);
         _shareButton.Click += (_, _) => DoShare();
-        RegisterHoverTooltip(_shareButton, () => WithShortcut(LocalizationService.Translate("Upload and copy a shareable link"), "Ctrl+Shift+U"), above: false);
+        RegisterHoverTooltip(_shareButton, () => WithShortcut(LocalizationService.Translate("Upload and copy a shareable link"), "Ctrl+U"), above: false);
         commandActions.Controls.Add(_shareButton);
 
         _shareMenuButton = new EditorCommandButton

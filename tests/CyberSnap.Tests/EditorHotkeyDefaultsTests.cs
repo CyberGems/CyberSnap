@@ -134,6 +134,16 @@ public class EditorHotkeyDefaultsTests
     }
 
     [Fact]
+    public void ShareChordIsReservedForEditorRows()
+    {
+        // Share is Ctrl+U and resolves before tool and view hotkeys, so Settings must refuse it.
+        Assert.True(CyberSnap.UI.Editor.EditorToolHotkeyHelper.IsReservedEditorChord(
+            System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.U));
+        Assert.False(CyberSnap.UI.Editor.EditorToolHotkeyHelper.IsReservedEditorChord(
+            System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.U));
+    }
+
+    [Fact]
     public void SavedEditorBindingsSurviveLoad()
     {
         string path = Path.Combine(Path.GetTempPath(), "CyberSnap-hotkeys-" + Guid.NewGuid().ToString("N"), "settings.json");

@@ -2382,7 +2382,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
-        if (keyData == (Keys.Control | Keys.Shift | Keys.U)) { DoShare(); return true; }
+        if (keyData == (Keys.Control | Keys.U)) { DoShare(); return true; }
         if (keyData == (Keys.Control | Keys.W)) { DoCloseDocument(); return true; }
         if (keyData == (Keys.Control | Keys.Tab)) { CycleTab(1); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.Tab)) { CycleTab(-1); return true; }
@@ -2529,7 +2529,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (mod == Keys.Control && key is Keys.O) { DoOpen(); return true; }
         if (mod == Keys.Control && key is Keys.S) { DoSave(); return true; }
         if (mod == (Keys.Control | Keys.Shift) && key is Keys.S) { DoSaveAs(); return true; }
-        if (mod == (Keys.Control | Keys.Shift) && key is Keys.U) { DoShare(); return true; }
+        if (mod == Keys.Control && key is Keys.U) { DoShare(); return true; }
         if (mod == Keys.Control && key is Keys.W) { DoCloseDocument(); return true; }
         if (mod == Keys.Control && key is Keys.Tab) { CycleTab(1); return true; }
         if (mod == (Keys.Control | Keys.Shift) && key is Keys.Tab) { CycleTab(-1); return true; }

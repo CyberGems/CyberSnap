@@ -115,7 +115,7 @@ internal static class EditorToolHotkeyHelper
         var key = keyData & Keys.KeyCode;
         if (mod == Keys.Control)
         {
-            return key is Keys.N or Keys.O or Keys.S or Keys.C or Keys.V or Keys.Z or Keys.Y or Keys.A or Keys.D;
+            return key is Keys.N or Keys.O or Keys.S or Keys.C or Keys.V or Keys.Z or Keys.Y or Keys.A or Keys.D or Keys.U;
         }
         if (mod == (Keys.Control | Keys.Shift))
         {
