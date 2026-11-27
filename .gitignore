@@ -12,3 +12,17 @@ Thumbs.db
 # Local scratch
 scratch/
 nul
+
+# Native build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+bld/
+x64/
+x86/
+
+# Publisher and test output
+publish/
+publish-win64/
+*.nupkg
