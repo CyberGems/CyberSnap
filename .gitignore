@@ -1,3 +1,7 @@
 # Shared dependency exclusion
 node_modules/
 artifacts/
+
+# OS generated files
+.DS_Store
+Thumbs.db
