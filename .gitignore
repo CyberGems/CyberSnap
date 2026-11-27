@@ -26,3 +26,9 @@ x86/
 publish/
 publish-win64/
 *.nupkg
+
+# Generated release artifacts
+*.zip
+
+# Temporary build output
+src/CyberSnap/.tmp-build/
