@@ -5,3 +5,10 @@ artifacts/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Diagnostics and caches
+*.cache
+
+# Local scratch
+scratch/
+nul
