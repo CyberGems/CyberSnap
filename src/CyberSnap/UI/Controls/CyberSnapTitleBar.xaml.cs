@@ -402,6 +402,14 @@ public partial class CyberSnapTitleBar : UserControl
                 () => ((App)Application.Current).ShowAbout());
         };
 
+        var starItem = new MenuItem
+        {
+            Header = LocalizationService.Translate("Star on GitHub"),
+            Icon = Helpers.FluentIcons.CreateWpfMenuIcon("star")
+        };
+        starItem.Click += async (_, _) => { rootMenu.IsOpen = false; await GitHubStarService.StarAsync(); };
+        helpItem.Items.Add(starItem);
+        helpItem.Items.Add(new Separator());
         helpItem.Items.Add(wikiItem);
         helpItem.Items.Add(homepageItem);
         helpItem.Items.Add(updatesItem);

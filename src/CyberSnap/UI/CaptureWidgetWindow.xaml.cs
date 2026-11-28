@@ -1276,6 +1276,10 @@ public partial class CaptureWidgetWindow : Window
         // ── Help submenu: wiki / homepage / updates / about ──
         var helpSubmenu = BuildLazyWidgetSubmenu("Help", "question", helpSubmenu =>
         {
+            var starItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Star on GitHub"), iconId: "star");
+            starItem.Click += async (_, _) => await GitHubStarService.StarAsync();
+            helpSubmenu.DropDownItems.Add(starItem);
+            helpSubmenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
             var wikiItem = Helpers.WindowsMenuRenderer.Item("Widget guide", iconId: "question");
             wikiItem.Click += (s, ev) =>
             {

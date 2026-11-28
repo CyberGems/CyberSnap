@@ -530,6 +530,55 @@ public partial class TrayContextMenuWindow : Window
             stack.Children.Add(galleryRow);
             stack.Children.Add(Divider());
             stack.Children.Add(resetRow);
+            stack.Children.Add(Divider());
+
+            System.Windows.Controls.Button HelpAction(string label, string iconId, Action action)
+            {
+                var content = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+                content.Children.Add(new System.Windows.Controls.Image
+                {
+                    Source = GetIcon(iconId, Theme.TextPrimary, 16),
+                    Width = 16, Height = 16, Margin = new Thickness(0, 0, 12, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                content.Children.Add(new TextBlock { Text = T(label), VerticalAlignment = VerticalAlignment.Center });
+                var row = new System.Windows.Controls.Button { Content = content, Focusable = true };
+                row.SetResourceReference(FrameworkElement.StyleProperty, "PanelMenuActionRow");
+                row.Click += (_, _) => { ClosePanelMenu(); CloseMenu(); action(); };
+                System.Windows.Automation.AutomationProperties.SetName(row, T(label));
+                return row;
+            }
+
+            var helpItems = new StackPanel { Visibility = Visibility.Collapsed };
+            helpItems.Children.Add(HelpAction("Star on GitHub", "star", () => _ = GitHubStarService.StarAsync()));
+            helpItems.Children.Add(Divider());
+            helpItems.Children.Add(HelpAction("Documentation & Wiki", "question", () => WikiLinks.Open(WikiLinks.HomePage)));
+            helpItems.Children.Add(HelpAction("About", "info", () => (System.Windows.Application.Current as App)?.ShowAbout()));
+            var helpLabel = new TextBlock { Text = T("Help"), VerticalAlignment = VerticalAlignment.Center };
+            var helpContent = new DockPanel();
+            var helpArrow = new TextBlock { Text = "›", Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            DockPanel.SetDock(helpArrow, Dock.Right);
+            helpContent.Children.Add(helpArrow);
+            helpContent.Children.Add(helpLabel);
+            var helpRow = new System.Windows.Controls.Button { Content = helpContent, Focusable = true };
+            helpRow.SetResourceReference(FrameworkElement.StyleProperty, "PanelMenuActionRow");
+            System.Windows.Automation.AutomationProperties.SetName(helpRow, T("Help"));
+            helpRow.Click += (_, _) =>
+            {
+                bool expanded = helpItems.Visibility != Visibility.Visible;
+                helpItems.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+                helpArrow.Text = expanded ? "⌄" : "›";
+            };
+            helpItems.PreviewKeyDown += (_, args) =>
+            {
+                if (args.Key != Key.Left) return;
+                helpItems.Visibility = Visibility.Collapsed;
+                helpArrow.Text = "›";
+                helpRow.Focus();
+                args.Handled = true;
+            };
+            stack.Children.Add(helpRow);
+            stack.Children.Add(helpItems);
 
             var shell = new Border
             {

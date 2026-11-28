@@ -1,4 +1,11 @@
 {
+  "Documentation & Wiki": "Documentación y Wiki",
+  "Star on GitHub": "Dar una estrella en GitHub",
+  "Starring…": "Enviando estrella…",
+  "Starred, thank you": "Estrella añadida, gracias",
+  "Complete your star on GitHub": "Completa la estrella en GitHub",
+  "Could not open GitHub. Retry": "No se pudo abrir GitHub. Reintentar",
+
   "Global shortcuts": "Atajos globales",
   "Capture annotations": "Anotaciones durante la captura",
   "Click a field and press a shortcut. Use × to clear it. Global shortcuts are optional and also appear in the capture toolbar. Another app may already be using a combination.": "Haz clic en un campo y presiona un atajo. Usa × para borrarlo. Los atajos globales son opcionales y también aparecen en la barra de captura. Otra app podría estar usando la misma combinación.",

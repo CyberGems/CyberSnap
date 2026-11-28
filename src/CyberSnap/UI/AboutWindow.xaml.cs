@@ -115,6 +115,8 @@ public partial class AboutWindow : Window
             AboutFooterWebsiteBtn.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterDocsBtn.ToolTip = LocalizationService.Translate("Open the online documentation");
             AboutFooterGithubBtn.ToolTip = LocalizationService.Translate("View project on GitHub");
+            System.Windows.Automation.AutomationProperties.SetName(AboutFooterStarBtn,
+                LocalizationService.Translate(LocalizationService.GetSourceToolTip(AboutFooterStarBtn)));
             AboutFooterIssuesBtn.ToolTip = LocalizationService.Translate("Report a bug or open an issue");
             AboutFooterDiagBtn.ToolTip = LocalizationService.Translate("Copy diagnostic information");
             AboutFooterReleasesBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
@@ -245,6 +247,29 @@ public partial class AboutWindow : Window
     {
         e.Handled = true;
         OpenUrl(WebsiteUrl);
+    }
+
+    private void AboutFooterStar_Click(object sender, RoutedEventArgs e) => GiveGitHubStar();
+
+    private async void GiveGitHubStar()
+    {
+        if (!AboutFooterStarBtn.IsEnabled) return;
+        AboutFooterStarBtn.IsEnabled = false;
+        LocalizationService.SetSourceToolTip(AboutFooterStarBtn, "Starring…");
+        AboutFooterStarBtn.ToolTip = LocalizationService.Translate("Starring…");
+        var result = await GitHubStarService.StarAsync();
+        var source = result switch
+        {
+            GitHubStarResult.Starred => "Starred, thank you",
+            GitHubStarResult.Opened => "Complete your star on GitHub",
+            _ => "Could not open GitHub. Retry"
+        };
+        LocalizationService.SetSourceToolTip(AboutFooterStarBtn, source);
+        AboutFooterStarBtn.ToolTip = LocalizationService.Translate(source);
+        System.Windows.Automation.AutomationProperties.SetName(AboutFooterStarBtn, LocalizationService.Translate(source));
+        if (result == GitHubStarResult.Starred)
+            AboutFooterStarIcon.SetResourceReference(Shape.FillProperty, "ThemeAccentBrush");
+        AboutFooterStarBtn.IsEnabled = result != GitHubStarResult.Starred;
     }
 
     private void AboutFooterGithub_Click(object sender, MouseButtonEventArgs e)

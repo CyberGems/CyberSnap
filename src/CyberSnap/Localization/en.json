@@ -1,4 +1,11 @@
 {
+  "Documentation & Wiki": "Documentation & Wiki",
+  "Star on GitHub": "Star on GitHub",
+  "Starring…": "Starring…",
+  "Starred, thank you": "Starred, thank you",
+  "Complete your star on GitHub": "Complete your star on GitHub",
+  "Could not open GitHub. Retry": "Could not open GitHub. Retry",
+
   "Global shortcuts": "Global shortcuts",
   "Capture annotations": "Capture annotations",
   "Click a field and press a shortcut. Use × to clear it. Global shortcuts are optional and also appear in the capture toolbar. Another app may already be using a combination.": "Click a field and press a shortcut. Use × to clear it. Global shortcuts are optional and also appear in the capture toolbar. Another app may already be using a combination.",

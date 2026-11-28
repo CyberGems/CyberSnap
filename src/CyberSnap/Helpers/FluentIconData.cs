@@ -4,6 +4,7 @@ internal static class FluentIconData
 {
     public static readonly IReadOnlyDictionary<string, (string Regular, string Filled)> Icons = new Dictionary<string, (string Regular, string Filled)>(StringComparer.OrdinalIgnoreCase)
     {
+        ["star"] = ("F0 M10 2 L12.3 6.7 L17.5 7.5 L13.8 11.1 L14.6 16.3 L10 13.9 L5.4 16.3 L6.2 11.1 L2.5 7.5 L7.7 6.7 Z M10 4.3 L8.4 7.7 L4.7 8.2 L7.3 10.8 L6.7 14.5 L10 12.8 L13.3 14.5 L12.7 10.8 L15.3 8.2 L11.6 7.7 Z", "M10 2 L12.3 6.7 L17.5 7.5 L13.8 11.1 L14.6 16.3 L10 13.9 L5.4 16.3 L6.2 11.1 L2.5 7.5 L7.7 6.7 Z"),
         ["clock"] = (
             "F0 M10 2a8 8 0 1 1 0 16a8 8 0 0 1 0-16Zm0 1a7 7 0 1 1 0 14a7 7 0 0 1 0-14Zm0 2.5a.5.5 0 0 1 .5.5v3.5H13a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5V6a.5.5 0 0 1 .5-.5Z",
             "F0 M10 2a8 8 0 1 1 0 16a8 8 0 0 1 0-16Zm0 3.25a.75.75 0 0 1 .75.75v3.25H13a.75.75 0 0 1 0 1.5h-3a.75.75 0 0 1-.75-.75V6a.75.75 0 0 1 .75-.75Z"),

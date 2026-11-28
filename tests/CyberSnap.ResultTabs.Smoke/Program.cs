@@ -274,6 +274,12 @@ internal static partial class Program
                 Console.WriteLine($"PASS: {_checks} tool settings checks.");
                 return 0;
             }
+            if (args.Contains("--github-star-only"))
+            {
+                CheckGitHubStarSurfaces(settings, args.FirstOrDefault(a => !a.StartsWith("--")));
+                Console.WriteLine($"PASS: {_checks} GitHub star surface checks.");
+                return 0;
+            }
             if (args.Contains("--about-only"))
             {
                 Theme.SetMode(settings.Settings.ThemeMode);

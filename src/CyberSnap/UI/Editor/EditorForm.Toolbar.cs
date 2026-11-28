@@ -2358,6 +2358,10 @@ public sealed partial class EditorForm
 
         // ── Help submenu: wiki / homepage / updates / about ──
         var helpSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Help"), showImages: true, iconId: "question");
+        var starItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Star on GitHub"), iconId: "star");
+        starItem.Click += async (_, _) => await GitHubStarService.StarAsync();
+        helpSubmenu.DropDownItems.Add(starItem);
+        helpSubmenu.DropDownItems.Add(new ToolStripSeparator());
 
         var quickStartItem = WindowsMenuRenderer.Item(
             LocalizationService.Translate("Editor Quick Start..."), iconId: "question");
